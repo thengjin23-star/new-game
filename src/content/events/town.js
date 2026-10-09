@@ -1,13 +1,13 @@
 import { WINDOWS } from '../../world/arcs.js';
 import { dayAt } from '../../core/calendar.js';
-import { has, flag, favor, alive, within, needLs, variant } from '../helpers.js';
+import { has, flag, favor, alive, within, needLs, variant, night } from '../helpers.js';
 
 const T = ['qingshi_town'];
 
 export default [
   {
     id: 'town_return',
-    trigger: ['arrive', 'explore'],
+    trigger: 'arrive',
     nodes: T,
     once: true,
     priority: 5,
@@ -33,7 +33,9 @@ export default [
 
   {
     id: 'town_breakup',
-    trigger: ['arrive', 'explore'],
+    trigger: 'explore',
+    poi: 'lin_gate',
+    auto: true,
     nodes: T,
     once: true,
     priority: 10,
@@ -81,6 +83,8 @@ export default [
   {
     id: 'town_lin_test',
     trigger: 'explore',
+    poi: 'lin_gate',
+    auto: true,
     nodes: T,
     once: true,
     priority: 8,
@@ -152,9 +156,11 @@ export default [
   {
     id: 'town_bully',
     trigger: 'explore',
+    poi: 'tofu_stall',
+    auto: true,
     nodes: T,
     once: true,
-    minExplore: 10,
+    cond: (s) => !!s.seen.town_return && s.day >= 5,
     title: '豆花攤',
     text: '街口傳來哭喊聲。趙虎帶著兩個跟班，把賣豆花的老李頭的攤子掀翻在地，白花花的豆花灑了一地。\n\n「這個月的份子錢，少了三文。」趙虎一腳踩在老李頭手上。',
     choices: [
@@ -227,7 +233,7 @@ export default [
     nodes: T,
     cooldown: 120,
     weight: 6,
-    cond: (s) => s.day > 45 && !s.nodes.fox_shrine.known,
+    cond: (s) => s.day > 45 && !s.nodes.fox_shrine.known && night(s),
     title: '月下',
     text: '夜裡睡不著，你坐在屋頂上吐納。\n\n月色很好。你看見一隻白狐，嘴裡叼著一盞小小的燈籠，從鎮東的牆頭輕巧地躍過，往荒野去了。\n\n燈籠裡的火，是藍色的。',
     choices: [
@@ -250,9 +256,9 @@ export default [
   {
     id: 'town_beggar',
     trigger: 'explore',
+    poi: 'earth_temple',
     nodes: T,
     once: true,
-    minExplore: 20,
     title: '老乞丐',
     text: '土地廟門口蹲著一個老乞丐，渾身酸臭，捧著一個缺了口的碗。\n\n「小哥，」他咧開沒剩幾顆牙的嘴，「賞口飯吃？」',
     choices: [
@@ -277,7 +283,9 @@ export default [
 
   {
     id: 'town_wanger_wedding',
-    trigger: ['arrive', 'explore'],
+    trigger: 'explore',
+    poi: 'wanger_house',
+    auto: true,
     nodes: T,
     once: true,
     priority: 9,
@@ -340,6 +348,8 @@ export default [
   {
     id: 'town_wanger_deathbed',
     trigger: ['arrive', 'explore'],
+    poi: 'wanger_house',
+    auto: true,
     nodes: T,
     once: true,
     priority: 20,
@@ -363,7 +373,9 @@ export default [
 
   {
     id: 'town_lin_pact',
-    trigger: ['arrive', 'explore'],
+    trigger: 'explore',
+    poi: 'shen_gate',
+    auto: true,
     nodes: T,
     once: true,
     priority: 10,

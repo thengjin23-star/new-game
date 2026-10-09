@@ -1,6 +1,6 @@
 import { DAYS_PER_YEAR } from '../core/calendar.js';
 import { rand, randInt, pick, chance } from '../core/rng.js';
-import { NODES } from './map.js';
+import { NODES, PEOPLE_PLACES } from './map.js';
 
 // 命名人物. `luck` marks 氣運之子.
 export const NAMED = {
@@ -174,6 +174,6 @@ export function simulateNpcs(s, report, rumor) {
       npc.stage = 0;
       rumor(s, `${npc.name}築基成功了！這位昔日的${npc.title}，如今也是一方前輩。`, 'npc', npc.id);
     }
-    if (chance(s, 0.08)) npc.loc = pick(s, Object.keys(NODES).filter((k) => k !== 'hidden_cave'));
+    if (chance(s, 0.08)) npc.loc = pick(s, PEOPLE_PLACES);
   }
 }

@@ -1,4 +1,4 @@
-import { has, flag, favor, alive, variant } from '../helpers.js';
+import { has, flag, favor, alive, variant, night } from '../helpers.js';
 
 const P = ['qingxu_temple'];
 
@@ -66,6 +66,7 @@ export default [
   {
     id: 'temple_chores',
     trigger: 'explore',
+    poi: 'temple_yard',
     nodes: P,
     cooldown: 30,
     weight: 8,
@@ -90,9 +91,10 @@ export default [
   {
     id: 'temple_well',
     trigger: 'explore',
+    poi: 'old_well',
     nodes: P,
     once: true,
-    minExplore: 40,
+    cond: (s) => night(s),
     title: '古井',
     text: '觀後那口古井，你打過無數次水。\n\n可今晚，月光照進井裡，井底有一點光，不是月亮的倒影。\n\n叮——檢測到微弱的同源波動。',
     choices: [
@@ -116,6 +118,8 @@ export default [
     id: 'temple_songhe_farewell',
     trigger: ['arrive', 'explore', 'visit'],
     npc: 'song_he',
+    poi: 'temple_hall',
+    auto: true,
     nodes: P,
     once: true,
     priority: 20,
@@ -151,6 +155,8 @@ export default [
   {
     id: 'temple_legacy',
     trigger: ['arrive', 'explore'],
+    poi: 'temple_hall',
+    auto: true,
     nodes: P,
     once: true,
     priority: 15,

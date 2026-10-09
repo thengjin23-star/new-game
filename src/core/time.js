@@ -64,6 +64,22 @@ function monthTick(s, report) {
   }
 }
 
+/**
+ * Let hours of the day pass (walking, talking, resting). Crossing midnight
+ * runs whole days through advance(). Returns how many days turned.
+ */
+export function spendHours(s, hours, report, mode = 'active') {
+  if (!(hours > 0)) return 0;
+  s.tod = (s.tod ?? 8) + hours;
+  let days = 0;
+  while (s.tod >= 24) {
+    s.tod -= 24;
+    days += 1;
+  }
+  if (days) advance(s, days, mode, report);
+  return days;
+}
+
 /** Reset the lifespan warnings after a breakthrough extends life. */
 export function resetLifeWarnings(s) {
   s.vars.lifeWarn = 0;

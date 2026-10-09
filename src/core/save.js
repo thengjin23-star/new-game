@@ -3,6 +3,7 @@ import { levelFor } from '../world/system.js';
 import { NODES } from '../world/map.js';
 import { NAMED } from '../world/npcs.js';
 import { DAYS_PER_YEAR } from './calendar.js';
+import { syncFog } from '../world/fog.js';
 
 const KEY = 'yijie-sanxiu/save';
 const META_KEY = 'yijie-sanxiu/meta';
@@ -46,6 +47,13 @@ export function migrate(s) {
   s.log ||= [];
   s.arcIdx ||= 0;
   s.stats ||= { explores: 0, events: 0, travels: 0, seclDays: 0, breakthroughs: 0 };
+  s.tod ??= 8;
+  if (s.world) {
+    s.world.found ||= {};
+    s.world.taken ||= {};
+    s.world.herbs ||= {};
+    s.world.mobs ||= {};
+  }
   s.player.buffs ||= {};
   s.player.arts ||= [];
   s.player.techs ||= [];
@@ -68,6 +76,7 @@ export function migrate(s) {
 
 /** Serialize, leaving out the live NPC reference an open event keeps (it is rebuilt from npcId). */
 export function serialize(s) {
+  syncFog(s);
   return JSON.stringify(s, (k, v) => (k === 'npc' && v && typeof v === 'object' && v.id ? undefined : v));
 }
 

@@ -29,6 +29,7 @@ export default [
   {
     id: 'travel_robber',
     trigger: 'travel',
+    mob: true,
     weight: 8,
     cooldown: 90,
     cond: (s) => s.player.realm >= 1,

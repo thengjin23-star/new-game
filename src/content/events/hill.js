@@ -44,6 +44,7 @@ export default [
   {
     id: 'hill_wolves',
     trigger: 'explore',
+    mob: true,
     nodes: H,
     cooldown: 60,
     weight: 8,
@@ -74,9 +75,10 @@ export default [
   {
     id: 'hill_hunter',
     trigger: 'explore',
+    poi: 'hunter_camp',
+    auto: true,
     nodes: H,
     once: true,
-    minExplore: 8,
     title: '老獵戶',
     text: (s) =>
       `山道上遇見了老獵戶趙大叔，他背上扛著一頭剛打的山羊。${s.player.origin === 'hunter' ? '\n\n「是你小子！」他認出了你，「你爹要是知道你從斷魂崖摔下來還活著，得在墳裡笑醒。」' : ''}\n\n「往北別去了。」他說，「翻過兩道梁就是黑風林。上個月劉家老三進去採藥，就沒出來。」\n\n他頓了頓，壓低聲音：「我年輕時在林子邊上，見過會飛的人。」`,
@@ -101,9 +103,9 @@ export default [
   {
     id: 'hill_crane',
     trigger: 'explore',
+    poi: 'creek_crane',
     nodes: H,
     once: true,
-    minExplore: 15,
     title: '白鶴',
     text: '溪邊的蘆葦叢裡，有一隻白鶴。\n\n牠的翅膀被獵人的鐵夾夾斷了，血把半邊羽毛染成了紅色。看見你，牠掙扎了一下，又無力地趴了回去。\n\n那雙眼睛很亮，亮得不像一隻鳥。',
     choices: [
@@ -133,10 +135,10 @@ export default [
   {
     id: 'hill_lin_cliff',
     trigger: 'explore',
+    poi: 'cliff_bottom',
+    auto: true,
     nodes: H,
     once: true,
-    minExplore: 20,
-    weight: 14,
     cond: (s) => s.day >= dayAt(0, 3) && s.day < dayAt(2, 8) && alive(s, 'lin_chen'),
     title: '崖下的少年',
     text: '斷崖下的亂石堆裡，躺著一個人。\n\n是林塵。他渾身是傷，像是從崖上摔下來的，手裡還死死攥著半截藥草的莖。\n\n「別碰我……」他咬著牙，「我自己能走。」\n\n他站起來，走了兩步，倒了。\n\n他手上那枚黑戒指，有一絲微弱的光在流轉。',
@@ -175,9 +177,9 @@ export default [
   {
     id: 'hill_stele',
     trigger: 'explore',
+    poi: 'stele',
     nodes: H,
     once: true,
-    minExplore: 30,
     title: '斷碑',
     text: '半山腰的樹叢裡，藏著一塊斷了半截的石碑。\n\n碑上的字被風雨磨得模糊，你只辨認出開頭幾個：「……天道有缺，命簿有漏……」\n\n叮——檢測到與本系統相關的資訊殘留。',
     choices: [
@@ -200,10 +202,9 @@ export default [
   {
     id: 'hill_lightning_tree',
     trigger: 'explore',
+    poi: 'lightning_tree',
     nodes: H,
     once: true,
-    minExplore: 35,
-    weight: (s) => (flag(s, 'cave_hint') ? 40 : 10),
     title: '雷擊木',
     text: '山坳裡有一株被雷劈開的老桃樹。焦黑的樹幹上，隱隱有細小的電光遊走。\n\n樹根旁邊，有一道裂縫，往山腹裡延伸。冷風從裡面吹出來。',
     choices: [
@@ -227,9 +228,8 @@ export default [
   {
     id: 'hill_cave',
     trigger: 'explore',
+    poi: 'cave_entrance',
     nodes: H,
-    cooldown: 10,
-    minExplore: 30,
     priority: 6,
     cond: (s) => flag(s, 'cave_hint') && !flag(s, 'cave_found'),
     title: '山腹',
@@ -285,6 +285,7 @@ export default [
   {
     id: 'hill_snake',
     trigger: 'explore',
+    mob: true,
     nodes: H,
     cooldown: 90,
     weight: 6,
@@ -341,18 +342,6 @@ export default [
         fail: { text: '你在霧裡兜了兩天圈子，又回到了原地。', effects: [['days', 2]] },
       },
     ],
-  },
-
-  {
-    id: 'hill_valley_path',
-    trigger: 'explore',
-    nodes: H,
-    once: true,
-    minExplore: 50,
-    cond: (s) => !s.nodes.lingxi_valley.known,
-    title: '西邊的山谷',
-    text: '你順著一條獸道往西走，翻過三道山梁，空氣忽然變得濕潤清甜。\n\n山谷裡霧氣氤氳，溪水叮咚。你深吸一口氣——是靈氣，濃得幾乎能嚐出甜味。\n\n然後你看見了溪邊石頭上，一張兩丈多長的蛇蛻。',
-    choices: [{ text: '記下這個地方。', out: { effects: [['discover', 'lingxi_valley']] } }],
   },
 
   {

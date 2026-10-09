@@ -17,6 +17,7 @@ export default [
   {
     id: 'forest_bandits',
     trigger: 'explore',
+    mob: true,
     nodes: F,
     cooldown: 90,
     weight: 10,
@@ -94,9 +95,10 @@ export default [
   {
     id: 'forest_wolf_king',
     trigger: 'explore',
+    poi: 'wolf_lair',
+    auto: true,
     nodes: F,
     once: true,
-    minExplore: 50,
     title: '狼王',
     text: '月光下，一頭比牛還大的灰狼蹲在岩石上，額頭有一撮銀毛。\n\n牠沒有叫。牠只是看著你，像看一頓送上門的晚餐。\n\n叮——警告：一階上品妖獸。建議宿主立即撤離。',
     choices: [
@@ -128,9 +130,9 @@ export default [
   {
     id: 'forest_corpse',
     trigger: 'explore',
+    poi: 'forest_corpse',
     nodes: F,
     once: true,
-    minExplore: 20,
     title: '樹下的屍體',
     text: '一具屍體靠坐在樹根下，已經被野獸啃得面目全非。從殘破的衣著看，是個修士。\n\n他手裡還攥著一個灰撲撲的小布袋——儲物袋。',
     choices: [
@@ -166,6 +168,8 @@ export default [
   {
     id: 'forest_poison',
     trigger: 'explore',
+    poi: ['miasma_a', 'miasma_b'],
+    auto: true,
     nodes: F,
     cooldown: 60,
     weight: 7,
@@ -224,9 +228,10 @@ export default [
   {
     id: 'forest_lost_girl',
     trigger: 'explore',
+    poi: 'lost_girl',
+    auto: true,
     nodes: F,
     once: true,
-    minExplore: 30,
     cond: (s) => alive(s, 'wang_er') && s.day < dayAt(12),
     title: '哭聲',
     text: '林子深處，傳來小女孩的哭聲。\n\n你循聲找過去，一個七八歲的女孩縮在樹洞裡，臉上全是泥。是王二的妹妹，王小妹。\n\n「我、我來採蘑菇……」她抽抽搭搭地說，「找不到路了……」\n\n遠處，傳來狼嚎。',
@@ -244,18 +249,6 @@ export default [
         },
       },
     ],
-  },
-
-  {
-    id: 'forest_ruins_path',
-    trigger: 'explore',
-    nodes: F,
-    once: true,
-    minExplore: 65,
-    cond: (s) => !s.nodes.ancient_ruins.known,
-    title: '林子的盡頭',
-    text: '林子北邊的盡頭，樹木忽然變得稀疏、焦黑，像被大火燒過，又像被什麼東西吸乾了生機。\n\n再往前，是一片灰白色的荒原。荒原上，密密麻麻地插滿了斷劍。\n\n風吹過劍林，發出嗚咽般的聲音。',
-    choices: [{ text: '記下這個方向。', out: { effects: [['discover', 'ancient_ruins']] } }],
   },
 
   {

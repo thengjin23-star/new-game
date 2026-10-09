@@ -55,6 +55,7 @@ export default [
     id: 'market_storyteller',
     trigger: ['explore', 'visit'],
     npc: 'qian_banxian',
+    poi: 'teahouse_market',
     nodes: M,
     cooldown: 25,
     weight: 10,
@@ -101,6 +102,8 @@ export default [
   {
     id: 'market_su_stone',
     trigger: 'explore',
+    poi: 'su_stall',
+    auto: true,
     nodes: M,
     once: true,
     priority: 4,
@@ -174,6 +177,7 @@ export default [
   {
     id: 'market_mystery_stall',
     trigger: 'explore',
+    poi: 'mystery_stall',
     nodes: M,
     cooldown: 45,
     weight: 9,
@@ -189,6 +193,8 @@ export default [
   {
     id: 'market_fake_pill',
     trigger: 'explore',
+    poi: 'market_alley',
+    auto: true,
     nodes: M,
     once: true,
     weight: 7,
@@ -213,6 +219,7 @@ export default [
   {
     id: 'market_auction',
     trigger: 'explore',
+    poi: 'auction_house',
     nodes: M,
     cooldown: 300,
     priority: 6,
@@ -260,6 +267,7 @@ export default [
   {
     id: 'market_alchemy_job',
     trigger: 'explore',
+    poi: 'alchemy_shop',
     nodes: M,
     cooldown: 40,
     weight: 7,
@@ -284,6 +292,7 @@ export default [
   {
     id: 'market_fellow',
     trigger: 'explore',
+    poi: 'tavern',
     nodes: M,
     cooldown: 150,
     weight: 6,

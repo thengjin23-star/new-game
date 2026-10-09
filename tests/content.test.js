@@ -5,6 +5,7 @@ import { ITEMS } from '../src/content/items.js';
 import { TECHS } from '../src/content/techniques.js';
 import { NODES } from '../src/world/map.js';
 import { NAMED } from '../src/world/npcs.js';
+import { POI_BY_ID, MOBS } from '../src/world/places.js';
 
 const TRIGGERS = new Set(['intro', 'explore', 'arrive', 'travel', 'inquire', 'visit', 'scheduled', 'fallback']);
 
@@ -72,6 +73,21 @@ test('every reference in content points at something real', () => {
       }
     }
   }
+});
+
+test('events placed in the world point at real places and creatures', () => {
+  for (const ev of EVENT_LIST) {
+    for (const id of [].concat(ev.poi || [])) {
+      const p = POI_BY_ID[id];
+      assert.ok(p, `${ev.id}: unknown place ${id}`);
+      if (ev.nodes) assert.ok(ev.nodes.includes(p.region), `${ev.id}: place ${id} is in ${p.region}, not ${ev.nodes}`);
+      if (ev.auto) assert.ok(p.auto, `${ev.id}: starts by itself, but ${id} has no auto radius`);
+      const triggers = Array.isArray(ev.trigger) ? ev.trigger : [ev.trigger];
+      assert.ok(triggers.includes('explore'), `${ev.id}: a place-bound event needs the explore trigger`);
+    }
+    if (ev.mob) assert.ok(MOBS.some((m) => m.event === ev.id), `${ev.id}: no creature brings it`);
+  }
+  for (const m of MOBS) assert.ok(EVENTS[m.event]?.mob, `${m.id}: its event ${m.event} should be marked mob`);
 });
 
 test('items reference real techniques and effects', () => {

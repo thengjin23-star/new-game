@@ -16,6 +16,8 @@ export default [
   {
     id: 'valley_python',
     trigger: 'explore',
+    poi: 'python_pool',
+    auto: true,
     nodes: V,
     priority: 8,
     cooldown: 20,
@@ -60,6 +62,7 @@ export default [
   {
     id: 'valley_spring',
     trigger: 'explore',
+    poi: 'spirit_spring',
     nodes: V,
     cooldown: 150,
     weight: 10,
@@ -79,7 +82,7 @@ export default [
 
   {
     id: 'valley_cultivators',
-    trigger: 'explore',
+    trigger: 'arrive',
     nodes: V,
     once: true,
     cond: (s) => flag(s, 'valley_safe') && s.player.realm >= 1,

@@ -24,6 +24,7 @@ export default [
   {
     id: 'ferry_cross',
     trigger: 'explore',
+    poi: 'ferry_pier',
     nodes: C,
     priority: 10,
     cond: (s) => s.player.realm >= 2 && !flag(s, 'chapter1_done'),
@@ -43,6 +44,7 @@ export default [
   {
     id: 'ferry_wait',
     trigger: 'explore',
+    poi: 'ferry_pier',
     nodes: C,
     cooldown: 20,
     cond: (s) => s.player.realm < 2,

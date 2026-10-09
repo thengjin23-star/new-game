@@ -22,5 +22,8 @@ export const season = (s) => {
   return m <= 3 ? 'spring' : m <= 6 ? 'summer' : m <= 9 ? 'autumn' : 'winter';
 };
 
+/** 夜裡（戌時以後、寅時以前）. */
+export const night = (s) => (s.tod ?? 12) >= 19.5 || (s.tod ?? 12) < 5;
+
 /** Deterministic variant for flavor text, so a reload shows the same words. */
 export const variant = (s, list, salt = 0) => list[Math.abs((s.day * 7 + salt * 13) | 0) % list.length];

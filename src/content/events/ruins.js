@@ -17,6 +17,7 @@ export default [
   {
     id: 'ruins_soul',
     trigger: 'explore',
+    mob: true,
     nodes: R,
     cooldown: 50,
     weight: 10,
@@ -44,9 +45,9 @@ export default [
   {
     id: 'ruins_broken_sword',
     trigger: 'explore',
+    poi: 'broken_sword',
     nodes: R,
-    cooldown: 30,
-    minExplore: 25,
+    cooldown: 10,
     cond: (s) => !has(s, 'broken_sword'),
     title: '斷劍',
     text: '所有的劍都鏽了，只有一柄沒有。\n\n它只剩三寸劍身，插在一塊黑石裡，寒光凜凜，像是昨天才斷的。\n\n你伸出手。劍身上，有一股冰冷的意志在抗拒你。',
@@ -67,9 +68,9 @@ export default [
   {
     id: 'ruins_frag',
     trigger: 'explore',
+    poi: 'frag_stele',
     nodes: R,
     once: true,
-    minExplore: 55,
     title: '殘頁',
     text: '一塊倒塌的石碑下，壓著一頁東西。非金非玉，薄如蟬翼，在一片灰白中閃著淡淡的光。\n\n你把它抽出來的那一刻，識海裡響起了一個聲音——不是系統平常的聲音，更老，更疲憊：\n\n「……第七次推演失敗。命簿之外，仍需一人。」\n\n「若有後來者得見此頁——」\n\n聲音斷了。\n\n叮——……叮。系統記憶校正中。',
     choices: [
@@ -86,6 +87,8 @@ export default [
   {
     id: 'ruins_su_camp',
     trigger: 'explore',
+    poi: 'realm_gate',
+    auto: true,
     nodes: R,
     once: true,
     priority: 5,
@@ -109,7 +112,9 @@ export default [
 
   {
     id: 'ruins_realm',
-    trigger: ['arrive', 'explore'],
+    trigger: 'explore',
+    poi: 'realm_gate',
+    auto: true,
     nodes: R,
     cooldown: 3,
     priority: 10,

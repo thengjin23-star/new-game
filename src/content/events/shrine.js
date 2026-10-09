@@ -5,7 +5,9 @@ const X = ['fox_shrine'];
 export default [
   {
     id: 'shrine_meet',
-    trigger: ['arrive', 'explore'],
+    trigger: 'explore',
+    poi: 'fox_shrine_poi',
+    auto: true,
     nodes: X,
     once: true,
     priority: 8,

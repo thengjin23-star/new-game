@@ -18,7 +18,9 @@ function rootLine(s) {
 export default [
   {
     id: 'sect_gate',
-    trigger: 'arrive',
+    trigger: 'explore',
+    poi: 'sect_gate',
+    auto: true,
     nodes: S,
     once: true,
     title: '青雲峰',
@@ -28,7 +30,9 @@ export default [
 
   {
     id: 'sect_recruit',
-    trigger: ['arrive', 'explore'],
+    trigger: 'explore',
+    poi: 'sect_gate',
+    auto: true,
     nodes: S,
     cooldown: 3000,
     priority: 10,
@@ -106,6 +110,7 @@ export default [
   {
     id: 'sect_chores',
     trigger: 'explore',
+    poi: 'sect_woodshed',
     nodes: S,
     cooldown: 60,
     cond: (s) => flag(s, 'sect_servant'),

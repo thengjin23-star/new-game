@@ -1,8 +1,9 @@
-import { NODES, route, canSecludeAt } from '../world/map.js';
+import { NODES, canSecludeAt } from '../world/map.js';
+import { POIS } from '../world/places.js';
 import { ITEMS, SHOPS, displayItem } from '../content/items.js';
 import { TECHS } from '../content/techniques.js';
 import { DEDUCE, DEDUCE_FALLBACK, sysGain } from '../world/system.js';
-import { advance, newReport, resetLifeWarnings } from './time.js';
+import { advance, newReport, resetLifeWarnings, spendHours } from './time.js';
 import { applyEffects, logLife, techValue } from './effects.js';
 import { pickEvent, startEvent, takeDue, notice } from './events.js';
 import { breakthroughInfo, realmLabel, REALMS, stageReq } from './cultivation.js';
@@ -33,84 +34,27 @@ function fireDue(s, report) {
   return true;
 }
 
-export function explore(s) {
+/** Ask around (at a teahouse, a crossroads): two hours of talk. */
+export function inquire(s, region = s.player.loc) {
   if (busy(s)) return;
-  const node = s.player.loc;
   const report = newReport();
-  advance(s, randInt(s, 2, 4), 'active', report);
+  spendHours(s, 2, report);
   if (s.dead) return finishDeath(s, report);
-  const st = s.nodes[node];
-  const gain = randInt(s, 6, 11) + Math.floor(s.player.attrs.jiyuan / 3);
-  const before = st.explore;
-  st.explore = Math.min(100, st.explore + gain);
-  if (before < 100 && st.explore >= 100) {
-    sysGain(s, 8, report);
-    report.toasts.push(`叮——${NODES[node].name}已探索完畢。`);
-  }
-  s.stats.explores += 1;
   if (fireDue(s, report)) return;
-  const id = pickEvent(s, 'explore', node) || 'generic_explore';
+  const id = pickEvent(s, 'inquire', region) || 'generic_inquire';
   startEvent(s, id, { pre: pre(report) });
 }
 
-export function inquire(s) {
-  if (busy(s)) return;
-  const node = s.player.loc;
-  if (!NODES[node].inquire) return;
-  const report = newReport();
-  advance(s, 1, 'active', report);
-  if (s.dead) return finishDeath(s, report);
-  if (fireDue(s, report)) return;
-  const id = pickEvent(s, 'inquire', node) || 'generic_inquire';
-  startEvent(s, id, { pre: pre(report) });
-}
-
-export function travel(s, to) {
-  if (busy(s) || to === s.player.loc) return;
-  const r = route(s, s.player.loc, to);
-  if (!r) return;
-  const report = newReport();
-  const from = s.player.loc;
-  advance(s, r.days, 'active', report);
-  if (s.dead) return finishDeath(s, report);
-  s.player.loc = to;
-  s.stats.travels += 1;
-  const st = s.nodes[to];
-  const first = !st.visited;
-  st.visited = true;
-  if (first) {
-    sysGain(s, 5, report);
-    logLife(s, `初到${NODES[to].name}`);
-  }
-  // A road event first, then whatever waits at the destination.
-  const queue = [];
-  if (r.days >= 2 && chance(s, 0.4)) {
-    const tid = pickEvent(s, 'travel', to, { from });
-    if (tid) queue.push(tid);
-  }
-  const due = takeDue(s, to);
-  if (due) queue.push(due.id);
-  const aid = pickEvent(s, 'arrive', to);
-  if (aid) queue.push(aid);
-  if (queue.length) {
-    startEvent(s, queue[0], { pre: pre(report) });
-    s.queue.push(...queue.slice(1));
-  } else {
-    notice(s, NODES[to].name, `${fmtDuration(r.days)}之後，你到了${NODES[to].name}。\n\n${NODES[to].desc}`, {
-      pre: pre(report),
-    });
-  }
-}
-
-export function visit(s, npcId) {
+/** Talk with someone. `near`: they are right here, even across a region's edge. */
+export function visit(s, npcId, { near = false } = {}) {
   if (busy(s)) return;
   const npc = s.npcs[npcId];
-  if (!npc || !npc.alive || npc.loc !== s.player.loc) return;
+  if (!npc || !npc.alive || (!near && npc.loc !== s.player.loc)) return;
   const report = newReport();
-  advance(s, 1, 'active', report);
+  spendHours(s, 1, report);
   if (s.dead) return finishDeath(s, report);
   if (fireDue(s, report)) return;
-  const id = pickEvent(s, 'visit', s.player.loc, { npc: npcId });
+  const id = pickEvent(s, 'visit', npc.loc || s.player.loc, { npc: npcId });
   if (id) return startEvent(s, id, { npcId, pre: pre(report) });
   const last = s.vars['chat_' + npcId] || -999;
   const chips = [];
@@ -357,8 +301,15 @@ export function setTech(s, id) {
   s.player.tech = id;
 }
 
+/** A shop within a few steps, if there is one. */
 export function shopHere(s) {
-  return NODES[s.player.loc].shop ? SHOPS[NODES[s.player.loc].shop] : null;
+  if (!s.world) return null;
+  for (const p of POIS) {
+    if (p.action !== 'shop') continue;
+    if (Math.hypot(p.x - s.world.x, p.y - s.world.y) > 160) continue;
+    return SHOPS[p.shop || NODES[p.region]?.shop] || null;
+  }
+  return null;
 }
 
 export function buy(s, id) {

@@ -4,6 +4,7 @@ import { NODES } from '../world/map.js';
 import { genNpc } from '../world/npcs.js';
 import { rumor } from '../world/rumors.js';
 import { sysGain, trySubstitute } from '../world/system.js';
+import { reveal, unseenSpot } from '../world/fog.js';
 import { addXiuwei, stageReq, INJURY } from './cultivation.js';
 import { advance } from './time.js';
 import { schedule, unschedule } from './schedule.js';
@@ -83,9 +84,25 @@ export function discover(s, id, report) {
   const n = s.nodes[id];
   if (!n || n.known) return;
   n.known = true;
+  // the map shows a glimpse of where it is
+  if (s.world && NODES[id].at) reveal(s, NODES[id].at[0], NODES[id].at[1], 240);
   chip(report, `發現：${NODES[id].name}`, 'good');
   logLife(s, `得知了${NODES[id].name}`);
   sysGain(s, 10, report);
+}
+
+/** Put the player somewhere in the world (the story carried them there). */
+export function moveTo(s, id) {
+  const p = s.player;
+  p.loc = id;
+  s.nodes[id].known = true;
+  s.nodes[id].visited = true;
+  if (s.world && NODES[id].at) {
+    s.world.x = NODES[id].at[0];
+    s.world.y = NODES[id].at[1];
+    s.world.region = id;
+    reveal(s, s.world.x, s.world.y, 260);
+  }
 }
 
 /** A count that may be a fixed number or a [min, max] range. */
@@ -238,8 +255,11 @@ export function applyEffects(s, effects, ctx, report) {
         discover(s, a, report);
         break;
       case 'explore': {
-        const node = s.nodes[b || p.loc];
-        node.explore = clamp(node.explore + a, 0, 100);
+        // wandering off somewhere new: clear the clouds over an unseen corner
+        const id = b || p.loc;
+        const spot = s.world ? unseenSpot(s, id, () => rand(s)) : null;
+        if (spot) reveal(s, spot[0], spot[1], 120 + a * 30);
+        else if (s.nodes[id]) s.nodes[id].explore = clamp(s.nodes[id].explore + a, 0, 100);
         break;
       }
       case 'sysexp':
@@ -289,9 +309,7 @@ export function applyEffects(s, effects, ctx, report) {
         }
         break;
       case 'move':
-        p.loc = a;
-        s.nodes[a].known = true;
-        s.nodes[a].visited = true;
+        moveTo(s, a);
         break;
       case 'buff':
         p.buffs[a] = Math.max(p.buffs[a] || 0, b);

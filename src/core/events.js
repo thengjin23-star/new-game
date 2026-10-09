@@ -21,11 +21,26 @@ function stepsOf(ev) {
   return ev.steps || { start: { text: ev.text, choices: ev.choices, effects: ev.effects } };
 }
 
+/**
+ * Can this event happen now? `trigger` may be a list (any of them will do).
+ * Where in the world: an event with `poi` happens (for the explore trigger)
+ * only at that place — opts.poi; `auto` ones start by themselves when you
+ * walk up (opts.auto). Events with `mob` only come with the creature.
+ */
 export function eligible(s, ev, trigger, node, opts = {}) {
+  if (Array.isArray(trigger)) return trigger.some((t) => eligible(s, ev, t, node, opts));
   if (Array.isArray(ev.trigger) ? !ev.trigger.includes(trigger) : ev.trigger !== trigger) return false;
   if (ev.nodes && !ev.nodes.includes(node)) return false;
   if (ev.npc && trigger === 'visit' && ev.npc !== opts.npc) return false;
   if (!ev.npc && trigger === 'visit') return false;
+  if (trigger === 'explore') {
+    if (ev.poi) {
+      const at = Array.isArray(ev.poi) ? ev.poi : [ev.poi];
+      if (!at.includes(opts.poi)) return false;
+      if (opts.auto && !ev.auto) return false;
+    } else if (opts.poi) return false;
+  }
+  if (ev.mob && !opts.mob) return false;
   const seen = s.seen[ev.id];
   if (ev.once && seen) return false;
   if (seen && ev.cooldown && s.day - seen.last < ev.cooldown) return false;
