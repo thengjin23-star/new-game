@@ -3,22 +3,22 @@
 
 import { stream, hashStr } from '../core/rng.js';
 
-const INK = [36, 33, 30];
-const RED = [168, 50, 42];
-const PAPER = [239, 233, 219];
+export const INK = [36, 33, 30];
+export const RED = [168, 50, 42];
+export const PAPER = [239, 233, 219];
 
-const SEASONS = {
+export const SEASONS = {
   spring: { sky: ['#f1f1e6', '#e8ebdc'], tint: [104, 146, 102], sun: [206, 112, 92, 0.42], particle: 'petal' },
   summer: { sky: ['#eef1ea', '#e1e9e2'], tint: [72, 124, 112], sun: [196, 108, 78, 0.36], particle: 'seed' },
   autumn: { sky: ['#f3e9d6', '#eadbc0'], tint: [172, 112, 56], sun: [178, 58, 40, 0.7], particle: 'leaf' },
   winter: { sky: ['#eeeeee', '#e3e5e7'], tint: [118, 126, 134], sun: [196, 196, 200, 0.55], particle: 'snow' },
 };
 
-const rgba = (c, a) => `rgba(${c[0]},${c[1]},${c[2]},${a})`;
+export const rgba = (c, a) => `rgba(${c[0]},${c[1]},${c[2]},${a})`;
 
 // ── noise & shapes ──
 
-function noise1D(rnd, n) {
+export function noise1D(rnd, n) {
   const v = Array.from({ length: n + 2 }, () => rnd());
   return (x) => {
     const i = Math.floor(x);
@@ -31,7 +31,7 @@ function noise1D(rnd, n) {
 }
 
 /** Ridge points [[x,y]...] across width w. */
-function ridge(rnd, w, { base, amp, scale = 200, sharp = 0.75, peakiness = 1.5 }) {
+export function ridge(rnd, w, { base, amp, scale = 200, sharp = 0.75, peakiness = 1.5 }) {
   const n0 = noise1D(rnd, Math.ceil(w / scale) + 3);
   const n1 = noise1D(rnd, Math.ceil((w / scale) * 2.3) + 3);
   const n2 = noise1D(rnd, Math.ceil((w / scale) * 5.1) + 3);
@@ -135,7 +135,7 @@ function farTrees(ctx, rnd, pts, count, size, alpha) {
 }
 
 /** One pine in the 松針 manner: a leaning trunk, branches, and fans of needles. */
-function pine(ctx, rnd, x, y, size, alpha, tint) {
+export function pine(ctx, rnd, x, y, size, alpha, tint) {
   ctx.save();
   ctx.lineCap = 'round';
   const lean = (rnd() - 0.5) * size * 0.4;
@@ -199,7 +199,7 @@ function pine(ctx, rnd, x, y, size, alpha, tint) {
   ctx.restore();
 }
 
-function leafTree(ctx, rnd, x, y, size, alpha, tint) {
+export function leafTree(ctx, rnd, x, y, size, alpha, tint) {
   ctx.save();
   ctx.strokeStyle = rgba(INK, alpha);
   ctx.lineWidth = Math.max(1, size * 0.06);
@@ -224,7 +224,7 @@ function leafTree(ctx, rnd, x, y, size, alpha, tint) {
   ctx.restore();
 }
 
-function roof(ctx, x, y, w, rise, alpha, color = INK) {
+export function roof(ctx, x, y, w, rise, alpha, color = INK) {
   ctx.fillStyle = rgba(color, alpha);
   ctx.beginPath();
   ctx.moveTo(x - w / 2 - w * 0.16, y + rise * 0.15);
@@ -235,7 +235,7 @@ function roof(ctx, x, y, w, rise, alpha, color = INK) {
   ctx.fill();
 }
 
-function house(ctx, x, y, s, alpha, opts = {}) {
+export function house(ctx, x, y, s, alpha, opts = {}) {
   const w = 30 * s;
   const hgt = 15 * s;
   ctx.fillStyle = rgba(PAPER, 0.96);
@@ -255,12 +255,12 @@ function house(ctx, x, y, s, alpha, opts = {}) {
   }
 }
 
-function hall(ctx, x, y, s, alpha) {
+export function hall(ctx, x, y, s, alpha) {
   house(ctx, x, y, s * 1.5, alpha, { window: true });
   roof(ctx, x, y - 15 * s * 1.5 - 7 * s, 30 * s, 7 * s, alpha);
 }
 
-function pagoda(ctx, x, y, s, alpha, tiers = 5) {
+export function pagoda(ctx, x, y, s, alpha, tiers = 5) {
   let w = 22 * s;
   let yy = y;
   for (let i = 0; i < tiers; i++) {
@@ -282,7 +282,7 @@ function pagoda(ctx, x, y, s, alpha, tiers = 5) {
   ctx.stroke();
 }
 
-function swordInGround(ctx, x, y, len, alpha, lean) {
+export function swordInGround(ctx, x, y, len, alpha, lean) {
   ctx.strokeStyle = rgba(INK, alpha);
   ctx.lineWidth = 1.1;
   const tx = x + lean;
@@ -294,7 +294,7 @@ function swordInGround(ctx, x, y, len, alpha, lean) {
   ctx.stroke();
 }
 
-function brokenPillar(ctx, rnd, x, y, w, hgt, alpha) {
+export function brokenPillar(ctx, rnd, x, y, w, hgt, alpha) {
   ctx.fillStyle = rgba(INK, alpha * 0.55);
   ctx.beginPath();
   ctx.moveTo(x - w / 2, y);
@@ -307,7 +307,7 @@ function brokenPillar(ctx, rnd, x, y, w, hgt, alpha) {
   ctx.strokeRect(x - w / 2, y - hgt, w, hgt);
 }
 
-function grass(ctx, rnd, w, y0, count, alpha, tint) {
+export function grass(ctx, rnd, w, y0, count, alpha, tint) {
   ctx.lineCap = 'round';
   for (let i = 0; i < count; i++) {
     const x = rnd() * w;
@@ -339,7 +339,7 @@ function water(ctx, rnd, w, y0, y1, alpha) {
   }
 }
 
-function boat(ctx, x, y, s, alpha) {
+export function boat(ctx, x, y, s, alpha) {
   ctx.fillStyle = rgba(INK, alpha);
   ctx.beginPath();
   ctx.moveTo(x - 22 * s, y - 3 * s);
@@ -359,7 +359,7 @@ function boat(ctx, x, y, s, alpha) {
   ctx.stroke();
 }
 
-function crane(ctx, x, y, s, alpha) {
+export function crane(ctx, x, y, s, alpha) {
   ctx.strokeStyle = rgba(INK, alpha);
   ctx.lineWidth = 1;
   ctx.beginPath();
@@ -414,7 +414,7 @@ function waterfall(ctx, rnd, x, top, bottom, w, alpha) {
 }
 
 /** A textured rock face: noisy outline, ink gradient, dry brush strokes. */
-function rockFace(ctx, rnd, outline, alpha, { strokes = 90, edge = null } = {}) {
+export function rockFace(ctx, rnd, outline, alpha, { strokes = 90, edge = null } = {}) {
   let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
   for (const [x, y] of outline) {
     minX = Math.min(minX, x); maxX = Math.max(maxX, x);
@@ -815,7 +815,7 @@ function recipe(kind, rnd, W, H, season) {
   return L;
 }
 
-function figure(ctx, x, y, s, pose, t, still) {
+export function figure(ctx, x, y, s, pose, t, still) {
   ctx.save();
   ctx.fillStyle = rgba(INK, 0.9);
   const sway = still ? 0 : Math.sin(t / 1100) * 1.2 * s;
@@ -864,7 +864,7 @@ function figure(ctx, x, y, s, pose, t, still) {
   ctx.restore();
 }
 
-function makeParticles(kind, rnd, W, H, count) {
+export function makeParticles(kind, rnd, W, H, count) {
   return Array.from({ length: count }, () => ({
     x: rnd() * W,
     y: rnd() * H,
@@ -875,7 +875,7 @@ function makeParticles(kind, rnd, W, H, count) {
   }));
 }
 
-function drawParticles(ctx, kind, list, W, H, dt, t, still) {
+export function drawParticles(ctx, kind, list, W, H, dt, t, still) {
   if (!list.length) return;
   for (const p of list) {
     if (!still) {

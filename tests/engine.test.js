@@ -7,7 +7,7 @@ import * as E from '../src/world/explore.js';
 import { atBottleneck, realmLabel, REALMS } from '../src/core/cultivation.js';
 import { exportCode, importCode, migrate } from '../src/core/save.js';
 import { canSecludeAt, NODES } from '../src/world/map.js';
-import { POIS, MOBS } from '../src/world/places.js';
+import { POIS, MOBS, NPC_SPOTS } from '../src/world/places.js';
 import { world, nearestOpen } from '../src/world/terrain.js';
 import { stream } from '../src/core/rng.js';
 import { EVENT_LIST } from '../src/content/index.js';
@@ -72,6 +72,7 @@ function playRandom(seed, steps) {
     ...POIS.map((p) => [p.x, p.y + 30, p.id]),
     ...POIS.filter((p) => p.action === 'inquire').map((p) => [p.x, p.y + 30, p.id]),
     ...MOBS.map((m) => [m.x + 140, m.y + 100]),
+    ...Object.entries(NPC_SPOTS).flatMap(([id, spots]) => Object.values(spots).map(([x, y]) => [x, y + 24, id])),
     ...Object.values(NODES).filter((n) => n.at).map((n) => n.at),
     ...world().herbs.filter((_, k) => k % 4 === 0).map((h) => [h.x + 20, h.y]),
   ];

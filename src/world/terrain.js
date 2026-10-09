@@ -113,7 +113,7 @@ const BASE = {
   farmland: () => T.FARM,
   lingxi_valley: (x, y) => (fbm(x / 140, y / 140, 6) > 0.58 ? T.FOREST : T.GRASS),
   qingyun_sect: (x, y) => (fbm(x / 200, y / 200, 7) > 0.55 ? T.FOREST : T.GRASS),
-  ancient_ruins: (x, y) => (fbm(x / 220, y / 220, 8) > 0.64 ? T.TALLGRASS : T.WASTE),
+  ancient_ruins: () => T.WASTE,
   black_forest: (x, y) => (fbm(x / 260, y / 260, 9) > 0.55 ? T.DEEP : T.FOREST),
   qingshi_hill: (x, y) => {
     const n = fbm(x / 240, y / 240, 10);
@@ -762,7 +762,7 @@ function makeMountains(g) {
     return 7;
   };
   const taken = [];
-  const free = (x, y, r) => !taken.some(([tx, ty, tr]) => (tx - x) ** 2 + (ty - y) ** 2 < (r + tr) ** 2 * 0.36);
+  const free = (x, y, r, k = 0.25) => !taken.some(([tx, ty, tr]) => (tx - x) ** 2 + (ty - y) ** 2 < (r + tr) ** 2 * k);
   // how far the mountain may spread sideways before it would cover open ground in its row
   const span = (i, j) => {
     let l = 0;
@@ -795,21 +795,23 @@ function makeMountains(g) {
       out.push({ kind: 'mount', x, y, w, h, v: Math.floor(hash2(i, j, 302) * 12) });
     }
   }
-  // cliffs
+  // cliffs (斷魂崖 gets one tall face of its own, below)
+  const onCliffLine = (x, y) => CLIFF_LINES.some(([[ax, ay], [bx, by], th]) => segDist(x, y, ax, ay, bx, by) < th + 30);
   for (let j = ROWS - 1; j >= 0; j--) {
     for (let i = 0; i < COLS; i++) {
       if (!isCliff(i, j)) continue;
       const x = cellX(i);
       const y = cellY(j) + CELL * 0.3;
-      if (!free(x, y, 46)) continue;
-      taken.push([x, y, 46]);
+      if (onCliffLine(x, y)) continue;
+      if (!free(x, y, 34, 0.5)) continue;
+      taken.push([x, y, 34]);
       const n = hash2(i, j, 310);
-      out.push({ kind: 'cliff', x, y, w: 96 + n * 40, h: 80 + n * 50, v: Math.floor(hash2(i, j, 311) * 6) });
+      out.push({ kind: 'cliff', x, y, w: 64 + n * 26, h: 46 + n * 26, v: Math.floor(hash2(i, j, 311) * 6) });
     }
   }
   // 斷魂崖 stands taller than the rest
   for (const [[ax, ay], [bx, by]] of CLIFF_LINES) {
-    out.push({ kind: 'bigcliff', x: (ax + bx) / 2, y: Math.max(ay, by) + 14, w: Math.hypot(bx - ax, by - ay) + 90, h: 300, v: 0 });
+    out.push({ kind: 'bigcliff', x: (ax + bx) / 2, y: Math.max(ay, by) + 14, w: Math.hypot(bx - ax, by - ay) + 50, h: 150, v: 0 });
   }
   return out;
 }

@@ -21,6 +21,12 @@ export function h(spec, attrs, ...children) {
   return el;
 }
 
+/** Append children, skipping null/false and flattening arrays. */
+export function put(el, ...children) {
+  append(el, children);
+  return el;
+}
+
 function append(el, children) {
   for (const c of children) {
     if (c === null || c === undefined || c === false) continue;
