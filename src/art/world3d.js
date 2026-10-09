@@ -8,7 +8,8 @@
 import * as THREE from './gl/three.js';
 import { WORLD_W, WORLD_H } from '../world/geo.js';
 import { world, hash2 } from '../world/terrain.js';
-import { POIS } from '../world/places.js';
+import { POIS, STRUCTURES } from '../world/places.js';
+import { VALLEY, LAKES } from '../world/geo.js';
 import { NODES } from '../world/map.js';
 import { heightAt } from '../world/height.js';
 import { fogOf } from '../world/fog.js';
@@ -20,10 +21,12 @@ import { createDecor } from './gl/decor.js';
 import { createWater } from './gl/water.js';
 import { createClouds } from './gl/clouds.js';
 import { createBuildings } from './gl/buildings.js';
+import { createGlows } from './gl/glows.js';
 import { drawPerson, drawMob, aura, LOOKS, FOLK_LOOKS, FIGURE } from './figures.js';
 import { propSprite, SPRITE } from './sprites.js';
 import { makeParticles, drawParticles } from './ink.js';
 import { seasonOf } from '../core/calendar.js';
+import { asset } from './assets.js';
 import { stream } from '../core/rng.js';
 
 const DEG = Math.PI / 180;
@@ -41,8 +44,9 @@ export function canDraw3D() {
   }
 }
 
-export function createWorld3D(canvas, { onFrame, idle } = {}) {
-  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
+export function createWorld3D(canvas, { onFrame, idle, quality = 'high', onSlow = null } = {}) {
+  // at high pixel densities the pixels are small enough without multisampling
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias: (window.devicePixelRatio || 1) < 1.8, powerPreference: 'high-performance' });
   renderer.outputColorSpace = THREE.LinearSRGBColorSpace;
   renderer.setClearColor(0xe9e5d4, 1);
 
@@ -66,9 +70,15 @@ export function createWorld3D(canvas, { onFrame, idle } = {}) {
   scene.add(decor.mesh);
   const clouds = createClouds(env);
   scene.add(clouds.group);
-  const cards = createCards(env, { size: 1024, slot: 128, res: 2, max: 64 });
+  if (quality === 'low') clouds.group.children.forEach((m, n) => (m.visible = n === 0));
+  const cards = createCards(env, renderer, { size: 1024, slot: 128, res: 2, max: 64 });
   scene.add(cards.mesh, cards.ghost);
+  const glows = createGlows();
+  scene.add(glows.lights.mesh, glows.mists.mesh, glows.shadows.mesh);
+  const mood = { tint: [0, 0, 0], amount: 0, dim: 1 };
 
+  // when the phone takes the GPU away and gives it back, the cards are painted again
+  canvas.addEventListener('webglcontextrestored', () => cards.reset());
   const reduce = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
   let s = null;
   let W = 1;
@@ -93,11 +103,15 @@ export function createWorld3D(canvas, { onFrame, idle } = {}) {
   const ray = new THREE.Raycaster();
   const v3 = new THREE.Vector3();
 
+  let q = quality;
+  let slowT = 0;
+  let frameEMA = 16;
+
   function resize() {
     const rect = canvas.getBoundingClientRect();
     W = Math.max(1, Math.round(rect.width));
     H = Math.max(1, Math.round(rect.height));
-    dpr = Math.min(2, window.devicePixelRatio || 1);
+    dpr = q === 'low' ? 1 : Math.min(2, window.devicePixelRatio || 1);
     renderer.setPixelRatio(dpr);
     renderer.setSize(W, H, false);
     overlay.width = Math.round(W * dpr);
@@ -208,8 +222,20 @@ export function createWorld3D(canvas, { onFrame, idle } = {}) {
 
   // ── the people and things standing about ──
 
+  /** A finished picture for a card's slot, drawn with its foot at the bottom middle. */
+  function picture(key, tall) {
+    const img = asset(`card/${key}`);
+    if (!img) return null;
+    const h = tall;
+    const w = (img.naturalWidth / img.naturalHeight) * h;
+    return (c) => c.drawImage(img, -w / 2, -h, w, h);
+  }
+
   function standing() {
     cards.begin();
+    const sh = glows.shadows;
+    sh.begin();
+    const foot = (x, y, r, a = 0.3) => sh.add(x, heightAt(x, y) + 0.6, y, r, 0.1, 0.09, 0.08, a);
     const w = s.world;
     const near = (x, y, r = 900) => Math.abs(x - focus.x) < r && y > focus.y - 1500 && y < focus.y + 700;
     FIGURE.shadows = false;
@@ -217,41 +243,237 @@ export function createWorld3D(canvas, { onFrame, idle } = {}) {
     for (const p of POIS) {
       if (!near(p.x, p.y) || !E.poiVisible(s, p)) continue;
       const kind = p.spriteIf ? (p.spriteIf(s) ? p.sprite : null) : p.sprite;
-      if (!kind) continue;
-      const sp = propSprite(kind);
-      if (!sp) continue;
-      cards.add(`prop:${kind}`, p.x, heightAt(p.x, p.y), p.y, (c) => c.drawImage(sp.c, -sp.fx, -sp.fy, sp.w, sp.h));
+      const sp = kind && propSprite(kind);
+      if (sp) {
+        // a few things in the world move: a glint on a sword, lightning in a split tree, a girl's tears
+        const moving = kind === 'sword_glint' || kind === 'lightning_tree' || kind === 'girl';
+        cards.add(`prop:${kind}`, p.x, heightAt(p.x, p.y), p.y, (c) => {
+          c.drawImage(sp.c, -sp.fx, -sp.fy, sp.w, sp.h);
+          if (kind === 'sword_glint') sparkle(c, 1, -22, 1);
+          if (kind === 'lightning_tree' && Math.sin(t * 3 + p.x) > 0.7) {
+            c.strokeStyle = 'rgba(150,190,255,0.9)';
+            c.lineWidth = 0.9;
+            c.beginPath();
+            c.moveTo(-2, -40);
+            c.lineTo(3, -30);
+            c.lineTo(-1, -22);
+            c.stroke();
+          }
+          if (kind === 'girl') {
+            c.strokeStyle = 'rgba(80,110,160,0.6)';
+            c.lineWidth = 0.8;
+            c.beginPath();
+            c.moveTo(5, -20 + Math.sin(t * 6) * 1.5);
+            c.lineTo(9, -23);
+            c.stroke();
+          }
+        }, { animated: moving, fps: 12 });
+        foot(p.x, p.y, sp.w * 0.45, 0.24);
+      }
+      // a crowd, a wedding's lanterns, a camp
+      if (p.crowd?.(s)) {
+        for (let n = 0; n < 9; n++) {
+          const x = p.x + (hash2(n, 2, p.x) - 0.5) * 120;
+          const y = p.y + 6 + hash2(n, 1, p.x) * 50;
+          cards.add(`crowd:${p.id}:${n}`, x, heightAt(x, y), y, (c) => drawPerson(c, 0, 0, FOLK_LOOKS[n % FOLK_LOOKS.length], { t: t + n, face: x < p.x ? 1 : -1 }), { animated: true, fps: 6 });
+          foot(x, y, 8);
+        }
+      }
+      if (p.festive?.(s)) cards.add('festive', p.x, heightAt(p.x, p.y), p.y + 2, festive);
+      if (p.camp?.(s)) {
+        for (let n = 0; n < 4; n++) {
+          const x = p.x + (n - 1.5) * 46 + (hash2(n, 3, 1) - 0.5) * 16;
+          const y = p.y + 40 + n * 12;
+          if (n % 2) cards.add(`camp:${p.id}:${n}`, x, heightAt(x, y), y, (c) => drawPerson(c, 0, 0, FOLK_LOOKS[4], { t: t + n, face: n < 2 ? 1 : -1 }), { animated: true, fps: 6 });
+          else cards.add('camp:tent', x, heightAt(x, y), y, tent);
+          foot(x, y, n % 2 ? 8 : 15);
+        }
+      }
     }
     for (const h of world().herbs) {
       if (!near(h.x, h.y, 600) || !E.herbReady(s, h)) continue;
       const sp = propSprite('herb');
-      cards.add('prop:herb', h.x, heightAt(h.x, h.y), h.y, (c) => c.drawImage(sp.c, -sp.fx, -sp.fy, sp.w, sp.h));
+      cards.add('prop:herb', h.x, heightAt(h.x, h.y), h.y, (c) => {
+        c.drawImage(sp.c, -sp.fx, -sp.fy, sp.w, sp.h);
+        sparkle(c, 0, -13, 0.8 + 0.4 * Math.sin(t * 3));
+      }, { animated: true, fps: 10 });
     }
     for (const n of E.peopleInWorld(s)) {
       if (!near(n.x, n.y)) continue;
       const look = LOOKS[n.id] || LOOKS.stranger;
       const face = n.x > w.x ? -1 : 1;
-      cards.add(`npc:${n.id}`, n.x, heightAt(n.x, n.y), n.y, (c) => drawPerson(c, 0, 0, look, { t: t + n.x * 0.01, face }), { animated: true });
+      const pic = picture(`npc:${n.id}`, look.big ? 58 : 50);
+      cards.add(`npc:${n.id}`, n.x, heightAt(n.x, n.y), n.y, pic || ((c) => drawPerson(c, 0, 0, look, { t: t + n.x * 0.01, face })), { animated: !pic, fps: 8 });
+      foot(n.x, n.y, look.big ? 11 : 9);
     }
     for (const fk of E.folkInWorld(s)) {
       if (!near(fk.x, fk.y)) continue;
-      cards.add(`folk:${fk.id ?? fk.line}`, fk.x, heightAt(fk.x, fk.y), fk.y, (c) => drawPerson(c, 0, 0, FOLK_LOOKS[fk.look], { t: t + fk.line, moving: fk.moving, face: fk.face }), { animated: true });
+      const pic = picture(`folk:${fk.look}`, 48);
+      cards.add(`folk:${fk.id ?? fk.line}`, fk.x, heightAt(fk.x, fk.y), fk.y, pic || ((c) => drawPerson(c, 0, 0, FOLK_LOOKS[fk.look], { t: t + fk.line, moving: fk.moving, face: fk.face })), { animated: !pic, fps: fk.moving ? 24 : 8 });
+      foot(fk.x, fk.y, 8.5);
     }
     for (const m of E.mobsInWorld(s)) {
       m.members.forEach((b, i) => {
         if (!near(b.x, b.y)) return;
-        cards.add(`mob:${m.def.id}:${i}`, b.x, heightAt(b.x, b.y), b.y, (c) => drawMob(c, m.def.kind, 0, 0, { t: t + b.x * 0.01, moving: b.moving, face: b.face }), { animated: true });
+        const pic = picture(`mob:${m.def.kind}`, m.def.kind === 'wolf' ? 26 : 44);
+        cards.add(`mob:${m.def.id}:${i}`, b.x, heightAt(b.x, b.y), b.y, pic || ((c) => drawMob(c, m.def.kind, 0, 0, { t: t + b.x * 0.01, moving: b.moving, face: b.face })), { animated: !pic, fps: b.moving ? 24 : 8 });
+        if (m.def.kind !== 'ghost') foot(b.x, b.y, 12);
       });
     }
     const sit = !!s.secl;
     const moving = E.liveOf(s).moving;
+    const me = !sit && picture('player', 50);
     cards.add('player', w.x, heightAt(w.x, w.y), w.y, (c) => {
       if (sit) aura(c, 0, 0, t, 1);
-      drawPerson(c, 0, 0, LOOKS.player, { t, moving, face: w.face || 1, sit });
-    }, { animated: true, ghost: true });
+      if (me) me(c);
+      else drawPerson(c, 0, 0, LOOKS.player, { t, moving, face: w.face || 1, sit });
+    }, { animated: true, fps: moving || sit ? 30 : 10, ghost: true });
+    foot(w.x, w.y, sit ? 13 : 9.5, 0.34);
+    sh.end();
     FIGURE.shadows = true;
     SPRITE.shadows = true;
     cards.end();
+  }
+
+  // ── light after dark, and the mists ──
+
+  /** Doors whose lamps are lit at night: how many lights, by kind of building. */
+  const LIT = { mansion: 2, teahouse: 2, auction: 3, shop: 1, house: 1, farmhouse: 1, hall: 1, bighall: 2, tower: 1, teashed: 1, hut: 1, pavilion: 1 };
+
+  function lightsAndMists() {
+    const dark = E.darkness(s.tod);
+    const L = glows.lights;
+    const M = glows.mists;
+    L.begin();
+    M.begin();
+    const bits = fogOf(s).bits;
+    const near = (x, y, r = 1300) => Math.abs(x - focus.x) < r && y > focus.y - 1700 && y < focus.y + 800 && !!bits[Math.floor(y / 40) * 130 + Math.floor(x / 40)];
+    if (dark > 0.04) {
+      for (const st of STRUCTURES) {
+        const lit = LIT[st.sprite];
+        if (!lit || !near(st.x, st.y)) continue;
+        const g = heightAt(st.x, st.y);
+        const fz = st.y + st.h / 2 + 3;
+        L.add(st.x, g + 9, fz, 18 + st.w * 0.12, 1, 0.62, 0.3, 0.5 * dark);
+        if (lit > 1) for (const k of [-1, 1]) L.add(st.x + k * st.w * 0.28, g + 16, fz + 2, 12, 1, 0.5, 0.24, 0.55 * dark);
+      }
+      for (const st of STRUCTURES) if (st.sprite === 'tent' && near(st.x, st.y)) L.add(st.x - st.w / 2 - 14, heightAt(st.x, st.y) + 4, st.y + st.h / 2 + 4, 34, 1, 0.55, 0.25, 0.7 * dark);
+      // your own small light, warmer as your cultivation deepens
+      const w = s.world;
+      L.add(w.x, heightAt(w.x, w.y) + 14, w.y, 70 + 10 * Math.min(4, s.player.realm), 1, 0.86, 0.66, 0.2 * dark);
+    }
+    for (const p of POIS) {
+      if (!near(p.x, p.y) || !E.poiVisible(s, p)) continue;
+      const g = heightAt(p.x, p.y);
+      if (p.glow?.(s)) {
+        const c = p.region === 'fox_shrine' ? [0.45, 0.65, 1] : p.region === 'ancient_ruins' ? [0.62, 0.5, 1] : [0.95, 0.92, 0.75];
+        L.add(p.x, g + 16 + Math.sin(t * 2 + p.x) * 2, p.y, 42, ...c, 0.2 + 0.45 * dark);
+      }
+      if (p.camp?.(s) && dark > 0.04) L.add(p.x, g + 6, p.y + 50, 46, 1, 0.55, 0.25, 0.7 * dark);
+      if (p.zone) {
+        for (let k = 0; k < 5; k++) {
+          const a = t * 0.2 + k * 1.3;
+          M.add(p.x + Math.cos(a) * p.zone * 0.35, g + 18, p.y + Math.sin(a * 0.8) * p.zone * 0.2, p.zone * 0.8, 0.5, 0.36, 0.6, 0.26);
+        }
+      }
+    }
+    for (const h of world().herbs) {
+      if (!near(h.x, h.y, 700) || !E.herbReady(s, h)) continue;
+      L.add(h.x, heightAt(h.x, h.y) + 12, h.y, 9 + 2 * Math.sin(t * 3 + h.id), 0.85, 1, 0.85, 0.25 + 0.35 * dark);
+    }
+    // the spirit mist that lies in 靈溪谷, morning mist on the lake
+    if (Math.hypot(focus.x - VALLEY.cx, focus.y - VALLEY.cy) < 1500) {
+      for (let k = 0; k < 14; k++) {
+        const a = hash2(k, 3, 41) * Math.PI * 2;
+        const r = Math.sqrt(hash2(k, 4, 41)) * 0.8;
+        const x = VALLEY.cx + Math.cos(a) * VALLEY.rx * r + Math.sin(t * 0.07 + k) * 30;
+        const y = VALLEY.cy + Math.sin(a) * VALLEY.ry * r;
+        M.add(x, heightAt(x, y) + 20, y, 130, 0.82, 0.95, 0.92, 0.2);
+      }
+    }
+    const morning = s.tod >= 4.5 && s.tod < 9.5 ? Math.sin(((s.tod - 4.5) / 5) * Math.PI) : 0;
+    if (morning > 0.02) {
+      const [cx, cy, rx, ry] = LAKES[0];
+      if (near(cx, cy, 1600)) {
+        for (let k = 0; k < 12; k++) {
+          const x = cx + (hash2(k, 5, 42) - 0.5) * rx * 1.8 + Math.sin(t * 0.05 + k) * 40;
+          const y = cy + (hash2(k, 6, 42) - 0.5) * ry * 1.6;
+          M.add(x, 14, y, 150, 0.95, 0.95, 0.93, 0.3 * morning);
+        }
+      }
+    }
+    L.end();
+    M.end();
+  }
+
+  /** Each region has its own air: the valley breathes spirit, the forest broods, the ruins are dusty. */
+  const MOODS = {
+    lingxi_valley: { tint: [0.8, 0.93, 0.9], amount: 0.38, dim: 1, motes: 'mote' },
+    black_forest: { tint: [0.5, 0.58, 0.52], amount: 0.42, dim: 0.86, motes: 'darkleaf' },
+    ancient_ruins: { tint: [0.86, 0.74, 0.6], amount: 0.36, dim: 0.95, motes: 'ash' },
+    qingyun_sect: { tint: [0.9, 0.94, 0.99], amount: 0.3, dim: 1.02, motes: null },
+    mirror_lake: { tint: [0.82, 0.88, 0.93], amount: 0.3, dim: 1, motes: null },
+    fox_shrine: { tint: [0.86, 0.82, 0.9], amount: 0.26, dim: 0.96, motes: null },
+    hidden_cave: { tint: [0.6, 0.62, 0.66], amount: 0.3, dim: 0.9, motes: null },
+  };
+
+  function regionMood(dt) {
+    const m = MOODS[s.player.loc] || { tint: [0, 0, 0], amount: 0, dim: 1 };
+    const k = Math.min(1, dt * 0.8);
+    for (let i = 0; i < 3; i++) mood.tint[i] += ((m.amount ? m.tint[i] : mood.tint[i]) - mood.tint[i]) * k;
+    mood.amount += (m.amount - mood.amount) * k;
+    mood.dim += (m.dim - mood.dim) * k;
+    const hz = env.u.uHaze.value;
+    hz.setRGB(hz.r + (mood.tint[0] - hz.r) * mood.amount, hz.g + (mood.tint[1] - hz.g) * mood.amount, hz.b + (mood.tint[2] - hz.b) * mood.amount);
+    env.u.uAmbient.value.multiplyScalar(mood.dim);
+    return m.motes;
+  }
+
+  function sparkle(c, x, y, a) {
+    const r = 3 + Math.sin(t * 5 + x) * 1;
+    c.strokeStyle = `rgba(255,248,210,${0.9 * a})`;
+    c.lineWidth = 0.8;
+    c.beginPath();
+    c.moveTo(x - r, y);
+    c.lineTo(x + r, y);
+    c.moveTo(x, y - r);
+    c.lineTo(x, y + r);
+    c.stroke();
+  }
+
+  function festive(c) {
+    for (const dx of [-26, 26]) {
+      c.strokeStyle = 'rgba(36,33,30,0.6)';
+      c.lineWidth = 0.6;
+      c.beginPath();
+      c.moveTo(dx, -30);
+      c.lineTo(dx, -22);
+      c.stroke();
+      c.fillStyle = 'rgba(190,40,34,0.95)';
+      c.beginPath();
+      c.ellipse(dx, -18, 3.4, 4.2, 0, 0, Math.PI * 2);
+      c.fill();
+    }
+    c.fillStyle = 'rgba(190,40,34,0.9)';
+    c.fillRect(-7, -34, 14, 10);
+    c.fillStyle = 'rgba(240,210,120,1)';
+    c.font = `700 8px ${FONT}`;
+    c.textAlign = 'center';
+    c.textBaseline = 'middle';
+    c.fillText('囍', 0, -29);
+  }
+
+  function tent(c) {
+    c.fillStyle = 'rgba(120,100,80,0.95)';
+    c.beginPath();
+    c.moveTo(-14, 0);
+    c.lineTo(0, -18);
+    c.lineTo(14, 0);
+    c.closePath();
+    c.fill();
+    c.strokeStyle = 'rgba(36,33,30,0.7)';
+    c.lineWidth = 0.8;
+    c.stroke();
   }
 
   // ── the flat layer: marks on the ground, names, weather ──
@@ -270,6 +492,8 @@ export function createWorld3D(canvas, { onFrame, idle } = {}) {
     octx.stroke();
     octx.setLineDash([]);
   }
+
+  let motes = null;
 
   function drawOverlay(dt) {
     octx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -299,14 +523,28 @@ export function createWorld3D(canvas, { onFrame, idle } = {}) {
       groundRing(tapMark.x, tapMark.y, 6 + k * 18, `rgba(168,50,42,${0.6 * (1 - k)})`, 1.6);
     }
     groundRing(w.x, w.y, 11, 'rgba(168,50,42,0.3)', 2);
+    // a beast that has seen you
+    octx.font = `700 13px ${FONT}`;
+    octx.textAlign = 'center';
+    octx.textBaseline = 'middle';
+    octx.fillStyle = 'rgba(168,50,42,0.92)';
+    for (const m of E.mobsInWorld(s)) {
+      if (m.state !== 'chase') continue;
+      for (const b of m.members) {
+        const [bx, by] = worldToScreen(b.x, b.y, 38);
+        if (bx > -20 && bx < W + 20 && by > -20 && by < H + 20) octx.fillText('！', bx, by);
+      }
+    }
     drawLabels();
     drawPlaceNames();
-    // weather and paper
-    const kind = { spring: 'petal', summer: 'seed', autumn: 'leaf', winter: 'snow' }[season];
+    // weather and paper; a region's own motes over the season's
+    const dark = E.darkness(s.tod);
+    const fireflies = dark > 0.6 && (season === 'summer' || season === 'spring') && !['qingshi_town', 'luoxia_market', 'qingyun_sect'].includes(s.player.loc);
+    const kind = motes || (fireflies ? 'firefly' : { spring: 'petal', summer: 'seed', autumn: 'leaf', winter: 'snow' }[season]);
     if (!reduce) {
       if (particleKind !== kind) {
         particleKind = kind;
-        particles = makeParticles(kind, stream(5), W, H, kind === 'snow' ? 60 : kind === 'seed' ? 10 : 22);
+        particles = makeParticles(kind, stream(5), W, H, kind === 'snow' ? 60 : kind === 'seed' ? 10 : kind === 'mote' ? 26 : kind === 'firefly' ? 18 : 22);
       }
       drawParticles(octx, kind, particles, W, H, dt * 1000, t * 1000, false);
     }
@@ -391,6 +629,7 @@ export function createWorld3D(canvas, { onFrame, idle } = {}) {
     if (nowSeason !== season) season = nowSeason;
     env.u.uTime.value = t;
     env.setLight(s.tod, E.darkness(s.tod), season);
+    motes = regionMood(dt);
     renderer.setClearColor(env.u.uHaze.value, 1);
     followCamera(dt, snap);
     updateFog();
@@ -398,14 +637,33 @@ export function createWorld3D(canvas, { onFrame, idle } = {}) {
     decor.update(season);
     water.update(season);
     standing();
+    lightsAndMists();
     renderer.render(scene, camera);
     drawOverlay(dt);
   }
 
+  function applyQuality() {
+    // the lighter picture: fewer pixels, one layer of cloud
+    clouds.group.children.forEach((m, n) => (m.visible = q === 'high' || n === 0));
+    resize();
+  }
+
   function frame(now) {
     if (!running) return;
-    const dt = Math.min(0.1, (now - (last || now)) / 1000);
+    const raw = (now - (last || now)) / 1000;
+    const dt = Math.min(0.1, raw);
     last = now;
+    // watch for a device that cannot keep up, and lighten the load once
+    if (raw > 0 && raw < 1 && !idle?.() && t > 6) {
+      frameEMA += (raw * 1000 - frameEMA) * 0.05;
+      slowT = frameEMA > 40 ? slowT + raw : 0;
+      if (slowT > 4 && q === 'high' && onSlow) {
+        q = 'low';
+        applyQuality();
+        onSlow();
+        onSlow = null;
+      }
+    }
     t += dt;
     onFrame?.(dt);
     if (s && (!idle?.() || now - lastDraw > 180)) {
@@ -451,6 +709,11 @@ export function createWorld3D(canvas, { onFrame, idle } = {}) {
     setHighlight(tg) {
       highlight = tg;
     },
+    setQuality(next) {
+      q = next;
+      onSlow = null;
+      applyQuality();
+    },
     markTap(x, y) {
       tapMark = { x, y, t };
     },
@@ -466,6 +729,9 @@ export function createWorld3D(canvas, { onFrame, idle } = {}) {
       water.dispose();
       clouds.dispose();
       cards.dispose();
+      glows.lights.dispose();
+      glows.mists.dispose();
+      glows.shadows.dispose();
       renderer.dispose();
       overlay.remove();
     },

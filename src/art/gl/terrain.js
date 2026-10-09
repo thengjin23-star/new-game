@@ -178,11 +178,14 @@ export function createTerrain(renderer, env) {
   const tiles = [];
   for (let ty = 0; ty < TY; ty++) {
     for (let tx = 0; tx < TX; tx++) {
-      const mat = base.clone();
-      // clones copy uniform values; share the environment's objects instead
-      Object.assign(mat.uniforms, env.u, { uGlobal: base.uniforms.uGlobal });
-      mat.uniforms.uPaint = { value: null };
-      mat.uniforms.uPainted = { value: 0 };
+      // a material per tile for its own painting; everything else is shared
+      // by reference (cloning would copy every texture's data, per tile)
+      const mat = new THREE.ShaderMaterial({
+        vertexShader: VERT,
+        fragmentShader: FRAG,
+        uniforms: { ...env.u, uGlobal: base.uniforms.uGlobal, uPaint: { value: null }, uPainted: { value: 0 } },
+      });
+      mat.extensions = { derivatives: true };
       const mesh = new THREE.Mesh(tileGeometry(tx, ty, H), mat);
       mesh.matrixAutoUpdate = false;
       mesh.frustumCulled = true;

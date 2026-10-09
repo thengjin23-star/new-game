@@ -58,10 +58,15 @@ void main() {
  * A layer of cards drawn from one atlas. Slots are slot×slot pixels; at
  * `res` pixels per world unit a slot holds (slot/res)² world units.
  */
-export function createCards(env, { size = 1024, slot = 128, res = 2, max = 64 } = {}) {
+export function createCards(env, renderer, { size = 1024, slot = 128, res = 2, max = 64 } = {}) {
+  // the atlas starts empty; each slot is painted on a small canvas of its
+  // own and copied straight into the texture, so a moving figure costs one
+  // small upload, not the whole atlas
   const canvas = document.createElement('canvas');
   canvas.width = canvas.height = size;
-  const ctx = canvas.getContext('2d');
+  const slotCanvas = document.createElement('canvas');
+  slotCanvas.width = slotCanvas.height = slot;
+  const ctx = slotCanvas.getContext('2d');
   const tex = new THREE.CanvasTexture(canvas);
   tex.colorSpace = THREE.NoColorSpace;
   tex.premultiplyAlpha = false;
@@ -95,11 +100,15 @@ export function createCards(env, { size = 1024, slot = 128, res = 2, max = 64 } 
   mesh.renderOrder = 2;
 
   // the same cards again, drawn through anything in front of them
-  const ghostMat = material.clone();
-  Object.assign(ghostMat.uniforms, env.u, { uAtlas: material.uniforms.uAtlas, uGhost: { value: 1 } });
-  ghostMat.transparent = true;
-  ghostMat.depthTest = false;
-  ghostMat.depthWrite = false;
+  const ghostMat = new THREE.ShaderMaterial({
+    vertexShader: VERT,
+    fragmentShader: FRAG,
+    uniforms: { ...env.u, uAtlas: material.uniforms.uAtlas, uGhost: { value: 1 } },
+    side: THREE.DoubleSide,
+    transparent: true,
+    depthTest: false,
+    depthWrite: false,
+  });
   const ghostGeo = new THREE.InstancedBufferGeometry();
   ghostGeo.index = quad.index;
   for (const name of ['position', 'aPos', 'aSize', 'aRect', 'aAlpha']) ghostGeo.setAttribute(name, quad.getAttribute(name));
@@ -112,7 +121,23 @@ export function createCards(env, { size = 1024, slot = 128, res = 2, max = 64 } 
   const free = Array.from({ length: per * per }, (_, n) => n);
   let frame = 0;
   let items = [];
-  let dirty = false;
+  let ready = false;
+  const pending = [];
+
+  /** Copy the slot canvas into slot n of the texture. */
+  function upload(n) {
+    const gl = renderer.getContext();
+    const glTex = renderer.properties.get(tex).__webglTexture;
+    if (!glTex) return false;
+    const sx = (n % per) * slot;
+    const sy = Math.floor(n / per) * slot;
+    renderer.state.activeTexture(gl.TEXTURE0);
+    renderer.state.bindTexture(gl.TEXTURE_2D, glTex);
+    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+    gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false);
+    gl.texSubImage2D(gl.TEXTURE_2D, 0, sx, size - sy - slot, gl.RGBA, gl.UNSIGNED_BYTE, slotCanvas);
+    return true;
+  }
 
   function slotFor(key) {
     let sl = slots.get(key);
@@ -143,33 +168,41 @@ export function createCards(env, { size = 1024, slot = 128, res = 2, max = 64 } 
      * world units (the slot is `unit` wide; the foot sits at its bottom
      * middle, `footPad` units up). animated: repaint every frame.
      */
-    add(key, x, ground, y, draw, { animated = false, alpha = 1, ghost: seeThrough = false, w = unit, h = unit, footPad = 6 } = {}) {
+    add(key, x, ground, y, draw, { animated = false, fps = 30, alpha = 1, ghost: seeThrough = false, w = unit, h = unit, footPad = 6 } = {}) {
       const sl = slotFor(key);
       if (!sl) return;
       sl.used = frame;
-      if (!sl.drawn || animated) {
-        const sx = (sl.n % per) * slot;
-        const sy = Math.floor(sl.n / per) * slot;
+      // a figure standing still needs repainting less often than one walking
+      const now = performance.now();
+      if (!sl.drawn || (animated && now - (sl.at || 0) >= 1000 / fps)) {
+        sl.at = now;
         ctx.setTransform(1, 0, 0, 1, 0, 0);
-        ctx.clearRect(sx, sy, slot, slot);
+        ctx.clearRect(0, 0, slot, slot);
         ctx.save();
-        ctx.beginPath();
-        ctx.rect(sx, sy, slot, slot);
-        ctx.clip();
-        ctx.setTransform(res, 0, 0, res, sx + slot / 2, sy + slot - footPad * res);
+        ctx.setTransform(res, 0, 0, res, slot / 2, slot - footPad * res);
         draw(ctx);
         ctx.restore();
+        // before the texture exists on the GPU, paint into the atlas itself
+        if (!ready || !upload(sl.n)) {
+          canvas.getContext('2d').clearRect((sl.n % per) * slot, Math.floor(sl.n / per) * slot, slot, slot);
+          canvas.getContext('2d').drawImage(slotCanvas, (sl.n % per) * slot, Math.floor(sl.n / per) * slot);
+          tex.needsUpdate = true;
+          pending.push(sl.n);
+        }
         sl.drawn = true;
-        dirty = true;
       }
       items.push({ sl, x, ground, y, alpha, seeThrough, w, h, footPad });
     },
+    /** After the GPU lost its memory: paint every card again from scratch. */
+    reset() {
+      for (const sl of slots.values()) sl.drawn = false;
+      ready = false;
+    },
     /** Lay out this frame's cards (call once all are added). */
     end() {
-      if (dirty) {
-        tex.needsUpdate = true;
-        dirty = false;
-      }
+      // once the atlas is on the GPU, slots go up one by one
+      if (!ready && renderer.properties.get(tex).__webglTexture && !tex.needsUpdate) ready = true;
+      pending.length = 0;
       const n = Math.min(max, items.length);
       // see-through cards go first so the ghost pass can draw just those
       items.sort((a, b) => b.seeThrough - a.seeThrough);

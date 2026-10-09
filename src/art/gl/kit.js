@@ -10,18 +10,50 @@ export const OUTLINE = 0.9;
 /** Surface kinds the building shader knows how to paint. */
 export const K = { PLAIN: 0, WALL: 1, TILE: 2, STRAW: 3, STONE: 4, WOOD: 5, CLOTH: 6 };
 
+/** A float array that grows as it is filled (no per-number pushes). */
+class Grow {
+  constructor(n = 65536) {
+    this.a = new Float32Array(n);
+    this.n = 0;
+  }
+
+  room(k) {
+    if (this.n + k <= this.a.length) return;
+    let size = this.a.length * 2;
+    while (size < this.n + k) size *= 2;
+    const b = new Float32Array(size);
+    b.set(this.a.subarray(0, this.n));
+    this.a = b;
+  }
+
+  push(...v) {
+    this.room(v.length);
+    for (let i = 0; i < v.length; i++) this.a[this.n++] = v[i];
+  }
+
+  push3(x, y, z) {
+    this.room(3);
+    this.a[this.n++] = x;
+    this.a[this.n++] = y;
+    this.a[this.n++] = z;
+  }
+
+  done() {
+    return this.a.slice(0, this.n);
+  }
+}
+
 export class Kit {
   constructor() {
-    this.P = [];
-    this.N = [];
-    this.C = [];
-    this.U = [];
-    this.KD = [];
-    this.HP = [];
-    this.HN = [];
-    this.DP = [];
-    this.DU = [];
-    this.DG = [];
+    this.P = new Grow();
+    this.N = new Grow();
+    this.C = new Grow();
+    this.U = new Grow();
+    this.KD = new Grow(16384);
+    this.HP = new Grow();
+    this.DP = new Grow(4096);
+    this.DU = new Grow(4096);
+    this.DG = new Grow(2048);
     // a transform applied to everything added (rotate about y, then move)
     this.ox = 0;
     this.oy = 0;
@@ -52,17 +84,35 @@ export class Kit {
 
   /** A flat triangle (local coordinates). uv: three [u, v] pairs. */
   tri(a, b, c, col, kind = K.PLAIN, uv = null) {
-    const A = this.tp(a);
-    const B = this.tp(b);
-    const C = this.tp(c);
-    const n = normal(A, B, C);
-    for (const [p, k] of [[A, 0], [B, 1], [C, 2]]) {
-      this.P.push(...p);
-      this.N.push(...n);
-      this.C.push(...col);
-      this.U.push(...(uv ? uv[k] : [0, 0]));
-      this.KD.push(kind);
-    }
+    const { ox, oy, oz, rc, rs } = this;
+    const ax = ox + a[0] * rc + a[2] * rs;
+    const ay = oy + a[1];
+    const az = oz - a[0] * rs + a[2] * rc;
+    const bx = ox + b[0] * rc + b[2] * rs;
+    const by = oy + b[1];
+    const bz = oz - b[0] * rs + b[2] * rc;
+    const cx = ox + c[0] * rc + c[2] * rs;
+    const cy = oy + c[1];
+    const cz = oz - c[0] * rs + c[2] * rc;
+    const ux = bx - ax;
+    const uy = by - ay;
+    const uz = bz - az;
+    const vx = cx - ax;
+    const vy = cy - ay;
+    const vz = cz - az;
+    let nx = uy * vz - uz * vy;
+    let ny = uz * vx - ux * vz;
+    let nz = ux * vy - uy * vx;
+    const l = Math.hypot(nx, ny, nz) || 1;
+    nx /= l;
+    ny /= l;
+    nz /= l;
+    this.P.push(ax, ay, az, bx, by, bz, cx, cy, cz);
+    this.N.push(nx, ny, nz, nx, ny, nz, nx, ny, nz);
+    this.C.push(col[0], col[1], col[2], col[0], col[1], col[2], col[0], col[1], col[2]);
+    if (uv) this.U.push(uv[0][0], uv[0][1], uv[1][0], uv[1][1], uv[2][0], uv[2][1]);
+    else this.U.push(0, 0, 0, 0, 0, 0);
+    this.KD.push(kind, kind, kind);
   }
 
   quad(a, b, c, d, col, kind = K.PLAIN, uv = null) {
@@ -71,14 +121,13 @@ export class Kit {
   }
 
   hullTri(a, b, c) {
-    const A = this.tp(a);
-    const B = this.tp(b);
-    const C = this.tp(c);
-    const n = normal(A, B, C);
-    for (const p of [A, B, C]) {
-      this.HP.push(...p);
-      this.HN.push(...n);
-    }
+    const { ox, oy, oz, rc, rs } = this;
+    // the hull is drawn inside-out in flat ink: it needs no normals of its own
+    this.HP.push(
+      ox + a[0] * rc + a[2] * rs, oy + a[1], oz - a[0] * rs + a[2] * rc,
+      ox + b[0] * rc + b[2] * rs, oy + b[1], oz - b[0] * rs + b[2] * rc,
+      ox + c[0] * rc + c[2] * rs, oy + c[1], oz - c[0] * rs + c[2] * rc,
+    );
   }
 
   hullQuad(a, b, c, d) {
@@ -181,30 +230,27 @@ export class Kit {
     const b = this.tp([x + (s * w) / 2, y, z]);
     const c = this.tp([x + (s * w) / 2, y + h, z]);
     const d = this.tp([x - (s * w) / 2, y + h, z]);
-    for (const [p, uv] of [[a, [u0, v0]], [b, [u1, v0]], [c, [u1, v1]], [a, [u0, v0]], [c, [u1, v1]], [d, [u0, v1]]]) {
-      this.DP.push(...p);
-      this.DU.push(...uv);
-      this.DG.push(glow);
-    }
+    this.DP.push(...a, ...b, ...c, ...a, ...c, ...d);
+    this.DU.push(u0, v0, u1, v0, u1, v1, u0, v0, u1, v1, u0, v1);
+    this.DG.push(glow, glow, glow, glow, glow, glow);
   }
 
   /** Bake into geometries: the painted mesh and its ink hull. */
   build() {
     const main = new THREE.BufferGeometry();
-    main.setAttribute('position', new THREE.Float32BufferAttribute(this.P, 3));
-    main.setAttribute('normal', new THREE.Float32BufferAttribute(this.N, 3));
-    main.setAttribute('aCol', new THREE.Float32BufferAttribute(this.C, 3));
-    main.setAttribute('aUv', new THREE.Float32BufferAttribute(this.U, 2));
-    main.setAttribute('aKind', new THREE.Float32BufferAttribute(this.KD, 1));
+    main.setAttribute('position', new THREE.BufferAttribute(this.P.done(), 3));
+    main.setAttribute('normal', new THREE.BufferAttribute(this.N.done(), 3));
+    main.setAttribute('aCol', new THREE.BufferAttribute(this.C.done(), 3));
+    main.setAttribute('aUv', new THREE.BufferAttribute(this.U.done(), 2));
+    main.setAttribute('aKind', new THREE.BufferAttribute(this.KD.done(), 1));
     main.computeBoundingSphere();
     const hull = new THREE.BufferGeometry();
-    hull.setAttribute('position', new THREE.Float32BufferAttribute(this.HP, 3));
-    hull.setAttribute('normal', new THREE.Float32BufferAttribute(this.HN, 3));
+    hull.setAttribute('position', new THREE.BufferAttribute(this.HP.done(), 3));
     hull.computeBoundingSphere();
     const decals = new THREE.BufferGeometry();
-    decals.setAttribute('position', new THREE.Float32BufferAttribute(this.DP, 3));
-    decals.setAttribute('aUv', new THREE.Float32BufferAttribute(this.DU, 2));
-    decals.setAttribute('aGlow', new THREE.Float32BufferAttribute(this.DG, 1));
+    decals.setAttribute('position', new THREE.BufferAttribute(this.DP.done(), 3));
+    decals.setAttribute('aUv', new THREE.BufferAttribute(this.DU.done(), 2));
+    decals.setAttribute('aGlow', new THREE.BufferAttribute(this.DG.done(), 1));
     decals.computeBoundingSphere();
     return { main, hull, decals };
   }
@@ -255,7 +301,8 @@ export function roof(kit, o) {
   } else {
     const per = 3;
     for (let i = 0; i < sides * per; i++) {
-      const a = Math.PI / 2 + (i / (sides * per)) * Math.PI * 2 + Math.PI / sides;
+      // round the same way as the rectangle's outline, so the roof faces up
+      const a = Math.PI / 2 - (i / (sides * per)) * Math.PI * 2 - Math.PI / sides;
       const k = (i % per) / per;
       const c = Math.abs(k - 0.5) * 2; // 1 at the corners
       const corner = Math.cos(Math.PI / sides) / Math.cos(((k - 0.5) * 2 * Math.PI) / sides);

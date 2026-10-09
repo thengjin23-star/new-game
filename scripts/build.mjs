@@ -19,7 +19,7 @@ function walk(dir) {
   return out;
 }
 
-const files = ['index.html', 'manifest.webmanifest', 'styles/main.css', ...walk('src'), ...walk('icons')]
+const files = ['index.html', 'manifest.webmanifest', 'styles/main.css', ...walk('src'), ...walk('icons'), ...walk('assets').filter((f) => !f.endsWith('.md'))]
   .filter((f) => !f.endsWith('.DS_Store'))
   .map((f) => './' + relative(root, join(root, f)).split('\\').join('/'));
 writeFileSync(join(root, 'precache.json'), JSON.stringify(files, null, 1) + '\n');

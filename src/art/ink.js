@@ -878,15 +878,38 @@ export function makeParticles(kind, rnd, W, H, count) {
 export function drawParticles(ctx, kind, list, W, H, dt, t, still) {
   if (!list.length) return;
   for (const p of list) {
-    if (!still) {
+    if (!still && (kind === 'mote' || kind === 'firefly')) {
+      // spirit motes rise; fireflies wander
+      if (kind === 'mote') p.y -= p.v * dt * 0.012;
+      p.x += Math.sin(t / 900 + p.ph) * (kind === 'firefly' ? 0.45 : 0.18);
+      p.y += kind === 'firefly' ? Math.cos(t / 1100 + p.ph * 2) * 0.3 : 0;
+      if (p.y < -6) {
+        p.y = H + 6;
+        p.x = Math.random() * W;
+      }
+      if (p.x > W + 6) p.x = -6;
+      if (p.x < -6) p.x = W + 6;
+    } else if (!still) {
       p.y += p.v * dt * (kind === 'snow' ? 0.03 : 0.025);
-      p.x += Math.sin(t / 1300 + p.ph) * 0.25 + (kind === 'leaf' ? 0.12 : 0.05);
+      p.x += Math.sin(t / 1300 + p.ph) * 0.25 + (kind === 'leaf' || kind === 'ash' ? 0.12 : 0.05);
       p.rot += 0.01;
       if (p.y > H + 6) {
         p.y = -6;
         p.x = Math.random() * W;
       }
       if (p.x > W + 6) p.x = -6;
+    }
+    if (kind === 'mote' || kind === 'firefly') {
+      const a = 0.3 + 0.4 * (0.5 + 0.5 * Math.sin(t / (kind === 'firefly' ? 380 : 700) + p.ph * 3));
+      const c = kind === 'mote' ? [214, 240, 226] : [226, 240, 130];
+      const r = kind === 'mote' ? p.r * 1.6 : p.r * 1.3;
+      const g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, r * 2.4);
+      g.addColorStop(0, `rgba(${c[0]},${c[1]},${c[2]},${a})`);
+      g.addColorStop(0.35, `rgba(${c[0]},${c[1]},${c[2]},${a * 0.5})`);
+      g.addColorStop(1, `rgba(${c[0]},${c[1]},${c[2]},0)`);
+      ctx.fillStyle = g;
+      ctx.fillRect(p.x - r * 2.4, p.y - r * 2.4, r * 4.8, r * 4.8);
+      continue;
     }
     if (kind === 'snow') {
       ctx.fillStyle = 'rgba(255,255,255,0.95)';
@@ -897,7 +920,7 @@ export function drawParticles(ctx, kind, list, W, H, dt, t, still) {
       ctx.fill();
       ctx.stroke();
     } else {
-      ctx.fillStyle = kind === 'petal' ? 'rgba(206,132,132,0.75)' : kind === 'leaf' ? 'rgba(170,104,48,0.75)' : 'rgba(120,120,110,0.45)';
+      ctx.fillStyle = kind === 'petal' ? 'rgba(206,132,132,0.75)' : kind === 'leaf' ? 'rgba(170,104,48,0.75)' : kind === 'darkleaf' ? 'rgba(70,84,60,0.7)' : kind === 'ash' ? 'rgba(110,104,98,0.5)' : 'rgba(120,120,110,0.45)';
       ctx.beginPath();
       ctx.ellipse(p.x, p.y, p.r, p.r * 0.5, p.rot, 0, Math.PI * 2);
       ctx.fill();

@@ -1813,3 +1813,13 @@ canvas.bigmap {
   display: grid;
   animation: toastIn 0.4s ease-out;
 }
+
+/* a painted scene at the head of an event, when one has been put in its slot */
+.event-pic {
+  display: block;
+  width: calc(100% + 32px);
+  margin: -8px -16px 12px;
+  max-height: 34vh;
+  object-fit: cover;
+  border-radius: 12px 12px 0 0;
+}

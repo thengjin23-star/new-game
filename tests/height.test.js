@@ -74,3 +74,10 @@ test('buildings stand on level ground', () => {
     assert.ok(spread < 3, `${st.sprite} at (${st.x}, ${st.y}) is level (spread ${spread.toFixed(1)})`);
   }
 });
+
+test('climbing is slower than walking the flat', async () => {
+  const { climb } = await import('../src/world/explore.js');
+  assert.ok(climb(4235, 1650, 0, -1) < 0.85, 'up the stair to the sect');
+  assert.equal(climb(4235, 1600, 0, 1), 1, 'down it is no faster, but no slower');
+  assert.ok(climb(2300, 3150, 1, 0) > 0.97, 'the high street through town is flat');
+});

@@ -5,6 +5,7 @@
 
 import { CELL, COLS, ROWS, WORLD_W, WORLD_H } from './geo.js';
 import { world, regionAt, collides, speedAt, findPath, nearestOpen, hash2, REGION_IDS, idxOf, cellX, cellY, PLAYER_R } from './terrain.js';
+import { heightAt } from './height.js';
 import { POIS, POI_BY_ID, NPC_SPOTS, NPC_SHOW, MOBS, GATHER, GATHER_RESPAWN, WANDERERS } from './places.js';
 import { NODES, PEOPLE_PLACES } from './map.js';
 import { NAMED } from './npcs.js';
@@ -167,7 +168,7 @@ export function step(s, dt, input) {
     L.moving = false;
     return;
   }
-  const want = WALK_SPEED * speedAt(w.x, w.y) * walkMult(s) * mag * dt;
+  const want = WALK_SPEED * speedAt(w.x, w.y) * walkMult(s) * mag * dt * climb(w.x, w.y, dx, dy);
   const n = Math.max(1, Math.ceil(want / 5));
   let moved = 0;
   for (let k = 0; k < n; k++) {
@@ -194,6 +195,12 @@ export function step(s, dt, input) {
     } else L.stuck = 0;
   }
   if (moved > 0) afterMove(s, L, moved);
+}
+
+/** Going uphill is slower: a long stair takes its toll; downhill is no faster. */
+export function climb(x, y, dx, dy) {
+  const grade = (heightAt(x + dx * 10, y + dy * 10) - heightAt(x, y)) / 10;
+  return grade > 0 ? Math.max(0.6, 1 / (1 + grade * 0.9)) : 1;
 }
 
 function afterMove(s, L, moved) {

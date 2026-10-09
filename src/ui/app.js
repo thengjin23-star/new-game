@@ -2,6 +2,7 @@ import { h, paragraphs, clear, put } from './dom.js';
 import { createScene } from '../art/ink.js';
 import { createWorldView, paintWorldThumb } from '../art/worldview.js';
 import { createWorld3D, canDraw3D } from '../art/world3d.js';
+import { loadAssets, asset } from '../art/assets.js';
 import { newGame, rollFate, ORIGINS, ATTRS, attrWord } from '../core/state.js';
 import { startEvent, choose, continueEvent } from '../core/events.js';
 import * as A from '../core/actions.js';
@@ -10,7 +11,8 @@ import { ROOTS, INJURY, BUFFS, realmLabel, stageReq, age, lifespan, rateParts, b
 import { fmtDate, fmtDuration, seasonOf, SEASON_NAME } from '../core/calendar.js';
 import { NODES, canSecludeAt, nodeQi } from '../world/map.js';
 import { WORLD_W, WORLD_H, COLS, ROWS } from '../world/geo.js';
-import { findPath, regionIdAt } from '../world/terrain.js';
+import { findPath, regionIdAt, world } from '../world/terrain.js';
+import { heights } from '../world/height.js';
 import { POIS } from '../world/places.js';
 import { fogOf, isRevealed, exploredPct } from '../world/fog.js';
 import { ITEMS, displayItem } from '../content/items.js';
@@ -21,7 +23,7 @@ import { npcAge, npcRealm, NAMED } from '../world/npcs.js';
 import { saveGame, loadGame, clearGame, exportCode, importCode, migrate, saveMeta, loadMeta, parseSave } from '../core/save.js';
 import { connectCloud } from '../platform/cloud.js';
 
-const VERSION = '0.2';
+const VERSION = '0.3';
 const ITEM_ORDER = ['pill', 'herb', 'material', 'book', 'weapon', 'treasure', 'talisman', 'token', 'unknown'];
 const ITEM_KIND = { pill: '丹藥', herb: '靈草', material: '材料', book: '典籍', weapon: '兵器', treasure: '寶物', talisman: '符籙', token: '信物', unknown: '未知' };
 const DOCK = [
@@ -78,6 +80,7 @@ function timeWord(s) {
 }
 
 export function startApp(root, { speed = 1, view = null } = {}) {
+  loadAssets();
   const ui = {
     s: null,
     sheet: null, // map | bag | cult | log | sys | rest | shop
@@ -244,6 +247,7 @@ export function startApp(root, { speed = 1, view = null } = {}) {
     );
     ui.titleScene?.stop();
     ui.titleScene = createScene(canvas);
+    prepareWorld();
     requestAnimationFrame(() => {
       ui.titleScene.set({ kind: 'mountain', seed: 3012, season: seasonOf(new Date().getMonth() * 30), pose: 'stand' });
       ui.titleScene.start();
@@ -378,12 +382,32 @@ export function startApp(root, { speed = 1, view = null } = {}) {
     bindPointer(shell.querySelector('canvas.world-canvas'));
   }
 
+  /** While the title shows, quietly work out the lie of the land, so the world opens quickly. */
+  function prepareWorld() {
+    const idle = window.requestIdleCallback || ((fn) => setTimeout(fn, 400));
+    idle(() => {
+      world();
+      idle(() => heights());
+    });
+  }
+
   /** The 3D world where the device can draw it (and the player has not asked for the flat map). */
   function makeView(canvas) {
     const opts = { onFrame, idle: () => !!(ui.s && (ui.s.pending || ui.sheet || ui.s.dead)) };
     if (viewMode() === '3d') {
       try {
-        return createWorld3D(canvas, opts);
+        let chosen = null;
+        try {
+          chosen = localStorage.getItem('yijie-quality');
+        } catch {
+          chosen = null;
+        }
+        return createWorld3D(canvas, {
+          ...opts,
+          quality: chosen || 'high',
+          // a slow device drops to the lighter picture by itself (unless you chose)
+          onSlow: chosen ? null : () => toast('畫面較吃力，已改用省電畫質。可在「系統」裡調整。'),
+        });
       } catch (e) {
         console.warn('3D world unavailable, using the flat map', e);
         const fresh = canvas.cloneNode(false);
@@ -392,6 +416,38 @@ export function startApp(root, { speed = 1, view = null } = {}) {
       }
     }
     return createWorldView(canvas, opts);
+  }
+
+  /** Switch between the 3D world and the flat map (rebuilds the world screen). */
+  function setView(mode) {
+    try {
+      localStorage.setItem('yijie-view', mode);
+    } catch {
+      /* private mode: it holds for this visit */
+    }
+    view = mode;
+    const keep = ui.sheet;
+    stopWorld();
+    ui.sheet = keep;
+    renderGame();
+  }
+
+  function quality() {
+    try {
+      return localStorage.getItem('yijie-quality') || 'high';
+    } catch {
+      return 'high';
+    }
+  }
+
+  function setQuality(q) {
+    try {
+      localStorage.setItem('yijie-quality', q);
+    } catch {
+      /* private mode */
+    }
+    ui.view?.setQuality?.(q);
+    renderLayer();
   }
 
   function viewMode() {
@@ -1184,6 +1240,22 @@ export function startApp(root, { speed = 1, view = null } = {}) {
           )
         : null,
       h('section.card',
+        h('h3', '畫面'),
+        h('p.muted.small', canDraw3D() ? '立體：有山有水、有房有雲海的世界。平面：手繪地圖的畫法，最省電。' : '這台裝置無法顯示立體畫面，目前使用平面地圖。'),
+        canDraw3D()
+          ? h('div.btn-row',
+              h('button.btn.small' + (viewMode() === '3d' ? '.on' : ''), { onclick: () => setView('3d') }, '立體'),
+              h('button.btn.small' + (viewMode() === '2d' ? '.on' : ''), { onclick: () => setView('2d') }, '平面'),
+            )
+          : null,
+        viewMode() === '3d'
+          ? h('div.btn-row',
+              h('button.btn.small' + (quality() === 'high' ? '.on' : ''), { onclick: () => setQuality('high') }, '畫質・精細'),
+              h('button.btn.small' + (quality() === 'low' ? '.on' : ''), { onclick: () => setQuality('low') }, '畫質・省電'),
+            )
+          : null,
+      ),
+      h('section.card',
         h('h3', '操作'),
         h('p.muted.small', '按住畫面任意處拖動：往那個方向走。點一下地面：自己走過去。點人或東西：走過去並互動。兩指捏合：縮放。鍵盤：WASD 或方向鍵行走，E 互動，M 地圖。'),
       ),
@@ -1250,6 +1322,13 @@ export function startApp(root, { speed = 1, view = null } = {}) {
   }
 
   // ── events ──
+  /** A painted scene for the event, if one has been put in its slot. */
+  function eventPicture(pend) {
+    const img = pend.id && asset(`event/${pend.id}`);
+    if (!img) return null;
+    return h('img.event-pic', { src: img.src, alt: '' });
+  }
+
   function eventSheet() {
     const s = ui.s;
     const pend = s.pending;
@@ -1259,6 +1338,7 @@ export function startApp(root, { speed = 1, view = null } = {}) {
     if (pre?.xw) preBits.push(`修為 +${pre.xw}`);
     const sheet = h('div.sheet.event-sheet', { role: 'dialog', 'aria-label': pend.title },
       h('div.sheet-inner',
+        eventPicture(pend),
         h('h2.sheet-title', pend.title),
         preBits.length ? h('p.pre', preBits.join('・')) : null,
         pre?.stageUps?.length ? h('p.pre.good', `境界提升：${pre.stageUps.join('、')}`) : null,

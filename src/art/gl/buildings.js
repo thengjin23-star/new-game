@@ -8,7 +8,7 @@ import * as THREE from './three.js';
 import { CELL, T, MARKET_WALL } from '../../world/geo.js';
 import { world, idxOf, colOf, rowOf, hash2 } from '../../world/terrain.js';
 import { STRUCTURES } from '../../world/places.js';
-import { heights, heightAt } from '../../world/height.js';
+import { heights, heightAt, waterAt } from '../../world/height.js';
 import { stream } from '../../core/rng.js';
 import { Kit, K, roof } from './kit.js';
 import { createDecals } from './decals.js';
@@ -175,7 +175,7 @@ function steps(kit, w, h, depth, z) {
   for (let k = 0; k < n; k++) kit.box(0, 0, z + depth / 2 - ((k + 0.5) * depth) / n, w, ((k + 1) * h) / n, depth / n, COL.stone, K.STONE, { hull: k === 0 });
 }
 
-const BUILD = {
+export const BUILD = {
   house(kit, dc, st, rnd) {
     const w = st.w - 4;
     const d = st.h - 4;
@@ -342,7 +342,7 @@ const BUILD = {
       if (!k) kit.decal(dc.door(7, 12, [120, 44, 34]), 0, y, r * 0.93 + 0.3, 7, 12);
       else kit.decal(dc.window(4, 5), 0, y + 4, r * 0.93 + 0.3, 4, 5, 1);
       const top = k === 6;
-      roofAt(kit, 0, 0, { w: r * 2, d: r * 2, y: y + h, rise: top ? 18 : 3.5, over: r * 0.18 + 3, col: COL.tile2, lift: 4, sides: 8, finial: top, ornament: COL.gold });
+      roofAt(kit, 0, 0, { w: r * 2, d: r * 2, y: y + h, rise: top ? 18 : 3.5, over: r * 0.18 + 3, col: C(112, 122, 120), lift: 4, sides: 8, finial: top, ornament: COL.gold });
       y += h + 3.5;
       r *= 0.88;
     }
@@ -636,9 +636,24 @@ export function createBuildings(env) {
   const kit = new Kit();
   const dc = createDecals();
   STRUCTURES.forEach((st, i) => {
+    // what stands on water stands at the water's surface: a boat floats, a pavilion is up on its deck
+    let ground = heightAt(st.x, st.y);
+    const wl = waterAt(st.x, st.y);
+    if (wl !== null && ground < wl + 2) ground = wl + (st.sprite === 'boat' ? 0 : 4);
+    if (st.paint === T.BRIDGE && wl !== null) {
+      // a wooden deck on stilts, out over the water
+      kit.at(st.x, 0, st.y, 0);
+      kit.box(0, wl + 1, 0, st.w, 3, st.h, COL.wood, K.WOOD);
+      for (const fx of [-0.45, 0, 0.45]) {
+        for (const fz of [-0.42, 0.42]) {
+          const x = fx * st.w;
+          const z = fz * st.h;
+          kit.beam([x, heightAt(st.x + x, st.y + z) - 2, z], [x, wl + 1.5, z], 2.4, COL.wood);
+        }
+      }
+    }
     const make = BUILD[st.sprite];
     if (!make) return;
-    const ground = heightAt(st.x, st.y);
     kit.at(st.x, ground, st.y, st.rot || 0);
     make(kit, dc, st, stream(Math.floor(hash2(i, 7, 911) * 1e9)));
   });
