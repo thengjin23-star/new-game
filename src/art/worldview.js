@@ -628,8 +628,9 @@ export function createWorldView(canvas, { onFrame, idle } = {}) {
 
   // ── transforms ──
 
-  function worldToScreen(x, y) {
-    return [(x - cam.x) * zoom + W / 2, (y - cam.y) * zoom + H / 2];
+  /** up: how far above the ground (world units), as a standing thing is drawn. */
+  function worldToScreen(x, y, up = 0) {
+    return [(x - cam.x) * zoom + W / 2, (y - up - cam.y) * zoom + H / 2];
   }
 
   function screenToWorld(sx, sy) {

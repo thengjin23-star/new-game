@@ -5,7 +5,10 @@ const params = new URLSearchParams(location.search);
 // ?speed=60 makes 閉關 run 60× faster, for playtesting only.
 const speed = Math.max(1, Math.min(600, Number(params.get('speed')) || 1));
 
-const app = startApp(document.getElementById('app'), { speed });
+// ?view=2d|3d picks how the world is drawn (otherwise: 3D where the device can)
+const view = ['2d', '3d'].includes(params.get('view')) ? params.get('view') : null;
+
+const app = startApp(document.getElementById('app'), { speed, view });
 // ?debug: expose the running game for playtesting tools
 if (params.has('debug')) window.__debug = { app, E };
 

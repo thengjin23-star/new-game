@@ -262,8 +262,10 @@ function buildHeights() {
     return best;
   };
 
+  const ground = new Float32Array(HW * HH);
   eachIn(0, 0, WORLD_W, WORLD_H, (k, x, y) => {
     const z = sampleCell(baseB, x, y) + (fbm(x / 520, y / 520, 61) - 0.5) * 2 * sampleCell(rollB, x, y);
+    ground[k] = z;
     let m = rockAt(x, y);
     // rock rises sheer from the edge of open ground, never out over it
     if (m > 0) m = Math.min(m, rockDepth(x, y) * 8);
@@ -313,12 +315,20 @@ function buildHeights() {
     if (great) surf = steps.map(() => LEVEL.river);
     else {
       const top = lakes[1] ? lakes[1].level : bilerp(h, steps[0][0], steps[0][1]);
+      // the water finds the lowest of its bed and both banks, and never climbs
       surf = [];
       let run = top;
-      for (const [x, y] of steps) {
-        run = Math.min(run, bilerp(h, x, y) - 2);
+      steps.forEach(([x, y], n) => {
+        const a = steps[Math.max(0, n - 1)];
+        const b = steps[Math.min(steps.length - 1, n + 1)];
+        const len = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1;
+        const ux = -(b[1] - a[1]) / len;
+        const uy = (b[0] - a[0]) / len;
+        let low = bilerp(h, x, y);
+        for (const d of [hw + 24, hw + 64]) low = Math.min(low, bilerp(h, x + ux * d, y + uy * d), bilerp(h, x - ux * d, y - uy * d));
+        run = Math.min(run, low - 2);
         surf.push(Math.max(run, LEVEL.lake));
-      }
+      });
       surf = movingAverage(surf, 2);
       surf[0] = top;
       surf[surf.length - 1] = LEVEL.lake;
@@ -456,9 +466,10 @@ function buildHeights() {
 
   // 7. buildings and courtyards stand on level ground (each point follows the
   //    building it is closest to, so neighbours never tilt one another)
-  const sites = STRUCTURES.filter((st) => st.paint !== T.BRIDGE).map((st) => ({
-    x: st.x, y: st.y, hw: st.w / 2 + 12, hh: st.h / 2 + 12, level: bilerp(h, st.x, st.y),
-  }));
+  const sites = STRUCTURES.filter((st) => st.paint !== T.BRIDGE).map((st) => {
+    const [fw, fh] = st.rot % 180 ? [st.h, st.w] : [st.w, st.h];
+    return { x: st.x, y: st.y, hw: fw / 2 + 12, hh: fh / 2 + 12, level: bilerp(h, st.x, st.y) };
+  });
   // buildings close enough to share ground share one level
   const root = sites.map((_, n) => n);
   const find = (n) => (root[n] === n ? n : (root[n] = find(root[n])));
@@ -488,7 +499,25 @@ function buildHeights() {
   }
   for (const [k, [w, level]] of pull) h[k] += (level - h[k]) * w;
 
-  return { h, water, bridges, streams, lakes };
+  // 8. last of all, the stream's banks stand above its water, whatever the
+  //    roads and buildings did to them
+  for (const r of streams) {
+    if (r.id === 'great') continue;
+    const hw = r.width / 2;
+    for (const [x, y, z] of r.pts) {
+      eachIn(x - hw - 44, y - hw - 44, x + hw + 44, y + hw + 44, (k, px, py) => {
+        const d = Math.hypot(px - x, py - y);
+        if (d <= hw || d > hw + 44 || isWet(cellAt(px, py))) return;
+        let wet = false;
+        touching(px, py, (c) => {
+          if (isWet(g.terr[c])) wet = true;
+        });
+        if (!wet && h[k] < z + 1.5) h[k] = z + 1.5;
+      });
+    }
+  }
+
+  return { h, ground, water, bridges, streams, lakes };
 }
 
 function bbox(pts, pad) {

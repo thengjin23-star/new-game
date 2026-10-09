@@ -1,6 +1,7 @@
 import { h, paragraphs, clear, put } from './dom.js';
 import { createScene } from '../art/ink.js';
 import { createWorldView, paintWorldThumb } from '../art/worldview.js';
+import { createWorld3D, canDraw3D } from '../art/world3d.js';
 import { newGame, rollFate, ORIGINS, ATTRS, attrWord } from '../core/state.js';
 import { startEvent, choose, continueEvent } from '../core/events.js';
 import * as A from '../core/actions.js';
@@ -76,7 +77,7 @@ function timeWord(s) {
   return `${E.shichen(t)}・${word}`;
 }
 
-export function startApp(root, { speed = 1 } = {}) {
+export function startApp(root, { speed = 1, view = null } = {}) {
   const ui = {
     s: null,
     sheet: null, // map | bag | cult | log | sys | rest | shop
@@ -251,6 +252,7 @@ export function startApp(root, { speed = 1 } = {}) {
 
   function stopWorld() {
     ui.view?.stop();
+    ui.view?.destroy?.();
     ui.view = null;
     ui.shell = null;
   }
@@ -369,11 +371,40 @@ export function startApp(root, { speed = 1 } = {}) {
     );
     root.appendChild(shell);
     ui.shell = shell;
-    ui.view = createWorldView(canvas, { onFrame, idle: () => !!(ui.s && (ui.s.pending || ui.sheet || ui.s.dead)) });
+    ui.view = makeView(canvas);
     ui.view.resize();
     ui.view.setState(ui.s);
     ui.view.start();
-    bindPointer(canvas);
+    bindPointer(shell.querySelector('canvas.world-canvas'));
+  }
+
+  /** The 3D world where the device can draw it (and the player has not asked for the flat map). */
+  function makeView(canvas) {
+    const opts = { onFrame, idle: () => !!(ui.s && (ui.s.pending || ui.sheet || ui.s.dead)) };
+    if (viewMode() === '3d') {
+      try {
+        return createWorld3D(canvas, opts);
+      } catch (e) {
+        console.warn('3D world unavailable, using the flat map', e);
+        const fresh = canvas.cloneNode(false);
+        canvas.replaceWith(fresh);
+        canvas = fresh;
+      }
+    }
+    return createWorldView(canvas, opts);
+  }
+
+  function viewMode() {
+    let pref = view;
+    if (!pref) {
+      try {
+        pref = localStorage.getItem('yijie-view');
+      } catch {
+        pref = null;
+      }
+    }
+    if (pref === '2d') return '2d';
+    return canDraw3D() ? '3d' : '2d';
   }
 
   const $ = (sel) => ui.shell?.querySelector(sel);
@@ -543,7 +574,11 @@ export function startApp(root, { speed = 1 } = {}) {
     let bd = 34;
     for (const t of E.targetsNear(s, 700)) {
       const [px, py] = ui.view.worldToScreen(t.x, t.y);
-      const d = Math.min(Math.hypot(px - sx, py - sy), t.kind === 'npc' || t.kind === 'folk' ? Math.hypot(px - sx, py - 18 * ui.view.zoom - sy) : Infinity);
+      let d = Math.hypot(px - sx, py - sy);
+      if (t.kind === 'npc' || t.kind === 'folk') {
+        const [bx, by] = ui.view.worldToScreen(t.x, t.y, 18);
+        d = Math.min(d, Math.hypot(bx - sx, by - sy));
+      }
       if (d < bd) {
         bd = d;
         best = t;

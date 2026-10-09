@@ -30,7 +30,11 @@ export const FOLK_LOOKS = [
   { robe: [212, 222, 230], trim: [60, 100, 150], hair: 'bun', sword: true },
 ];
 
+/** Drawing switches: no shadow when a figure is painted onto a standing card. */
+export const FIGURE = { shadows: true };
+
 export function groundShadow(ctx, x, y, rx, ry, a = 0.22) {
+  if (!FIGURE.shadows) return;
   ctx.fillStyle = `rgba(20,18,16,${a})`;
   ctx.beginPath();
   ctx.ellipse(x, y, rx, ry, 0, 0, Math.PI * 2);

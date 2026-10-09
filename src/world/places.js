@@ -34,6 +34,10 @@ export const STRUCTURES = [
   { x: 2600, y: 3365, w: 70, h: 44, sprite: 'farmhouse' },
   { x: 2305, y: 3108, w: 40, h: 20, sprite: 'stall', block: false },
   { x: 2440, y: 3196, w: 26, h: 18, sprite: 'bigtree', landmark: true },
+  // where the roads come into town: name stones by the high road, a 牌坊 on the south road
+  { x: 1880, y: 3104, w: 18, h: 8, sprite: 'stele', block: false, name: '青石鎮' },
+  { x: 2732, y: 3096, w: 18, h: 8, sprite: 'stele', block: false, name: '青石鎮' },
+  { x: 2250, y: 3432, w: 74, h: 10, sprite: 'paifang', block: false, name: '青石鎮' },
   // 清虛觀
   { x: 1060, y: 3190, w: 230, h: 130, paint: T.PAVED },
   { x: 1060, y: 3120, w: 120, h: 64, sprite: 'hall', landmark: true },

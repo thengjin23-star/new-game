@@ -48,8 +48,12 @@ function canvas(w, h) {
   return [c, ctx];
 }
 
+/** Painting switches: no shadow when a sprite stands as a card in the 3D world. */
+export const SPRITE = { shadows: true };
+
 /** Paint a sprite once: w×h world units, foot at (fx, fy). */
-function bake(key, w, h, fx, fy, draw) {
+function bake(key0, w, h, fx, fy, draw) {
+  const key = SPRITE.shadows ? key0 : `${key0}:ns`;
   let sp = cache.get(key);
   if (sp) return sp;
   const [c, ctx] = canvas(w, h);
@@ -100,6 +104,7 @@ function dab(ctx, x, y, r, c, a, squash = 0.8) {
 
 /** A soft shadow where a thing meets the ground. */
 function shadow(ctx, x, y, rx, ry, a = 0.18) {
+  if (!SPRITE.shadows) return;
   const g = ctx.createRadialGradient(x, y, 0, x, y, rx);
   g.addColorStop(0, rgba(INK, a));
   g.addColorStop(1, rgba(INK, 0));
@@ -1115,7 +1120,7 @@ const BUILD = {
     roofShape(ctx, b.x0 - 6, b.fx - b.w * 0.2, b.base - 38, 6, TILE, { snow: b.snow, lift: 3, inset: 3 });
     roofShape(ctx, b.fx + b.w * 0.2, b.x1 + 6, b.base - 38, 6, TILE, { snow: b.snow, lift: 3, inset: 3 });
     roofShape(ctx, b.fx - b.w * 0.26, b.fx + b.w * 0.26, b.base - 48, 9, TILE, { snow: b.snow, lift: 4, ornament: GOLD });
-    plaque(ctx, b.fx, b.base - 41, '青雲', 18, [40, 50, 70]);
+    plaque(ctx, b.fx, b.base - 41, b.st.name || '青雲', 18, [40, 50, 70]);
   },
   stonegate(ctx, rnd, b) {
     shadow(ctx, b.fx, b.base, b.w * 0.62, 8, 0.28);
@@ -1148,6 +1153,21 @@ const BUILD = {
     ctx.strokeRect(-b.w * 0.36, -6, b.w * 0.72, 12);
     ctx.restore();
     for (let i = 0; i < 6; i++) rockLump(ctx, rnd, b.fx + (rnd() - 0.5) * b.w, b.base + 2, 10 + rnd() * 8, 5 + rnd() * 4, b.season, false);
+  },
+  stele(ctx, rnd, b) {
+    shadow(ctx, b.fx, b.base, 12, 3, 0.24);
+    ctx.fillStyle = rgba(STONE, 1);
+    ctx.fillRect(b.fx - 10, b.base - 6, 20, 6);
+    ctx.fillStyle = rgba([136, 132, 124], 1);
+    ctx.fillRect(b.fx - 7, b.base - 34, 14, 28);
+    ctx.strokeStyle = rgba(INK, 0.85);
+    ctx.lineWidth = 0.8;
+    ctx.strokeRect(b.fx - 7, b.base - 34, 14, 28);
+    ctx.fillStyle = rgba(INK, 0.85);
+    ctx.font = `700 7px ${FONT}`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    [...(b.st.name || '')].forEach((ch, i) => ctx.fillText(ch, b.fx, b.base - 28 + i * 8));
   },
   torii(ctx, rnd, b) {
     for (const s of [-1, 1]) {
