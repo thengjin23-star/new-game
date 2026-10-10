@@ -107,4 +107,19 @@ export default [
       },
     ],
   },
+
+  {
+    id: 'valley_deer',
+    trigger: 'explore',
+    nodes: V,
+    cooldown: 120,
+    weight: 5,
+    cond: (s) => flag(s, 'valley_safe'),
+    title: '靈鹿',
+    text: '溪邊站著一頭鹿，渾身的毛泛著淡淡的光，頭上的角像兩枝玉雕的珊瑚。\n\n牠看見你，沒有跑。牠低下頭喝了一口水，轉身往谷裡走，走幾步，回頭看你一眼。',
+    choices: [
+      { text: '跟著牠走。', out: { text: '靈鹿把你帶到一面石壁前，石縫裡長滿了凝氣草。你回過頭，牠已經不見了。', effects: [['item', 'ningqi_grass', 3], ['mind', 2]] } },
+      { text: '遠遠看著。', out: { text: '牠在谷口站了一會兒，像是有點失望，然後隱進了霧裡。你在溪邊坐了很久，心裡很靜。', effects: [['mind', 4]] } },
+    ],
+  },
 ];

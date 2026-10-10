@@ -36,6 +36,9 @@ export function lookOf(key) {
   return SCENE_LOOKS[key] || LOOKS[key] || FOLK_LOOKS[0];
 }
 
+/** Props that flicker or sway (repainted as they go); the rest are still. */
+export const LIVE_PROPS = new Set(['campfire', 'ginseng', 'wisp']);
+
 const POSES = new Set(['sit', 'sweep', 'fish', 'drink', 'sword', 'tell', 'gong', 'stagger', 'lantern']);
 
 /**
@@ -115,7 +118,7 @@ export function drawActor(ctx, ac, { t = 0, alpha = 1 } = {}) {
   ctx.globalAlpha *= alpha;
   if (ac.a === 'person') drawPose(ctx, lookOf(ac.look), ac.pose || 'stand', { t: t + (ac.n || 0) * 0.7, face: ac.face || 1, moving: !!ac.moving });
   else if (ac.a === 'beast') drawBeast(ctx, ac.beast, { t: t + (ac.n || 0), face: ac.face || 1, moving: !!ac.moving, fly: ac.fly || 0 });
-  else drawProp(ctx, ac.prop, { t, face: ac.face || 1 });
+  else drawProp(ctx, ac.prop, { t: t + (ac.n || 0) * 1.3, face: ac.face || 1 });
   ctx.restore();
 }
 
@@ -327,11 +330,17 @@ function lying(ctx, look, face) {
 export function drawBeast(ctx, kind, { t = 0, face = 1, moving = false, fly = 0 } = {}) {
   if (kind === 'wolf' || kind === 'snake' || kind === 'bandit' || kind === 'ghost') return drawMob(ctx, kind, 0, 0, { t, face, moving });
   ctx.save();
-  if (!fly) groundShadow(ctx, 0, 0, kind === 'deer' || kind === 'spirit_deer' ? 11 : 6, 2);
+  if (!fly) groundShadow(ctx, 0, 0, kind === 'deer' || kind === 'spirit_deer' || kind === 'fox_trapped' ? 11 : 6, 2);
   ctx.scale(face, 1);
   switch (kind) {
     case 'fox':
       fox(ctx, t, moving);
+      break;
+    case 'redfox':
+      fox(ctx, t, moving, { red: true, lantern: false });
+      break;
+    case 'fox_trapped':
+      trappedFox(ctx, t);
       break;
     case 'deer':
     case 'spirit_deer':
@@ -353,9 +362,13 @@ export function drawBeast(ctx, kind, { t = 0, face = 1, moving = false, fly = 0 
   ctx.restore();
 }
 
-function fox(ctx, t, moving) {
+/**
+ * A fox. The white one of the shrine carries a little lantern burning blue;
+ * a common fox of the fields is red and carries nothing.
+ */
+function fox(ctx, t, moving, { red = false, lantern = true } = {}) {
   const ph = moving ? Math.sin(t * 13) : 0;
-  ctx.strokeStyle = 'rgba(236,236,232,1)';
+  ctx.strokeStyle = red ? 'rgba(150,84,46,1)' : 'rgba(236,236,232,1)';
   ctx.lineWidth = 1.5;
   ctx.beginPath();
   ctx.moveTo(-5, -5);
@@ -363,11 +376,11 @@ function fox(ctx, t, moving) {
   ctx.moveTo(4, -5);
   ctx.lineTo(4 - ph * 2.4, 0);
   ctx.stroke();
-  ctx.fillStyle = 'rgba(246,244,240,1)';
+  ctx.fillStyle = red ? 'rgba(196,112,60,1)' : 'rgba(246,244,240,1)';
   ctx.beginPath();
   ctx.ellipse(0, -7.5, 8, 3.8, -0.05, 0, Math.PI * 2);
   ctx.fill();
-  // the tail, full and white
+  // the tail, full (and white-tipped, on a red one)
   ctx.beginPath();
   ctx.moveTo(-7, -8);
   ctx.quadraticCurveTo(-16, -14 + Math.sin(t * 3) * 2, -15, -4);
@@ -387,8 +400,15 @@ function fox(ctx, t, moving) {
   ctx.strokeStyle = rgba(INK, 0.5);
   ctx.lineWidth = 0.6;
   ctx.stroke();
-  ctx.fillStyle = 'rgba(200,40,40,1)';
+  if (red) {
+    ctx.fillStyle = 'rgba(244,240,232,1)';
+    ctx.beginPath();
+    ctx.ellipse(-15, -5, 2.2, 1.6, 0.4, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.fillStyle = red ? 'rgba(30,24,20,1)' : 'rgba(200,40,40,1)';
   ctx.fillRect(9.5, -9.4, 1, 0.8);
+  if (!lantern) return;
   // a little lantern in its mouth, burning blue
   ctx.strokeStyle = rgba(INK, 0.6);
   ctx.lineWidth = 0.4;
@@ -399,6 +419,43 @@ function fox(ctx, t, moving) {
   ctx.fillStyle = 'rgba(120,180,255,1)';
   ctx.beginPath();
   ctx.ellipse(13, -2.5, 1.8, 2.2, 0, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+function trappedFox(ctx, t) {
+  // lying on its side, a hind leg in the iron jaws; it breathes, and watches you
+  const breath = Math.sin(t * 2) * 0.4;
+  ctx.fillStyle = 'rgba(246,244,240,1)';
+  ctx.strokeStyle = rgba(INK, 0.45);
+  ctx.lineWidth = 0.6;
+  ctx.beginPath();
+  ctx.ellipse(0, -4, 8.5, 3.4 + breath, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(-7, -5);
+  ctx.quadraticCurveTo(-15, -8, -14, -1);
+  ctx.quadraticCurveTo(-10, -2, -7, -3);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(6, -7);
+  ctx.lineTo(13, -5);
+  ctx.lineTo(7, -2);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(7, -7);
+  ctx.lineTo(8, -11);
+  ctx.lineTo(10, -6.5);
+  ctx.fill();
+  ctx.fillStyle = 'rgba(200,40,40,1)';
+  ctx.fillRect(9.5, -5.6, 1, 0.8);
+  // blood on the white
+  ctx.fillStyle = 'rgba(160,30,26,0.75)';
+  ctx.beginPath();
+  ctx.ellipse(-6, -2, 2.6, 1.2, 0.3, 0, Math.PI * 2);
+  ctx.ellipse(-9, 0.5, 1.4, 0.7, 0, 0, Math.PI * 2);
   ctx.fill();
 }
 
@@ -797,6 +854,47 @@ export function drawProp(ctx, kind, { t = 0, face = 1 } = {}) {
       ctx.strokeRect(-8, -9, 16, 9);
       ctx.fillStyle = 'rgba(200,170,90,1)';
       ctx.fillRect(-1.5, -6, 3, 3);
+      return;
+    }
+    case 'sword': {
+      // a sword laid on the ground, in its scabbard
+      ctx.strokeStyle = 'rgba(70,58,46,1)';
+      ctx.lineWidth = 2.2;
+      ctx.beginPath();
+      ctx.moveTo(-12, -1.5);
+      ctx.lineTo(8, -2.5);
+      ctx.stroke();
+      ctx.strokeStyle = 'rgba(190,160,90,1)';
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      ctx.moveTo(8, -5);
+      ctx.lineTo(8.5, 0);
+      ctx.stroke();
+      ctx.strokeStyle = 'rgba(110,40,32,1)';
+      ctx.lineWidth = 1.6;
+      ctx.beginPath();
+      ctx.moveTo(9, -2.6);
+      ctx.lineTo(14, -2.9);
+      ctx.stroke();
+      return;
+    }
+    case 'wisp': {
+      // a will-o'-the-wisp: a cold green flame, adrift at the height of a man's waist
+      const y = -16 + Math.sin(t * 1.7) * 3;
+      const g = ctx.createRadialGradient(0, y, 0, 0, y, 10);
+      g.addColorStop(0, 'rgba(210,255,225,0.95)');
+      g.addColorStop(0.4, 'rgba(110,220,170,0.55)');
+      g.addColorStop(1, 'rgba(60,160,140,0)');
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.arc(0, y, 10, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = 'rgba(180,255,215,0.9)';
+      ctx.beginPath();
+      ctx.moveTo(-3, y + 2);
+      ctx.quadraticCurveTo(Math.sin(t * 5) * 1.5, y - 9 - Math.sin(t * 6) * 2, 3, y + 2);
+      ctx.quadraticCurveTo(0, y + 4, -3, y + 2);
+      ctx.fill();
       return;
     }
     case 'drum': {

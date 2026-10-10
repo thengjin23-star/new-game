@@ -106,9 +106,10 @@ function findSpot(s, L, def, around) {
     if (!groundOk(def.ground, x, y)) continue;
     if (taken.some(([px, py]) => Math.hypot(px - x, py - y) < 150)) continue;
     // whoever is in it must have room to stand, and (if it can be had) not behind a bush
-    if (def.actors.some((ac) => ac.a !== 'beast' && ac.prop !== 'hut' && collides(s, x + ac.at[0], y + ac.at[1], 6))) continue;
+    const at = (ac) => (def.orient ? turned(ac.at, x - w.x, y - w.y) : ac.at);
+    if (def.actors.some((ac) => ac.a !== 'beast' && ac.prop !== 'hut' && collides(s, x + at(ac)[0], y + at(ac)[1], 6))) continue;
     const room = def.ground === 'forest' ? 12 : 24;
-    if (k < 60 && def.actors.some((ac) => ac.prop !== 'hut' && decorNear(x + ac.at[0], y + ac.at[1], room))) continue;
+    if (k < 60 && def.actors.some((ac) => ac.prop !== 'hut' && decorNear(x + at(ac)[0], y + at(ac)[1], room))) continue;
     return [x, y];
   }
   return null;
@@ -126,6 +127,8 @@ export function stageScene(s, L, eventId, { around = false } = {}) {
   const spot = findSpot(s, L, def, around);
   if (!spot) return null;
   const [x, y] = spot;
+  // someone at the water's edge looks out over it
+  const toWater = def.faceWater ? waterSide(x, y) : 0;
   L.sceneSeq = (L.sceneSeq || 0) + 1;
   const sc = {
     uid: L.sceneSeq,
@@ -138,10 +141,36 @@ export function stageScene(s, L, eventId, { around = false } = {}) {
     fade: 0,
     // among trees: drawn through them, faintly, so it can be found
     inWoods: WOODS.has(cellT(x, y)),
-    actors: def.actors.map((ac, n) => ({ ...ac, n, x: x + ac.at[0], y: y + ac.at[1], face: ac.face ?? (ac.at[0] > 4 ? -1 : 1), moving: false })),
+    actors: def.actors.map((ac, n) => {
+      const [ox, oy] = def.orient ? turned(ac.at, x - s.world.x, y - s.world.y) : ac.at;
+      return { ...ac, n, x: x + ox, y: y + oy, face: ac.face ?? (toWater || (ox > 4 ? -1 : 1)), moving: false };
+    }),
   };
   scenesOf(L).push(sc);
   return sc;
+}
+
+/** An offset turned so that its +y points along (ux, uy), away from you. */
+function turned([ax, ay], ux, uy) {
+  const d = Math.hypot(ux, uy) || 1;
+  const vx = ux / d;
+  const vy = uy / d;
+  return [Math.round(ax * -vy + ay * vx), Math.round(ax * vx + ay * vy)];
+}
+
+/** Which way (left -1, right 1) the nearest water lies, or 0 if none is near. */
+function waterSide(x, y) {
+  const g = world();
+  let best = null;
+  for (let j = rowOf(y) - 3; j <= rowOf(y) + 3; j++) {
+    for (let i = colOf(x) - 3; i <= colOf(x) + 3; i++) {
+      if (i < 0 || j < 0 || i >= 130 || j >= 115 || g.terr[idxOf(i, j)] !== T.WATER) continue;
+      const dx = (i + 0.5) * CELL - x;
+      const d = Math.hypot(dx, (j + 0.5) * CELL - y);
+      if (!best || d < best[1]) best = [dx, d];
+    }
+  }
+  return best ? (best[0] < 0 ? -1 : 1) : 0;
 }
 
 function stillEligible(s, sc) {
@@ -162,22 +191,35 @@ export function meetScene(s, L, sc) {
   return true;
 }
 
-/** Move along a scene that walks (a fox trotting off down the street). */
+/**
+ * Move along a scene that walks: a fox trotting off down the street (east or
+ * west), or a thief running straight at you (toward).
+ */
 function moveStep(s, sc, dt) {
   const m = sc.def.move;
   const lead = sc.actors[0];
-  const dx = m.east ? 1 : -1;
-  const nx = lead.x + dx * m.speed * dt;
-  if (collides(s, nx, lead.y, 6) || !groundOk('any', nx, lead.y) && !groundOk('street', nx, lead.y)) {
-    lead.moving = false;
+  let vx = m.east ? 1 : -1;
+  let vy = 0;
+  if (m.toward) {
+    const w = s.world;
+    const d = Math.hypot(w.x - lead.x, w.y - lead.y) || 1;
+    vx = (w.x - lead.x) / d;
+    vy = (w.y - lead.y) / d;
+  }
+  const nx = lead.x + vx * m.speed * dt;
+  const ny = lead.y + vy * m.speed * dt;
+  if (collides(s, nx, ny, 6) || (!groundOk('any', nx, ny) && !groundOk('street', nx, ny))) {
+    for (const ac of sc.actors) ac.moving = false;
     return;
   }
   for (const ac of sc.actors) {
-    ac.x += dx * m.speed * dt;
-    ac.face = dx;
+    ac.x += vx * m.speed * dt;
+    ac.y += vy * m.speed * dt;
+    if (Math.abs(vx) > 0.15) ac.face = vx < 0 ? -1 : 1;
     ac.moving = true;
   }
   sc.x = lead.x;
+  sc.y = lead.y;
 }
 
 /** After its event: people walk off, the dead are buried, the strange simply go. */
@@ -193,7 +235,8 @@ function afterStep(s, sc, dt) {
   const w = s.world;
   sc.t2 = (sc.t2 || 0) + dt;
   for (const ac of sc.actors) {
-    if (ac.a === 'prop' && ac.prop !== 'mule') continue;
+    // things stay where they were set down, and so do the fallen
+    if ((ac.a === 'prop' && ac.prop !== 'mule') || ac.pose === 'lie' || ac.beast === 'fox_trapped') continue;
     const d = Math.hypot(ac.x - w.x, ac.y - w.y) || 1;
     const vx = (ac.x - w.x) / d;
     const vy = (ac.y - w.y) / d;
@@ -205,7 +248,7 @@ function afterStep(s, sc, dt) {
     }
     ac.face = vx < 0 ? -1 : 1;
     ac.moving = true;
-    ac.pose = ac.pose === 'lie' ? 'lie' : 'stand';
+    ac.pose = 'stand';
   }
   if (sc.t2 > 4) sc.fade += dt * 1.2;
   if (sc.fade >= 1) sc.gone = true;

@@ -1,5 +1,5 @@
 import { dayAt } from '../../core/calendar.js';
-import { has, flag, favor, met, needLs, npcPower, variant } from '../helpers.js';
+import { has, flag, favor, met, needLs, needItem, npcPower, variant } from '../helpers.js';
 
 const M = ['luoxia_market'];
 
@@ -32,6 +32,65 @@ const STORIES = [
 ];
 
 export default [
+  {
+    id: 'market_duel',
+    trigger: 'explore',
+    nodes: M,
+    cooldown: 40,
+    weight: 6,
+    cond: (s) => s.tod >= 9 && s.tod < 18,
+    title: '鬥法',
+    text: '路口圍了一大圈人。圈子當中，兩個修士正在鬥法：一個使劍，一個甩出一張又一張符籙，火光和劍光攪成一團，看得人眼花繚亂。\n\n「好！」有人叫好。\n「執法隊來了——！」又有人喊。',
+    choices: [
+      {
+        text: '看下去。',
+        check: { kind: 'wuxing', diff: 6 },
+        ok: { text: '使劍的那個，每一劍都留了三分力。你看出來了：他們不是在拚命，是在做給人看——可那三分力一收一放之間，自有章法。', effects: [['insight', 1], ['mind', 1]] },
+        fail: { text: '劍光、火光，你看得目不暇給，卻什麼也沒看懂。', effects: [['mind', 1]] },
+      },
+      {
+        text: '趁亂撿地上的東西。',
+        karma: true,
+        check: { kind: 'jiyuan', diff: 5 },
+        ok: { text: '你在一堆人腳底下摸到了兩塊被踢飛的靈石，揣進懷裡，沒人看見。', effects: [['ls', 3], ['mind', -1]] },
+        fail: { text: '你剛彎下腰，一隻手就按住了你的肩膀。是執法隊的人。\n\n「撿什麼呢？」\n\n你被罰了五塊靈石。', effects: [['ls', -5]] },
+      },
+      { text: '走開，免得殃及池魚。', out: { text: '你剛走開兩步，身後「轟」的一聲——剛才你站的地方，被一團火燒焦了一大片。', effects: [['mind', 1]] } },
+    ],
+  },
+
+  {
+    id: 'market_sword_seller',
+    trigger: 'explore',
+    nodes: M,
+    cooldown: 180,
+    weight: 4,
+    cond: (s) => s.tod >= 8 && s.tod < 19,
+    title: '賣劍',
+    steps: {
+      start: {
+        effects: [['newnpc', 'sanxiu']],
+        text: '路邊蹲著一個{npcTitle}，面前鋪著一塊破布，布上只擺了一把劍。那人臉色蠟黃，胸口纏的布條還在滲血。\n\n「青鋼劍，」{npc}說，「八十塊，不還價。我要買藥。」',
+        choices: [
+          {
+            text: '買下。',
+            need: needLs(80),
+            out: { text: '{npc}把劍遞給你的時候，手抖了一下。「它跟了我十二年。」{npc}說，「別讓它生鏽。」', effects: [['ls', -80], ['item', 'qinggang_sword', 1], ['favor', 'npc', 10]] },
+          },
+          {
+            text: '送{npc}一顆療傷丹。',
+            need: needItem('heal_pill', '療傷丹'),
+            out: {
+              text: '{npc}愣了很久，才把丹藥接過去。「這份情，我記下了。」\n\n{npc}把劍收回了鞘裡：「劍，不賣了。」',
+              effects: [['item', 'heal_pill', -1], ['favor', 'npc', 35], ['mind', 3]],
+            },
+          },
+          { text: '搖搖頭，走開。', out: { text: '{npc}沒有抬頭。' } },
+        ],
+      },
+    },
+  },
+
   {
     id: 'market_arrive',
     trigger: 'arrive',

@@ -16,7 +16,7 @@ const isNight = (s) => s.tod >= 19.5 || s.tod < 5;
 export const WILDLIFE = {
   qingshi_hill: { n: 4, kinds: [['deer', 3, 'day', 'wild', [1, 2]], ['rabbit', 4, 'any', 'wild', [1, 1]], ['crow', 2, 'day', 'wild', [2, 3]]] },
   black_forest: { n: 2, kinds: [['crow', 4, 'day', 'forest', [2, 4]], ['deer', 1, 'day', 'forest', [1, 1]]] },
-  wilds: { n: 4, kinds: [['rabbit', 4, 'any', 'wild', [1, 2]], ['crow', 3, 'day', 'wild', [2, 3]], ['egret', 2, 'day', 'water', [1, 2]], ['deer', 2, 'day', 'wild', [1, 2]], ['fox', 3, 'night', 'wild', [1, 1]]] },
+  wilds: { n: 4, kinds: [['rabbit', 4, 'any', 'wild', [1, 2]], ['crow', 3, 'day', 'wild', [2, 3]], ['egret', 2, 'day', 'water', [1, 2]], ['deer', 2, 'day', 'wild', [1, 2]], ['redfox', 3, 'night', 'wild', [1, 1]]] },
   farmland: { n: 4, kinds: [['egret', 4, 'day', 'water', [1, 3]], ['crow', 3, 'day', 'wild', [2, 4]], ['rabbit', 2, 'any', 'wild', [1, 1]]] },
   mirror_lake: { n: 4, kinds: [['egret', 4, 'day', 'water', [1, 3]], ['crane', 2, 'day', 'water', [1, 2]]] },
   crane_ferry: { n: 3, kinds: [['crane', 4, 'day', 'water', [1, 3]], ['egret', 2, 'day', 'water', [1, 2]]] },
@@ -33,6 +33,7 @@ const SHY = {
   spirit_deer: { r: 170, run: 190 },
   rabbit: { r: 90, run: 150 },
   fox: { r: 120, run: 140 },
+  redfox: { r: 130, run: 150 },
   egret: { r: 110, fly: true },
   crane: { r: 120, fly: true },
   crow: { r: 100, fly: true },
@@ -180,7 +181,7 @@ export function updateWild(s, L, dt) {
   for (let i = list.length - 1; i >= 0; i--) {
     const c = list[i];
     // walked on and left behind: gone; and the fox goes home at dawn
-    if (c.state === 'gone' || Math.hypot(c.x - w.x, c.y - w.y) > 1100 || (c.kind === 'fox' && !isNight(s) && c.state === 'idle')) {
+    if (c.state === 'gone' || Math.hypot(c.x - w.x, c.y - w.y) > 1100 || ((c.kind === 'fox' || c.kind === 'redfox') && !isNight(s) && c.state === 'idle')) {
       list.splice(i, 1);
       continue;
     }

@@ -216,4 +216,28 @@ export default [
       },
     },
   },
+
+  {
+    id: 'ruins_wisps',
+    trigger: 'explore',
+    nodes: R,
+    cooldown: 30,
+    weight: 7,
+    cond: (s) => s.tod >= 19.5 || s.tod < 5,
+    title: '鬼火',
+    text: '斷劍林裡飄起了鬼火。一團，兩團，三團……綠瑩瑩的，在半人高的地方慢慢地轉，像是在找什麼東西。\n\n離你最近的那一團停了一下，往遠處飄去，又停下來。像在等你。',
+    choices: [
+      {
+        text: '跟上去。',
+        check: { kind: 'jiyuan', diff: 5 },
+        ok: { text: '鬼火把你引到一截斷牆下，然後散了。牆根的土是鬆的。你挖了幾下，挖出一個鏽死的鐵盒。', effects: [['item', 'mystery', 1]] },
+        fail: { text: '你跟著鬼火繞了半夜，最後發現自己又回到了原地。鬼火散了，風裡傳來一陣笑聲。', effects: [['mind', -3]] },
+      },
+      {
+        text: '念一段往生咒。',
+        out: { text: '你不會往生咒，只記得小時候聽和尚念過的幾句。你念了。\n\n鬼火一團一團地暗下去。最後一團，在你面前停了很久，才熄滅。', effects: [['mind', 4], ['sysexp', 2]] },
+      },
+      { text: '離開這裡。', out: { text: '你轉身就走。走出很遠，還覺得背後有東西在看你。', effects: [['mind', -1]] } },
+    ],
+  },
 ];

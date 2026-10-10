@@ -1,4 +1,12 @@
-import { needLs, npcPower, variant } from '../helpers.js';
+import { needLs, needItem, npcPower, variant } from '../helpers.js';
+
+const day = (s) => s.tod >= 6 && s.tod < 19;
+
+/** Quietly, without a word to you: how someone you may not have met yet feels about you. */
+const regard = (id, n) => (s) => {
+  const npc = s.npcs[id];
+  if (npc) npc.favor = Math.max(-100, Math.min(100, npc.favor + n));
+};
 
 export default [
   {
@@ -177,6 +185,127 @@ export default [
         fail: { text: '妖狼比你想的難纏。你拼著受傷把牠趕跑了，但沒能殺死牠。', effects: [['days', 2], ['hurt', 1], ['mind', 2]] },
       },
       { text: '「我還有要事。」', out: { text: '你走出村口的時候，聽見身後有人在哭。', effects: [['mind', -5]] } },
+    ],
+  },
+
+  {
+    id: 'travel_escort',
+    trigger: 'travel',
+    weight: 6,
+    cooldown: 150,
+    cond: (s) => s.player.realm >= 1 && day(s),
+    title: '劫鏢',
+    text: '前頭傳來兵刃相交的聲音。一輛鏢車翻在路邊，兩個鏢師背靠著背，被三個蒙面人圍在當中，已經見了血。\n\n其中一個鏢師看見了你，啞著嗓子喊：「這位兄弟——搭把手！事後必有重謝！」',
+    choices: [
+      {
+        text: '拔刀相助。',
+        check: { kind: 'power', diff: 28 },
+        ok: {
+          text: '蒙面人沒想到半路殺出個修士，丟下兩個受傷的同伴跑了。鏢頭給你作了個揖，從車上搬下一個小匣子：「一點心意，不成敬意。」',
+          effects: [['ls', [12, 24]], ['mind', 3], ['log', '在路上救下一支鏢隊']],
+        },
+        fail: {
+          text: '你衝上去，捱了一刀，可總算替鏢師們撕開了一個口子。蒙面人見勢不妙，退了。\n\n鏢頭替你裹了傷，塞給你幾塊靈石。',
+          effects: [['hurt', 1], ['ls', [4, 8]], ['mind', 2]],
+        },
+      },
+      {
+        text: '躲在樹後，等他們兩敗俱傷。',
+        karma: true,
+        out: {
+          text: '你在樹後等到聲音停了。鏢師死了一個，蒙面人也躺下了兩個。你在屍體上摸到了幾塊靈石。\n\n活著的那個鏢師看著你，什麼也沒說。',
+          effects: [['ls', [6, 12]], ['mind', -6]],
+        },
+      },
+      { text: '繞道走。', out: { text: '你繞了一個大圈。走出很遠，還能聽見那邊的喊殺聲。', effects: [['mind', -2]] } },
+    ],
+  },
+
+  {
+    id: 'travel_wounded',
+    trigger: 'travel',
+    weight: 6,
+    cooldown: 120,
+    cond: (s) => s.player.realm >= 1,
+    title: '負傷的人',
+    steps: {
+      start: {
+        effects: [['newnpc', 'sanxiu']],
+        text: '路邊的石頭上靠著一個{npcTitle}，一隻手捂著肋下，血從指縫裡往外滲。看見你，{npc}下意識地去摸劍，摸了個空——劍掉在三步外的草叢裡。\n\n「別過來。」聲音很虛。',
+        choices: [
+          {
+            text: '遞過去一顆療傷丹。',
+            need: needItem('heal_pill', '療傷丹'),
+            out: {
+              text: '{npc}盯著丹藥看了很久，才張嘴吞了下去。過了一炷香，臉上總算有了點血色。\n\n「我叫{npc}。」對方說，「欠你一條命。」',
+              effects: [['item', 'heal_pill', -1], ['favor', 'npc', 40], ['mind', 3], ['sysexp', 2]],
+            },
+          },
+          {
+            text: '撕塊布，替{npc}包紮。',
+            out: { text: '你替{npc}把傷口紮緊了。{npc}一直盯著你的手，直到你包完，才鬆了口氣。\n\n「後會有期。」', effects: [['favor', 'npc', 15], ['mind', 2]] },
+          },
+          { text: '繞開。', out: { text: '修士的事，少管為妙。你繞了過去。' } },
+        ],
+      },
+    },
+  },
+
+  {
+    id: 'travel_trap',
+    trigger: 'travel',
+    weight: 5,
+    cooldown: 200,
+    cond: (s) => day(s) && !s.flags.fox_betrayed,
+    title: '獸夾',
+    text: '草叢裡有東西在掙扎。你撥開草——是一隻白狐，後腿被獵人的鐵夾子咬住了，血把雪白的毛染紅了一片。\n\n牠看著你，不叫，也不動。',
+    choices: [
+      {
+        text: '掰開夾子，放了牠。',
+        out: {
+          text: '鐵夾子咬得很死，你掰得滿手是血。白狐一瘸一拐地鑽進了草叢，走之前，回頭看了你一眼。',
+          effects: [['flag', 'freed_fox'], ['mind', 4], regard('hu_sanniang', 10)],
+        },
+      },
+      { text: '那是獵人的東西。走開。', out: { text: '你走開了。身後很靜，牠一聲也沒叫。' } },
+      {
+        text: '狐皮能賣錢。',
+        karma: true,
+        out: {
+          text: '……\n\n那張狐皮，在坊市賣了六塊靈石。那天夜裡，你夢見一雙眼睛，看了你一整夜。',
+          effects: [['ls', 6], ['mind', -8], ['flag', 'skinned_fox'], regard('hu_sanniang', -40)],
+        },
+      },
+    ],
+  },
+
+  {
+    id: 'lake_fisher',
+    trigger: 'explore',
+    nodes: ['mirror_lake'],
+    weight: 6,
+    cooldown: 90,
+    cond: (s) => s.tod >= 4.5 && s.tod < 9,
+    title: '漁翁',
+    text: '天剛濛濛亮，湖面上起了一層薄霧。岸邊坐著一個戴斗笠的老漁翁，竿子垂進霧裡，看不見線，也看不見浮子。\n\n你在他身邊站了很久，他一動也沒動。',
+    choices: [
+      {
+        text: '坐下，陪他一起釣。',
+        check: { kind: 'xinxing', diff: 5 },
+        ok: {
+          text: '你們一句話也沒說。太陽升起來，霧散了，老漁翁收起竿子——鉤上什麼也沒有，連餌都沒有。\n\n「釣了一早上，」他說，「釣到一個肯陪老頭子坐著的人。值了。」',
+          effects: [['mind', 5], ['insight', 1]],
+        },
+        fail: { text: '你坐不住，沒一會兒就開始東張西望。老漁翁咳嗽了一聲，你不好意思地站起來，走了。', effects: [['mind', 1]] },
+      },
+      {
+        text: '問他湖裡有什麼。',
+        out: {
+          text: '「湖裡啊，」老漁翁慢悠悠地說，「有魚，有月亮，還有一座亭子。從前亭子裡住過一個仙人，後來不知道去哪了。」',
+          effects: [['mind', 1], ['rumor', '鏡湖的老漁翁說，湖心亭裡從前住過一個仙人。']],
+        },
+      },
+      { text: '不打擾他。', out: { text: '你悄悄地走開了。霧裡，傳來一聲很輕的水響。' } },
     ],
   },
 ];

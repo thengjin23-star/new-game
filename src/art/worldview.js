@@ -1166,6 +1166,13 @@ export function createWorldView(canvas, { onFrame, idle } = {}) {
       for (const fk of E.folkInWorld(s)) if (fk.act === 'gong') lamp(fk.x + fk.face * 12, fk.y - 15, [255, 170, 90], 40, 0.6);
       for (const n of E.peopleInWorld(s)) if (n.inside && Math.hypot(n.x - w.x, n.y - w.y) <= E.DOOR) lamp(n.x + (n.x > w.x ? -12 : 12), n.y - 15, [255, 170, 90], 38, 0.55);
       for (const h of world().herbs) if (E.herbReady(s, h)) lamp(h.x, h.y - 10, [210, 255, 210], 16, 0.4);
+      for (const sc of E.scenesInWorld(s)) {
+        for (const ac of sc.actors) {
+          if (ac.prop === 'wisp') lamp(ac.x, ac.y - 16, [130, 255, 190], 44, 0.6 * (1 - sc.fade));
+          if (ac.prop === 'campfire') lamp(ac.x, ac.y - 6, [255, 150, 70], 60, 0.6 * (1 - sc.fade));
+          if (ac.beast === 'fox') lamp(ac.x + (ac.face || 1) * 13, ac.y - 6, [110, 160, 255], 40, 0.6 * (1 - sc.fade));
+        }
+      }
       for (const c of E.wildInWorld(s)) {
         if (c.kind === 'fox') lamp(c.x + c.face * 13, c.y - 6, [110, 160, 255], 40, 0.6 * (1 - c.fade));
         if (c.kind === 'spirit_deer') lamp(c.x, c.y - 16, [190, 255, 230], 46, 0.5 * (1 - c.fade));

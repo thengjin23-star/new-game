@@ -55,4 +55,28 @@ export default [
         : '你坐在江邊，看著霧氣裡若隱若現的對岸。\n\n老船夫說：「築基了再來。」\n\n你點點頭。江風很大，吹得人眼睛發酸。',
     choices: [{ text: '回去修煉。', out: { effects: [['mind', 2]] } }],
   },
+
+  {
+    id: 'ferry_crate',
+    trigger: 'explore',
+    nodes: C,
+    cooldown: 60,
+    weight: 6,
+    cond: (s) => s.tod >= 6 && s.tod < 19,
+    title: '浮箱',
+    text: '江水把一隻木箱沖上了岸，卡在蘆葦叢裡。箱子上的漆已經泡掉了，鎖倒是還在。',
+    choices: [
+      {
+        text: '撬開看看。',
+        check: { kind: 'jiyuan', diff: 5 },
+        ok: { text: '箱子裡墊著油布，油布裡裹著兩個瓷瓶。拔開塞子一聞——是聚氣丹。不知道是哪條沉船上的。', effects: [['item', 'juqi_pill', 2]] },
+        fail: { text: '箱子裡是半箱泡爛的書，字都糊了。你翻了半天，翻出一條死魚。', effects: [['mind', -1]] },
+      },
+      {
+        text: '交給渡口的船家。',
+        out: { text: '船家看了看箱子上的記號：「上游劉家貨棧的。」他咧嘴一笑，「我替你捎回去，劉掌櫃最講究，少不了你的好處。」\n\n過了幾天，劉家真托人捎來了三塊靈石。', effects: [['ls', 3], ['mind', 2]] },
+      },
+      { text: '不關我的事。', out: { text: '你看著箱子在蘆葦叢裡一起一伏，走開了。' } },
+    ],
+  },
 ];

@@ -82,7 +82,7 @@ test('the wild fills in around you, with what lives there and at its hour', () =
   standAt(s, 3150, 2380, 23);
   idle(s, 600);
   const night = E.wildInWorld(s);
-  assert.ok(night.every((c) => c.kind === 'fox' || c.kind === 'rabbit'), `only night creatures: ${night.map((c) => c.kind)}`);
+  assert.ok(night.every((c) => c.kind === 'redfox' || c.kind === 'rabbit'), `only night creatures: ${night.map((c) => c.kind)}`);
 });
 
 test('靈溪谷 stays silent until the python is settled', () => {

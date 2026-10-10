@@ -384,6 +384,7 @@ const ENCOUNTER = {
   ancient_ruins: [1600, 0.25],
   lingxi_valley: [1700, 0.25],
   qingshi_town: [1500, 0.5],
+  luoxia_market: [1400, 0.4],
 };
 const ON_THE_ROAD = new Set(['wilds', 'farmland', 'mirror_lake', 'crane_ferry', 'fox_shrine']);
 

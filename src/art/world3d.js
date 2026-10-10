@@ -27,7 +27,7 @@ import { propSprite, SPRITE } from './sprites.js';
 import { makeParticles, drawParticles } from './ink.js';
 import { seasonOf } from '../core/calendar.js';
 import { asset } from './assets.js';
-import { drawActor, drawPose, poseOf, lookOf, drawSpeech } from './scenery.js';
+import { drawActor, drawPose, poseOf, lookOf, drawSpeech, LIVE_PROPS } from './scenery.js';
 import { stream } from '../core/rng.js';
 
 const DEG = Math.PI / 180;
@@ -341,7 +341,7 @@ export function createWorld3D(canvas, { onFrame, idle, quality = 'high', onSlow 
       if (!near(sc.x, sc.y)) continue;
       const alpha = Math.max(0, 1 - sc.fade);
       for (const ac of sc.actors) {
-        const still = ac.a === 'prop' && ac.prop !== 'campfire' && ac.prop !== 'ginseng';
+        const still = ac.a === 'prop' && !LIVE_PROPS.has(ac.prop);
         cards.add(`scene:${sc.uid}:${ac.n}`, ac.x, heightAt(ac.x, ac.y), ac.y, (c) => drawActor(c, ac, { t }), { animated: !still, fps: ac.moving ? 24 : 8, alpha, ghost: sc.inWoods && (!still || ac.prop === 'ginseng') });
         if (!still || ac.prop === 'mule' || ac.prop === 'crates') foot(ac.x, ac.y, ac.pose === 'lie' ? 15 : ac.prop === 'mule' ? 13 : 9, 0.28 * alpha);
       }
@@ -433,6 +433,8 @@ export function createWorld3D(canvas, { onFrame, idle, quality = 'high', onSlow 
         if (ac.prop === 'campfire') L.add(ac.x, g + 6, ac.y, 40 + Math.sin(t * 9) * 3, 1, 0.55, 0.22, (0.35 + 0.5 * dark) * a);
         if (ac.prop === 'ginseng') L.add(ac.x, g + 8, ac.y, 22, 1, 0.55, 0.5, (0.25 + 0.3 * dark) * a);
         if (ac.beast === 'fox') L.add(ac.x + (ac.face || 1) * 13, g + 4, ac.y, 26 + Math.sin(t * 5) * 3, 0.45, 0.7, 1, (0.5 + 0.4 * dark) * a);
+        if (ac.beast === 'spirit_deer') L.add(ac.x, g + 16, ac.y, 34 + Math.sin(t * 2) * 3, 0.75, 1, 0.9, (0.3 + 0.35 * dark) * a);
+        if (ac.prop === 'wisp') L.add(ac.x, g + 16, ac.y, 30 + Math.sin(t * 3 + ac.n) * 4, 0.5, 1, 0.75, (0.45 + 0.4 * dark) * a);
       }
     }
     // the spirit mist that lies in 靈溪谷, morning mist on the lake
