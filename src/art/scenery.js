@@ -36,6 +36,252 @@ export function lookOf(key) {
   return SCENE_LOOKS[key] || LOOKS[key] || FOLK_LOOKS[0];
 }
 
+// ── the great beasts (and worse) you fight ──
+
+/** A wolf of any size and coat: grey for the common, near-black for a demon, silver for a king. */
+function wolfShape(ctx, t, moving, { body, dark, eye, mane = false, scar = false }) {
+  const ph = moving ? Math.sin(t * 14) : 0;
+  ctx.strokeStyle = dark;
+  ctx.lineWidth = 1.8;
+  ctx.beginPath();
+  ctx.moveTo(-6, -7);
+  ctx.lineTo(-7 + ph * 3, 0);
+  ctx.moveTo(6, -7);
+  ctx.lineTo(7 - ph * 3, 0);
+  ctx.stroke();
+  ctx.fillStyle = body;
+  ctx.beginPath();
+  ctx.ellipse(0, -10, 10, 5, -0.05, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = rgba(INK, 0.75);
+  ctx.lineWidth = 0.8;
+  ctx.stroke();
+  if (mane) {
+    // a ruff of long hair over the shoulders
+    ctx.fillStyle = body;
+    ctx.beginPath();
+    ctx.moveTo(2, -15.5);
+    for (let k = 0; k <= 6; k++) ctx.lineTo(2 + k * 1.4, -15.5 - (k % 2 ? 2.6 : 0.4));
+    ctx.lineTo(10, -9);
+    ctx.lineTo(3, -7);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+  }
+  ctx.fillStyle = body;
+  ctx.beginPath();
+  ctx.moveTo(7, -13);
+  ctx.lineTo(16, -12);
+  ctx.lineTo(10, -8);
+  ctx.closePath();
+  ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(8, -13);
+  ctx.lineTo(9, -18);
+  ctx.lineTo(11, -13);
+  ctx.fill();
+  ctx.fillStyle = eye;
+  ctx.fillRect(11, -12, 1.6, 1.1);
+  if (scar) {
+    ctx.strokeStyle = 'rgba(150,40,34,0.9)';
+    ctx.lineWidth = 0.5;
+    ctx.beginPath();
+    ctx.moveTo(10.5, -14);
+    ctx.lineTo(12.5, -10.5);
+    ctx.stroke();
+  }
+  ctx.strokeStyle = body;
+  ctx.lineWidth = 2.6;
+  ctx.beginPath();
+  ctx.moveTo(-9, -11);
+  ctx.quadraticCurveTo(-14, -12, -16, -8 + (moving ? Math.sin(t * 7) : 0));
+  ctx.stroke();
+}
+
+function python(ctx, t) {
+  // coiled on the ground, the head reared up and swaying
+  const sway = Math.sin(t * 1.6) * 2;
+  ctx.lineCap = 'round';
+  const coil = () => {
+    ctx.beginPath();
+    ctx.moveTo(-26, -2);
+    ctx.bezierCurveTo(-30, -14, -6, -16, -8, -4);
+    ctx.bezierCurveTo(-10, 6, 16, 4, 14, -8);
+    ctx.bezierCurveTo(12, -20, 4 + sway, -26, 10 + sway, -34);
+  };
+  ctx.strokeStyle = 'rgba(28,40,32,1)';
+  ctx.lineWidth = 8.5;
+  coil();
+  ctx.stroke();
+  ctx.strokeStyle = 'rgba(58,84,62,1)';
+  ctx.lineWidth = 6.5;
+  coil();
+  ctx.stroke();
+  // the pale belly and a row of scales along the back
+  ctx.strokeStyle = 'rgba(176,180,140,0.7)';
+  ctx.lineWidth = 1.4;
+  ctx.setLineDash([2, 2.5]);
+  coil();
+  ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle = 'rgba(40,58,44,1)';
+  ctx.beginPath();
+  ctx.ellipse(12 + sway, -36, 6, 3.6, -0.3, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = rgba(INK, 0.7);
+  ctx.lineWidth = 0.7;
+  ctx.stroke();
+  ctx.fillStyle = 'rgba(230,200,60,1)';
+  ctx.fillRect(14 + sway, -38, 1.6, 1.2);
+  ctx.strokeStyle = 'rgba(190,40,40,0.9)';
+  ctx.lineWidth = 0.6;
+  ctx.beginPath();
+  ctx.moveTo(17.5 + sway, -35);
+  ctx.lineTo(21 + sway, -34 + Math.sin(t * 9));
+  ctx.stroke();
+}
+
+function bear(ctx, t, moving) {
+  const ph = moving ? Math.sin(t * 9) * 1.5 : 0;
+  ctx.strokeStyle = 'rgba(30,26,22,1)';
+  ctx.lineWidth = 4;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  for (const x of [-12, -5, 6, 13]) {
+    ctx.moveTo(x, -10);
+    ctx.lineTo(x + ph * (x > 0 ? 1 : -1), -1);
+  }
+  ctx.stroke();
+  ctx.fillStyle = 'rgba(52,44,38,1)';
+  ctx.beginPath();
+  ctx.ellipse(0, -15, 19, 10, -0.05, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = rgba(INK, 0.8);
+  ctx.lineWidth = 0.9;
+  ctx.stroke();
+  // the iron-grey ridge down its back
+  ctx.strokeStyle = 'rgba(120,124,128,0.9)';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(-14, -22);
+  ctx.quadraticCurveTo(0, -27, 12, -22);
+  ctx.stroke();
+  ctx.fillStyle = 'rgba(46,40,34,1)';
+  ctx.beginPath();
+  ctx.arc(19, -18, 6.5, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = rgba(INK, 0.8);
+  ctx.lineWidth = 0.8;
+  ctx.stroke();
+  for (const dx of [15, 21]) {
+    ctx.beginPath();
+    ctx.arc(dx, -24, 2, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.fillStyle = 'rgba(120,100,80,1)';
+  ctx.beginPath();
+  ctx.ellipse(24, -16.5, 3, 2.2, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = 'rgba(20,16,14,1)';
+  ctx.fillRect(20.5, -20, 1.3, 1.3);
+}
+
+function skeleton(ctx, t, moving) {
+  const bone = 'rgba(226,220,204,1)';
+  const ph = moving ? Math.sin(t * 8) * 2 : 0;
+  ctx.lineCap = 'round';
+  const limb = (pts, w) => {
+    ctx.strokeStyle = rgba(INK, 0.75);
+    ctx.lineWidth = w + 1.2;
+    ctx.beginPath();
+    pts.forEach(([x, y], k) => (k ? ctx.lineTo(x, y) : ctx.moveTo(x, y)));
+    ctx.stroke();
+    ctx.strokeStyle = bone;
+    ctx.lineWidth = w;
+    ctx.stroke();
+  };
+  limb([[-4, -30], [-6 + ph, -16], [-7 + ph, 0]], 2.2);
+  limb([[4, -30], [6 - ph, -16], [7 - ph, 0]], 2.2);
+  limb([[0, -30], [0, -50]], 2.4);
+  // ribs
+  for (let k = 0; k < 4; k++) {
+    const y = -48 + k * 4;
+    limb([[-6 + k * 0.6, y + 2], [0, y], [6 - k * 0.6, y + 2]], 1.1);
+  }
+  // a rag of a red war-robe, still hanging on
+  ctx.fillStyle = 'rgba(130,36,30,0.85)';
+  ctx.beginPath();
+  ctx.moveTo(-7, -31);
+  ctx.lineTo(7, -31);
+  ctx.lineTo(9, -18);
+  ctx.lineTo(3, -21);
+  ctx.lineTo(-2, -16);
+  ctx.lineTo(-8, -20);
+  ctx.closePath();
+  ctx.fill();
+  limb([[-6, -49], [-12, -38], [-14, -28]], 1.8);
+  limb([[6, -49], [12, -40], [15, -33]], 1.8);
+  // the skull, and the light in its eyes
+  ctx.fillStyle = bone;
+  ctx.strokeStyle = rgba(INK, 0.8);
+  ctx.lineWidth = 0.8;
+  ctx.beginPath();
+  ctx.ellipse(0, -56, 5, 6, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+  ctx.fillStyle = 'rgba(120,230,170,0.9)';
+  ctx.fillRect(-2.6, -57.5, 1.6, 1.6);
+  ctx.fillRect(1, -57.5, 1.6, 1.6);
+  // the broken halberd
+  ctx.strokeStyle = 'rgba(70,52,36,1)';
+  ctx.lineWidth = 1.6;
+  ctx.beginPath();
+  ctx.moveTo(15, -33);
+  ctx.lineTo(20, -70);
+  ctx.stroke();
+  ctx.fillStyle = 'rgba(150,154,158,1)';
+  ctx.beginPath();
+  ctx.moveTo(19.5, -66);
+  ctx.lineTo(28, -70);
+  ctx.lineTo(26, -60);
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = rgba(INK, 0.7);
+  ctx.lineWidth = 0.6;
+  ctx.stroke();
+}
+
+/** The big ones: a demon wolf, the wolf king, the python, the iron-backed bear, the skeleton general. */
+export function drawBigBeast(ctx, kind, { t = 0, face = 1, moving = false } = {}) {
+  ctx.save();
+  groundShadow(ctx, 0, 0, { demon_wolf: 15, wolf_king: 22, python: 24, bear: 22, skeleton: 12 }[kind] || 14, 3);
+  ctx.scale(face, 1);
+  switch (kind) {
+    case 'demon_wolf':
+      ctx.scale(1.35, 1.35);
+      wolfShape(ctx, t, moving, { body: 'rgba(58,48,46,1)', dark: 'rgba(36,30,28,1)', eye: 'rgba(230,60,40,1)' });
+      break;
+    case 'wolf_king':
+      ctx.scale(1.85, 1.85);
+      wolfShape(ctx, t, moving, { body: 'rgba(176,178,180,1)', dark: 'rgba(110,112,114,1)', eye: 'rgba(240,200,60,1)', mane: true, scar: true });
+      break;
+    case 'python':
+      python(ctx, t);
+      break;
+    case 'bear':
+      bear(ctx, t, moving);
+      break;
+    case 'skeleton':
+      skeleton(ctx, t, moving);
+      break;
+    default:
+      break;
+  }
+  ctx.restore();
+}
+
+export const BIG_BEASTS = new Set(['demon_wolf', 'wolf_king', 'python', 'bear', 'skeleton']);
+
 /** Props that flicker or sway (repainted as they go); the rest are still. */
 export const LIVE_PROPS = new Set(['campfire', 'ginseng', 'wisp']);
 

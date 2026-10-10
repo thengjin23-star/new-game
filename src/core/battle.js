@@ -55,6 +55,12 @@ export const FIGHT_ITEMS = {
 };
 
 const WEAPON_VERB = { chaidao: '一刀劈向', qinggang_sword: '一劍刺向', hunting_bow: '一箭射向' };
+const WEAPON_MOVE = { chaidao: '劈砍', qinggang_sword: '劍擊', hunting_bow: '射箭' };
+
+/** What your plain attack is called, by what you hold. */
+export function attackName(s) {
+  return WEAPON_MOVE[s.player.weapon] || '拳腳';
+}
 
 /** 戰力 before injuries (a wound shows as blood already lost, not as weakness). */
 export function fightPower(s) {
@@ -197,9 +203,24 @@ export function startBattle(s, spec, { diff = 20, npc = null, origin = null, fir
   const b = { v: 1, units, turn: null, over: null, spar: !!spec.spar, origin, first, beats: 0, diff };
   s.battle = b;
   const beats = [];
+  shown = [];
   if (first === 'me') beats.push({ who: 'me', kind: 'status', text: '你搶先出手！' });
   runUntilPlayer(s, b, beats);
+  return told(beats);
+}
+
+// what has happened, waiting to be shown (the picture takes it; it is not saved)
+let shown = [];
+function told(beats) {
+  shown.push(...beats);
   return beats;
+}
+
+/** The beats since last asked (for the picture). */
+export function takeBeats() {
+  const out = shown;
+  shown = [];
+  return out;
 }
 
 export function unitOf(b, id) {
@@ -258,9 +279,10 @@ function startTurn(s, b, u, beats) {
   for (const kind of ['poison', 'burn']) {
     if (!u.st[kind]) continue;
     const dmg = Math.max(1, Math.round(u.maxHp * (kind === 'burn' ? 0.06 : 0.05)));
+    const hpBefore = u.hp;
     u.hp = Math.max(0, u.hp - dmg);
     if (--u.st[kind] <= 0) delete u.st[kind];
-    const hit = { id: u.id, dmg, hpAfter: u.hp, dot: kind };
+    const hit = { id: u.id, dmg, hpBefore, hpAfter: u.hp, dot: kind };
     beats.push({ who: u.id, kind: 'status', fx: kind, hits: [hit], text: `${u.name}${kind === 'burn' ? '身上的火還在燒' : '毒性發作'}。` });
     if (fall(b, u, hit, beats)) return true;
   }
@@ -327,8 +349,9 @@ function fall(b, u, hit, beats) {
 function strike(s, b, a, d, { mult = 1, kind = 'phys', pierce = false, sure = false } = {}) {
   if (!sure) {
     const dodge = clamp(0.08 + (d.spd - a.spd) * 0.012 + (d.st.blink ? 0.15 : 0), 0.03, 0.35) * (kind === 'spirit' ? 0.5 : 1);
-    if (rand(s) < dodge) return { id: d.id, miss: true, hpAfter: d.hp };
+    if (rand(s) < dodge) return { id: d.id, miss: true, hpBefore: d.hp, hpAfter: d.hp };
   }
+  const hpBefore = d.hp;
   let dmg = a.atk * mult * (0.75 + rand(s) * 0.5);
   const crit = rand(s) < (a.crit || 0.05);
   if (crit) dmg *= 1.7;
@@ -345,7 +368,7 @@ function strike(s, b, a, d, { mult = 1, kind = 'phys', pierce = false, sure = fa
     if (d.st.shield <= 0) delete d.st.shield;
   }
   d.hp = Math.max(0, d.hp - dmg);
-  return { id: d.id, dmg, crit, absorbed, hpAfter: d.hp };
+  return { id: d.id, dmg, crit, absorbed, hpBefore, hpAfter: d.hp };
 }
 
 function hitAndFall(s, b, a, d, opts, beats) {
@@ -381,7 +404,7 @@ export function options(s) {
   const far = foes.every((f) => !isNear(me, f));
   return {
     targets: foes.map((f) => f.id),
-    attack: { name: s.player.weapon && WEAPON_VERB[s.player.weapon] ? { chaidao: '劈砍', qinggang_sword: '劍擊', hunting_bow: '射箭' }[s.player.weapon] : '拳腳', ranged: me.range === 'ranged' },
+    attack: { name: attackName(s), ranged: me.range === 'ranged' },
     skills,
     items,
     canBack: me.t > EDGE[0] + 10,
@@ -485,7 +508,7 @@ export function act(s, action) {
       if (rand(s) < fleeChance(b, me, far)) {
         b.over = 'flee';
         beats.push({ who: 'me', kind: 'end', over: 'flee', from: me.t, to: me.t - 160, text: '你轉身就跑，總算脫了身。' });
-        return beats;
+        return told(beats);
       }
       beats.push({ who: 'me', kind: 'move', fx: 'stumble', from: me.t, to: me.t, text: '你想跑，卻被纏住了。' });
       break;
@@ -496,13 +519,14 @@ export function act(s, action) {
   }
   checkOver(b, beats);
   runUntilPlayer(s, b, beats);
-  return beats;
+  return told(beats);
 }
 
 function selfCare(u, k) {
   const heal = k.heal ? Math.min(u.maxHp - u.hp, Math.round(u.maxHp * k.heal)) : 0;
+  const hpBefore = u.hp;
   u.hp += heal;
-  const hit = { id: u.id, heal, hpAfter: u.hp };
+  const hit = { id: u.id, heal, hpBefore, hpAfter: u.hp };
   if (k.cure) {
     delete u.st.poison;
     delete u.st.burn;
@@ -550,8 +574,9 @@ function foeAct(s, b, u, beats) {
     u.st.howled = 1;
     u.st.rage = 0.4;
     const heal = Math.round(u.maxHp * 0.1);
+    const hpBefore = u.hp;
     u.hp = Math.min(u.maxHp, u.hp + heal);
-    beats.push({ who: u.id, kind: 'skill', name: '狼王嘯', fx: 'howl', target: u.id, hits: [{ id: u.id, heal, hpAfter: u.hp }], text: '狼王仰天長嘯，渾身的毛都豎了起來！' });
+    beats.push({ who: u.id, kind: 'skill', name: '狼王嘯', fx: 'howl', target: u.id, hits: [{ id: u.id, heal, hpBefore, hpAfter: u.hp }], text: '狼王仰天長嘯，渾身的毛都豎了起來！' });
     return;
   }
   if (sk.includes('guard') && u.hp < u.maxHp * 0.35 && rand(s) < 0.3) {
@@ -563,6 +588,7 @@ function foeAct(s, b, u, beats) {
     const hit = hitAndFall(s, b, u, d, { mult: 1, kind: 'spirit' }, beats);
     if (!hit.miss) {
       const heal = Math.min(u.maxHp - u.hp, Math.round((hit.dmg || 0) * 0.5));
+      hit.drainFrom = u.hp;
       u.hp += heal;
       hit.drain = heal;
     }

@@ -93,6 +93,8 @@ export function createEnv() {
     uDark: { value: 0 },
     uSnow: { value: 0 },
     uStretch: { value: 1.5 },
+    // a fight's ground (x, z, radius): trees standing in it fade back so the fighters can be seen
+    uClear: { value: new THREE.Vector3(0, 0, 0) },
     uCot: { value: 0.8 },
   };
 

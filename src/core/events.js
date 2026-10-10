@@ -134,7 +134,7 @@ export function enterStep(s, stepId) {
     .map((c, i) => {
       if (c.show && !c.show(s, ctx)) return null;
       const reason = c.need ? c.need(s, ctx) : null;
-      return { i, text: resolve(c.text, s, ctx), hint: hintFor(s, c, ctx), disabled: reason || null };
+      return { i, text: resolve(c.text, s, ctx), hint: hintFor(s, c, ctx), disabled: reason || null, fight: !!c.fight };
     })
     .filter(Boolean);
   // Safety net: never leave the player with nothing they can press.

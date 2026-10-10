@@ -4,7 +4,9 @@ import { createWorldView, paintWorldThumb } from '../art/worldview.js';
 import { createWorld3D, canDraw3D } from '../art/world3d.js';
 import { loadAssets, asset } from '../art/assets.js';
 import { newGame, rollFate, ORIGINS, ATTRS, attrWord } from '../core/state.js';
-import { startEvent, choose, continueEvent } from '../core/events.js';
+import { startEvent, choose, continueEvent, finishFight } from '../core/events.js';
+import * as B from '../core/battle.js';
+import { createFightPlayer } from '../art/fightplayer.js';
 import * as A from '../core/actions.js';
 import * as E from '../world/explore.js';
 import { ROOTS, INJURY, BUFFS, realmLabel, stageReq, age, lifespan, rateParts, breakthroughInfo, power, atBottleneck, techOf } from '../core/cultivation.js';
@@ -106,6 +108,11 @@ export function startApp(root, { speed = 1, view = null } = {}) {
     thumbSeason: null,
     map: null,
     shell: null,
+    fight: null, // the fight as it is being shown
+    fightKey: null,
+    fightMenu: null, // 'skills' | 'items'
+    fightAim: null, // an action waiting for you to pick who
+    fightEndT: null,
   };
 
   // ── persistence ──
@@ -393,7 +400,7 @@ export function startApp(root, { speed = 1, view = null } = {}) {
 
   /** The 3D world where the device can draw it (and the player has not asked for the flat map). */
   function makeView(canvas) {
-    const opts = { onFrame, idle: () => !!(ui.s && (ui.s.pending || ui.sheet || ui.s.dead)) };
+    const opts = { onFrame, idle: () => !!(ui.s && !ui.s.battle && (ui.s.pending || ui.sheet || ui.s.dead)), fight: () => ui.fight };
     if (viewMode() === '3d') {
       try {
         let chosen = null;
@@ -479,6 +486,7 @@ export function startApp(root, { speed = 1, view = null } = {}) {
         if (ui.caption && Math.hypot(s.world.x - ui.caption.at[0], s.world.y - ui.caption.at[1]) > 60) hideCaption();
       }
     }
+    fightTick(dt);
     for (const f of E.takeFeed(s)) toast(f.text, f.kind);
     for (const sig of E.takeSignals(s)) onSignal(sig);
     // something happened out there: an event, a death
@@ -502,6 +510,7 @@ export function startApp(root, { speed = 1, view = null } = {}) {
   }
 
   function layerKeyOf(s) {
+    if (s.battle) return 'fight';
     if (s.dead && !s.pending) return 'dead';
     if (s.pending) {
       const p = s.pending;
@@ -550,7 +559,8 @@ export function startApp(root, { speed = 1, view = null } = {}) {
     const joyEl = $('.joy');
     const JOY_R = 56;
     canvas.addEventListener('pointerdown', (e) => {
-      if (!ui.s || ui.s.pending || ui.sheet) return;
+      // in a fight the story is open but the field still takes taps (to pick whom to strike)
+      if (!ui.s || (ui.s.pending && !ui.s.battle) || ui.sheet) return;
       canvas.setPointerCapture?.(e.pointerId);
       pts.set(e.pointerId, { x: e.clientX, y: e.clientY, x0: e.clientX, y0: e.clientY, t0: performance.now() });
       if (pts.size === 2) {
@@ -579,13 +589,14 @@ export function startApp(root, { speed = 1, view = null } = {}) {
       const d = Math.hypot(dx, dy);
       if (!j.active && d > 12) {
         j.active = true;
+        if (ui.s?.battle) return; // no walking off mid-fight: a drag is just not a tap
         hideCaption();
         const rect = canvas.getBoundingClientRect();
         joyEl.style.left = `${j.x0 - rect.left}px`;
         joyEl.style.top = `${j.y0 - rect.top}px`;
         joyEl.classList.add('on');
       }
-      if (j.active) {
+      if (j.active && !ui.s?.battle) {
         const k = Math.min(1, d / JOY_R);
         j.vx = (dx / (d || 1)) * k;
         j.vy = (dy / (d || 1)) * k;
@@ -619,6 +630,7 @@ export function startApp(root, { speed = 1, view = null } = {}) {
   /** A tap on the world: walk there, or to the person or thing you tapped. */
   function tap(cx, cy) {
     const s = ui.s;
+    if (s?.battle) return fightTap(cx, cy);
     if (!s || s.pending || s.secl || ui.sheet) return;
     const rect = ui.shell.querySelector('canvas.world-canvas').getBoundingClientRect();
     const sx = cx - rect.left;
@@ -929,7 +941,10 @@ export function startApp(root, { speed = 1, view = null } = {}) {
     ui.layerKey = layerKeyOf(s);
     clear(el);
     el.classList.remove('dim');
-    if (s.pending) el.appendChild(eventSheet());
+    el.classList.toggle('fight', !!s.battle);
+    ui.shell?.classList.toggle('fighting', !!s.battle);
+    if (s.battle) el.appendChild(fightPanel());
+    else if (s.pending) el.appendChild(eventSheet());
     else if (s.dead) el.appendChild(deathScreen());
     else if (ui.sheet) {
       el.appendChild(ui.sheet === 'map' ? mapSheet() : panelSheet(ui.sheet));
@@ -1334,6 +1349,148 @@ export function startApp(root, { speed = 1, view = null } = {}) {
 
   // ── events ──
   /** A painted scene for the event, if one has been put in its slot. */
+  // ── a fight ──
+
+  /** Each frame: show the fight beat by beat; when it is decided and shown, set the seal, then go on with the story. */
+  function fightTick(dt) {
+    const s = ui.s;
+    if (!s.battle) {
+      ui.fight = null;
+      ui.fightEndT = null;
+      ui.fightShown = false;
+      return;
+    }
+    if (!ui.fight) {
+      ui.fight = createFightPlayer();
+      ui.fightMenu = null;
+      ui.fightAim = null;
+      ui.fightKey = null;
+    }
+    ui.fight.feed(s.battle, B.takeBeats());
+    ui.fight.update(dt);
+    if (s.battle.over && ui.fight.idle()) {
+      ui.fightEndT = (ui.fightEndT ?? 0) + dt;
+      if (ui.fightEndT > 1.6) {
+        ui.fightEndT = null;
+        ui.fight = null;
+        act(finishFight);
+        return;
+      }
+    }
+    const b = s.battle;
+    const key = `${b.turn}:${ui.fight.idle()}:${ui.fightMenu}:${ui.fightAim?.kind}:${b.over}:${ui.fightEndT !== null}`;
+    if (key !== ui.fightKey) {
+      ui.fightKey = key;
+      renderLayer();
+    } else fightLive();
+  }
+
+  /** What changes every beat: the narration and your bars. */
+  function fightLive() {
+    const el = $('.fight-panel');
+    if (!el || !ui.fight) return;
+    const say = el.querySelector('.fight-say');
+    if (say && ui.fight.text && say.textContent !== ui.fight.text) say.textContent = ui.fight.text;
+    const me = B.unitOf(ui.s.battle, 'me');
+    const hp = ui.fight.shown.get('me')?.hp ?? me.hp;
+    const hpBar = el.querySelector('.fight-hp i');
+    if (hpBar) hpBar.style.width = `${Math.max(0, (hp / me.maxHp) * 100)}%`;
+    const hpNum = el.querySelector('.fight-hp-n');
+    if (hpNum) hpNum.textContent = `${hp} / ${me.maxHp}`;
+  }
+
+  function fightDo(action) {
+    const s = ui.s;
+    if (!s.battle || s.battle.turn !== 'me' || !ui.fight?.idle()) return;
+    ui.fightMenu = null;
+    ui.fightAim = null;
+    B.act(s, action);
+    persist();
+    ui.fightKey = null;
+  }
+
+  /** An action that needs someone to aim at: with one foe, at them; else pick by tapping. */
+  function fightAimAt(action) {
+    const o = B.options(ui.s);
+    if (!o) return;
+    if (o.targets.length === 1) return fightDo({ ...action, target: o.targets[0] });
+    ui.fightAim = action;
+    ui.fightMenu = null;
+    ui.fightKey = null;
+  }
+
+  /** A tap on the field: whoever is nearest under your finger. */
+  function fightTap(cx, cy) {
+    const s = ui.s;
+    const o = B.options(s);
+    if (!o || !ui.fight?.idle()) return;
+    const rect = ui.shell.querySelector('canvas.world-canvas').getBoundingClientRect();
+    const field = E.battleField(s);
+    let best = null;
+    let bd = 64;
+    for (const id of o.targets) {
+      const u = B.unitOf(s.battle, id);
+      const [x, y] = field.at({ t: ui.fight.tOf(id), lane: u.lane, side: u.side });
+      for (const up of [8, 24, 40]) {
+        const [sx, sy] = ui.view.worldToScreen(x, y, up);
+        const d = Math.hypot(sx - (cx - rect.left), sy - (cy - rect.top));
+        if (d < bd) {
+          bd = d;
+          best = id;
+        }
+      }
+    }
+    if (!best) return;
+    fightDo({ ...(ui.fightAim || { kind: 'attack' }), target: best });
+  }
+
+  function fightPanel() {
+    const s = ui.s;
+    const b = s.battle;
+    const fx = ui.fight;
+    const me = B.unitOf(b, 'me');
+    const ready = fx && fx.idle() && b.turn === 'me' && !b.over;
+    const o = ready ? B.options(s) : null;
+    const shownHp = fx?.shown.get('me')?.hp ?? me.hp;
+    const order = B.upcoming(b, 7).map((id) => B.unitOf(b, id)).filter(Boolean);
+    const menu = ui.fightMenu && o
+      ? h('div.fight-menu', (ui.fightMenu === 'skills' ? o.skills : o.items).map((k) =>
+          h('button.fight-opt', {
+            disabled: !!k.why,
+            onclick: () => (ui.fightMenu === 'skills'
+              ? k.self ? fightDo({ kind: 'skill', id: k.id }) : fightAimAt({ kind: 'skill', id: k.id })
+              : fightDo({ kind: 'item', id: k.id })),
+          },
+          h('b', k.name),
+          ui.fightMenu === 'skills' ? h('span.cost', k.mp ? `靈力 ${k.mp}` : '') : h('span.cost', `×${k.n}`),
+          h('span.why', k.why || k.desc || (k.all ? '所有對手' : '服下')),
+          )))
+      : null;
+    const btn = (label, onclick, { disabled = false, on = false, sub = null } = {}) =>
+      h('button.fight-btn' + (on ? '.on' : ''), { disabled: !ready || disabled, onclick }, h('b', label), sub ? h('span', sub) : null);
+    const enter = !ui.fightShown;
+    ui.fightShown = true;
+    return h('div.fight-panel' + (enter ? '.enter' : ''), { role: 'region', 'aria-label': '戰鬥' },
+      b.over ? null : h('div.fight-order', order.map((u, k) => h('span.' + (u.side === 'foe' ? 'foe' : 'ally') + (k === 0 && b.turn ? '.now' : ''), u.side === 'me' ? '你' : u.name))),
+      h('p.fight-say', fx?.text || (ready ? '輪到你出手。' : '')),
+      h('div.fight-me',
+        h('div.fight-stat', h('small', '氣血'), h('div.bar.fight-hp', h('i', { style: { width: `${Math.max(0, (shownHp / me.maxHp) * 100)}%` } })), h('span.fight-hp-n', `${shownHp} / ${me.maxHp}`)),
+        me.maxMp ? h('div.fight-stat', h('small', '靈力'), bar(me.mp, me.maxMp, 'fight-mp'), h('span', `${me.mp} / ${me.maxMp}`)) : null,
+      ),
+      ui.fightAim ? h('div.fight-aim', h('span', '點一下要出手的對手'), h('button.btn.small.ghost', { onclick: () => { ui.fightAim = null; ui.fightKey = null; } }, '取消')) : menu,
+      b.over && fx?.idle()
+        ? h('div.fight-stamp.' + b.over, { win: '勝', lose: '敗', flee: '走' }[b.over])
+        : h('div.fight-acts',
+            btn(B.attackName(s), () => fightAimAt({ kind: 'attack' })),
+            btn('招式', () => { ui.fightMenu = ui.fightMenu === 'skills' ? null : 'skills'; ui.fightKey = null; }, { disabled: !o?.skills.length, on: ui.fightMenu === 'skills' }),
+            btn('物品', () => { ui.fightMenu = ui.fightMenu === 'items' ? null : 'items'; ui.fightKey = null; }, { disabled: !o?.items.length, on: ui.fightMenu === 'items' }),
+            btn('防禦', () => fightDo({ kind: 'defend' })),
+            btn('後退', () => fightDo({ kind: 'back' }), { disabled: !o?.canBack }),
+            b.spar ? null : btn('逃跑', () => fightDo({ kind: 'flee' }), { sub: o ? `${Math.round(o.flee * 100)}%` : null }),
+          ),
+    );
+  }
+
   function eventPicture(pend) {
     const img = pend.id && asset(`event/${pend.id}`);
     if (!img) return null;
@@ -1363,6 +1520,7 @@ export function startApp(root, { speed = 1, view = null } = {}) {
               h('button.choice', { disabled: !!c.disabled, onclick: () => act((x) => choose(x, c.i)) },
                 h('span.ctext', c.text),
                 c.disabled ? h('span.why', c.disabled) : null,
+                c.fight ? h('span.hint.fight', '戰') : null,
                 c.hint ? h('span.hint.' + c.hint.kind, c.hint.label) : null,
                 c.hint?.karma ? h('span.hint.karma', '因果') : null,
               )))
@@ -1379,7 +1537,8 @@ export function startApp(root, { speed = 1, view = null } = {}) {
 
   function resultBlock(r) {
     return h('div.result',
-      r.check ? h('p.check.' + (r.check.ok ? 'ok' : 'fail'), `${r.check.kind}檢定 ${r.check.ok ? '成功' : '失敗'}（${Math.round(r.check.p * 100)}%）`) : null,
+      r.check?.fight ? h('p.check.' + (r.check.ok ? 'ok' : 'fail'), { win: '戰鬥：勝', lose: '戰鬥：敗', flee: '戰鬥：脫身' }[r.check.fight])
+        : r.check ? h('p.check.' + (r.check.ok ? 'ok' : 'fail'), `${r.check.kind}檢定 ${r.check.ok ? '成功' : '失敗'}（${Math.round(r.check.p * 100)}%）`) : null,
       r.text ? h('div.story', paragraphs(r.text)) : null,
       chipList(r.chips),
       systemLines(r.toasts),

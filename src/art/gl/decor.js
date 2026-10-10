@@ -19,11 +19,14 @@ attribute vec4 aSize;
 attribute vec4 aRect;
 attribute vec2 aSway;
 uniform float uStretch;
+uniform vec3 uClear;
 varying vec2 vUv;
 varying vec3 vWorld;
 varying float vSeen;
 varying float vShade;
+varying float vClear;
 void main() {
+  vClear = uClear.z > 0.0 && distance(aPos.xz, uClear.xy) < uClear.z ? 1.0 : 0.0;
   vec2 c = position.xy;
   vec3 p = aPos;
   float up = (c.y - aSize.w);
@@ -48,9 +51,12 @@ varying vec2 vUv;
 varying vec3 vWorld;
 varying float vSeen;
 varying float vShade;
+varying float vClear;
 void main() {
   vec4 c = texture2D(uAtlas, vUv);
   if (c.a < 0.45 || vSeen < 0.25) discard;
+  // on a fight's ground, only a ghost of the tree stays
+  if (vClear > 0.5 && mod(floor(gl_FragCoord.x) + floor(gl_FragCoord.y) * 2.0, 4.0) > 0.5) discard;
   vec3 col = c.rgb * (uAmbient + uSunColor * 0.9) * vShade;
   gl_FragColor = vec4(haze(col, vWorld), 1.0);
 }
