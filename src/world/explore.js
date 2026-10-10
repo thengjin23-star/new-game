@@ -18,6 +18,7 @@ import { EVENTS } from '../content/index.js';
 import { ITEMS, displayItem } from '../content/items.js';
 import { pickEvent, startEvent, takeDue, notice, choose, fightChoice } from '../core/events.js';
 import { arenaOf, placeOf } from './arena.js';
+import { updateCombat, beastTargets, strikeAt, FIGHT_HOURS } from './combat.js';
 import { inquire, visit } from '../core/actions.js';
 import { spendHours, newReport } from '../core/time.js';
 import { applyEffects, logLife } from '../core/effects.js';
@@ -142,16 +143,52 @@ export function step(s, dt, input) {
   }
   updatePeople(s, L, dt);
   updateWild(s, L, dt);
-  if (updateMobs(s, L, dt)) return;
-  if (updateScenes(s, L, dt)) {
+  // a fight goes on in the world as it is: the beasts out there, on this ground, on this clock
+  const fight = updateCombat(s, dt, { input, feed: (kind, text) => L.feed.push({ kind, text }), signal: (x) => L.signals.push(x) });
+  if (busy(s)) {
+    // you went down
     stopWalking(L);
     L.moving = false;
+    return;
+  }
+  if (fight.on) {
+    // while it lasts, time runs at the fight's pace, and nothing else comes up
+    L.fightHours = (L.fightHours || 0) + dt * FIGHT_HOURS;
+    if (L.fightHours >= 0.02) {
+      passHours(s, L, L.fightHours);
+      L.fightHours = 0;
+      if (busy(s)) return;
+    }
+    L.fought = true;
+  } else {
+    if (L.fought) {
+      // over: what was waiting for you in this place can come now
+      L.fought = false;
+      if (afterFight(s, L)) return;
+    }
+    if (updateMobs(s, L, dt)) return;
+    if (updateScenes(s, L, dt)) {
+      stopWalking(L);
+      L.moving = false;
+      return;
+    }
+  }
+  if (fight.hold) {
+    // a dash or a blow is carrying you
+    L.moving = fight.moved > 0.01;
+    if (fight.moved > 0) afterMove(s, L, fight.moved, fight.on);
     return;
   }
   let dx = 0;
   let dy = 0;
   let mag = 0;
-  if (input && (input.x || input.y)) {
+  if (fight.steer) {
+    // walking up to whoever you went for
+    L.path = null;
+    L.then = null;
+    [dx, dy] = fight.steer;
+    mag = 1;
+  } else if (input && (input.x || input.y)) {
     L.path = null;
     L.then = null;
     L.resume = null;
@@ -179,9 +216,10 @@ export function step(s, dt, input) {
   }
   if (!mag) {
     L.moving = false;
+    if (fight.moved > 0) afterMove(s, L, fight.moved, fight.on);
     return;
   }
-  const want = WALK_SPEED * speedAt(w.x, w.y) * walkMult(s) * mag * dt * climb(w.x, w.y, dx, dy);
+  const want = WALK_SPEED * speedAt(w.x, w.y) * walkMult(s) * mag * dt * climb(w.x, w.y, dx, dy) * fight.mult;
   const n = Math.max(1, Math.ceil(want / 5));
   let moved = 0;
   for (let k = 0; k < n; k++) {
@@ -212,7 +250,7 @@ export function step(s, dt, input) {
       if (L.stuck > 0.6) repath(s, L);
     } else L.stuck = 0;
   }
-  if (moved > 0) afterMove(s, L, moved);
+  if (moved + fight.moved > 0) afterMove(s, L, moved + fight.moved, fight.on);
 }
 
 /** Going uphill is slower: a long stair takes its toll; downhill is no faster. */
@@ -221,10 +259,11 @@ export function climb(x, y, dx, dy) {
   return grade > 0 ? Math.max(0.6, 1 / (1 + grade * 0.9)) : 1;
 }
 
-function afterMove(s, L, moved) {
+/** After moving: the clouds part, places come into view; and (unless you are fighting) time passes and things happen. */
+function afterMove(s, L, moved, fighting = false) {
   const w = s.world;
   w.walked += moved;
-  passHours(s, L, moved / UNITS_PER_HOUR);
+  if (!fighting) passHours(s, L, moved / UNITS_PER_HOUR);
   if (s.dead) return;
   if (!L.lastReveal || Math.hypot(w.x - L.lastReveal[0], w.y - L.lastReveal[1]) > 16) {
     L.lastReveal = [w.x, w.y];
@@ -232,10 +271,11 @@ function afterMove(s, L, moved) {
   }
   const region = regionAt(s, w.x, w.y);
   if (region !== w.region) {
-    enterRegion(s, L, region);
+    enterRegion(s, L, region, fighting);
     if (s.pending) return;
   }
   findHidden(s, L, 1);
+  if (fighting) return;
   if (autoTriggers(s, L)) return;
   if (L.dayTurned) {
     L.dayTurned = false;
@@ -254,7 +294,8 @@ function clearClouds(s, L, x, y, r) {
   }
 }
 
-function enterRegion(s, L, to) {
+/** Into another region. quiet: in the middle of a fight — what waits here comes once it is over. */
+function enterRegion(s, L, to, quiet = false) {
   const w = s.world;
   w.region = to;
   s.player.loc = to;
@@ -276,6 +317,15 @@ function enterRegion(s, L, to) {
   }
   if (!L.banner || L.banner.id !== to || L.t - L.banner.t > 20) L.banner = { id: to, name: node.name, first, t: L.t };
   flush(s, L, report);
+  if (quiet) {
+    L.arriveLater = to;
+    return;
+  }
+  arrivals(s, L, to);
+}
+
+/** What waits for you on arriving somewhere: something scheduled, something that happens here. */
+function arrivals(s, L, to) {
   const queue = [];
   const due = takeDue(s, to);
   if (due) queue.push(due);
@@ -286,6 +336,15 @@ function enterRegion(s, L, to) {
     startEvent(s, queue[0].id, { data: queue[0].data || null });
     for (const q of queue.slice(1)) s.queue.push(q.id);
   }
+}
+
+/** A fight is over: if you came somewhere new while it lasted, what waits there comes now. */
+function afterFight(s, L) {
+  const to = L.arriveLater;
+  L.arriveLater = null;
+  if (!to || to !== s.world.region) return false;
+  arrivals(s, L, to);
+  return !!s.pending;
 }
 
 function fireDue(s, L) {
@@ -761,6 +820,7 @@ export function targetsNear(s, radius = 160) {
   }
   for (const t of sceneTargets(s, liveOf(s))) add(t);
   for (const t of mobTargets(s, liveOf(s))) add(t);
+  for (const t of beastTargets(s)) add(t);
   out.sort((a, b) => a.d / a.reach - b.d / b.reach);
   return out;
 }
@@ -881,6 +941,7 @@ export function interact(s, t) {
   if (t.kind === 'folk') return chatFolk(s, L, t.folk);
   if (t.kind === 'scene') return meetScene(s, L, sceneByUid(L, t.id));
   if (t.kind === 'mob') return strikeFirst(s, L, t.id);
+  if (t.kind === 'beast') return strikeAt(s, t.id);
 }
 
 /** Set an event's scene near you (tools and tests; the director does this as you walk). */

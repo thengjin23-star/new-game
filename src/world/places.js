@@ -238,6 +238,16 @@ export const MOBS = [
   { id: 'ghost_c', kind: 'ghost', n: 1, x: 2760, y: 1000, r: 150, event: 'ruins_soul', respawn: 30, speed: 80, power: 30 },
 ];
 
+/**
+ * Beasts that fight where they stand (即時戰鬥, world/combat.js): where each
+ * roams. power: its strength; tier: its 境界 (1 一階, a match for 煉氣);
+ * respawn: days before another takes its place.
+ */
+export const BEASTS = [
+  // 黑風林南緣: a lone demon wolf where the wood thins toward 青石鎮
+  { id: 'demon_wolf_a', kind: 'demon_wolf', x: 2400, y: 2150, r: 170, respawn: 5, power: 28, tier: 1 },
+];
+
 /** Which regions grow herbs, what they give, and roughly how many spots. */
 export const GATHER = {
   qingshi_hill: { n: 18, give: [[70, 'ningqi_grass', 1, 2], [30, 'zhixue_grass', 1, 1]] },
