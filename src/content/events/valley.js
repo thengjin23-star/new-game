@@ -29,6 +29,7 @@ export default [
         text: '斬蟒。',
         tag: 'danger',
         check: { kind: 'power', diff: 55 },
+        fight: { foes: [['python', 1]] },
         ok: {
           text: '溪水被染紅了半里。你斬下蟒首的時候，劍都捲了刃。\n\n從今天起，這座谷，是你的了。',
           effects: [['flag', 'valley_safe'], ['item', 'python_scale', 3], ['sysexp', 15], ['log', '斬殺靈溪蟒，佔據靈溪谷']],
@@ -99,6 +100,7 @@ export default [
       {
         text: '「這裡是我的地方。」',
         check: { kind: 'power', diff: 40 },
+        fight: { foes: [['cultivator', 3]] },
         ok: { text: '你拔劍出鞘。三個人對視一眼，退走了。', effects: [['mind', 1]] },
         fail: {
           text: '三打一。你被打得滿地找牙，他們卻沒趕你走，只是在谷的另一頭住了下來。',

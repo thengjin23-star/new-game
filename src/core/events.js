@@ -4,6 +4,8 @@ import { checkChance, CHECK_NAME } from './checks.js';
 import { rand, pickWeighted } from './rng.js';
 import { newReport } from './time.js';
 import { NODES } from '../world/map.js';
+import { MOBS } from '../world/places.js';
+import { startBattle, aftermath, endBattle, fightPower } from './battle.js';
 
 /** Resolve a text field: a string with {name}/{npc}/{loc} tokens, or a function. */
 export function resolve(x, s, ctx = {}) {
@@ -83,7 +85,13 @@ function hintFor(s, c, ctx) {
   if (!s.sys.bound) return null;
   const lv = s.sys.lv;
   let h = null;
-  if (c.check) {
+  if (c.fight) {
+    // a fight: how you measure up against what you face
+    const diff = typeof c.check.diff === 'function' ? c.check.diff(s, ctx) : c.check.diff;
+    const r = (fightPower(s) * [1, 0.8, 0.6, 0.4][s.player.injury || 0]) / diff;
+    const [kind, word] = r >= 1.5 ? ['good', '穩操勝券'] : r >= 1.15 ? ['good', '佔上風'] : r >= 0.87 ? ['mid', '勢均力敵'] : r >= 0.65 ? ['bad', '落下風'] : ['bad', '凶多吉少'];
+    h = { kind, label: lv >= 2 ? word : { good: '吉', mid: '平', bad: '凶' }[kind], fight: true };
+  } else if (c.check) {
     const p = checkChance(s, c.check, ctx);
     const kind = p >= 0.7 ? 'good' : p >= 0.4 ? 'mid' : 'bad';
     const label = lv >= 2 ? `${CHECK_NAME[c.check.kind]} ${Math.round(p * 100)}%` : p >= 0.7 ? '吉' : p >= 0.4 ? '平' : '凶';
@@ -137,7 +145,7 @@ export function enterStep(s, stepId) {
 
 export function choose(s, i) {
   const pend = s.pending;
-  if (!pend || pend.result || pend.notice) return;
+  if (!pend || pend.result || pend.notice || s.battle) return;
   if (i === -1) {
     pend.result = { text: '', check: null, chips: [], toasts: [], next: null, goto: null, saved: false, died: false };
     return;
@@ -149,6 +157,13 @@ export function choose(s, i) {
   const ctx = pend.ctx;
   if (ctx.npcId) ctx.npc = s.npcs[ctx.npcId];
   if (!c || (c.show && !c.show(s, ctx)) || (c.need && c.need(s, ctx))) return;
+  // a fight is fought, not rolled: the battle decides which way the story goes
+  if (c.fight) {
+    const diff = typeof c.check.diff === 'function' ? c.check.diff(s, ctx) : c.check.diff;
+    startBattle(s, fightSpec(c, ctx), { diff, npc: ctx.npc || null, origin: { event: pend.id, step: pend.step, choice: i }, first: ctx.data?.first || null });
+    pend.fight = i;
+    return;
+  }
   let out = c.out || {};
   let check = null;
   if (c.check) {
@@ -157,11 +172,48 @@ export function choose(s, i) {
     out = (ok ? c.ok : c.fail) || {};
     check = { ok, p, kind: CHECK_NAME[c.check.kind] };
   }
+  settle(s, c, out, check);
+}
+
+/** Is this choice (of the open step) a fight? */
+export function fightChoice(pend, i) {
+  const st = stepsOf(EVENTS[pend.id])[pend.step];
+  return !!(st.choices || [])[i]?.fight;
+}
+
+/** What a fight choice puts against you: its own foes, or whatever caught you. */
+function fightSpec(c, ctx) {
+  const spec = typeof c.fight === 'function' ? c.fight(ctx) : c.fight;
+  const mob = spec.mob && MOBS.find((m) => m.id === ctx.data?.mob);
+  if (!mob) return spec;
+  return { ...spec, foes: [[spec.foes[0][0], mob.n]], close: ctx.data?.first !== 'me' };
+}
+
+/** The fight is over: its result takes the story on (and brings what it left you). */
+export function finishFight(s) {
+  const b = s.battle;
+  const pend = s.pending;
+  if (!b?.over || !pend || pend.fight === undefined || pend.fight === null) return;
+  const st = stepsOf(EVENTS[pend.id])[pend.step];
+  const c = (st.choices || [])[pend.fight];
+  const outcome = b.over;
+  const out = (outcome === 'win' ? c.ok : outcome === 'lose' ? c.fail : c.flee || { text: '你且戰且退，總算脫了身。' }) || {};
+  const spoils = aftermath(s);
+  endBattle(s);
+  pend.fight = null;
+  settle(s, c, out, { ok: outcome === 'win', kind: '戰鬥', fight: outcome }, spoils);
+}
+
+/** Apply a choice's outcome and set the result card. */
+function settle(s, c, out, check, more = []) {
+  const pend = s.pending;
+  const ctx = pend.ctx;
   const report = newReport();
   let effects = typeof out.effects === 'function' ? out.effects(s, ctx) : [...(out.effects || [])];
+  effects.push(...more);
   let extra = '';
   const harmful = (e) => Array.isArray(e) && (e[0] === 'hurt' || e[0] === 'death');
-  if (check && !check.ok && c.check.kind === 'power' && s.player.items.foxfire_talisman > 0 && effects.some(harmful)) {
+  if (check && !check.ok && check.fight !== 'flee' && c.check?.kind === 'power' && s.player.items.foxfire_talisman > 0 && effects.some(harmful)) {
     effects = effects.filter((e) => !harmful(e));
     effects.push(['item', 'foxfire_talisman', -1]);
     extra = '\n\n危急關頭，懷中的狐火符自行燃起。幽藍火光一卷，你已在十丈之外。';

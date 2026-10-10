@@ -54,6 +54,7 @@ export default [
       {
         text: '拔刀迎戰。',
         check: { kind: 'power', diff: 20 },
+        fight: { foes: [['wolf', 3]], mob: true },
         ok: { text: '你砍翻了領頭的那一頭，剩下兩頭夾著尾巴跑了。狼皮拿到鎮上，能換幾塊靈石。', effects: [['ls', [3, 6]], ['mind', 2]] },
         fail: { text: '你被撲倒在地，肩膀被撕下一塊肉，拼了命才把狼趕走。', effects: [['hurt', 1]] },
       },
@@ -296,6 +297,7 @@ export default [
       {
         text: '出手斬蛇。',
         check: { kind: 'power', diff: 24 },
+        fight: { foes: [['snake', 1]], mob: true },
         ok: { text: '刀光一閃，蛇頭落地。你剖出蛇膽，用油紙包好。', effects: [['item', 'snake_gall', 1]] },
         fail: {
           text: '你慢了一步，手腕上多了兩個血洞。',

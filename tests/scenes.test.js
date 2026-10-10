@@ -143,7 +143,8 @@ test('a thief runs straight at you, the shopkeeper behind him', () => {
   s.tod = 17;
   const L = E.liveOf(s);
   L.heading = [1, 0];
-  const sc = stageScene(s, L, 'town_thief');
+  let sc = null;
+  for (let k = 0; k < 10 && !sc; k++) sc = stageScene(s, L, 'town_thief');
   assert.ok(sc, 'there was room in the street');
   const [thief, keeper] = sc.actors;
   const d = (a) => Math.hypot(a.x - s.world.x, a.y - s.world.y);

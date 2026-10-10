@@ -22,6 +22,7 @@ export default [
             text: '「妖怪！」拔出兵器。',
             karma: true,
             check: { kind: 'power', diff: 65 },
+            fight: { foes: [['fox_spirit', 1, 'hu_sanniang']] },
             ok: {
               text: '你一劍斬去，白衣女子化作一道白光，從破窗飛走了。\n\n供桌上的藍燈，滅了。',
               effects: [['meet', 'hu_sanniang'], ['favor', 'hu_sanniang', -60], ['flag', 'fox_attacked']],
@@ -104,6 +105,7 @@ export default [
           {
             text: '「我替你擋住他。」',
             check: { kind: 'power', diff: 38 },
+            fight: { foes: [['enforcer', 1, { name: '周延' }]] },
             ok: {
               text: '你在廟門口截住了周延。一番交手，他捂著胳膊退走了，臨走前恨恨地說：「青雲宗不會放過你們！」\n\n胡三娘倚在門框上看完了全程，輕輕說了一句：「傻子。」',
               effects: [['flag', 'fox_protected'], ['favor', 'hu_sanniang', 30], ['flag', 'zhouyan_enemy'], ['sched', 'fox_gift', 10, 40, { node: 'fox_shrine', expire: 1800 }], ['log', '在狐仙廟前擊退了青雲宗弟子']],

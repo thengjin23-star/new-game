@@ -372,6 +372,7 @@ export default [
           {
             text: '正面纏住牠。',
             check: { kind: 'power', diff: 30 },
+            fight: { foes: [['bear', 1]], allies: [['cultivator', 1, 'npc']] },
             ok: { next: 'split', text: '你頂住了熊的正面，{npc}從側面一刀捅進了牠的心窩。', effects: [['days', 4]] },
             fail: { next: 'split', text: '你被熊掌拍飛出去。等你爬起來，{npc}已經解決了牠。', effects: [['days', 4], ['hurt', 1]] },
           },
@@ -473,6 +474,7 @@ export default [
         text: '拼死一戰。',
         tag: 'danger',
         check: { kind: 'power', diff: 60 },
+        fight: { foes: [['blood_robe', 1]] },
         ok: {
           text: '你不知道自己是怎麼贏的。等你回過神來，血袍人已經倒在地上，胸口插著你的劍。\n\n你在他身上搜出了一本血色的冊子，上面記著血煞門的秘法。你把它燒了。',
           effects: [['item', 'xuesha_token', -1], ['ls', 80], ['mind', -6], ['sysexp', 10], ['log', '斬殺血煞門修士']],

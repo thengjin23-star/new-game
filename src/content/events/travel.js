@@ -50,6 +50,7 @@ export default [
           {
             text: '動手。',
             check: { kind: 'power', diff: (s, ctx) => npcPower(ctx.npc) },
+            fight: { foes: [['cultivator', 1, 'npc']], close: true },
             ok: { text: '{npc}沒想到你這麼硬，捂著傷口逃了。臨走前，扔下了錢袋保命。', effects: [['ls', [8, 20]], ['favor', 'npc', -30]] },
             fail: { text: '{npc}的身法比你快得多。你被打倒在地，錢袋被摸走了。', effects: [['hurt', 1, '死於劫修之手'], ['halfls'], ['favor', 'npc', -10]] },
           },
@@ -178,6 +179,7 @@ export default [
       {
         text: '上山除妖。',
         check: { kind: 'power', diff: 26 },
+        fight: { foes: [['demon_wolf', 1]] },
         ok: {
           text: '你在山洞裡找到了那頭妖狼。還找到了兩個活著的孩子。\n\n村民們殺了一頭豬招待你。走的時候，孩子們追著你跑了好遠。',
           effects: [['days', 2], ['mind', 6], ['sysexp', 3], ['log', '替山村除了一頭妖狼']],
@@ -200,6 +202,7 @@ export default [
       {
         text: '拔刀相助。',
         check: { kind: 'power', diff: 28 },
+        fight: { foes: [['masked', 3]], allies: [['escort', 2]] },
         ok: {
           text: '蒙面人沒想到半路殺出個修士，丟下兩個受傷的同伴跑了。鏢頭給你作了個揖，從車上搬下一個小匣子：「一點心意，不成敬意。」',
           effects: [['ls', [12, 24]], ['mind', 3], ['log', '在路上救下一支鏢隊']],

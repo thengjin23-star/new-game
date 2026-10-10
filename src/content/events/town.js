@@ -167,6 +167,7 @@ export default [
       {
         text: '上前阻止。',
         check: { kind: 'power', diff: 9 },
+        fight: { foes: [['thug', 1, 'zhao_hu'], ['thug', 2]], close: true },
         ok: {
           text: '你一把扣住趙虎的手腕，輕輕一擰。他殺豬般地叫起來。\n\n你自己也愣了——你根本沒用力。\n\n趙虎帶著跟班落荒而逃，臨走撂下一句狠話。老李頭拉著你的手，眼淚都下來了。',
           effects: [
@@ -201,6 +202,7 @@ export default [
       {
         text: '拔劍迎戰。',
         check: { kind: 'power', diff: 34 },
+        fight: { foes: [['cultivator', 1, { name: '陰沉的中年人' }], ['thug', 1, 'zhao_hu']], close: true },
         ok: {
           text: '你們在窄巷裡交手了二十多招。最後一劍，你削斷了他的劍穗。\n\n中年人臉色變了又變，扔下一句「後會有期」，拽著趙虎走了。\n\n從此以後，趙虎見了你就繞道。',
           effects: [['flag', 'zhao_done'], ['mind', 5], ['sysexp', 5]],
@@ -488,6 +490,7 @@ export default [
         text: '「陪你練練。」',
         show: (s) => !flag(s, 'lin_mocked'),
         check: { kind: 'power', diff: 14 },
+        fight: { foes: [['swordsman', 1, 'lin_chen']], spar: true },
         ok: { text: '你們拆了幾十招。他沒有靈力，招式卻刁鑽得嚇人。\n\n「不錯。」他擦了擦汗，「再來。」', effects: [['favor', 'lin_chen', 6], ['insight', 1]] },
         fail: { text: '他明明沒有靈力，你卻沒在他手下走過十招。\n\n「你太在意輸贏了。」他說。', effects: [['favor', 'lin_chen', 4], ['hurt', 1]] },
       },

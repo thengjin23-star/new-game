@@ -36,6 +36,7 @@ export default [
       {
         text: '用兵器斬散他。',
         check: { kind: 'power', diff: 30 },
+        fight: { foes: [['ghost', 1]], mob: true },
         ok: { text: '劍光過處，殘魂發出一聲不甘的嘶吼，化為飛灰。', effects: [['mind', 1]] },
         fail: { text: '劍從他身上穿了過去。他沒有實體，可他的手，卻抓住了你的心。', effects: [['mind', -8], ['hurt', 1, '神魂被殘魂撕碎']] },
       },
@@ -147,6 +148,7 @@ export default [
           {
             text: '加入圍攻。',
             check: { kind: 'power', diff: 45 },
+            fight: { foes: [['skeleton', 1]], allies: [['cultivator', 2, { name: '散修' }]] },
             ok: { text: '骷髏將軍轟然倒塌。在一片混亂的分贓裡，你搶到了一袋靈石和兩顆療傷丹。', effects: [['ls', [50, 80]], ['item', 'heal_pill', 2]], next: 'core' },
             fail: { text: '斷戟擦著你的頭皮掃過。你滾到一邊，趁亂溜了。', effects: [['hurt', 1, '戰死於秘境']], next: 'core' },
           },
@@ -191,6 +193,7 @@ export default [
             text: '趁她不備，連古經一起搶。',
             karma: true,
             check: { kind: 'power', diff: 50 },
+            fight: { foes: [['cultivator', 1, 'su_qingyao']] },
             ok: {
               text: '你搶到了古經和果子。蘇清瑤沒有追，只是站在祭壇前，用一種很平靜的眼神看著你。\n\n「原來，」她說，「這輩子多出來的人，是你這樣的。」',
               effects: [['item', 'longevity_fruit', 1], ['item', 'book_xuanshui', 1], ['favor', 'su_qingyao', -80], ['flag', 'su_enemy'], ['mind', -10], ['log', '在秘境中搶奪了蘇清瑤']],

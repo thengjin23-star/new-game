@@ -206,11 +206,15 @@ function moveStep(s, sc, dt) {
     vx = (w.x - lead.x) / d;
     vy = (w.y - lead.y) / d;
   }
-  const nx = lead.x + vx * m.speed * dt;
-  const ny = lead.y + vy * m.speed * dt;
-  if (collides(s, nx, ny, 6) || (!groundOk('any', nx, ny) && !groundOk('street', nx, ny))) {
-    for (const ac of sc.actors) ac.moving = false;
-    return;
+  const ok = (x, y) => !collides(s, x, y, 6) && (groundOk('any', x, y) || groundOk('street', x, y));
+  // blocked straight ahead: slide along whichever way is open
+  if (!ok(lead.x + vx * m.speed * dt, lead.y + vy * m.speed * dt)) {
+    if (m.toward && ok(lead.x + Math.sign(vx) * m.speed * dt, lead.y)) [vx, vy] = [Math.sign(vx), 0];
+    else if (m.toward && ok(lead.x, lead.y + Math.sign(vy) * m.speed * dt)) [vx, vy] = [0, Math.sign(vy)];
+    else {
+      for (const ac of sc.actors) ac.moving = false;
+      return;
+    }
   }
   for (const ac of sc.actors) {
     ac.x += vx * m.speed * dt;

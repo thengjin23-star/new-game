@@ -33,6 +33,7 @@ export default [
       {
         text: '拼了。',
         check: { kind: 'power', diff: 32 },
+        fight: { foes: [['bandit_chief', 1, { name: '獨眼龍' }], ['bandit', 2]], close: true },
         ok: {
           text: '你一劍挑飛了獨眼龍的刀，另外兩個人見勢不妙，扭頭就跑。\n\n獨眼龍跪在地上求饒。你搜出了他身上的靈石，然後放他走了。',
           effects: [['ls', [12, 28]], ['flag', 'beat_bandits'], ['mind', 3], ['sysexp', 3]],
@@ -68,6 +69,7 @@ export default [
       {
         text: '殺出去。',
         check: { kind: 'power', diff: 48 },
+        fight: { foes: [['enforcer', 3]] },
         ok: {
           text: '你殺出了一條血路，逃進了深山。從此以後，青雲宗的通緝令上，多了你的名字。',
           effects: [['flag', 'sect_wanted'], ['unflag', 'bandit_joined'], ['mind', -6], ['log', '被青雲宗通緝']],
@@ -106,6 +108,7 @@ export default [
         text: '戰。',
         tag: 'danger',
         check: { kind: 'power', diff: 70 },
+        fight: { foes: [['wolf_king', 1]] },
         ok: {
           text: '這一戰打了整整一夜。天亮時，狼王倒在血泊裡，你也只剩半條命。\n\n你從牠的腦袋裡剖出了一顆拳頭大的妖丹。',
           effects: [['item', 'wolf_core', 1], ['hurt', 1], ['sysexp', 10], ['mind', 5], ['log', '斬殺黑風林狼王']],
@@ -217,6 +220,7 @@ export default [
             text: '動手搶。',
             karma: true,
             check: { kind: 'power', diff: (s, ctx) => npcPower(ctx.npc) },
+            fight: { foes: [['cultivator', 1, 'npc']], close: true },
             ok: { text: '{npc}捂著傷口退走了，臨走時死死地盯著你，像要把你的臉刻進腦子裡。', effects: [['item', 'blood_ginseng', 2], ['favor', 'npc', -40]] },
             fail: { text: '{npc}的劍比你快。你捂著傷口，看著對方拿走了血參。', effects: [['hurt', 1], ['favor', 'npc', -15]] },
           },
@@ -239,6 +243,7 @@ export default [
       {
         text: '背起她就走。',
         check: { kind: 'power', diff: 18 },
+        fight: { foes: [['wolf', 2]] },
         ok: {
           text: '一路上你打退了兩頭狼。把王小妹送回家時，王二撲通一聲給你跪下了。',
           effects: [['favor', 'wang_er', 25], ['mind', 6], ['log', '把王二的妹妹從黑風林背了回來']],
@@ -271,6 +276,7 @@ export default [
           {
             text: '迎戰。',
             check: { kind: 'power', diff: (s, ctx) => npcPower(ctx.npc) * 1.1 },
+            fight: { foes: [['cultivator', 1, 'npc']], close: true },
             ok: { text: '{npc}倒下了。你站在原地喘著粗氣，心裡說不出是什麼滋味。', effects: [['npc', 'npc', 'alive', false], ['mind', -3], ['ls', [10, 30]]] },
             fail: { text: '{npc}的劍抵在你喉嚨上，停了很久，最後收了回去：「這次，算扯平了。」', effects: [['hurt', 2], ['favor', 'npc', 30]] },
           },

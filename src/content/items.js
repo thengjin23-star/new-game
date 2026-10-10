@@ -46,6 +46,15 @@ export const ITEMS = {
     desc: '參鬚泛紅，像是浸過血。補氣血的好東西。',
     use: { text: '血參入腹，渾身燥熱，像是喝了一大碗烈酒。', effects: [['xw', 70], ['healdays', 15]] },
   },
+  wolf_pelt: {
+    name: '狼皮', kind: 'material', sell: 4,
+    desc: '灰狼的皮，毛色雜亂。鎮上的皮匠肯收。',
+  },
+  beast_core: {
+    name: '妖獸內丹', kind: 'material', sell: 18,
+    desc: '一階妖獸的內丹，只有指甲蓋大小。坊市的丹師會收，煉丹時用得上。',
+    use: { text: '你把內丹含在舌下，一股燥熱的妖力慢慢化開。', effects: [['xw', 60], ['mind', -2]] },
+  },
   python_scale: {
     name: '靈溪蟒鱗', kind: 'material', sell: 70,
     desc: '巴掌大的青黑鱗片，刀劍難傷。',
@@ -118,7 +127,7 @@ export const ITEMS = {
     desc: '砍柴的刀。總比空手好。',
   },
   hunting_bow: {
-    name: '獵弓', kind: 'weapon', sell: 2, power: 0.15,
+    name: '獵弓', kind: 'weapon', sell: 2, power: 0.15, ranged: true,
     desc: '父親留下的獵弓，弓背磨得發亮。',
   },
   qinggang_sword: {

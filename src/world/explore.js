@@ -16,7 +16,8 @@ import { power } from '../core/cultivation.js';
 import { sysGain } from './system.js';
 import { EVENTS } from '../content/index.js';
 import { ITEMS, displayItem } from '../content/items.js';
-import { pickEvent, startEvent, takeDue, notice } from '../core/events.js';
+import { pickEvent, startEvent, takeDue, notice, choose, fightChoice } from '../core/events.js';
+import { arenaOf, placeOf } from './arena.js';
 import { inquire, visit } from '../core/actions.js';
 import { spendHours, newReport } from '../core/time.js';
 import { applyEffects, logLife } from '../core/effects.js';
@@ -452,6 +453,24 @@ export function herbReady(s, h) {
   return t === undefined || s.day - t >= GATHER_RESPAWN;
 }
 
+// ── a fight ──
+
+/**
+ * The ground a fight is on, and everyone's place on it: { arena, at(u) → [x, y] }.
+ * The line runs toward where they came from (the pack, the scene), else the way you face.
+ */
+export function battleField(s) {
+  if (!s.battle) return null;
+  const data = s.pending?.ctx?.data || {};
+  let toward = data.at || null;
+  if (!toward && data.scene) {
+    const sc = scenesOf(liveOf(s)).find((x) => x.def.id === data.scene);
+    if (sc) toward = [sc.x, sc.y];
+  }
+  const arena = arenaOf(s, toward);
+  return { arena, at: (u) => placeOf(arena, u) };
+}
+
 // ── townsfolk ──
 
 export function folkInWorld(s) {
@@ -516,6 +535,44 @@ function mobActive(s, m) {
   if (!ev) return false;
   if (ev.cond && !ev.cond(s)) return false;
   return true;
+}
+
+function centroid(list) {
+  const n = list.length || 1;
+  return [Math.round(list.reduce((a, b) => a + b.x, 0) / n), Math.round(list.reduce((a, b) => a + b.y, 0) / n)];
+}
+
+const MOB_NAME = { wolf: ['灰狼', '狼群'], snake: ['青鱗蛇', '蛇群'], bandit: ['劫修', '山賊'], ghost: ['殘魂', '殘魂'] };
+
+/** Beasts you could go for first (before they come for you). */
+function mobTargets(s, L) {
+  const w = s.world;
+  const out = [];
+  for (const m of mobsOf(s, L)) {
+    if (m.state === 'flee' || !mobActive(s, m)) continue;
+    let near = null;
+    for (const b of m.members) if (!near || Math.hypot(b.x - w.x, b.y - w.y) < Math.hypot(near.x - w.x, near.y - w.y)) near = b;
+    if (!near) continue;
+    out.push({ kind: 'mob', id: m.def.id, x: near.x, y: near.y, name: MOB_NAME[m.def.kind][m.members.length > 1 ? 1 : 0], verb: '出手', reach: 260 });
+  }
+  return out;
+}
+
+/** Go for them first: the fight starts where you stand, and you have the first move. */
+function strikeFirst(s, L, id) {
+  const m = mobsOf(s, L).find((x) => x.def.id === id);
+  if (!m || !mobActive(s, m)) return;
+  const def = m.def;
+  const first = m.state === 'chase' ? null : 'me';
+  s.world.mobs[def.id] = s.day + def.respawn;
+  const at = centroid(m.members);
+  homeMembers(m);
+  startEvent(s, def.event, { data: { mob: def.id, at, first } });
+  const pend = s.pending;
+  const i = pend.choices.findIndex((c) => !c.disabled && fightChoice(pend, c.i));
+  if (i < 0) return;
+  if (first) pend.text = '你看準了時機，搶先出手。';
+  choose(s, pend.choices[i].i);
 }
 
 /** Running from someone far too strong: away, out of sight, and not back today. */
@@ -597,9 +654,11 @@ function updateMobs(s, L, dt) {
       }
       if (m.state === 'chase' && dp < 22 + PLAYER_R) {
         s.world.mobs[def.id] = s.day + def.respawn;
+        const at = centroid(m.members);
         homeMembers(m);
         stopWalking(L);
-        startEvent(s, def.event);
+        // they are upon you: if it comes to a fight, it is with them, from where they came
+        startEvent(s, def.event, { data: { mob: def.id, at } });
         return true;
       }
     }
@@ -701,6 +760,7 @@ export function targetsNear(s, radius = 160) {
     add({ kind: 'folk', id: f.id, x: f.x, y: f.y, name: f.name || '路人', verb: '搭話', reach: REACH.folk, folk: f });
   }
   for (const t of sceneTargets(s, liveOf(s))) add(t);
+  for (const t of mobTargets(s, liveOf(s))) add(t);
   out.sort((a, b) => a.d / a.reach - b.d / b.reach);
   return out;
 }
@@ -820,6 +880,7 @@ export function interact(s, t) {
   if (t.kind === 'herb') return gather(s, L, world().herbs[t.id]);
   if (t.kind === 'folk') return chatFolk(s, L, t.folk);
   if (t.kind === 'scene') return meetScene(s, L, sceneByUid(L, t.id));
+  if (t.kind === 'mob') return strikeFirst(s, L, t.id);
 }
 
 /** Set an event's scene near you (tools and tests; the director does this as you walk). */
