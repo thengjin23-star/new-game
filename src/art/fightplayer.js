@@ -20,6 +20,7 @@ export function createFightPlayer() {
     over: null,
     text: '',
     t: 0,
+    marks: null, // id → what ails or guards them, as of the last beat shown
   };
 
   const pop = (id, text, kind) => v.pops.push({ id, text, kind, t0: v.t });
@@ -51,6 +52,7 @@ export function createFightPlayer() {
 
   /** New beats from the battle (b: the battle as it now stands). */
   v.feed = (b, beats) => {
+    if (!v.marks) v.marks = beats.length ? {} : Object.fromEntries(b.units.map((u) => [u.id, { ...u.st }]));
     if (!v.shown.size) rewind(b, beats);
     if (!beats.length) return;
     if (!v.beat && !v.queue.length) rewind(b, beats);
@@ -58,6 +60,7 @@ export function createFightPlayer() {
   };
 
   function land(beat) {
+    if (beat.marks) v.marks = beat.marks;
     for (const h of beat.hits || []) {
       const sh = v.shown.get(h.id);
       if (!sh) continue;
@@ -115,6 +118,9 @@ export function createFightPlayer() {
 
   /** Nothing left to show. */
   v.idle = () => !v.beat && !v.queue.length;
+
+  /** What ails or guards someone as shown: as of the last beat, or (caught up) as it stands. */
+  v.marksOf = (u) => (v.idle() ? u.st : v.marks?.[u.id]) || {};
 
   /** How far into the current beat (0…1), or -1. */
   v.progress = () => (v.beat ? Math.min(1, v.bt / v.dur) : -1);

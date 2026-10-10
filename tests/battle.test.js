@@ -11,6 +11,8 @@ import { ITEMS } from '../src/content/items.js';
 import { EVENT_LIST } from '../src/content/index.js';
 import { nearestOpen } from '../src/world/terrain.js';
 import { fresh, resolvePending, fightOut } from './helpers.js';
+import { createFightPlayer } from '../src/art/fightplayer.js';
+import { isReachable } from '../src/world/terrain.js';
 
 function cultivator(seed, stage = 2) {
   const s = fresh(seed);
@@ -206,4 +208,80 @@ test('a win teaches you something and may leave you something; a near thing leav
   }
   assert.ok(xw > 0 && pelts > 0, `cultivation (${xw}) and pelts (${pelts})`);
   assert.ok(close === 0 || hurt > 0, 'the narrow wins left wounds');
+});
+
+test('the picture plays the fight a blow at a time, and comes out where the fight stands', () => {
+  const s = cultivator(46, 3);
+  s.player.arts = ['qingyuan_sword'];
+  const fx = createFightPlayer();
+  const play = (beats) => {
+    fx.feed(s.battle, beats);
+    // before it plays, everyone is shown as they were before these blows
+    const first = new Map();
+    for (const bt of beats) for (const h of bt.hits || []) if (h.hpBefore !== undefined && !first.has(h.id) && !h.drain) first.set(h.id, h.hpBefore);
+    for (const [id, hp] of first) assert.equal(fx.shown.get(id).hp, hp, `${id} before the blow lands`);
+    for (let k = 0; k < 5000 && !fx.idle(); k++) fx.update(1 / 30);
+    assert.ok(fx.idle(), 'it catches up');
+    for (const u of s.battle.units) {
+      const sh = fx.shown.get(u.id);
+      assert.equal(sh.hp, u.hp, `${u.name}: blood as it stands`);
+      assert.equal(sh.alive, u.alive, `${u.name}: standing or fallen`);
+      assert.equal(fx.tOf(u.id), u.t, `${u.name}: where they stand`);
+    }
+  };
+  B.startBattle(s, { foes: [['ghost', 1], ['wolf', 2]], allies: [['escort', 1]] }, { diff: 30 });
+  play(B.takeBeats());
+  for (let k = 0; k < 80 && !s.battle.over; k++) {
+    const o = B.options(s);
+    const skill = o.skills.find((x) => x.id === 'swordqi' && !x.why);
+    B.act(s, skill ? { kind: 'skill', id: 'swordqi', target: o.targets[0] } : { kind: 'attack', target: o.targets[0] });
+    play(B.takeBeats());
+  }
+  assert.ok(s.battle.over);
+  assert.equal(fx.over, s.battle.over, 'and it ends the way the fight did');
+});
+
+test('a fight stands on open ground near you, the two sides facing each other', () => {
+  for (const def of MOBS) {
+    const s = cultivator(47);
+    const [x, y] = nearestOpen(s, def.x, def.y + 120, 4);
+    E.placeAt(s, x, y);
+    B.startBattle(s, { foes: [['bandit', 3]], allies: [['escort', 2]] }, { diff: 30 });
+    const field = E.battleField(s);
+    const a = field.arena;
+    assert.ok(Math.hypot(a.x - x, a.y - y) <= 100, `${def.id}: where you stand`);
+    const at = (u) => field.at({ t: u.t, lane: u.lane, side: u.side });
+    const [mx, my] = at(B.unitOf(s.battle, 'me'));
+    for (const u of s.battle.units) {
+      const [ux, uy] = at(u);
+      assert.ok(isReachable(ux, uy), `${def.id}: ${u.name} stands on the ground`);
+      const ahead = (ux - mx) * a.dx + (uy - my) * a.dy;
+      if (u.side === 'foe') assert.ok(ahead > 40, `${def.id}: ${u.name} across from you`);
+      if (u.side === 'ally') assert.ok(ahead < 0, `${def.id}: ${u.name} at your side`);
+    }
+  }
+});
+
+test('the fight is told in the order it happened: a blow, then what follows from it', () => {
+  let howls = 0;
+  let marked = 0;
+  for (let i = 0; i < 30; i++) {
+    const s = cultivator(500 + i, 4);
+    s.rng = (i * 7919 + 3) >>> 0;
+    const all = [...B.startBattle(s, i % 2 ? { foes: [['wolf', 3]] } : { foes: [['snake', 1], ['python', 1]] }, { diff: 30 })];
+    for (let k = 0; k < 80 && !s.battle.over; k++) all.push(...B.act(s, { kind: 'attack', target: B.options(s).targets[0] }));
+    all.forEach((bt, k) => {
+      if (bt.fx === 'howl' && bt.kind === 'status') {
+        howls++;
+        assert.ok(all[k - 1]?.hits?.some((h) => h.dead), 'the pack howls after one of them falls');
+      }
+      for (const h of bt.hits || []) {
+        if (!h.status || h.dead || !['poison', 'bleed', 'stun', 'burn'].includes(h.status)) continue;
+        const key = h.status === 'bleed' ? 'poison' : h.status;
+        assert.ok(bt.marks?.[h.id]?.[key], `${h.status} shows as the blow that dealt it lands`);
+        marked++;
+      }
+    });
+  }
+  assert.ok(howls > 0 && marked > 0, `howls (${howls}) and marks (${marked}) were seen`);
 });

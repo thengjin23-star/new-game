@@ -202,7 +202,7 @@ export function startBattle(s, spec, { diff = 20, npc = null, origin = null, fir
   for (const u of units) u.ct = rand(s) * 25 + (first === 'me' && u.side !== 'foe' ? 60 : 0) + (first === 'foe' && u.side === 'foe' ? 35 : 0);
   const b = { v: 1, units, turn: null, over: null, spar: !!spec.spar, origin, first, beats: 0, diff };
   s.battle = b;
-  const beats = [];
+  const beats = beatList(b);
   shown = [];
   if (first === 'me') beats.push({ who: 'me', kind: 'status', text: '你搶先出手！' });
   runUntilPlayer(s, b, beats);
@@ -212,8 +212,37 @@ export function startBattle(s, spec, { diff = 20, npc = null, origin = null, fir
 // what has happened, waiting to be shown (the picture takes it; it is not saved)
 let shown = [];
 function told(beats) {
+  // what follows from a blow (a pack's howl as one of them falls) is decided
+  // while the blow is, but heard after it
+  for (let i = beats.length - 1; i >= 0; i--) {
+    if (!beats[i].after) continue;
+    const j = beats.findIndex((x, k) => k > i && !x.after);
+    if (j < 0) continue;
+    beats.splice(j, 0, ...beats.splice(i, 1));
+  }
   shown.push(...beats);
-  return beats;
+  return [...beats];
+}
+
+/** What ails or guards each fighter, as it stands. */
+function marksOf(b) {
+  const out = {};
+  for (const u of b.units) {
+    const m = {};
+    for (const k of ['poison', 'burn', 'stun', 'guard', 'rage', 'shield']) if (u.st[k]) m[k] = u.st[k];
+    out[u.id] = m;
+  }
+  return out;
+}
+
+/** A list of beats, each marked with how everyone stands once it has happened (for the picture). */
+function beatList(b) {
+  const list = [];
+  list.push = (...xs) => {
+    for (const x of xs) Array.prototype.push.call(list, Object.assign(x, { marks: marksOf(b) }));
+    return list.length;
+  };
+  return list;
 }
 
 /** The beats since last asked (for the picture). */
@@ -337,7 +366,7 @@ function fall(b, u, hit, beats) {
     const pack = b.units.filter((x) => x.alive && x.side === u.side && FOES[x.kind]?.skills.includes('howl') && !x.st.rage);
     if (pack.length) {
       for (const x of pack) x.st.rage = 0.2;
-      beats.push({ who: pack[0].id, kind: 'status', fx: 'howl', text: '狼群一陣長嚎，眼睛都紅了。' });
+      beats.push({ who: pack[0].id, kind: 'status', fx: 'howl', text: '狼群一陣長嚎，眼睛都紅了。', after: true });
     }
   }
   return true;
@@ -431,7 +460,7 @@ export function act(s, action) {
   const me = unitOf(b, 'me');
   const foes = foesOf(b, 'me');
   const pickTarget = (id) => (id && foes.find((f) => f.id === id)) || foes.slice().sort((x, y) => Math.abs(x.t - me.t) - Math.abs(y.t - me.t) || x.hp - y.hp)[0];
-  const beats = [];
+  const beats = beatList(b);
   b.turn = null;
   switch (action.kind) {
     case 'attack': {
@@ -562,8 +591,10 @@ function foeAct(s, b, u, beats) {
   const d = pickFoeTarget(s, b, u);
   if (!d) return;
   const verb = () => K.says[Math.floor(rand(s) * K.says.length)];
-  const blow = (opts, fx, line, extra = {}) => {
+  // then: what a blow that lands leaves behind (poison, a stun), before it is told
+  const blow = (opts, fx, line, extra = {}, then = null) => {
     const hit = hitAndFall(s, b, u, d, opts, beats);
+    if (then && !hit.miss && !hit.dead) then(hit);
     beats.push({ who: u.id, kind: 'attack', fx, target: d.id, from: extra.from ?? u.t, to: u.t, hits: [hit], name: extra.name, text: line(hit) });
     return hit;
   };
@@ -618,11 +649,10 @@ function foeAct(s, b, u, beats) {
     return;
   }
   if (sk.includes('constrict') && rand(s) < 0.25) {
-    const hit = blow({ mult: 0.8 }, 'constrict', (h) => tell(h, '一甩身子纏了上來'), { name: '纏絞' });
-    if (!hit.miss && !hit.dead) {
+    blow({ mult: 0.8 }, 'constrict', (h) => tell(h, '一甩身子纏了上來'), { name: '纏絞' }, (hit) => {
       d.st.stun = 1;
       hit.status = 'stun';
-    }
+    });
     return;
   }
   if (sk.includes('venom_breath') && rand(s) < 0.25) {
@@ -646,19 +676,19 @@ function foeAct(s, b, u, beats) {
   }
   for (const [skill, mult, name] of [['maul', 1.6, '重掌'], ['heavy', 1.5, '劈砍'], ['rend', 1.4, '撕咬']]) {
     if (sk.includes(skill) && rand(s) < 0.3) {
-      const hit = blow({ mult }, skill === 'rend' ? 'bite' : 'heavy', (h) => tell(h, verb()), { name });
-      if (skill === 'rend' && !hit.miss && !hit.dead) {
+      const bleed = (hit) => {
         d.st.poison = 2;
         hit.status = 'bleed';
-      }
+      };
+      blow({ mult }, skill === 'rend' ? 'bite' : 'heavy', (h) => tell(h, verb()), { name }, skill === 'rend' ? bleed : null);
       return;
     }
   }
-  const hit = blow({ mult: 1 }, sk.includes('venom') || sk.includes('pounce') || sk.includes('rend') ? 'bite' : 'slash', (h) => tell(h, verb()));
-  if (sk.includes('venom') && !hit.miss && !hit.dead) {
+  const venom = (hit) => {
     d.st.poison = 3;
     hit.status = 'poison';
-  }
+  };
+  blow({ mult: 1 }, sk.includes('venom') || sk.includes('pounce') || sk.includes('rend') ? 'bite' : 'slash', (h) => tell(h, verb()), {}, sk.includes('venom') ? venom : null);
 }
 
 /** Someone fighting at your side: goes for whoever is weakest. */
@@ -691,7 +721,10 @@ export function aftermath(s) {
     const foes = b.units.filter((u) => u.side === 'foe');
     const xw = Math.round(foes.reduce((a, f) => a + f.p * (f.boss ? 0.4 : 0.25), 0));
     if (xw > 0) out.push(['xw', xw]);
-    for (const f of foes) for (const [p, item, n] of FOES[f.kind].loot || []) if (rand(s) < p) out.push(['item', item, n]);
+    // what they leave, counted together (three pelts, not a pelt three times)
+    const loot = new Map();
+    for (const f of foes) for (const [p, item, n] of FOES[f.kind].loot || []) if (rand(s) < p) loot.set(item, (loot.get(item) || 0) + n);
+    for (const [item, n] of loot) out.push(['item', item, n]);
     out.push(['sysexp', foes.some((f) => f.boss) ? 3 : 1]);
   }
   // won, but only just: it leaves a mark

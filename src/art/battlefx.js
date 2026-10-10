@@ -151,7 +151,7 @@ export function drawFightMarks(ctx, proj, px, s, fx, list, t, font) {
   for (const f of list) {
     if (f.fallen) continue;
     const u = f.u;
-    const st = b.units.find((x) => x.id === u.id)?.st || {};
+    const st = fx.marksOf(u);
     const [sx, sy] = proj(f.x, f.y, f.tall + 7);
     const bw = (u.side === 'me' ? 46 : 40) * px;
     const bh = 5 * px;
@@ -204,12 +204,16 @@ export function drawFightMarks(ctx, proj, px, s, fx, list, t, font) {
     }
   }
   if (fx.beat) blowFx(ctx, proj, px, fx, at, t);
-  // numbers rising off whoever took them
-  for (const pp of fx.pops) {
+  // numbers rising off whoever took them (several at once stack up)
+  fx.pops.forEach((pp, i) => {
     const f = at.get(pp.id);
-    if (!f) continue;
+    if (!f) return;
     const age = fx.t - pp.t0;
-    const [sx, sy] = proj(f.x, f.y, f.tall + 20);
+    let k = 0;
+    for (let j = 0; j < i; j++) if (fx.pops[j].id === pp.id && Math.abs(fx.pops[j].t0 - pp.t0) < 0.15) k++;
+    // starting just over the name, whatever the zoom
+    const [sx, by] = proj(f.x, f.y, f.tall + 7);
+    const sy = by - (27 + k * 17) * px;
     const [col, size, weight] = POP_STYLE[pp.kind] || POP_STYLE.dmg;
     const grow = pp.kind === 'crit' ? 1 + Math.max(0, 0.35 - age) * 1.6 : 1;
     ctx.globalAlpha = Math.max(0, Math.min(1, (1.15 - age) / 0.45));
@@ -222,7 +226,7 @@ export function drawFightMarks(ctx, proj, px, s, fx, list, t, font) {
     ctx.fillStyle = col;
     ctx.fillText(text, sx, y);
     ctx.globalAlpha = 1;
-  }
+  });
 }
 
 /** The blow of the current beat: in flight, landing, or what it leaves. */

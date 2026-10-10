@@ -25,7 +25,7 @@ import { npcAge, npcRealm, NAMED } from '../world/npcs.js';
 import { saveGame, loadGame, clearGame, exportCode, importCode, migrate, saveMeta, loadMeta, parseSave } from '../core/save.js';
 import { connectCloud } from '../platform/cloud.js';
 
-const VERSION = '0.4';
+const VERSION = '0.5';
 const ITEM_ORDER = ['pill', 'herb', 'material', 'book', 'weapon', 'treasure', 'talisman', 'token', 'unknown'];
 const ITEM_KIND = { pill: '丹藥', herb: '靈草', material: '材料', book: '典籍', weapon: '兵器', treasure: '寶物', talisman: '符籙', token: '信物', unknown: '未知' };
 const DOCK = [
