@@ -27,6 +27,7 @@ import { propSprite, SPRITE } from './sprites.js';
 import { makeParticles, drawParticles } from './ink.js';
 import { seasonOf } from '../core/calendar.js';
 import { asset } from './assets.js';
+import { drawActor, drawPose, poseOf, lookOf, drawSpeech } from './scenery.js';
 import { stream } from '../core/rng.js';
 
 const DEG = Math.PI / 180;
@@ -71,7 +72,7 @@ export function createWorld3D(canvas, { onFrame, idle, quality = 'high', onSlow 
   const clouds = createClouds(env);
   scene.add(clouds.group);
   if (quality === 'low') clouds.group.children.forEach((m, n) => (m.visible = n === 0));
-  const cards = createCards(env, renderer, { size: 1024, slot: 128, res: 2, max: 64 });
+  const cards = createCards(env, renderer, { size: 2048, rows: 8, slot: 128, res: 2, max: 128 });
   scene.add(cards.mesh, cards.ghost);
   const glows = createGlows();
   scene.add(glows.lights.mesh, glows.mists.mesh, glows.shadows.mesh);
@@ -298,27 +299,52 @@ export function createWorld3D(canvas, { onFrame, idle, quality = 'high', onSlow 
         sparkle(c, 0, -13, 0.8 + 0.4 * Math.sin(t * 3));
       }, { animated: true, fps: 10 });
     }
+    const night = E.isNight(s);
     for (const n of E.peopleInWorld(s)) {
       if (!near(n.x, n.y)) continue;
+      const dn = Math.hypot(n.x - w.x, n.y - w.y);
+      // at home: they come to the door when you are close
+      if (n.inside && dn > E.DOOR) continue;
       const look = LOOKS[n.id] || LOOKS.stranger;
-      const face = n.x > w.x ? -1 : 1;
-      const pic = picture(`npc:${n.id}`, look.big ? 58 : 50);
-      cards.add(`npc:${n.id}`, n.x, heightAt(n.x, n.y), n.y, pic || ((c) => drawPerson(c, 0, 0, look, { t: t + n.x * 0.01, face })), { animated: !pic, fps: 8 });
-      foot(n.x, n.y, look.big ? 11 : 9);
+      const pose = poseOf(n, night);
+      // busy with something, they face their work; otherwise they turn to you
+      const face = n.moving || n.fixed ? n.face : dn < 260 || n.face === undefined ? (n.x > w.x ? -1 : 1) : n.face;
+      const pic = pose === 'stand' && !n.moving && picture(`npc:${n.id}`, look.big ? 58 : 50);
+      cards.add(`npc:${n.id}`, n.x, heightAt(n.x, n.y), n.y, pic || ((c) => drawPose(c, look, pose, { t: t + n.x * 0.01, face, moving: n.moving })), { animated: !pic, fps: n.moving ? 24 : 8 });
+      foot(n.x, n.y, look.big ? 11 : pose === 'sit' || pose === 'fish' ? 11 : 9);
     }
     for (const fk of E.folkInWorld(s)) {
       if (!near(fk.x, fk.y)) continue;
-      const pic = picture(`folk:${fk.look}`, 48);
-      cards.add(`folk:${fk.id ?? fk.line}`, fk.x, heightAt(fk.x, fk.y), fk.y, pic || ((c) => drawPerson(c, 0, 0, FOLK_LOOKS[fk.look], { t: t + fk.line, moving: fk.moving, face: fk.face })), { animated: !pic, fps: fk.moving ? 24 : 8 });
-      foot(fk.x, fk.y, 8.5);
+      const pose = poseOf(fk, night);
+      const pic = pose === 'stand' && picture(`folk:${fk.look}`, 48);
+      cards.add(`folk:${fk.id}`, fk.x, heightAt(fk.x, fk.y), fk.y, pic || ((c) => drawPose(c, lookOf(fk.look), pose, { t: t + fk.line + fk.x * 0.01, moving: fk.moving, face: fk.face })), { animated: !pic, fps: fk.moving ? 24 : 8 });
+      foot(fk.x, fk.y, pose === 'sit' ? 11 : 8.5);
     }
     for (const m of E.mobsInWorld(s)) {
+      const alpha = 1 - (m.fade || 0);
       m.members.forEach((b, i) => {
         if (!near(b.x, b.y)) return;
         const pic = picture(`mob:${m.def.kind}`, m.def.kind === 'wolf' ? 26 : 44);
-        cards.add(`mob:${m.def.id}:${i}`, b.x, heightAt(b.x, b.y), b.y, pic || ((c) => drawMob(c, m.def.kind, 0, 0, { t: t + b.x * 0.01, moving: b.moving, face: b.face })), { animated: !pic, fps: b.moving ? 24 : 8 });
-        if (m.def.kind !== 'ghost') foot(b.x, b.y, 12);
+        cards.add(`mob:${m.def.id}:${i}`, b.x, heightAt(b.x, b.y), b.y, pic || ((c) => drawMob(c, m.def.kind, 0, 0, { t: t + b.x * 0.01, moving: b.moving, face: b.face })), { animated: !pic, fps: b.moving ? 24 : 8, alpha });
+        if (m.def.kind !== 'ghost') foot(b.x, b.y, 12, 0.3 * alpha);
       });
+    }
+    // the small lives of the wild: grazing, hopping, taking wing
+    for (const c of E.wildInWorld(s)) {
+      if (!near(c.x, c.y)) continue;
+      const alpha = 1 - c.fade;
+      cards.add(`wild:${c.id}`, c.x, heightAt(c.x, c.y) + c.fly * 46, c.y, (cx) => drawActor(cx, { a: 'beast', beast: c.kind, face: c.face, moving: c.moving, fly: c.fly, n: c.seed }, { t }), { animated: true, fps: c.moving || c.fly ? 20 : 6, alpha });
+      if (!c.fly) foot(c.x, c.y, c.kind === 'deer' || c.kind === 'spirit_deer' ? 11 : 6, 0.24 * alpha);
+    }
+    // scenes out in the world: who and what is there
+    for (const sc of E.scenesInWorld(s)) {
+      if (!near(sc.x, sc.y)) continue;
+      const alpha = Math.max(0, 1 - sc.fade);
+      for (const ac of sc.actors) {
+        const still = ac.a === 'prop' && ac.prop !== 'campfire' && ac.prop !== 'ginseng';
+        cards.add(`scene:${sc.uid}:${ac.n}`, ac.x, heightAt(ac.x, ac.y), ac.y, (c) => drawActor(c, ac, { t }), { animated: !still, fps: ac.moving ? 24 : 8, alpha, ghost: sc.inWoods && (!still || ac.prop === 'ginseng') });
+        if (!still || ac.prop === 'mule' || ac.prop === 'crates') foot(ac.x, ac.y, ac.pose === 'lie' ? 15 : ac.prop === 'mule' ? 13 : 9, 0.28 * alpha);
+      }
     }
     const sit = !!s.secl;
     const moving = E.liveOf(s).moving;
@@ -380,6 +406,34 @@ export function createWorld3D(canvas, { onFrame, idle, quality = 'high', onSlow 
     for (const h of world().herbs) {
       if (!near(h.x, h.y, 700) || !E.herbReady(s, h)) continue;
       L.add(h.x, heightAt(h.x, h.y) + 12, h.y, 9 + 2 * Math.sin(t * 3 + h.id), 0.85, 1, 0.85, 0.25 + 0.35 * dark);
+    }
+    // lamps carried at night: the watchman's, and whoever comes to the door
+    if (dark > 0.04) {
+      const w = s.world;
+      for (const fk of E.folkInWorld(s)) {
+        if (fk.act === 'gong' && near(fk.x, fk.y)) L.add(fk.x + fk.face * 12, heightAt(fk.x, fk.y) + 14, fk.y, 32 + Math.sin(t * 4) * 2, 1, 0.62, 0.3, 0.75 * dark);
+      }
+      for (const n of E.peopleInWorld(s)) {
+        if (!n.inside || Math.hypot(n.x - w.x, n.y - w.y) > E.DOOR) continue;
+        L.add(n.x + (n.x > w.x ? -12 : 12), heightAt(n.x, n.y) + 14, n.y, 30, 1, 0.62, 0.3, 0.7 * dark);
+      }
+    }
+    for (const c of E.wildInWorld(s)) {
+      if (!near(c.x, c.y)) continue;
+      const a = 1 - c.fade;
+      if (c.kind === 'spirit_deer') L.add(c.x, heightAt(c.x, c.y) + 16, c.y, 34 + Math.sin(t * 2 + c.seed) * 3, 0.75, 1, 0.9, (0.3 + 0.35 * dark) * a);
+      if (c.kind === 'fox') L.add(c.x + c.face * 13, heightAt(c.x, c.y) + 4, c.y, 24 + Math.sin(t * 5 + c.seed) * 3, 0.45, 0.7, 1, (0.4 + 0.4 * dark) * a);
+    }
+    // a scene's own light: a fire, a ginseng's glow, a fox's blue lantern
+    for (const sc of E.scenesInWorld(s)) {
+      if (!near(sc.x, sc.y)) continue;
+      const a = Math.max(0, 1 - sc.fade);
+      for (const ac of sc.actors) {
+        const g = heightAt(ac.x, ac.y);
+        if (ac.prop === 'campfire') L.add(ac.x, g + 6, ac.y, 40 + Math.sin(t * 9) * 3, 1, 0.55, 0.22, (0.35 + 0.5 * dark) * a);
+        if (ac.prop === 'ginseng') L.add(ac.x, g + 8, ac.y, 22, 1, 0.55, 0.5, (0.25 + 0.3 * dark) * a);
+        if (ac.beast === 'fox') L.add(ac.x + (ac.face || 1) * 13, g + 4, ac.y, 26 + Math.sin(t * 5) * 3, 0.45, 0.7, 1, (0.5 + 0.4 * dark) * a);
+      }
     }
     // the spirit mist that lies in 靈溪谷, morning mist on the lake
     if (Math.hypot(focus.x - VALLEY.cx, focus.y - VALLEY.cy) < 1500) {
@@ -536,6 +590,9 @@ export function createWorld3D(canvas, { onFrame, idle, quality = 'high', onSlow 
       }
     }
     drawLabels();
+    drawSceneBubbles();
+    drawSpeechBubbles();
+    drawBeastMarks();
     drawPlaceNames();
     // weather and paper; a region's own motes over the season's
     const dark = E.darkness(s.tod);
@@ -589,6 +646,7 @@ export function createWorld3D(canvas, { onFrame, idle, quality = 'high', onSlow 
     const w = s.world;
     for (const n of E.peopleInWorld(s)) {
       const d = Math.hypot(n.x - w.x, n.y - w.y);
+      if (n.inside && d > E.DOOR) continue;
       if (d < 260) label(n.x, n.y, 46, n.name, n.named ? 1 : 0.8);
     }
     if (highlight && highlight.kind !== 'npc' && highlight.kind !== 'folk') label(highlight.x, highlight.y, highlight.kind === 'herb' ? 28 : 50, highlight.name, 1);
@@ -597,6 +655,74 @@ export function createWorld3D(canvas, { onFrame, idle, quality = 'high', onSlow 
       const d = Math.hypot(p.x - w.x, p.y - w.y);
       if (d > 220 || !E.poiVisible(s, p)) continue;
       label(p.x, p.y, 46, E.poiName(s, p), 0.6);
+    }
+  }
+
+  /** Over beasts that have seen you: a question; over those coming for you: a cry. */
+  function drawBeastMarks() {
+    for (const m of E.mobsInWorld(s)) {
+      if (!m.alert && m.state !== 'chase') continue;
+      const mark = m.state === 'chase' ? '！' : '？';
+      for (const b of m.members) {
+        const [sx, sy] = worldToScreen(b.x, b.y, m.def.kind === 'wolf' ? 30 : 46);
+        if (sx < -20 || sx > W + 20 || sy < -20 || sy > H + 20) continue;
+        octx.font = `700 15px ${FONT}`;
+        octx.textAlign = 'center';
+        octx.textBaseline = 'middle';
+        octx.lineWidth = 3;
+        octx.strokeStyle = 'rgba(250,246,236,0.85)';
+        octx.strokeText(mark, sx, sy);
+        octx.fillStyle = mark === '！' ? 'rgba(168,50,42,0.95)' : 'rgba(35,32,27,0.85)';
+        octx.fillText(mark, sx, sy);
+      }
+    }
+  }
+
+  /** What people are saying as you pass. */
+  function drawSpeechBubbles() {
+    const w = s.world;
+    const said = [];
+    for (const n of E.peopleInWorld(s)) if (n.say && !(n.inside && Math.hypot(n.x - w.x, n.y - w.y) > E.DOOR)) said.push([n.x, n.y, n.say]);
+    for (const fk of E.folkInWorld(s)) {
+      const say = E.sayingOf(s, fk);
+      if (say) said.push([fk.x, fk.y, say]);
+    }
+    for (const [x, y, text] of said) {
+      const [sx, sy] = worldToScreen(x, y, 64);
+      if (sx < -90 || sx > W + 90 || sy < -10 || sy > H + 60) continue;
+      drawSpeech(octx, sx, sy, text, { font: FONT, size: 11 });
+    }
+  }
+
+  /** Over a scene that waits for you: a little bubble, so you notice it from afar. */
+  function drawSceneBubbles() {
+    const w = s.world;
+    for (const sc of E.scenesInWorld(s)) {
+      if (sc.state !== 'idle') continue;
+      const d = Math.hypot(sc.x - w.x, sc.y - w.y);
+      const lead = sc.actors.find((a) => a.a !== 'prop') || sc.actors[0];
+      // close enough to read what it is: its name; further off, only that something is there
+      const named = d < 230 && sc.def.start === 'touch';
+      if (named) label(lead.x, lead.y, 46, sc.def.name, 0.75);
+      if (!sc.def.bubble || named || d > 520 || d < 70) continue;
+      const [bx, by0] = worldToScreen(lead.x, lead.y, 50);
+      const by = by0 + Math.sin(t * 3 + sc.uid) * 2;
+      if (bx < -20 || bx > W + 20 || by < -20 || by > H + 20) continue;
+      octx.fillStyle = 'rgba(250,246,236,0.95)';
+      octx.strokeStyle = 'rgba(35,32,27,0.55)';
+      octx.lineWidth = 1;
+      octx.beginPath();
+      octx.ellipse(bx, by, 11, 9, 0, 0, Math.PI * 2);
+      octx.moveTo(bx - 3, by + 8);
+      octx.lineTo(bx, by + 14);
+      octx.lineTo(bx + 3, by + 8);
+      octx.fill();
+      octx.stroke();
+      octx.font = `700 12px ${FONT}`;
+      octx.textAlign = 'center';
+      octx.textBaseline = 'middle';
+      octx.fillStyle = sc.def.bubble === '！' ? 'rgba(168,50,42,0.95)' : 'rgba(35,32,27,0.9)';
+      octx.fillText(sc.def.bubble, bx, by + 0.5);
     }
   }
 

@@ -3,13 +3,16 @@
 // road itself. The UI feeds it input every frame; it changes the save and
 // starts events, and leaves notes (toasts, banners) for the UI to show.
 
-import { CELL, COLS, ROWS, WORLD_W, WORLD_H } from './geo.js';
-import { world, regionAt, collides, speedAt, findPath, nearestOpen, hash2, REGION_IDS, idxOf, cellX, cellY, PLAYER_R } from './terrain.js';
+import { world, regionAt, collides, speedAt, findPath, nearestOpen, hash2, PLAYER_R } from './terrain.js';
 import { heightAt } from './height.js';
-import { POIS, POI_BY_ID, NPC_SPOTS, NPC_SHOW, MOBS, GATHER, GATHER_RESPAWN, WANDERERS } from './places.js';
-import { NODES, PEOPLE_PLACES } from './map.js';
+import { POIS, POI_BY_ID, MOBS, GATHER, GATHER_RESPAWN } from './places.js';
+import { NODES } from './map.js';
 import { NAMED } from './npcs.js';
 import { reveal, fogOf } from './fog.js';
+import { stageScene, updateScenes, sceneTargets, sceneByUid, meetScene, scenesOf } from './director.js';
+import { peopleNow, folkNow, folkChat, updatePeople } from './people.js';
+import { updateWild, wildNow, spawnCritter } from './wildlife.js';
+import { power } from '../core/cultivation.js';
 import { sysGain } from './system.js';
 import { EVENTS } from '../content/index.js';
 import { ITEMS, displayItem } from '../content/items.js';
@@ -23,6 +26,8 @@ import { fmtDuration } from '../core/calendar.js';
 export const WALK_SPEED = 150; // world units per second, on grass, as a mortal
 export const UNITS_PER_HOUR = 375; // a full day of walking covers 9000 units
 export const REACH = { poi: 70, npc: 60, herb: 48, folk: 52 };
+/** Someone at home comes to the door when you are this close. */
+export const DOOR = 150;
 
 export const isNight = (s) => s.tod >= 19.5 || s.tod < 5;
 
@@ -134,8 +139,14 @@ export function step(s, dt, input) {
     L.moving = false;
     return;
   }
-  updateFolk(s, L, dt);
+  updatePeople(s, L, dt);
+  updateWild(s, L, dt);
   if (updateMobs(s, L, dt)) return;
+  if (updateScenes(s, L, dt)) {
+    stopWalking(L);
+    L.moving = false;
+    return;
+  }
   let dx = 0;
   let dy = 0;
   let mag = 0;
@@ -143,6 +154,7 @@ export function step(s, dt, input) {
     L.path = null;
     L.then = null;
     L.resume = null;
+    L.chase = 0;
     const len = Math.hypot(input.x, input.y);
     mag = Math.min(1, len);
     dx = input.x / len;
@@ -188,6 +200,11 @@ export function step(s, dt, input) {
   }
   if (Math.abs(dx) > 0.2) w.face = dx < 0 ? -1 : 1;
   L.moving = moved > 0.01;
+  // which way you are going (the director sets scenes ahead of you)
+  if (L.moving) {
+    const h = L.heading || [dx, dy];
+    L.heading = [h[0] * 0.9 + dx * 0.1, h[1] * 0.9 + dy * 0.1];
+  }
   if (L.path) {
     if (moved < want * 0.25) {
       L.stuck += dt;
@@ -386,10 +403,11 @@ function encounter(s, L, moved) {
     return;
   }
   const id = encounterPick(s, w.region);
-  if (id) {
-    stopWalking(L);
-    startEvent(s, id);
-  } else ambient(s, L);
+  if (!id) return ambient(s, L);
+  // something out there: if it can be seen, set it ahead of you and let you choose
+  if (stageScene(s, L, id)) return;
+  stopWalking(L);
+  startEvent(s, id);
 }
 
 const AMBIENT = {
@@ -415,50 +433,15 @@ function ambient(s, L) {
 
 // ── people ──
 
-const npcPlace = new Map();
-
-/** A fixed-for-the-month spot for a stranger you know, somewhere in their region. */
-function strangerSpot(s, npc) {
-  const month = Math.floor(s.day / 30);
-  const key = `${npc.id}:${npc.loc}:${month}`;
-  if (npcPlace.has(key)) return npcPlace.get(key);
-  const g = world();
-  const ridx = REGION_IDS.indexOf(npc.loc);
-  const at = NODES[npc.loc].at;
-  let best = null;
-  for (let tries = 0; tries < 60 && !best; tries++) {
-    const a = hash2(month, tries, npc.id.length * 97 + Number(npc.id.slice(1)) || 1) * Math.PI * 2;
-    const r = 60 + hash2(tries, month, 7) * 360;
-    const x = at[0] + Math.cos(a) * r;
-    const y = at[1] + Math.sin(a) * r;
-    if (x < CELL || y < CELL || x > WORLD_W - CELL || y > WORLD_H - CELL) continue;
-    const k = idxOf(Math.floor(x / CELL), Math.floor(y / CELL));
-    if (g.reg[k] !== ridx || !g.reach[k]) continue;
-    if (collides(null, x, y, PLAYER_R + 4)) continue;
-    best = [Math.round(x), Math.round(y)];
-  }
-  const spot = best || at;
-  npcPlace.set(key, spot);
-  return spot;
+/** Everyone standing somewhere in the world right now (at home, behind their door, too). */
+export function peopleInWorld(s) {
+  return peopleNow(s, liveOf(s));
 }
 
-/** Everyone standing somewhere in the world right now. */
-export function peopleInWorld(s) {
-  const out = [];
-  for (const npc of Object.values(s.npcs)) {
-    if (!npc.alive || !npc.loc) continue;
-    if (npc.named) {
-      const spot = NPC_SPOTS[npc.id]?.[npc.loc];
-      if (!spot) continue;
-      if (NPC_SHOW[npc.id] && !NPC_SHOW[npc.id](s)) continue;
-      const [x, y] = typeof spot === 'function' ? spot(s) : spot;
-      out.push({ id: npc.id, x, y, named: true, met: npc.met, name: npc.met ? npc.name : npc.title, npc });
-    } else if (npc.met && PEOPLE_PLACES.includes(npc.loc)) {
-      const [x, y] = strangerSpot(s, npc);
-      out.push({ id: npc.id, x, y, named: false, met: true, name: npc.name, npc });
-    }
-  }
-  return out;
+/** What someone (a person or a passer-by) is saying right now, if anything. */
+export function sayingOf(s, ent) {
+  if (ent.sayUntil === undefined) return ent.say || null; // already worked out (peopleInWorld)
+  return ent.sayUntil > liveOf(s).t ? ent.say : null;
 }
 
 // ── herbs ──
@@ -470,86 +453,38 @@ export function herbReady(s, h) {
 
 // ── townsfolk ──
 
-const FOLK_LINES = {
-  qingshi_town: [
-    '今年的雨水不錯，稻子長得好。', '聽說林家那個少爺……唉，可惜了。', '王二那小子又去河邊摸魚了。',
-    '回春堂的孫掌櫃，收草藥從不壓價。', '趙虎那幫人又在街口收份子錢了。', '夜裡別往鎮東走，那邊的荒廟不乾淨。',
-  ],
-  luoxia_market: [
-    '一顆聚氣丹三十塊？搶錢啊。', '聽說黑風林最近又死了人。', '茶樓的錢半仙，嘴裡沒一句真話，可就是好聽。',
-    '拍賣會每年十月開，壓軸的東西，一年比一年邪乎。', '別在坊市裡動手，執法隊可不是吃素的。', '想去中州？先活到築基再說吧。',
-  ],
-  farmland: ['靈溪的水澆出來的稻子，特別香。', '前些天田埂邊挖出個瓦罐，可惜是空的。', '天要下雨了，得趕緊收。'],
-  qingyun_sect: ['外門大比快到了，師兄們都在閉關。', '藏經閣的老執事，脾氣古怪得很。', '聽說丹房又炸爐了。'],
-};
-
-function folkOf(s, L) {
-  if (L.folk) return L.folk;
-  const g = world();
-  L.folk = [];
-  for (const [region, n] of Object.entries(WANDERERS)) {
-    const ridx = REGION_IDS.indexOf(region);
-    const at = NODES[region].at;
-    const cand = [];
-    for (let j = 0; j < ROWS; j++) {
-      for (let i = 0; i < COLS; i++) {
-        const k = idxOf(i, j);
-        if (g.reg[k] !== ridx || !g.reach[k] || g.solidCell[k]) continue;
-        const x = cellX(i);
-        const y = cellY(j);
-        if (Math.hypot(x - at[0], y - at[1]) > 520) continue;
-        cand.push([x, y]);
-      }
-    }
-    for (let m = 0; m < n && cand.length; m++) {
-      const [x, y] = cand[Math.floor(hash2(m, ridx, 77) * cand.length)];
-      const look = Math.floor(hash2(m, ridx, 78) * 6);
-      L.folk.push({ region, x, y, hx: x, hy: y, tx: x, ty: y, wait: hash2(m, ridx, 79) * 4, look, face: 1, line: Math.floor(hash2(m, ridx, 80) * 99), id: `${region}:${m}` });
-    }
-  }
-  return L.folk;
-}
-
 export function folkInWorld(s) {
-  return folkOf(s, liveOf(s));
+  return folkNow(s, liveOf(s));
 }
 
-function updateFolk(s, L, dt) {
-  const w = s.world;
-  for (const f of folkOf(s, L)) {
-    if (Math.abs(f.x - w.x) > 1100 || Math.abs(f.y - w.y) > 1400) continue;
-    if (f.wait > 0) {
-      f.wait -= dt;
-      f.moving = false;
-      continue;
-    }
-    const d = Math.hypot(f.tx - f.x, f.ty - f.y);
-    if (d < 4) {
-      f.wait = 1.5 + Math.random() * 5;
-      const a = Math.random() * Math.PI * 2;
-      const r = 30 + Math.random() * 150;
-      f.tx = f.hx + Math.cos(a) * r;
-      f.ty = f.hy + Math.sin(a) * r;
-      continue;
-    }
-    const sp = 38 * dt;
-    const nx = f.x + ((f.tx - f.x) / d) * sp;
-    const ny = f.y + ((f.ty - f.y) / d) * sp;
-    if (collides(s, nx, ny, 9) || regionAt(s, nx, ny) !== f.region) {
-      f.tx = f.x;
-      f.ty = f.y;
-      continue;
-    }
-    if (Math.abs(nx - f.x) > 0.01) f.face = nx < f.x ? -1 : 1;
-    f.x = nx;
-    f.y = ny;
-    f.moving = true;
-  }
+// ── the wild ──
+
+/** Deer, hares, birds and the rest around you now (for drawing). */
+export function wildInWorld(s) {
+  return wildNow(liveOf(s));
+}
+
+/** Set a creature down near you (tools and tests; the wild does this itself). */
+export function addCritter(s, kind, x, y, n = 1) {
+  return spawnCritter(liveOf(s), kind, x, y, n);
 }
 
 // ── beasts and robbers ──
 
 const AGGRO = { wolf: 210, snake: 80, bandit: 230, ghost: 170 };
+/** You hear them before they come. */
+const WARN = { wolf: '遠處傳來狼嚎。', snake: '草叢裡沙沙作響。', bandit: '林子裡有人在低聲說話。', ghost: '一陣陰風吹過，你打了個寒顫。' };
+/** And when you are far too much for them, they know it. */
+const FLEE = { wolf: '狼群夾著尾巴跑了。', snake: '那條蛇一扭身，鑽進了石縫。', bandit: '那幾個人看了你一眼，扭頭就跑。', ghost: '那道影子一顫，散進了風裡。' };
+const FAR_STRONGER = 2.2;
+
+/** How far off they notice you: wolves hunt by night and doze at noon; the dead walk after dark. */
+function aggroOf(s, kind) {
+  const night = isNight(s);
+  const noon = s.tod >= 10 && s.tod < 15;
+  const k = { wolf: night ? 1.25 : noon ? 0.7 : 1, ghost: night ? 1.5 : 0.6, snake: night ? 0.7 : 1 }[kind] ?? (night ? 1.15 : 1);
+  return AGGRO[kind] * k;
+}
 
 function mobsOf(s, L) {
   if (L.mobs) return L.mobs;
@@ -582,6 +517,35 @@ function mobActive(s, m) {
   return true;
 }
 
+/** Running from someone far too strong: away, out of sight, and not back today. */
+function fleeStep(s, m, dt) {
+  const w = s.world;
+  for (const b of m.members) {
+    const d = Math.hypot(b.x - w.x, b.y - w.y) || 1;
+    const nx = b.x + ((b.x - w.x) / d) * m.def.speed * 1.1 * dt;
+    const ny = b.y + ((b.y - w.y) / d) * m.def.speed * 1.1 * dt;
+    if (!collides(s, nx, ny, 9)) {
+      b.x = nx;
+      b.y = ny;
+    } else if (!collides(s, nx, b.y, 9)) b.x = nx;
+    else if (!collides(s, b.x, ny, 9)) b.y = ny;
+    b.face = b.x < w.x ? -1 : 1;
+    b.moving = true;
+  }
+  if (m.t > 1.8) m.fade = (m.fade || 0) + dt * 1.4;
+  if (m.fade >= 1) {
+    s.world.mobs[m.def.id] = s.day + 1;
+    m.fade = 0;
+    m.members.forEach((b, k) => {
+      const a = hash2(k, m.def.x, 501) * Math.PI * 2;
+      const r = hash2(k, m.def.y, 502) * m.def.r * 0.7;
+      b.x = m.def.x + Math.cos(a) * r;
+      b.y = m.def.y + Math.sin(a) * r;
+    });
+    homeMembers(m);
+  }
+}
+
 function homeMembers(m) {
   m.state = 'idle';
   m.t = 0;
@@ -602,13 +566,32 @@ function updateMobs(s, L, dt) {
       continue;
     }
     if (!mobActive(s, m)) continue;
-    const range = AGGRO[def.kind] * (isNight(s) ? 1.25 : 1);
+    const range = aggroOf(s, def.kind);
     m.t += dt;
+    if (m.state === 'flee') {
+      fleeStep(s, m, dt);
+      continue;
+    }
+    // before they come for you, you hear them; close by, they have seen you
+    const dmin = Math.min(...m.members.map((b) => Math.hypot(w.x - b.x, w.y - b.y)));
+    if (m.state === 'idle') {
+      if (dmin < range + 160 && !m.warned) {
+        m.warned = true;
+        L.feed.push({ kind: 'ambient', text: WARN[def.kind] });
+      }
+      if (dmin > range + 400) m.warned = false;
+      m.alert = dmin < range + 110;
+    } else m.alert = false;
     for (const b of m.members) {
       const dp = Math.hypot(w.x - b.x, w.y - b.y);
       if (m.state === 'idle' && dp < range) {
-        m.state = 'chase';
         m.t = 0;
+        if (power(s) >= (def.power || 20) * FAR_STRONGER) {
+          m.state = 'flee';
+          L.feed.push({ kind: 'good', text: def.n > 1 || def.kind !== 'bandit' ? FLEE[def.kind] : '那人看了你一眼，扭頭就跑。' });
+          break;
+        }
+        m.state = 'chase';
         L.feed.push({ kind: 'bad', text: { wolf: '狼！', snake: '草叢裡有東西！', bandit: '有人衝了過來！', ghost: '一道影子朝你飄了過來……' }[def.kind] });
       }
       if (m.state === 'chase' && dp < 22 + PLAYER_R) {
@@ -644,6 +627,12 @@ function updateMobs(s, L, dt) {
           continue;
         }
       } else {
+        if (m.alert) {
+          // they have seen you: still, watching
+          b.moving = false;
+          b.face = w.x < b.x ? -1 : 1;
+          continue;
+        }
         if (b.wait > 0) {
           b.wait -= dt;
           b.moving = false;
@@ -706,10 +695,11 @@ export function targetsNear(s, radius = 160) {
     if (Math.abs(h.x - w.x) > radius || Math.abs(h.y - w.y) > radius || !herbReady(s, h)) continue;
     add({ kind: 'herb', id: h.id, x: h.x, y: h.y, name: '靈草', verb: '採集', reach: REACH.herb });
   }
-  for (const f of folkOf(s, liveOf(s))) {
+  for (const f of folkNow(s, liveOf(s))) {
     if (Math.abs(f.x - w.x) > radius || Math.abs(f.y - w.y) > radius) continue;
-    add({ kind: 'folk', id: f.id, x: f.x, y: f.y, name: '路人', verb: '搭話', reach: REACH.folk, folk: f });
+    add({ kind: 'folk', id: f.id, x: f.x, y: f.y, name: f.name || '路人', verb: '搭話', reach: REACH.folk, folk: f });
   }
+  for (const t of sceneTargets(s, liveOf(s))) add(t);
   out.sort((a, b) => a.d / a.reach - b.d / b.reach);
   return out;
 }
@@ -770,7 +760,26 @@ function arrive(s, L) {
   L.goal = null;
   if (!then) return;
   const w = s.world;
-  if (Math.hypot(then.x - w.x, then.y - w.y) <= then.reach + 24) interact(s, then);
+  // people move: act on them where they are now, or follow a little way
+  const t = whereNow(s, L, then);
+  if (!t) return;
+  const d = Math.hypot(t.x - w.x, t.y - w.y);
+  if (d <= t.reach + 24) interact(s, t);
+  else if ((L.chase = (L.chase || 0) + 1) <= 3 && d < 600) walkTo(s, t.x, t.y, t);
+}
+
+/** A target as it is now (a person who has walked on, a scene that has moved). */
+function whereNow(s, L, t) {
+  if (t.kind === 'npc') {
+    const n = peopleInWorld(s).find((p) => p.id === t.id);
+    return n ? { ...t, x: n.x, y: n.y } : null;
+  }
+  if (t.kind === 'folk') return t.folk && folkNow(s, L).includes(t.folk) ? { ...t, x: t.folk.x, y: t.folk.y } : null;
+  if (t.kind === 'scene') {
+    const sc = sceneByUid(L, t.id);
+    return sc && sc.state === 'idle' ? { ...t, x: sc.x, y: sc.y } : null;
+  }
+  return t;
 }
 
 export function stop(s) {
@@ -804,10 +813,22 @@ export function interact(s, t) {
   const L = liveOf(s);
   stopWalking(L);
   L.resume = null;
+  L.chase = 0;
   if (t.kind === 'poi') return usePoi(s, L, POI_BY_ID[t.id]);
   if (t.kind === 'npc') return meetNpc(s, L, t.id);
   if (t.kind === 'herb') return gather(s, L, world().herbs[t.id]);
   if (t.kind === 'folk') return chatFolk(s, L, t.folk);
+  if (t.kind === 'scene') return meetScene(s, L, sceneByUid(L, t.id));
+}
+
+/** Set an event's scene near you (tools and tests; the director does this as you walk). */
+export function stage(s, eventId, around = true) {
+  return stageScene(s, liveOf(s), eventId, { around });
+}
+
+/** The scenes out in the world right now (for drawing). */
+export function scenesInWorld(s) {
+  return scenesOf(liveOf(s));
 }
 
 function usePoi(s, L, p) {
@@ -864,15 +885,7 @@ function gather(s, L, h) {
 }
 
 function chatFolk(s, L, f) {
-  const lines = FOLK_LINES[f.region] || FOLK_LINES.qingshi_town;
-  const fresh = s.rumors.find((r) => !r.read && r.kind !== 'npc');
-  let text;
-  f.line += 1;
-  if (fresh && f.line % 3 === 0) {
-    text = `「聽說了嗎？」${fresh.text}`;
-    fresh.read = true;
-  } else text = `「${lines[f.line % lines.length]}」`;
-  L.signals.push({ caption: { title: '路人', text } });
+  L.signals.push({ caption: { title: f.name || '路人', text: folkChat(s, f) } });
 }
 
 /** Look around properly: two hours, a wide look, maybe something turns up. */
@@ -890,6 +903,10 @@ export function search(s) {
   const pre = report.days ? { days: report.days, xw: Math.round(report.xw), stageUps: report.stageUps, toasts: [] } : null;
   if (ENCOUNTER[w.region] && chance(s, 0.45)) {
     const id = encounterPick(s, w.region);
+    if (id && stageScene(s, L, id, { around: true })) {
+      L.feed.push({ kind: 'find', text: '附近好像有動靜。' });
+      return;
+    }
     if (id) return startEvent(s, id, { pre });
   }
   startEvent(s, 'generic_explore', { pre });

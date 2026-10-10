@@ -838,6 +838,17 @@ export function startApp(root, { speed = 1, view = null } = {}) {
       g.fillStyle = 'rgba(35,32,27,0.7)';
       g.fillRect(px - 2, py - 2, 4, 4);
     }
+    // something going on out there
+    for (const sc of E.scenesInWorld(s)) {
+      if (sc.state !== 'idle') continue;
+      const px = (sc.x - x0) * k;
+      const py = (sc.y - y0) * k;
+      if (px < 4 || py < 4 || px > cv.width - 4 || py > cv.height - 4) continue;
+      g.fillStyle = sc.def.bubble === '！' ? 'rgba(168,50,42,0.85)' : 'rgba(176,132,60,0.9)';
+      g.beginPath();
+      g.arc(px, py, 4.5, 0, Math.PI * 2);
+      g.fill();
+    }
     // you
     g.fillStyle = '#a8322a';
     g.beginPath();

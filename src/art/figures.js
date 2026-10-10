@@ -186,6 +186,13 @@ function head(ctx, look, face, t, y0 = -29) {
       ctx.arc(face * 0.3, y0 - 5.6, 1.9, 0, Math.PI * 2);
       ctx.fill();
       break;
+    case 'bald':
+      // a shaven head: just a hint of the scalp's shine
+      ctx.fillStyle = 'rgba(250,240,224,0.8)';
+      ctx.beginPath();
+      ctx.arc(face * 1.2, y0 - 2, 1.2, 0, Math.PI * 2);
+      ctx.fill();
+      break;
     case 'long':
       ctx.beginPath();
       ctx.arc(face * 0.5, y0 - 1, 4, Math.PI * 0.95, Math.PI * 0.05);

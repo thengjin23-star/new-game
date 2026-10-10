@@ -11,6 +11,7 @@ import * as E from '../world/explore.js';
 import { decorSprite, mountainSprite, structureSprite, wallSprite, propSprite } from './sprites.js';
 import { drawPerson, drawMob, aura, LOOKS, FOLK_LOOKS, groundShadow } from './figures.js';
 import { makeParticles, drawParticles, rgba, INK, PAPER } from './ink.js';
+import { drawActor, drawPose, poseOf, lookOf, drawSpeech } from './scenery.js';
 import { seasonOf } from '../core/calendar.js';
 import { stream } from '../core/rng.js';
 
@@ -826,6 +827,8 @@ export function createWorldView(canvas, { onFrame, idle } = {}) {
     }
     for (const n of E.peopleInWorld(s)) {
       if (n.x < x0 - 30 || n.x > x1 + 30 || n.y < y0 || n.y > y1 + 50) continue;
+      // at home: they come to the door when you are close
+      if (n.inside && Math.hypot(n.x - s.world.x, n.y - s.world.y) > E.DOOR) continue;
       push(n.y, 'npc', n);
     }
     for (const fk of E.folkInWorld(s)) {
@@ -837,6 +840,16 @@ export function createWorldView(canvas, { onFrame, idle } = {}) {
         if (b.x < x0 - 30 || b.x > x1 + 30 || b.y < y0 || b.y > y1 + 50) continue;
         push(b.y, 'mob', m, b);
       }
+    }
+    for (const sc of E.scenesInWorld(s)) {
+      for (const ac of sc.actors) {
+        if (ac.x < x0 - 60 || ac.x > x1 + 60 || ac.y < y0 || ac.y > y1 + 80) continue;
+        push(ac.y, 'scene', ac, sc);
+      }
+    }
+    for (const c of E.wildInWorld(s)) {
+      if (c.x < x0 - 30 || c.x > x1 + 30 || c.y < y0 || c.y > y1 + 60) continue;
+      push(c.y, 'wild', c);
     }
     const w = s.world;
     push(w.y, 'player', w);
@@ -961,25 +974,54 @@ export function createWorldView(canvas, { onFrame, idle } = {}) {
       case 'npc': {
         const n = it.a;
         const look = LOOKS[n.id] || LOOKS.stranger;
-        drawPerson(ctx, n.x, n.y, look, { t: t + n.x * 0.01, face: n.x > s.world.x ? -1 : 1 });
+        const w = s.world;
+        const dn = Math.hypot(n.x - w.x, n.y - w.y);
+        // busy with something, they face their work; otherwise they turn to you
+        const face = n.moving || n.fixed ? n.face : dn < 260 || n.face === undefined ? (n.x > w.x ? -1 : 1) : n.face;
+        ctx.save();
+        ctx.translate(n.x, n.y);
+        drawPose(ctx, look, poseOf(n, E.isNight(s)), { t: t + n.x * 0.01, face, moving: n.moving });
+        ctx.restore();
         if (n.id === 'hu_sanniang') glowDot(n.x, n.y - 20, [120, 170, 240], 28, 0.35);
         break;
       }
       case 'folk': {
         const fk = it.a;
-        drawPerson(ctx, fk.x, fk.y, FOLK_LOOKS[fk.look], { t: t + fk.line, moving: fk.moving, face: fk.face });
+        ctx.save();
+        ctx.translate(fk.x, fk.y);
+        drawPose(ctx, lookOf(fk.look), poseOf(fk, E.isNight(s)), { t: t + fk.line + fk.x * 0.01, moving: fk.moving, face: fk.face });
+        ctx.restore();
         break;
       }
       case 'mob': {
         const m = it.a;
         const b = it.b;
+        ctx.save();
+        ctx.globalAlpha *= 1 - (m.fade || 0);
         drawMob(ctx, m.def.kind, b.x, b.y, { t: t + b.x * 0.01, moving: b.moving, face: b.face });
-        if (m.state === 'chase') {
-          ctx.fillStyle = 'rgba(168,50,42,0.9)';
+        ctx.restore();
+        if (m.state === 'chase' || m.alert) {
+          ctx.fillStyle = m.state === 'chase' ? 'rgba(168,50,42,0.9)' : 'rgba(35,32,27,0.8)';
           ctx.font = `700 10px ${FONT}`;
           ctx.textAlign = 'center';
-          ctx.fillText('！', b.x, b.y - 38);
+          ctx.fillText(m.state === 'chase' ? '！' : '？', b.x, b.y - 38);
         }
+        break;
+      }
+      case 'wild': {
+        const c = it.a;
+        ctx.save();
+        ctx.translate(c.x, c.y - c.fly * 34);
+        drawActor(ctx, { a: 'beast', beast: c.kind, face: c.face, moving: c.moving, fly: c.fly, n: c.seed }, { t, alpha: 1 - c.fade });
+        ctx.restore();
+        break;
+      }
+      case 'scene': {
+        const ac = it.a;
+        ctx.save();
+        ctx.translate(ac.x, ac.y);
+        drawActor(ctx, ac, { t, alpha: Math.max(0, 1 - it.b.fade) });
+        ctx.restore();
         break;
       }
       case 'player': {
@@ -1020,9 +1062,16 @@ export function createWorldView(canvas, { onFrame, idle } = {}) {
   function drawLabels() {
     const w = s.world;
     const labels = [];
+    const said = [];
     for (const n of E.peopleInWorld(s)) {
       const d = Math.hypot(n.x - w.x, n.y - w.y);
+      if (n.inside && d > E.DOOR) continue;
       if (d < 230) labels.push([n.x, n.y - 44, n.name, n.named ? 1 : 0.8]);
+      if (n.say) said.push([n.x, n.y - 54, n.say]);
+    }
+    for (const fk of E.folkInWorld(s)) {
+      const say = E.sayingOf(s, fk);
+      if (say) said.push([fk.x, fk.y - 50, say]);
     }
     if (highlight && highlight.kind !== 'npc' && highlight.kind !== 'folk') labels.push([highlight.x, highlight.y - (highlight.kind === 'herb' ? 26 : 50), highlight.name, 1]);
     for (const p of POIS) {
@@ -1031,6 +1080,34 @@ export function createWorldView(canvas, { onFrame, idle } = {}) {
       if (d > 190 || !E.poiVisible(s, p)) continue;
       labels.push([p.x, p.y - 44, E.poiName(s, p), 0.55]);
     }
+    // scenes: a name when close, a bubble from afar
+    const bubbles = [];
+    for (const sc of E.scenesInWorld(s)) {
+      if (sc.state !== 'idle') continue;
+      const d = Math.hypot(sc.x - w.x, sc.y - w.y);
+      const lead = sc.actors.find((a) => a.a !== 'prop') || sc.actors[0];
+      const named = d < 230 && sc.def.start === 'touch';
+      if (named) labels.push([lead.x, lead.y - 44, sc.def.name, 0.75]);
+      if (sc.def.bubble && !named && d < 520 && d > 70) bubbles.push([lead.x, lead.y - 48 + Math.sin(t * 3 + sc.uid) * 2, sc.def.bubble]);
+    }
+    for (const [x, y, b] of bubbles) {
+      ctx.fillStyle = 'rgba(250,246,236,0.95)';
+      ctx.strokeStyle = 'rgba(35,32,27,0.55)';
+      ctx.lineWidth = 0.8;
+      ctx.beginPath();
+      ctx.ellipse(x, y, 9, 7.5, 0, 0, Math.PI * 2);
+      ctx.moveTo(x - 2.5, y + 6.5);
+      ctx.lineTo(x, y + 11);
+      ctx.lineTo(x + 2.5, y + 6.5);
+      ctx.fill();
+      ctx.stroke();
+      ctx.font = `700 10px ${FONT}`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillStyle = b === '！' ? 'rgba(168,50,42,0.95)' : 'rgba(35,32,27,0.9)';
+      ctx.fillText(b, x, y + 0.5);
+    }
+    for (const [x, y, text] of said) drawSpeech(ctx, x, y, text, { font: FONT, size: 9 });
     ctx.font = `700 10px ${FONT}`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
@@ -1085,7 +1162,14 @@ export function createWorldView(canvas, { onFrame, idle } = {}) {
       }
       const w = s.world;
       lamp(w.x, w.y - 12, [255, 220, 170], 110 + 20 * Math.min(4, s.player.realm), 0.2);
+      // lamps carried at night: the watchman's, and whoever comes to the door
+      for (const fk of E.folkInWorld(s)) if (fk.act === 'gong') lamp(fk.x + fk.face * 12, fk.y - 15, [255, 170, 90], 40, 0.6);
+      for (const n of E.peopleInWorld(s)) if (n.inside && Math.hypot(n.x - w.x, n.y - w.y) <= E.DOOR) lamp(n.x + (n.x > w.x ? -12 : 12), n.y - 15, [255, 170, 90], 38, 0.55);
       for (const h of world().herbs) if (E.herbReady(s, h)) lamp(h.x, h.y - 10, [210, 255, 210], 16, 0.4);
+      for (const c of E.wildInWorld(s)) {
+        if (c.kind === 'fox') lamp(c.x + c.face * 13, c.y - 6, [110, 160, 255], 40, 0.6 * (1 - c.fade));
+        if (c.kind === 'spirit_deer') lamp(c.x, c.y - 16, [190, 255, 230], 46, 0.5 * (1 - c.fade));
+      }
     } else {
       // daytime glows still show, softly
       for (const p of POIS) {

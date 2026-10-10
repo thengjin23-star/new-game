@@ -58,12 +58,15 @@ void main() {
  * A layer of cards drawn from one atlas. Slots are slot×slot pixels; at
  * `res` pixels per world unit a slot holds (slot/res)² world units.
  */
-export function createCards(env, renderer, { size = 1024, slot = 128, res = 2, max = 64 } = {}) {
+export function createCards(env, renderer, { size = 1024, rows = 0, slot = 128, res = 2, max = 64 } = {}) {
   // the atlas starts empty; each slot is painted on a small canvas of its
   // own and copied straight into the texture, so a moving figure costs one
   // small upload, not the whole atlas
   const canvas = document.createElement('canvas');
-  canvas.width = canvas.height = size;
+  // `size` wide; `rows` slots tall (or square)
+  const height = rows ? rows * slot : size;
+  canvas.width = size;
+  canvas.height = height;
   const slotCanvas = document.createElement('canvas');
   slotCanvas.width = slotCanvas.height = slot;
   const ctx = slotCanvas.getContext('2d');
@@ -73,6 +76,7 @@ export function createCards(env, renderer, { size = 1024, slot = 128, res = 2, m
   tex.minFilter = THREE.LinearFilter;
   tex.generateMipmaps = false;
   const per = Math.floor(size / slot);
+  const slotRows = Math.floor(height / slot);
   const unit = slot / res; // world units per slot side
 
   const quad = new THREE.InstancedBufferGeometry();
@@ -118,7 +122,7 @@ export function createCards(env, renderer, { size = 1024, slot = 128, res = 2, m
   ghost.renderOrder = 50;
 
   const slots = new Map(); // key → { n, used, drawn }
-  const free = Array.from({ length: per * per }, (_, n) => n);
+  const free = Array.from({ length: per * slotRows }, (_, n) => n);
   let frame = 0;
   let items = [];
   let ready = false;
@@ -135,7 +139,7 @@ export function createCards(env, renderer, { size = 1024, slot = 128, res = 2, m
     renderer.state.bindTexture(gl.TEXTURE_2D, glTex);
     gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
     gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false);
-    gl.texSubImage2D(gl.TEXTURE_2D, 0, sx, size - sy - slot, gl.RGBA, gl.UNSIGNED_BYTE, slotCanvas);
+    gl.texSubImage2D(gl.TEXTURE_2D, 0, sx, height - sy - slot, gl.RGBA, gl.UNSIGNED_BYTE, slotCanvas);
     return true;
   }
 
@@ -215,7 +219,7 @@ export function createCards(env, renderer, { size = 1024, slot = 128, res = 2, m
         aPos.setXYZ(k, it.x, it.ground, it.y);
         // the whole slot is the card; its foot is footPad up from the bottom middle
         aSize.setXYZW(k, unit, unit, 0.5, it.footPad / unit);
-        aRect.setXYZW(k, sx / size, 1 - (sy + slot) / size, (sx + slot) / size, 1 - sy / size);
+        aRect.setXYZW(k, sx / size, 1 - (sy + slot) / height, (sx + slot) / size, 1 - sy / height);
         aAlpha.setX(k, it.alpha);
       }
       for (const a of [aPos, aSize, aRect, aAlpha]) a.needsUpdate = true;

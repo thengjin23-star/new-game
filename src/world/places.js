@@ -113,7 +113,10 @@ export const POIS = [
   { id: 'tofu_stall', region: 'qingshi_town', x: 2305, y: 3132, name: '豆花攤', verb: '查看', auto: 110, text: '老李頭的豆花，三文錢一碗，加糖不加錢。' },
   { id: 'teahouse_town', region: 'qingshi_town', x: 2400, y: 3232, name: '茶館', verb: '打聽', action: 'inquire' },
   { id: 'earth_temple', region: 'qingshi_town', x: 1965, y: 3332, name: '土地廟', verb: '查看', text: '小小的土地廟，香爐裡插著三根燒了一半的香。' },
-  { id: 'old_locust', region: 'qingshi_town', x: 2440, y: 3214, name: '老槐樹', verb: '查看', text: '老槐樹下，兩個老頭在下棋，旁邊圍著一圈看熱鬧的。你看了一會兒，看不出誰贏誰輸。' },
+  {
+    id: 'old_locust', region: 'qingshi_town', x: 2440, y: 3214, name: '老槐樹', verb: '查看',
+    text: (s) => (s.tod >= 8 && s.tod < 17.5 ? '老槐樹下，兩個老頭在下棋，旁邊圍著一圈看熱鬧的。你看了一會兒，看不出誰贏誰輸。' : '老槐樹下空蕩蕩的。石桌上還擺著半局殘棋，誰也沒去動它。'),
+  },
   { id: 'stone_bridge', region: 'qingshi_town', x: 1795, y: 3152, name: '鎮口石橋', verb: '查看', text: '鎮口的石橋，橋下是從青石山流下來的溪水。小時候，你常在這裡摸魚。' },
   {
     id: 'wanger_house', region: 'qingshi_town', x: 2600, y: 3330, name: '王二家', verb: '查看', auto: 130,
@@ -223,16 +226,16 @@ export const NPC_SHOW = {
   hu_sanniang: (s) => night(s) && s.npcs.hu_sanniang.met,
 };
 
-/** Things that roam and come at you. */
+/** Things that roam and come at you. power: what their fight asks of you (far stronger, and they run). */
 export const MOBS = [
-  { id: 'wolves_a', kind: 'wolf', n: 3, x: 1450, y: 2395, r: 150, event: 'hill_wolves', respawn: 45, speed: 125 },
-  { id: 'wolves_b', kind: 'wolf', n: 2, x: 790, y: 2470, r: 120, event: 'hill_wolves', respawn: 60, speed: 125 },
-  { id: 'snake_a', kind: 'snake', n: 1, x: 1760, y: 2690, r: 90, event: 'hill_snake', respawn: 90, speed: 70 },
-  { id: 'bandits_a', kind: 'bandit', n: 3, x: 2120, y: 1610, r: 200, event: 'forest_bandits', respawn: 90, speed: 110 },
-  { id: 'robber_road', kind: 'bandit', n: 1, x: 3060, y: 2420, r: 140, event: 'travel_robber', respawn: 120, speed: 110 },
-  { id: 'ghost_a', kind: 'ghost', n: 1, x: 2300, y: 820, r: 150, event: 'ruins_soul', respawn: 30, speed: 80 },
-  { id: 'ghost_b', kind: 'ghost', n: 1, x: 2950, y: 620, r: 150, event: 'ruins_soul', respawn: 30, speed: 80 },
-  { id: 'ghost_c', kind: 'ghost', n: 1, x: 2760, y: 1000, r: 150, event: 'ruins_soul', respawn: 30, speed: 80 },
+  { id: 'wolves_a', kind: 'wolf', n: 3, x: 1450, y: 2395, r: 150, event: 'hill_wolves', respawn: 45, speed: 125, power: 20 },
+  { id: 'wolves_b', kind: 'wolf', n: 2, x: 790, y: 2470, r: 120, event: 'hill_wolves', respawn: 60, speed: 125, power: 20 },
+  { id: 'snake_a', kind: 'snake', n: 1, x: 1760, y: 2690, r: 90, event: 'hill_snake', respawn: 90, speed: 70, power: 24 },
+  { id: 'bandits_a', kind: 'bandit', n: 3, x: 2120, y: 1610, r: 200, event: 'forest_bandits', respawn: 90, speed: 110, power: 32 },
+  { id: 'robber_road', kind: 'bandit', n: 1, x: 3060, y: 2420, r: 140, event: 'travel_robber', respawn: 120, speed: 110, power: 30 },
+  { id: 'ghost_a', kind: 'ghost', n: 1, x: 2300, y: 820, r: 150, event: 'ruins_soul', respawn: 30, speed: 80, power: 30 },
+  { id: 'ghost_b', kind: 'ghost', n: 1, x: 2950, y: 620, r: 150, event: 'ruins_soul', respawn: 30, speed: 80, power: 30 },
+  { id: 'ghost_c', kind: 'ghost', n: 1, x: 2760, y: 1000, r: 150, event: 'ruins_soul', respawn: 30, speed: 80, power: 30 },
 ];
 
 /** Which regions grow herbs, what they give, and roughly how many spots. */
