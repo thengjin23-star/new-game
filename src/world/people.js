@@ -270,7 +270,8 @@ export function peopleNow(s, L) {
       if (!spot) continue;
       const [x, y] = typeof spot === 'function' ? spot(s) : spot;
       out.push({ id: npc.id, x, y, named: true, met: npc.met, name: npc.met ? npc.name : npc.title, npc, act: 'stand' });
-    } else if (npc.met && PEOPLE_PLACES.includes(npc.loc)) {
+    } else if (npc.met && npc.role !== 'robber' && PEOPLE_PLACES.includes(npc.loc)) {
+      // (a robber you met on the road does not stand about afterwards waiting for a chat)
       const [x, y] = strangerSpot(s, npc);
       out.push({ id: npc.id, x, y, named: false, met: true, name: npc.name, npc, act: 'stand' });
     }

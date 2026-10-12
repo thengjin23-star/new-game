@@ -26,6 +26,11 @@ const QI = [150, 225, 235];
 /** Sword qi thrown at you: a colder, redder light than yours. */
 const FOE_QI = [222, 96, 84];
 const SOUL = [170, 200, 240];
+const FOX = [110, 160, 255];
+const GOLD = [214, 170, 70];
+const LEAF = [96, 168, 96];
+/** The light a move gathers into as you cast it. */
+const GLOW = { fire: FIRE, shield: [120, 170, 230], foeqi: FOE_QI, foxfire: FOX, mend: LEAF, iron: GOLD, sweep: GOLD, charge: GOLD };
 
 // ── figures ──
 
@@ -80,6 +85,9 @@ export function paintBeast(ctx, b, t, now, { tint = true, pic = null } = {}) {
     ctx.scale(1.03, 0.94);
   } else if (st === 'howl') {
     ctx.rotate(-b.face * 0.2 * Math.min(1, b.st / 0.2));
+  } else if (st === 'stun') {
+    // reeling: a sway it cannot help
+    ctx.rotate(Math.sin(now * 14) * 0.12);
   }
   if (pic) pic(ctx);
   else figure(ctx, b, t, now, p);
@@ -261,7 +269,7 @@ function orb(ctx, x, y, p, now, col) {
 
 /** Hands out, 靈力 gathering at the fingertips, then thrown. */
 function cast(ctx, k, face, p, after, now) {
-  const col = k?.fx === 'fire' ? FIRE : k?.fx === 'shield' ? [120, 170, 230] : k?.fx === 'foeqi' ? FOE_QI : QI;
+  const col = GLOW[k?.fx] || QI;
   ctx.lineCap = 'round';
   ctx.strokeStyle = rgba([52, 58, 74], 1);
   ctx.lineWidth = 3;
@@ -424,12 +432,50 @@ export function drawGroundMarks(g, s, C, kit, u = 1) {
       g.moveTo(w.x, w.y);
       g.lineTo(cx, cy);
       g.stroke();
+    } else if (k.aim === 'dash') {
+      // where it will carry you
+      g.fillStyle = rgba(col, 0.28);
+      band(g, w.x, w.y, ux, uy, k.range, k.width);
+      g.fill();
+      g.strokeStyle = rgba(ready ? GOLD : col, 0.9);
+      g.lineWidth = lw(1.6);
+      g.stroke();
+      const ex = w.x + ux * k.range;
+      const ey = w.y + uy * k.range;
+      g.fillStyle = rgba(ready ? GOLD : col, 0.8);
+      g.beginPath();
+      g.moveTo(ex + ux * 10, ey + uy * 10);
+      g.lineTo(ex - uy * 9, ey + ux * 9);
+      g.lineTo(ex + uy * 9, ey - ux * 9);
+      g.closePath();
+      g.fill();
+    } else if (k.aim === 'around') {
+      g.fillStyle = rgba(ready ? GOLD : col, 0.22);
+      ring(g, w.x, w.y, k.radius);
+      g.fill();
+      g.strokeStyle = rgba(ready ? GOLD : col, 0.9);
+      g.lineWidth = lw(1.8);
+      g.stroke();
+    } else if (k.aim === 'seek') {
+      g.strokeStyle = rgba(ready ? FOX : col, 0.6);
+      g.lineWidth = lw(1.2);
+      g.setLineDash([lw(6), lw(6)]);
+      ring(g, w.x, w.y, k.range);
+      g.stroke();
+      g.setLineDash([]);
     } else if (k.aim === 'self') {
-      g.strokeStyle = rgba([110, 160, 220], 0.9);
+      g.strokeStyle = rgba(GLOW[k.fx] || [110, 160, 220], 0.9);
       g.lineWidth = lw(2);
       ring(g, w.x, w.y, 26);
       g.stroke();
     }
+  }
+  // 金剛: a ring of gold at your feet while it holds
+  if (me?.ward) {
+    g.strokeStyle = rgba(GOLD, 0.6 + 0.2 * Math.sin(now * 8));
+    g.lineWidth = lw(2.4);
+    ring(g, w.x, w.y, 22);
+    g.stroke();
   }
   // your shield, a pale ring at your feet
   if (me?.shield > 0) {
@@ -448,6 +494,26 @@ export function drawGroundMarks(g, s, C, kit, u = 1) {
       g.strokeStyle = rgba(FIRE, 0.8 * (1 - p));
       g.lineWidth = lw(2.5);
       ring(g, f.x, f.y, f.r * (0.5 + p * 0.6));
+      g.stroke();
+    } else if (f.kind === 'sweep') {
+      // the sweep of a leg, all the way round
+      g.strokeStyle = rgba(GOLD, 0.7 * (1 - p));
+      g.lineWidth = lw(3);
+      g.beginPath();
+      g.arc(f.x, f.y, f.r * (0.6 + 0.4 * p), 0, Math.PI * 2 * Math.min(1, p * 2.5));
+      g.stroke();
+    } else if (f.kind === 'slashline') {
+      // where the sword went through
+      g.strokeStyle = `rgba(250,246,236,${0.55 * (1 - p)})`;
+      g.lineWidth = lw(6 * (1 - p) + 1);
+      g.beginPath();
+      g.moveTo(f.x, f.y);
+      g.lineTo(f.to[0], f.to[1]);
+      g.stroke();
+    } else if (f.kind === 'impact') {
+      g.strokeStyle = `rgba(120,100,80,${0.55 * (1 - p)})`;
+      g.lineWidth = lw(2.4);
+      ring(g, f.x, f.y, 10 + p * 30);
       g.stroke();
     } else if (f.kind === 'land') {
       g.strokeStyle = `rgba(120,100,80,${0.5 * (1 - p)})`;
@@ -526,6 +592,27 @@ export function drawCombatOverlay(ctx, proj, px, s, C, look, t, font) {
     ctx.fill();
     ctx.stroke();
   }
+  // 金剛: gold about you; 回春: green motes rising off you
+  if (me?.ward) {
+    const [cx, cy] = proj(w.x, w.y, 17);
+    const k = unitAt(proj, w.x, w.y);
+    ctx.strokeStyle = rgba(GOLD, 0.55 + 0.2 * Math.sin(now * 8));
+    ctx.lineWidth = 2 * px;
+    ctx.beginPath();
+    ctx.ellipse(cx, cy, 14 * k, 21 * k, 0, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+  if (me?.regen) {
+    const k = unitAt(proj, w.x, w.y);
+    for (let n = 0; n < 5; n++) {
+      const q = (now * 0.9 + n / 5) % 1;
+      const [mx, my] = proj(w.x + Math.sin(n * 2.3 + now) * 10, w.y, 6 + q * 34);
+      ctx.fillStyle = rgba(LEAF, 0.8 * (1 - q));
+      ctx.beginPath();
+      ctx.arc(mx, my, 1.8 * k, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
   // over each of them: what it is, its realm, its blood
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
@@ -539,6 +626,7 @@ export function drawCombatOverlay(ctx, proj, px, s, C, look, t, font) {
     }
     if (near > 520) continue;
     const [sx, sy] = proj(b.x, b.y, b.R.tall + 9 + (b.K.spirit ? 6 : 0));
+    if (b.state === 'stun') reel(ctx, sx, sy + 14 * px, px, now);
     if (b.state === 'notice') mark(ctx, sx, sy - 4 * px, '？', 'rgba(35,32,27,0.9)', px, font);
     else if (b.state === 'yield') say(ctx, sx, sy - 4 * px, '饒命！', px, font);
     else if (b.state === 'approach' || b.state === 'talk') nameTag(ctx, sx, sy, b.name, 'rgba(35,32,27,0.92)', px, font);
@@ -619,6 +707,17 @@ function say(ctx, x, y, text, px, font) {
   ctx.fillText(text, x, y + 0.5 * px);
 }
 
+/** Reeling: little stars going round its head. */
+function reel(ctx, x, y, px, now) {
+  for (let n = 0; n < 3; n++) {
+    const a = now * 6 + (n / 3) * Math.PI * 2;
+    ctx.fillStyle = 'rgba(214,170,70,0.95)';
+    ctx.beginPath();
+    ctx.arc(x + Math.cos(a) * 10 * px, y + Math.sin(a) * 3.5 * px, 2.2 * px, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
 /** Grass stirring where something lies hidden: faster, the closer you come. */
 function rustle(ctx, proj, px, b, now, near) {
   const k = unitAt(proj, b.x, b.y);
@@ -679,6 +778,47 @@ function drawShot(ctx, proj, px, sh, now) {
     ctx.moveTo(x - Math.cos(a) * 12 * k, y - Math.sin(a) * 12 * k);
     ctx.lineTo(x, y);
     ctx.stroke();
+    return;
+  }
+  if (sh.kind === 'qi') {
+    // a small bolt of 靈力, a short bright tail
+    const [bx, by] = proj(sh.x - sh.ux * 18, sh.y - sh.uy * 18, 15);
+    const tail = ctx.createLinearGradient(bx, by, x, y);
+    tail.addColorStop(0, rgba(QI, 0));
+    tail.addColorStop(1, rgba(QI, 0.6));
+    ctx.strokeStyle = tail;
+    ctx.lineWidth = 4 * k;
+    ctx.beginPath();
+    ctx.moveTo(bx, by);
+    ctx.lineTo(x, y);
+    ctx.stroke();
+    ctx.fillStyle = 'rgba(240,252,255,0.95)';
+    ctx.beginPath();
+    ctx.arc(x, y, 3.2 * k, 0, Math.PI * 2);
+    ctx.fill();
+    return;
+  }
+  if (sh.kind === 'foxfire') {
+    // a flame of cold blue, flickering as it turns
+    const fl = 1 + Math.sin(now * 24 + sh.seek * 2) * 0.15;
+    for (let n = 3; n >= 1; n--) {
+      const [tx, ty] = proj(sh.x - sh.ux * n * 7, sh.y - sh.uy * n * 7, 16 + n);
+      ctx.fillStyle = rgba(FOX, 0.28 - n * 0.06);
+      ctx.beginPath();
+      ctx.arc(tx, ty, (5 - n) * k, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    const r = 6 * k * fl;
+    const g = ctx.createRadialGradient(x, y + r * 0.3, 0, x, y, r * 1.8);
+    g.addColorStop(0, 'rgba(235,245,255,1)');
+    g.addColorStop(0.45, rgba(FOX, 0.9));
+    g.addColorStop(1, rgba(FOX, 0));
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.moveTo(x, y - r * 1.9);
+    ctx.quadraticCurveTo(x + r * 1.2, y, x, y + r);
+    ctx.quadraticCurveTo(x - r * 1.2, y, x, y - r * 1.9);
+    ctx.fill();
     return;
   }
   if (sh.kind === 'soul') {
@@ -774,6 +914,58 @@ function drawFx(ctx, proj, px, f, now) {
       ctx.stroke();
       ctx.beginPath();
       ctx.arc(x, y + r * (1 - shut) * 0.6, r, Math.PI + 0.3, Math.PI * 2 - 0.3);
+      ctx.stroke();
+      break;
+    }
+    case 'slashline': {
+      // the sword's path, a thin crescent of light
+      const [x0, y0] = proj(f.x, f.y, 14);
+      const [x1, y1] = proj(f.to[0], f.to[1], 14);
+      ctx.strokeStyle = `rgba(255,255,250,${0.9 * (1 - p)})`;
+      ctx.lineWidth = (3.5 * (1 - p) + 0.6) * px;
+      ctx.beginPath();
+      ctx.moveTo(x0, y0);
+      ctx.quadraticCurveTo((x0 + x1) / 2, (y0 + y1) / 2 - 10 * k, x1, y1);
+      ctx.stroke();
+      ctx.strokeStyle = `rgba(36,33,30,${0.5 * (1 - p)})`;
+      ctx.lineWidth = 0.8 * px;
+      ctx.stroke();
+      break;
+    }
+    case 'impact': {
+      // a blow that throws: a burst of strokes
+      const [x, y] = proj(f.x, f.y, 14);
+      ctx.strokeStyle = rgba(GOLD, 0.95 * (1 - p));
+      ctx.lineWidth = 2.2 * px;
+      for (let n = 0; n < 8; n++) {
+        const a = (n / 8) * Math.PI * 2;
+        const r0 = 6 * k * (1 + p);
+        const r1 = 15 * k * (1 + p);
+        ctx.beginPath();
+        ctx.moveTo(x + Math.cos(a) * r0, y + Math.sin(a) * r0);
+        ctx.lineTo(x + Math.cos(a) * r1, y + Math.sin(a) * r1);
+        ctx.stroke();
+      }
+      break;
+    }
+    case 'sweep': {
+      const [x, y] = proj(f.x, f.y, 6);
+      ctx.strokeStyle = `rgba(250,246,236,${0.8 * (1 - p)})`;
+      ctx.lineWidth = 3 * px;
+      ctx.beginPath();
+      ctx.ellipse(x, y, f.r * k * (0.6 + 0.4 * p), f.r * k * 0.45 * (0.6 + 0.4 * p), 0, 0, Math.PI * 2 * Math.min(1, p * 2.5));
+      ctx.stroke();
+      break;
+    }
+    case 'mend':
+    case 'iron': {
+      // green rising (回春), or a flash of gold (金剛)
+      const col = f.kind === 'mend' ? LEAF : GOLD;
+      const [x, y] = proj(f.x, f.y, 17);
+      ctx.strokeStyle = rgba(col, 0.9 * (1 - p));
+      ctx.lineWidth = 2.4 * px;
+      ctx.beginPath();
+      ctx.ellipse(x, y, (14 + p * 14) * k, (21 + p * 16) * k, 0, 0, Math.PI * 2);
       ctx.stroke();
       break;
     }

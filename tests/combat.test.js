@@ -156,8 +156,9 @@ test('your blow lands on what is in reach; spells fly, burst and burn, cost 靈�
   assert.ok(me.shield > 0, 'a shield of 靈力');
 });
 
-test('before 煉氣 you have no spells; a 凡人 can only strike and step aside', () => {
+test('before 煉氣 you have no spells; a 凡人 can strike and step aside (and only a strong body knows more)', () => {
   const s = cultivator(13, 0, { realm: 0 });
+  s.player.attrs.gengu = 4;
   near(s);
   assert.ok(C.kitOf(s).every((k) => k.locked), 'all three out of reach');
   assert.ok(!C.castCmd(s, 'fireball'));

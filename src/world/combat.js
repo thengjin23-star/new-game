@@ -19,7 +19,9 @@ import { NODES } from './map.js';
 import { npcRealm } from './npcs.js';
 import { FOES } from '../content/foes.js';
 import { EVENTS } from '../content/index.js';
-import { MOVES, STRIKES, DASH, BEAST_MOVES } from '../content/moves.js';
+import { MOVES, STRIKES, DASH, BEAST_MOVES, KIT_ORDER, TRIAL_KIT } from '../content/moves.js';
+import { TECHS } from '../content/techniques.js';
+import { ITEMS } from '../content/items.js';
 import { fightPower } from '../core/battle.js';
 import { power } from '../core/cultivation.js';
 import { applyEffects } from '../core/effects.js';
@@ -55,7 +57,7 @@ export const TIER_NAME = ['凡獸', '一階', '二階', '三階', '四階'];
 const PERSON_RANK = ['凡人', '煉氣', '築基', '金丹', '元嬰'];
 
 /** What a beast is doing that means it is after you. */
-const HUNTING = new Set(['chase', 'windup', 'leap', 'recover', 'hop', 'howl']);
+const HUNTING = new Set(['chase', 'windup', 'leap', 'recover', 'hop', 'howl', 'stun']);
 /**
  * Out of the fight: dead and fading, gone until it comes back, running off,
  * on its knees, on its way (the matter settled).
@@ -101,7 +103,7 @@ export function hero(s, C = combatOf(s)) {
   let me = C.me;
   if (!me) {
     me = C.me = {
-      hp: cap, mp: maxMp, cds: {}, act: null, dash: null, kb: null, inv: 0, shield: 0, shieldT: 0, poison: null,
+      hp: cap, mp: maxMp, cds: {}, act: null, dash: null, kb: null, inv: 0, shield: 0, shieldT: 0, poison: null, regen: null, ward: null,
       hurtT: -99, flashT: -99, target: null, auto: false, hold: false, press: 0, steer: null, dir: [1, 0], trail: [],
     };
   }
@@ -125,16 +127,65 @@ export function strikeOf(s) {
   return STRIKES[s.player.weapon] || STRIKES.fists;
 }
 
-/** The three moves of a cultivator: stronger if you have learned the art behind one; out of reach before 煉氣. */
+const REALM_WORD = ['', '需引氣入體', '需築基', '需結丹'];
+
+/** Why you cannot use a move yet, or null if you can. */
+function lockOf(s, m) {
+  const p = s.player;
+  const realm = m.realm ?? 1;
+  if (p.realm < realm) return REALM_WORD[realm] || '境界不足';
+  const knows = (ids) => ids.some((a) => (p.arts || []).includes(a) || (p.techs || []).includes(a) || p.tech === a);
+  // a move of the body comes to you at 築基, whatever else it asks
+  if (m.school === '體修' && p.realm >= 2) return null;
+  if (!m.learn && !m.weapon && !m.gengu) return null;
+  if (m.learn && knows(m.learn)) return null;
+  if (m.weapon && m.weapon.includes(p.weapon)) return null;
+  if (m.gengu && (p.attrs.gengu ?? 0) >= m.gengu) return null;
+  const ways = [];
+  if (m.learn) ways.push(`習得${m.learn.map((a) => TECHS[a]?.name || a).join('或')}`);
+  if (m.weapon) ways.push(`手持${m.weapon.map((w) => ITEMS[w]?.name || w).join('或')}`);
+  if (m.gengu) ways.push(`根骨達${m.gengu}`);
+  return `需${ways.join('，或')}`;
+}
+
+/** A move as you would use it: stronger if you have learned the art behind it; why it is out of reach, if it is. */
+function moveOf(s, id, lend = false) {
+  const p = s.player;
+  const m = MOVES[id];
+  const knows = (ids) => ids.some((a) => (p.arts || []).includes(a) || (p.techs || []).includes(a) || p.tech === a);
+  const good = knows(m.arts || []);
+  return { ...m, ...(good ? m.better : null), id, good, locked: lend ? null : lockOf(s, m) };
+}
+
+/** Every move there is, as it stands for you (for choosing your three). */
+export function movesOf(s) {
+  return Object.keys(MOVES).map((id) => moveOf(s, id));
+}
+
+/**
+ * The three you take into a fight: those you chose (修煉 → 戰鬥招式) that you
+ * can use, the rest filled the usual way; short of three, what is still out of
+ * reach shows in the empty places. 戰鬥試煉 lends you its own three.
+ */
 export function kitOf(s) {
   const C = combatOf(s);
-  const p = s.player;
-  const knows = (ids) => ids.some((a) => (p.arts || []).includes(a) || p.tech === a);
-  const able = p.realm >= 1 || !!C.trial;
-  return Object.entries(MOVES).map(([id, m]) => {
-    const good = knows(m.arts || []);
-    return { ...m, ...(good ? m.better : null), id, good, locked: able ? null : '需引氣入體' };
-  });
+  if (C.trial) return TRIAL_KIT.map((id) => moveOf(s, id, true));
+  const out = [];
+  const take = (id) => {
+    if (out.length >= 3 || out.some((k) => k.id === id) || !MOVES[id]) return;
+    const k = moveOf(s, id);
+    if (!k.locked) out.push(k);
+  };
+  for (const id of s.player.kit || []) take(id);
+  for (const id of KIT_ORDER) take(id);
+  for (const id of TRIAL_KIT) if (out.length < 3 && !out.some((k) => k.id === id)) out.push(moveOf(s, id));
+  return out;
+}
+
+/** Choose the three you take into a fight (null: let them be chosen for you). */
+export function setKit(s, ids) {
+  s.player.kit = ids ? ids.filter((id) => MOVES[id]).slice(0, 3) : null;
+  if (!s.player.kit?.length) delete s.player.kit;
 }
 
 /** How soon you can step aside again: quicker as your cultivation deepens. */
@@ -401,7 +452,7 @@ function hurtBeast(s, C, b, base, io, { kind = 'phys' } = {}) {
   const crit = kind !== 'burn' && rand(s) < me.crit;
   const roll = kind === 'burn' ? 1 : 0.85 + rand(s) * 0.3;
   // a thing of spirit: a blade goes through it; fire and 靈力 do not
-  const spirit = b.K.spirit ? (kind === 'phys' ? 0.5 : kind === 'fire' || kind === 'burn' ? 1.3 : 1.15) : 1;
+  const spirit = b.K.spirit ? (kind === 'phys' ? 0.5 : kind === 'fox' ? 1.5 : kind === 'fire' || kind === 'burn' ? 1.3 : 1.15) : 1;
   const dmg = Math.max(1, Math.round(base * roll * (crit ? 1.6 : 1) * b.taken * spirit * (sneak ? 1.5 : 1)));
   b.hp -= dmg;
   b.flashT = C.t;
@@ -453,6 +504,8 @@ function hurtMe(s, C, b, mult, io, push = null, M = null) {
     return -1;
   }
   let dmg = Math.max(1, Math.round(b.dmg * mult * (0.85 + rand(s) * 0.3) * (b.enraged ? 1.2 : 1)));
+  // 金剛: braced, the body takes only part of it
+  if (me.ward) dmg = Math.max(1, Math.round(dmg * (1 - me.ward.k)));
   if (me.shield > 0) {
     const held = Math.min(me.shield, dmg);
     me.shield -= held;
@@ -532,6 +585,14 @@ function rout(s, C, b, io, line = null) {
   if (line) io.feed('good', line);
 }
 
+/** Knocked reeling (whatever it was gathering itself for comes to nothing); push: thrown back along (ux, uy). */
+function stagger(b, secs, push = null) {
+  if (!alive(b) || b.state === 'talk') return;
+  if (push) b.kb = { ux: push[0], uy: push[1], left: push[2] };
+  if (!(secs > 0)) return;
+  Object.assign(b, { state: 'stun', st: 0, stunT: secs * (b.K.boss ? 0.5 : 1), move: null, moving: false });
+}
+
 /**
  * One of a group is down: with its leader gone, or more than half a pack,
  * the rest give up and run; a pack that loses one of its own turns savage.
@@ -558,7 +619,7 @@ function morale(s, C, b, io) {
 /** You go down. The beasts lose interest; you wake later, hurt (and the story, if there is one, says how). */
 function fallen(s, C, b, io) {
   const me = C.me;
-  Object.assign(me, { act: null, dash: null, kb: null, auto: false, hold: false, press: 0, steer: null, target: null, shield: 0, shieldT: 0, poison: null });
+  Object.assign(me, { act: null, dash: null, kb: null, auto: false, hold: false, press: 0, steer: null, target: null, shield: 0, shieldT: 0, poison: null, regen: null, ward: null });
   for (const x of beastsOf(s, C)) if (hunting(x) || x.state === 'notice') calmDown(x, true);
   C.shots = [];
   C.on = false;
@@ -637,7 +698,12 @@ function finish(s, C, io) {
   Object.assign(C.me, { auto: false, hold: false, press: 0, target: null, steer: null });
   io.signal({ combat: C.outcome });
   if (C.trial) return endTrial(s, C, io, C.outcome);
-  if (C.rt) return endTale(s, C, C.outcome);
+  if (C.rt) {
+    // a moment to see how it ended (on his knees, the rest of them running) before the story picks up
+    C.rt.how = C.outcome;
+    C.taleAt = C.t + 1.2;
+    return;
+  }
   io.feed(won ? 'good' : 'sys', won ? '戰鬥結束。' : '已脫離戰鬥。');
 }
 
@@ -742,7 +808,8 @@ export function updateCombat(s, dt, io) {
   // a fight (or a run) chosen in an event; one from before the game was closed is long over
   if (s.rtFight) {
     if (!s.rtFight.on) beginTale(s, C, io, s.rtFight.pend?.ctx?.data?.first === 'me');
-    else if (C.rt !== s.rtFight) endRealFight(s, 'escaped');
+    else if (C.rt !== s.rtFight) endRealFight(s, s.rtFight.how || 'escaped');
+    else if (C.rt.how && C.t >= C.taleAt) endTale(s, C, C.rt.how);
     if (s.pending || s.dead) return STILL;
   }
   const steering = !!(io.input && (io.input.x || io.input.y));
@@ -830,6 +897,13 @@ function think(s, C, b, dt, io) {
       hurtBeast(s, C, b, b.burn.dps * 0.5, io, { kind: 'burn' });
     }
     if (b.burn && b.burn.left <= 0) b.burn = null;
+  }
+  // thrown back by a blow
+  if (b.kb) {
+    const want = Math.min(b.kb.left, 360 * dt);
+    const went = slide(s, b, b.kb.ux, b.kb.uy, want, b.R.body * 0.65);
+    b.kb.left -= want;
+    if (b.kb.left <= 0.5 || went < want * 0.3) b.kb = null;
   }
   const dx = w.x - b.x;
   const dy = w.y - b.y;
@@ -960,6 +1034,15 @@ function think(s, C, b, dt, io) {
         b.state = 'chase';
         b.st = 0;
         b.strafe = b.rng() < 0.5 ? 1 : -1;
+      }
+      break;
+    }
+    case 'stun': {
+      // reeling: it can do nothing, for a moment
+      b.moving = false;
+      if (b.st >= b.stunT) {
+        b.state = 'chase';
+        b.st = 0;
       }
       break;
     }
@@ -1249,19 +1332,35 @@ function heroTick(s, C, dt, io) {
     }
     if (P.left <= 0) me.poison = null;
   }
+  // 回春: blood coming back a little at a time; 金剛: braced, for a while
+  if (me.regen) {
+    me.hp = Math.min(me.cap, me.hp + me.regen.hps * Math.min(dt, me.regen.left));
+    me.regen.left -= dt;
+    if (me.regen.left <= 0) me.regen = null;
+  }
+  if (me.ward) {
+    me.ward.left -= dt;
+    if (me.ward.left <= 0) me.ward = null;
+  }
   // 靈力 comes back slowly in a fight, quickly out of one; blood only once it is over
   me.mp = Math.min(me.maxMp, me.mp + me.maxMp * (C.on ? 0.03 : 0.1) * dt);
   if (!C.on && C.t - me.hurtT > 3 && me.hp < me.cap) me.hp = Math.min(me.cap, me.hp + me.cap * 0.05 * dt);
   let moved = 0;
   if (me.dash) {
     const D = me.dash;
-    const want = Math.min((DASH.dist / DASH.time) * dt, DASH.dist - D.went);
+    const x0 = w.x;
+    const y0 = w.y;
+    const want = Math.min((D.dist / D.time) * dt, D.dist - D.went);
     const went = slide(s, w, D.ux, D.uy, want, PLAYER_R);
     D.went += went;
     D.t += dt;
     moved += went;
     me.trail.push({ x: w.x, y: w.y, t0: C.t });
-    if (D.t >= DASH.time || D.went >= DASH.dist - 0.5 || went < want * 0.2) me.dash = null;
+    // a move that carries you: it strikes what you pass (or the first you meet)
+    if (D.k) dashHits(s, C, D, x0, y0, io);
+    if (s.pending || s.dead) return moved;
+    if (me.dash && (D.t >= D.time || D.went >= D.dist - 0.5 || went < want * 0.2)) me.dash = null;
+    if (!me.dash && D.k?.fx === 'swordstep') C.fx.push({ kind: 'slashline', x: D.from[0], y: D.from[1], to: [w.x, w.y], t0: C.t, dur: 0.45 });
   } else if (me.kb) {
     const want = Math.min(me.kb.left, 280 * dt);
     const went = slide(s, w, me.kb.ux, me.kb.uy, want, PLAYER_R);
@@ -1364,9 +1463,67 @@ function release(s, C, a, io) {
     const d = Math.max(20, Math.hypot(dx, dy));
     shoot(C, { kind: 'fire', x: w.x + (dx / d) * 10, y: w.y + (dy / d) * 10, ux: dx / d, uy: dy / d, speed: k.speed, left: d - 10, r: 10, dmg: me.atk * k.mult, radius: k.radius, burn: k.burn ? me.atk * 0.22 : 0, burnT: k.burn || 0, boom: true, hurt: 'fire' });
   } else if (k.aim === 'self') {
-    me.shield = Math.round(me.maxHp * k.shield);
-    me.shieldT = k.last;
-    C.fx.push({ kind: 'shield', x: w.x, y: w.y, t0: C.t, dur: 0.6 });
+    if (k.shield) {
+      me.shield = Math.round(me.maxHp * k.shield);
+      me.shieldT = k.last;
+    }
+    if (k.heal) me.regen = { left: k.last, hps: (me.cap * k.heal) / k.last };
+    if (k.cure && me.poison) {
+      me.poison = null;
+      pop(C, w.x - 12, w.y, '解毒', 'status', 52);
+    }
+    if (k.ward) me.ward = { left: k.last, k: k.ward };
+    C.fx.push({ kind: k.fx, x: w.x, y: w.y, t0: C.t, dur: 0.6 });
+  } else if (k.aim === 'dash') {
+    startDash(s, C, a.ux, a.uy, k);
+  } else if (k.aim === 'around') {
+    // a sweep all round you: whoever is in it is caught, and reels
+    C.fx.push({ kind: 'sweep', x: w.x, y: w.y, r: k.radius, t0: C.t, dur: 0.4 });
+    for (const b of beastsOf(s, C)) {
+      const d = Math.hypot(b.x - w.x, b.y - w.y) || 1;
+      if (!alive(b) || !present(s, b) || d > k.radius + b.R.body) continue;
+      hurtBeast(s, C, b, me.atk * k.mult, io);
+      if (s.pending || s.dead) return;
+      stagger(b, k.stun, [(b.x - w.x) / d, (b.y - w.y) / d, 18]);
+    }
+  } else if (k.aim === 'seek') {
+    // flames fanning out, each finding its own way
+    const a0 = Math.atan2(a.uy, a.ux);
+    for (let n = 0; n < k.count; n++) {
+      const an = a0 + (n - (k.count - 1) / 2) * 0.7;
+      shoot(C, { kind: k.fx, x: w.x + Math.cos(an) * 12, y: w.y + Math.sin(an) * 12, ux: Math.cos(an), uy: Math.sin(an), speed: k.speed, left: k.range, r: 9, dmg: me.atk * k.mult, hurt: 'fox', seek: n, burn: k.burn ? me.atk * 0.15 : 0, burnT: k.burn || 0 });
+    }
+  }
+}
+
+/** You go along a line, fast (a step aside, or a move that carries you: k). Untouchable while you do. */
+function startDash(s, C, ux, uy, k = null) {
+  const me = C.me;
+  const dist = k ? k.range : DASH.dist;
+  const time = k ? Math.max(0.16, dist / 850) : DASH.time;
+  me.dash = { ux, uy, t: 0, went: 0, dist, time, k, hit: new Set(), from: [s.world.x, s.world.y] };
+  me.inv = k ? time + 0.08 : DASH.inv;
+  me.kb = null;
+  faceTo(s, me, ux, uy);
+  C.fx.push({ kind: 'dash', x: s.world.x, y: s.world.y, dir: [ux, uy], t0: C.t, dur: 0.35 });
+}
+
+/** What a move that carries you strikes on the way: everyone it passes, or (first) the first, thrown back. */
+function dashHits(s, C, D, x0, y0, io) {
+  const k = D.k;
+  const w = s.world;
+  for (const b of beastsOf(s, C)) {
+    if (!alive(b) || !present(s, b) || D.hit.has(b.uid)) continue;
+    if (segDist(x0, y0, w.x, w.y, b.x, b.y) > k.width / 2 + b.R.body) continue;
+    D.hit.add(b.uid);
+    hurtBeast(s, C, b, C.me.atk * k.mult, io);
+    if (s.pending || s.dead) return;
+    C.fx.push({ kind: k.first ? 'impact' : 'spark', x: b.x, y: b.y, t0: C.t, dur: 0.35, of: k.fx });
+    stagger(b, k.stun, k.push ? [D.ux, D.uy, k.push] : null);
+    if (k.first) {
+      C.me.dash = null;
+      return;
+    }
   }
 }
 
@@ -1384,6 +1541,7 @@ function flyShots(s, C, dt, io) {
   const list = beastsOf(s, C);
   for (const sh of C.shots) {
     if (sh.done) continue;
+    if (sh.seek !== undefined) seek(s, C, sh, dt);
     const step = Math.min(sh.speed * dt, Math.max(0, sh.left - sh.went));
     const n = Math.max(1, Math.ceil(step / 8));
     for (let k = 0; k < n && !sh.done; k++) {
@@ -1417,6 +1575,7 @@ function flyShots(s, C, dt, io) {
         sh.hit.add(b.uid);
         hurtBeast(s, C, b, sh.dmg, io, { kind: sh.hurt || 'phys' });
         if (s.pending || s.dead) return;
+        if (sh.burn && alive(b)) b.burn = { left: sh.burnT, tick: 0.5, dps: sh.burn };
         C.fx.push({ kind: 'spark', x: sh.x, y: sh.y, t0: C.t, dur: 0.25, of: sh.kind });
         if (!sh.pierce) sh.done = true;
       }
@@ -1429,6 +1588,24 @@ function flyShots(s, C, dt, io) {
     if (s.pending || s.dead) return;
   }
   C.shots = C.shots.filter((x) => !x.done);
+}
+
+/** A flame that finds its own way: it turns toward whoever is nearest (each of a handful to a different one, if it can). */
+function seek(s, C, sh, dt) {
+  if (!sh.tgt || !alive(sh.tgt)) {
+    const live = beastsOf(s, C)
+      .filter((b) => seen(b) && present(s, b) && Math.hypot(b.x - sh.x, b.y - sh.y) < 380)
+      .sort((a, b) => Math.hypot(a.x - sh.x, a.y - sh.y) - Math.hypot(b.x - sh.x, b.y - sh.y));
+    sh.tgt = live.length ? live[sh.seek % live.length] : null;
+  }
+  if (!sh.tgt) return;
+  const cur = Math.atan2(sh.uy, sh.ux);
+  let da = Math.atan2(sh.tgt.y - sh.y, sh.tgt.x - sh.x) - cur;
+  while (da > Math.PI) da -= Math.PI * 2;
+  while (da < -Math.PI) da += Math.PI * 2;
+  const turn = Math.max(-7 * dt, Math.min(7 * dt, da));
+  sh.ux = Math.cos(cur + turn);
+  sh.uy = Math.sin(cur + turn);
 }
 
 /** A shot comes to its end: a fireball bursts over everyone near; anything else just stops. */
@@ -1605,15 +1782,11 @@ export function dashCmd(s, dir = null) {
   const n = Math.hypot(ux, uy) || 1;
   ux /= n;
   uy /= n;
-  me.dash = { ux, uy, t: 0, went: 0 };
-  me.inv = DASH.inv;
   me.cds.dash = dashCd(s);
-  me.kb = null;
   // a dash cuts off what you were only starting
   if (me.act && !me.act.done) me.act = null;
   Object.assign(me, { auto: false, hold: false, press: 0, steer: null });
-  faceTo(s, me, ux, uy);
-  C.fx.push({ kind: 'dash', x: s.world.x, y: s.world.y, dir: [ux, uy], t0: C.t, dur: 0.35 });
+  startDash(s, C, ux, uy);
   return true;
 }
 
@@ -1654,7 +1827,7 @@ export function startTrial(s) {
   me.hp = me.cap;
   me.mp = me.maxMp;
   me.cds = {};
-  me.poison = null;
+  Object.assign(me, { poison: null, regen: null, ward: null });
   const def = { id: `trial_${++C.uid}`, kind: 'demon_wolf', name: '幻影妖狼', x: spot[0], y: spot[1], r: 100, power: Math.max(4, Math.round(me.P)), tier: s.player.realm, phantom: true, rt: { lose: 560 } };
   const b = spawn(s, def);
   b.state = 'notice';
@@ -1672,6 +1845,6 @@ function endTrial(s, C, io, how) {
     b.st = 0;
   }
   const me = hero(s, C);
-  Object.assign(me, { hp: me.cap, mp: me.maxMp, shield: 0, shieldT: 0, poison: null });
+  Object.assign(me, { hp: me.cap, mp: me.maxMp, shield: 0, shieldT: 0, poison: null, regen: null, ward: null });
   io.feed('sys', { won: '叮——試煉完成。系統：「不錯。」', escaped: '叮——你甩掉了幻影。系統：「逃得掉，也是本事。」', fell: '叮——試煉失敗。好在只是幻影，你毫髮無傷。' }[how]);
 }

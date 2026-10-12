@@ -20,6 +20,7 @@ import { POIS } from '../world/places.js';
 import { fogOf, isRevealed, exploredPct } from '../world/fog.js';
 import { ITEMS, displayItem } from '../content/items.js';
 import { TECHS } from '../content/techniques.js';
+import { SCHOOLS } from '../content/moves.js';
 import { FRAGMENTS, FRAGMENT_TOTAL } from '../content/fragments.js';
 import { SYS_LEVELS, SYS_FEATURES } from '../world/system.js';
 import { npcAge, npcRealm, NAMED } from '../world/npcs.js';
@@ -695,7 +696,9 @@ export function startApp(root, { speed = 1, view = null } = {}) {
 
   // ── a fight as you move ──
 
-  const SKILL_KEYS = { 1: 'swordqi', 2: 'fireball', 3: 'guard' };
+  /** Keys 1, 2, 3: the three moves you carry, in their places. */
+  const SKILL_KEYS = { 1: 0, 2: 1, 3: 2 };
+  const SLOT_OF = { s1: 0, s2: 1, s3: 2 };
   /** What those out there are doing that is nothing to fight: down, hidden, on their knees, on their way. */
   const CALM = new Set(['dead', 'flee', 'vanish', 'gone', 'hide', 'yield', 'leave']);
 
@@ -752,7 +755,7 @@ export function startApp(root, { speed = 1, view = null } = {}) {
       else CB.attackRelease(s);
       return true;
     }
-    const id = SKILL_KEYS[key];
+    const id = key in SKILL_KEYS ? CB.kitOf(s)[SKILL_KEYS[key]]?.id : null;
     if (id) {
       e.preventDefault();
       if (down) ui.keyAim = ui.keyAim || id;
@@ -809,7 +812,7 @@ export function startApp(root, { speed = 1, view = null } = {}) {
     });
     strike.addEventListener('pointerup', release);
     strike.addEventListener('pointercancel', release);
-    for (const [id, cls, key] of [['swordqi', 's1', '1'], ['fireball', 's2', '2'], ['guard', 's3', '3']]) aimButton(make(id, cls, key), id);
+    for (const [cls, key] of [['s1', '1'], ['s2', '2'], ['s3', '3']]) aimButton(make('', cls, key));
     const dash = make('dash', 'dash', '␣');
     dash.addEventListener('pointerdown', (e) => {
       e.preventDefault();
@@ -826,13 +829,14 @@ export function startApp(root, { speed = 1, view = null } = {}) {
    * (the ground shows where), and letting go casts it — unless you drag back
    * onto the button, which calls it off.
    */
-  function aimButton(el, id) {
+  function aimButton(el) {
     let st = null;
     el.addEventListener('pointerdown', (e) => {
       e.preventDefault();
-      if (!ui.s) return;
+      if (!ui.s || !el.dataset.id) return;
       el.setPointerCapture?.(e.pointerId);
-      st = { pid: e.pointerId, sx: e.clientX, sy: e.clientY, aiming: false, off: false, pt: null };
+      // (the move in this place as you pressed it: it stays the same until you let go)
+      st = { id: el.dataset.id, pid: e.pointerId, sx: e.clientX, sy: e.clientY, aiming: false, off: false, pt: null };
       el.classList.add('down');
     });
     el.addEventListener('pointermove', (e) => {
@@ -843,7 +847,9 @@ export function startApp(root, { speed = 1, view = null } = {}) {
       if (!st.aiming && d > 14) st.aiming = true;
       if (!st.aiming) return;
       st.off = d < 16;
+      const id = st.id;
       const k = CB.kitOf(ui.s).find((x) => x.id === id);
+      if (!k) return;
       const [ux, uy] = dragToWorld(dx, dy);
       const reach = k.aim === 'ground' ? k.range * Math.min(1, d / 90) : k.range || 60;
       const w = ui.s.world;
@@ -856,7 +862,7 @@ export function startApp(root, { speed = 1, view = null } = {}) {
       el.classList.remove('down', 'off');
       if (ui.s) {
         CB.setPreview(ui.s, null);
-        if (e.type === 'pointerup' && !(st.aiming && st.off)) CB.castCmd(ui.s, id, st.aiming ? st.pt : null);
+        if (e.type === 'pointerup' && !(st.aiming && st.off)) CB.castCmd(ui.s, st.id, st.aiming ? st.pt : null);
       }
       st = null;
     };
@@ -893,7 +899,7 @@ export function startApp(root, { speed = 1, view = null } = {}) {
     const mpBar = $('.cbt-bar.mp');
     hpBar.querySelector('i').style.width = `${(me.hp / me.maxHp) * 100}%`;
     hpBar.style.setProperty('--cap', `${(me.cap / me.maxHp) * 100}%`);
-    set(hpBar.querySelector('span'), 'textContent', `氣血 ${Math.ceil(me.hp)} / ${me.cap}${me.shield > 0 ? `　護體 ${Math.ceil(me.shield)}` : ''}`);
+    set(hpBar.querySelector('span'), 'textContent', `氣血 ${Math.ceil(me.hp)} / ${me.cap}${me.shield > 0 ? `　護體 ${Math.ceil(me.shield)}` : ''}${me.ward ? '　金剛' : ''}`);
     mpBar.querySelector('i').style.width = `${me.maxMp ? (me.mp / me.maxMp) * 100 : 0}%`;
     set(mpBar.querySelector('span'), 'textContent', me.maxMp ? `靈力 ${Math.floor(me.mp)} / ${me.maxMp}` : '靈力 —');
     hpBar.classList.toggle('shield', me.shield > 0);
@@ -918,6 +924,9 @@ export function startApp(root, { speed = 1, view = null } = {}) {
     const kit = CB.kitOf(s);
     const S = CB.strikeOf(s);
     for (const el of shell.querySelectorAll('.cbt-btn')) {
+      const slot = SLOT_OF[[...el.classList].find((c) => c in SLOT_OF)];
+      // a place for a move: whichever of your three is in it now (not while you hold it down)
+      if (slot !== undefined && !el.classList.contains('down') && el.dataset.id !== kit[slot]?.id) el.dataset.id = kit[slot]?.id || '';
       const id = el.dataset.id;
       let name;
       let cost = '';
@@ -934,8 +943,9 @@ export function startApp(root, { speed = 1, view = null } = {}) {
         total = CB.dashCd(s);
       } else {
         const k = kit.find((x) => x.id === id);
+        if (!k) continue;
         name = k.name;
-        cost = k.locked ? '需引氣' : String(k.mp);
+        cost = k.locked ? (k.locked.startsWith('需引氣') ? '需引氣' : '未習得') : k.mp ? String(k.mp) : '';
         left = me.cds[id] || 0;
         total = k.cd;
         off = !!k.locked || me.mp < k.mp;
@@ -1318,8 +1328,43 @@ export function startApp(root, { speed = 1, view = null } = {}) {
     if (s.secl) put(wrap, seclusionCard());
     else if (atBottleneck(s)) put(wrap, breakthroughCard());
     else put(wrap, seclusionOptions());
-    put(wrap, statusCard(), techCard());
+    put(wrap, statusCard(), techCard(), kitCard());
     return wrap;
+  }
+
+  /**
+   * 戰鬥招式: the three you take into a fight (keys 1, 2, 3), and every move
+   * there is, by school. Tap a place, then a move to put in it.
+   */
+  function kitCard() {
+    const s = ui.s;
+    const kit = CB.kitOf(s);
+    const all = CB.movesOf(s);
+    const sel = Math.min(2, ui.kitSlot || 0);
+    const ids = kit.map((k) => k.id);
+    const put3 = (id) => {
+      const next = ids.slice();
+      const at = next.indexOf(id);
+      // already carried elsewhere: the two change places
+      if (at >= 0) [next[at], next[sel]] = [next[sel], next[at]];
+      else next[sel] = id;
+      ui.kitSlot = (sel + 1) % 3;
+      act((x) => CB.setKit(x, next));
+    };
+    return h('section.card.kit',
+      h('h3', '戰鬥招式'),
+      h('p.muted.small', '帶進戰鬥的三招，對應技能鍵 1、2、3。先點一格，再點下面的招式換上。'),
+      h('div.kit-slots', kit.map((k, i) =>
+        h('button.kit-slot' + (i === sel ? '.sel' : '') + (k.locked ? '.locked' : ''), { type: 'button', onclick: () => { ui.kitSlot = i; renderLayer(); } },
+          h('kbd', String(i + 1)), h('b', k.name), h('span', k.locked ? '未解鎖' : k.school)))),
+      SCHOOLS.map((school) => h('div.kit-school',
+        h('h4', school),
+        all.filter((m) => m.school === school).map((m) =>
+          h('button.kit-move' + (ids.includes(m.id) && !m.locked ? '.on' : '') + (m.locked ? '.locked' : '') + (m.good ? '.good' : ''), { type: 'button', disabled: !!m.locked, onclick: () => put3(m.id) },
+            h('div.kit-head', h('b', m.name), h('span', m.mp ? `靈力 ${m.mp}` : '不耗靈力'), h('span', `冷卻 ${m.cd} 秒`)),
+            h('p', m.locked || m.desc))))),
+      s.player.kit ? h('button.btn.small', { type: 'button', onclick: () => { ui.kitSlot = 0; act((x) => CB.setKit(x, null)); } }, '交給系統自動配招') : null,
+    );
   }
 
   function seclusionCard() {
@@ -1589,7 +1634,7 @@ export function startApp(root, { speed = 1, view = null } = {}) {
       h('section.card',
         h('h3', '操作'),
         h('p.muted.small', '按住畫面任意處拖動：往那個方向走。點一下地面：自己走過去。點人或東西：走過去並互動。兩指捏合：縮放。鍵盤：WASD 或方向鍵行走，E 互動，M 地圖。'),
-        h('p.muted.small', '戰鬥：左手拖動移動；右下大鈕普攻（按住連續攻擊，點妖獸也會上前攻擊），三顆小鈕是劍氣、火球、護體——點一下自動瞄準，按住拖曳可以自己瞄準，放開施放，拖回按鈕上取消；「閃避」短距離位移，途中不會被打中。逃跑就是真的跑：跑得夠遠、躲進密林或進城，妖獸就會放棄。鍵盤：J 普攻、1 2 3 法術（朝滑鼠方向，按住看範圍、放開施放）、空白鍵或 Shift 閃避。'),
+        h('p.muted.small', '戰鬥：左手拖動移動；右下大鈕普攻（按住連續攻擊，點妖獸也會上前攻擊），三顆小鈕是你帶的三招（在「修煉」頁的戰鬥招式換）——點一下自動瞄準，按住拖曳可以自己瞄準，放開施放，拖回按鈕上取消；「閃避」短距離位移，途中不會被打中。逃跑就是真的跑：跑得夠遠、躲進密林或進城，妖獸就會放棄。鍵盤：J 普攻、1 2 3 三招（朝滑鼠方向，按住看範圍、放開施放）、空白鍵或 Shift 閃避。'),
       ),
       h('section.card',
         h('h3', '存檔'),

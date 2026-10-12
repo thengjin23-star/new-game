@@ -778,6 +778,102 @@ p {
   margin-left: 8px;
 }
 
+/* 戰鬥招式: the three you carry, and the rest by school */
+.kit-slots {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin: 8px 0 12px;
+}
+
+.kit-slot {
+  font: inherit;
+  color: var(--ink);
+  background: var(--paper-2);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 8px 6px;
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  cursor: pointer;
+}
+
+.kit-slot.sel {
+  border-color: var(--red);
+  box-shadow: 0 0 0 2px rgba(168, 50, 42, 0.25);
+}
+
+.kit-slot.locked b {
+  color: var(--muted);
+}
+
+.kit-slot kbd {
+  font: 600 11px/1 var(--font);
+  color: var(--muted);
+}
+
+.kit-slot span {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.kit-school h4 {
+  margin: 12px 0 6px;
+  font-size: 14px;
+  color: var(--ochre);
+}
+
+.kit-move {
+  font: inherit;
+  color: var(--ink);
+  text-align: left;
+  width: 100%;
+  background: transparent;
+  border: 0;
+  border-top: 1px solid var(--line);
+  padding: 8px 4px;
+  display: grid;
+  gap: 2px;
+  cursor: pointer;
+}
+
+.kit-move.on {
+  background: rgba(59, 106, 91, 0.1);
+}
+
+.kit-move.on b::after {
+  content: '・攜帶中';
+  font-size: 12px;
+  color: var(--jade);
+}
+
+.kit-move.good b {
+  color: var(--jade);
+}
+
+.kit-move.locked {
+  cursor: default;
+  opacity: 0.55;
+}
+
+.kit-head {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.kit-head span {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.kit-move p {
+  margin: 0;
+  font-size: 13px;
+  color: var(--ink-2);
+}
+
 /* ── 行囊 ── */
 .items li {
   border-top: 1px solid var(--line);
