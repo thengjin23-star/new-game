@@ -65,8 +65,8 @@ test('every fight in the stories is fought where you stand: those in it exist an
       }
     }
   }
-  // (23 from the story; 3 more, the rounds of the sect's 大比; 3 in each 秘境)
-  assert.equal(n, 32);
+  // (23 from the story; 3 more, the rounds of the sect's 大比; 3 in each 秘境; a 獸潮 and a treasure out of the sky)
+  assert.equal(n, 34);
   for (const f of Object.values(FOES)) for (const [, item] of f.loot || []) assert.ok(ITEMS[item], `loot ${item}`);
 });
 

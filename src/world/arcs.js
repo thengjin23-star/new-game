@@ -3,6 +3,7 @@ import { schedule } from '../core/schedule.js';
 import { rumor } from './rumors.js';
 import { inTide, bloodMoon } from './weather.js';
 import { SECRET_REALMS } from './realms.js';
+import { tideNight, omensOf, OMEN_WHERE } from './happenings.js';
 
 // The world's own timeline. These beats happen whether or not the player is
 // there; content events let the player witness or change them inside their
@@ -229,6 +230,20 @@ export function recurring(s) {
   // a 秘境 about to open: the word goes round a week before
   for (const R of Object.values(SECRET_REALMS)) {
     if (R.next(s.day) - s.day === 7) rumor(s, R.name === '古戰場秘境' ? '古戰場那座斷石門又開始發光了。老散修說，再過七天，秘境就要開了。' : '中秋快到了。坊市裡有人在打聽鏡湖的事：說每年中秋月圓，湖心亭底下的水府會開三天。', 'hint');
+  }
+  // a 獸潮: the signs five days before (and the event waits in 青石鎮 for that night); what it did, if you were not there
+  for (const y of [year, year + 1]) {
+    const n = tideNight(s, y);
+    if (n === null) continue;
+    if (n - s.day === 5) {
+      rumor(s, '黑風林的狼嚎一夜比一夜近。鎮上的老獵戶說，看這架勢，五天之內，獸潮就要下山了。', 'hint');
+      schedule(s, 'world_beast_tide', 5, 5, { node: 'qingshi_town', expire: 1 });
+    }
+    if (s.day - n === 2 && s.vars.tideFought !== y) rumor(s, '獸潮夜襲青石鎮，叼走了好幾頭牛，傷了兩個獵戶。鎮上的人說，要是有個修士在就好了。', 'world');
+  }
+  // a treasure out of the sky: everyone sees it come down
+  for (const o of omensOf(s, year)) {
+    if (o.day === s.day) rumor(s, `昨夜一道寶光從天上落下，落在${OMEN_WHERE[o.spot]}。各路散修都趕過去了。`, 'hint');
   }
   // the sect's 大比: the first ten days of the sixth month, every year
   const tourney = dayAt(0, 6, 1);

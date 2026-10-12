@@ -2,6 +2,7 @@
 // where people are, what roams, and small things hidden off the road.
 
 import { T } from './geo.js';
+import { omenAt } from './happenings.js';
 
 const night = (s) => s.tod >= 19.5 || s.tod < 5;
 
@@ -208,6 +209,13 @@ export const POIS = [
   { id: 'find_chessboard', region: 'wilds', x: 3700, y: 1180, name: '老松下的棋盤', verb: '查看', hidden: { r: 90 }, treasure: { text: '老松樹下有一張石桌，桌上刻著一局沒下完的棋。你看了很久，看不懂，卻又覺得好像懂了什麼。', effects: [['insight', 1]] } },
   { id: 'find_valleycave', region: 'lingxi_valley', x: 300, y: 1900, name: '谷中石洞', verb: '查看', hidden: { r: 90 }, treasure: { text: '石洞裡長滿了凝氣草，像是很久沒人來過。', effects: [['item', 'ningqi_grass', 4]] } },
   { id: 'find_teagarden', region: 'wilds', x: 2500, y: 4130, name: '荒廢的茶園', verb: '查看', hidden: { r: 100 }, treasure: { text: '一片荒廢的茶園，茶樹長得比人還高。你摘了些嫩葉，用山泉煮了一壺。', effects: [['item', 'ningqi_grass', 2], ['mind', 2]] } },
+
+  // 異寶出世: where a light out of the sky may come down (seen only while it is there; world/happenings.js)
+  { id: 'omen_wilds', region: 'wilds', x: 3150, y: 2150, name: '寶光', verb: '查看', sprite: 'sword_glint', glow: () => true, show: (s) => !!omenAt(s, 'omen_wilds'), text: '地上一個淺坑，坑底空了。' },
+  { id: 'omen_forest', region: 'black_forest', x: 3400, y: 1500, name: '寶光', verb: '查看', sprite: 'sword_glint', glow: () => true, show: (s) => !!omenAt(s, 'omen_forest'), text: '地上一個淺坑，坑底空了。' },
+  { id: 'omen_hill', region: 'qingshi_hill', x: 1880, y: 2470, name: '寶光', verb: '查看', sprite: 'sword_glint', glow: () => true, show: (s) => !!omenAt(s, 'omen_hill'), text: '地上一個淺坑，坑底空了。' },
+  { id: 'omen_south', region: 'wilds', x: 3600, y: 3050, name: '寶光', verb: '查看', sprite: 'sword_glint', glow: () => true, show: (s) => !!omenAt(s, 'omen_south'), text: '地上一個淺坑，坑底空了。' },
+  { id: 'omen_east', region: 'black_forest', x: 2600, y: 1720, name: '寶光', verb: '查看', sprite: 'sword_glint', glow: () => true, show: (s) => !!omenAt(s, 'omen_east'), text: '地上一個淺坑，坑底空了。' },
 
   // 只有飛（或躍）才到得了的地方
   { id: 'crane_nest', region: 'crane_peak', x: 1554, y: 2196, name: '鶴巢', verb: '查看', sprite: 'crane_nest', text: '峰頂背風的石凹裡，一個用枯枝搭成的大巢。' },

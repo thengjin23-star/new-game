@@ -12,6 +12,7 @@ import { weatherNow, skySigns, hoursToClear, SIGNS } from '../world/weather.js';
 import { FACTIONS, standing } from '../world/factions.js';
 import * as Q from '../world/quests.js';
 import * as SECT from '../world/sect.js';
+import { happenings, whenWord } from '../world/happenings.js';
 import * as CB from '../world/combat.js';
 import * as AR from '../world/arts.js';
 import { ROOTS, INJURY, BUFFS, realmLabel, stageReq, age, lifespan, rateParts, breakthroughInfo, power, atBottleneck, techOf } from '../core/cultivation.js';
@@ -1805,11 +1806,12 @@ export function startApp(root, { speed = 1, view = null } = {}) {
       ['rumors', '傳聞'],
       ['people', '人物'],
       ['factions', '勢力'],
+      ['events', '大事'],
       ['places', '地點'],
       ['life', '生平'],
       ['frags', '殘頁'],
     ];
-    const body = { rumors: logRumors, people: logPeople, factions: logFactions, places: logPlaces, life: logLife, frags: logFrags }[ui.logTab]();
+    const body = { rumors: logRumors, people: logPeople, factions: logFactions, events: logEvents, places: logPlaces, life: logLife, frags: logFrags }[ui.logTab]();
     return h('div.logpage',
       h('div.subtabs', subs.map(([id, label]) => h('button.subtab' + (ui.logTab === id ? '.on' : ''), { onclick: () => { ui.logTab = id; renderLayer(); } }, label))),
       body,
@@ -1826,6 +1828,18 @@ export function startApp(root, { speed = 1, view = null } = {}) {
         s.sys.lv >= 4 && r.kind === 'false' ? h('span.tag.bad', '系統：此為謠言') : null,
         s.sys.lv >= 4 && r.kind === 'hint' ? h('span.tag.good', '系統：線索') : null,
       )));
+  }
+
+  /** 世界大事: what is going on, and what is coming. */
+  function logEvents() {
+    const s = ui.s;
+    const list = happenings(s);
+    if (!list.length) return h('p.muted.pad', '近來風平浪靜。');
+    return h('ul.factions', list.map((x) => h('li' + (x.from <= s.day ? '.now' : ''),
+      h('div.person-head', h('b', x.name), h('span.tier', whenWord(s, x)), h('span.muted.small', x.where)),
+      h('p.muted.small', `${fmtDate(x.from)}${x.to > x.from ? ` 至 ${fmtDate(x.to)}` : ''}`),
+      h('p.small', x.note),
+    )));
   }
 
   /** Where the factions stand with you, and the work you have taken (wherever you are). */

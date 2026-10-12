@@ -12,12 +12,13 @@ import ferry from './events/ferry.js';
 import travel from './events/travel.js';
 import air from './events/air.js';
 import realms from './events/realms.js';
+import world from './events/world.js';
 import inquire, { GENERIC_INQUIRE } from './events/inquire.js';
 import generic, { GENERIC_EXPLORE } from './events/generic.js';
 
 export const EVENT_LIST = [
   ...opening, ...town, ...hill, ...temple, ...forest, ...market, ...valley,
-  ...sect, ...ruins, ...shrine, ...ferry, ...travel, ...air, ...realms, ...inquire, ...generic,
+  ...sect, ...ruins, ...shrine, ...ferry, ...travel, ...air, ...realms, ...world, ...inquire, ...generic,
   GENERIC_INQUIRE, GENERIC_EXPLORE,
 ];
 
