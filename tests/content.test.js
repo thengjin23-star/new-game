@@ -110,11 +110,27 @@ test('what roams the wild fights in real time; those that come to talk have a fi
     for (const c of choices) if (c.run) assert.ok(choices.some((x) => x.fight) && c.ok && c.fail, `${def.id}: a run needs a fight beside it, and both ways out`);
   }
   for (const [id, M] of Object.entries(BEAST_MOVES)) {
-    assert.ok(['fan', 'leap', 'shot'].includes(M.shape), `${id}: shape`);
-    assert.ok(M.windup > 0 && M.recover > 0 && M.cd > 0 && M.mult > 0, `${id}: seen coming, open after, not again at once`);
+    assert.ok(['fan', 'leap', 'shot', 'ring', 'zone', 'call', 'blink'].includes(M.shape), `${id}: shape`);
+    assert.ok(M.windup > 0 && M.recover > 0 && M.cd > 0, `${id}: seen coming, open after, not again at once`);
+    if (M.shape !== 'call' && M.shape !== 'blink') assert.ok(M.mult > 0, `${id}: it hurts`);
     if (M.shape === 'fan') assert.ok(M.reach > 0 && M.arc > 0, `${id}: reach and arc`);
-    else assert.ok(M.max > M.min && M.speed > 0 && M.width > 0, `${id}: a line, from min to max`);
+    else if (M.shape === 'leap' || M.shape === 'shot') assert.ok(M.max > M.min && M.speed > 0 && M.width > 0, `${id}: a line, from min to max`);
     if (M.shape === 'shot') assert.ok(M.range >= M.max, `${id}: it reaches as far as it is thrown from`);
+    if (M.shape === 'ring') assert.ok(M.radius > 0, `${id}: how far round`);
+    if (M.shape === 'zone') assert.ok(M.max > M.min && M.radius > 0 && (!(M.count > 1) || M.spread > 0), `${id}: where, how wide`);
+    if (M.shape === 'call') assert.ok(FOES[M.call.kind]?.rt && M.call.n > 0 && M.call.max >= M.call.n, `${id}: whom it calls`);
+    if (M.shape === 'blink') assert.ok(M.near > 0, `${id}: when`);
+    if (M.combo) assert.ok(M.combo > 1 && M.again > 0, `${id}: a run of them`);
+    for (const P of [M.pool, M.trail].filter(Boolean)) assert.ok(P.secs > 0 && P.dps > 0, `${id}: the ground it leaves`);
+  }
+  // a boss's marks come one after another, and what it does after each is something it can do
+  for (const [kind, K] of Object.entries(FOES)) {
+    let last = 1;
+    for (const ph of K.rt?.phases || []) {
+      assert.ok(ph.at > 0 && ph.at < last, `${kind}: phases in order`);
+      last = ph.at;
+      for (const m of ph.moves || []) assert.ok(BEAST_MOVES[m], `${kind}: unknown move ${m}`);
+    }
   }
 });
 

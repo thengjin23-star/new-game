@@ -1881,6 +1881,9 @@ canvas.bigmap {
     width: 130px;
     height: 130px;
   }
+  .cbt-boss {
+    right: 152px;
+  }
   .hud-row {
     max-width: calc(100% - 160px);
   }
@@ -2095,6 +2098,75 @@ canvas.bigmap {
 
 .cbt-foe.enraged .cbt-bar.foe i {
   background: #d8402c;
+}
+
+/* a boss: its name and blood right across, marked where it changes */
+.cbt-boss {
+  position: absolute;
+  left: 12px;
+  right: 120px;
+  top: calc(var(--fsat) + 100px);
+  max-width: 520px;
+  display: none;
+  gap: 3px;
+}
+
+.cbt-boss.on {
+  display: grid;
+}
+
+.cbt-boss-name {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  color: var(--red);
+  text-shadow: 0 0 3px rgba(250, 246, 236, 0.95), 0 0 7px rgba(250, 246, 236, 0.9);
+}
+
+.cbt-boss-name b {
+  font-size: 17px;
+  letter-spacing: 0.08em;
+}
+
+.cbt-boss-name span {
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.cbt-bar.boss {
+  height: 12px;
+  background: rgba(35, 32, 27, 0.4);
+  border: 1.5px solid rgba(35, 32, 27, 0.75);
+  box-shadow: 0 0 0 1px rgba(250, 246, 236, 0.55);
+}
+
+.cbt-bar.boss i {
+  background: linear-gradient(#c2402f, #8f2a22);
+}
+
+.cbt-bar.boss em {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  margin-left: -1px;
+  background: rgba(250, 246, 236, 0.95);
+  box-shadow: 0 0 2px rgba(35, 32, 27, 0.9);
+}
+
+.cbt-bar.boss em.past {
+  opacity: 0.35;
+}
+
+.cbt-boss.enraged .cbt-bar.boss i {
+  background: linear-gradient(#ee5534, #b02a1c);
+  animation: rage 0.9s ease-in-out infinite alternate;
+}
+
+@keyframes rage {
+  to {
+    filter: brightness(1.25);
+  }
 }
 
 /* the buttons, under the right thumb */

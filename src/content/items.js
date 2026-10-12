@@ -50,6 +50,10 @@ export const ITEMS = {
     name: '狼皮', kind: 'material', sell: 4,
     desc: '灰狼的皮，毛色雜亂。鎮上的皮匠肯收。',
   },
+  fire_tiger_pelt: {
+    name: '赤炎虎皮', kind: 'material', sell: 60,
+    desc: '赤炎妖虎的皮，摸上去還是溫熱的。坊市裡識貨的人肯出高價。',
+  },
   beast_core: {
     name: '妖獸內丹', kind: 'material', sell: 18,
     desc: '一階妖獸的內丹，只有指甲蓋大小。坊市的丹師會收，煉丹時用得上。',

@@ -186,6 +186,114 @@ function bear(ctx, t, moving) {
   ctx.fillRect(20.5, -20, 1.3, 1.3);
 }
 
+/** 赤炎妖虎: a great red tiger, black-striped, flame running along its back and at the tip of its tail. */
+function fireTiger(ctx, t, moving) {
+  const ph = moving ? Math.sin(t * 10) * 2 : 0;
+  const coat = 'rgba(196,82,36,1)';
+  const dark = 'rgba(120,40,20,1)';
+  // legs
+  ctx.lineCap = 'round';
+  ctx.strokeStyle = dark;
+  ctx.lineWidth = 3.4;
+  ctx.beginPath();
+  for (const x of [-14, -7, 8, 15]) {
+    ctx.moveTo(x, -10);
+    ctx.lineTo(x + ph * (x > 0 ? 1 : -1), -0.5);
+  }
+  ctx.stroke();
+  // the tail, ending in a flame
+  const sw = Math.sin(t * 3) * 3;
+  ctx.strokeStyle = coat;
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.moveTo(-18, -16);
+  ctx.quadraticCurveTo(-28, -18 + sw * 0.4, -30, -27 + sw);
+  ctx.stroke();
+  flameTongue(ctx, -30, -27 + sw, 5.5, t, 0);
+  // the body, a pale belly beneath
+  ctx.fillStyle = coat;
+  ctx.beginPath();
+  ctx.ellipse(0, -15, 21, 9, -0.04, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = 'rgba(236,214,180,0.9)';
+  ctx.beginPath();
+  ctx.ellipse(1, -9.5, 15, 3.4, 0, 0, Math.PI * 2);
+  ctx.fill();
+  // stripes
+  ctx.strokeStyle = 'rgba(30,22,18,0.92)';
+  ctx.lineWidth = 1.6;
+  for (const x of [-13, -7, -1, 5, 11]) {
+    ctx.beginPath();
+    ctx.moveTo(x + 1, -23);
+    ctx.quadraticCurveTo(x - 2, -18, x + 0.5, -13);
+    ctx.stroke();
+  }
+  ctx.strokeStyle = rgba(INK, 0.8);
+  ctx.lineWidth = 0.9;
+  ctx.beginPath();
+  ctx.ellipse(0, -15, 21, 9, -0.04, 0, Math.PI * 2);
+  ctx.stroke();
+  // flame along its back
+  for (let k = 0; k < 5; k++) flameTongue(ctx, -12 + k * 5.5, -23.5, 3.2 + (k % 2) * 1.2, t, k);
+  // the head: ears, a white muzzle, gold eyes, 王 on its brow
+  ctx.fillStyle = coat;
+  ctx.beginPath();
+  ctx.moveTo(18, -25);
+  ctx.lineTo(19.5, -30);
+  ctx.lineTo(22, -26);
+  ctx.moveTo(24, -26);
+  ctx.lineTo(26.5, -30.5);
+  ctx.lineTo(27.5, -25);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(23, -20, 7.5, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = rgba(INK, 0.85);
+  ctx.lineWidth = 0.9;
+  ctx.stroke();
+  ctx.fillStyle = 'rgba(244,232,212,1)';
+  ctx.beginPath();
+  ctx.ellipse(27.5, -16.5, 4, 3, 0.2, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = 'rgba(250,200,60,1)';
+  ctx.beginPath();
+  ctx.arc(26, -21.5, 1.3, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = 'rgba(20,16,14,1)';
+  ctx.fillRect(26, -22, 0.7, 1.1);
+  ctx.strokeStyle = 'rgba(30,22,18,0.9)';
+  ctx.lineWidth = 0.7;
+  ctx.beginPath();
+  for (const y of [-26.2, -24.6, -23]) {
+    ctx.moveTo(21.4, y);
+    ctx.lineTo(24.4, y);
+  }
+  ctx.moveTo(22.9, -26.2);
+  ctx.lineTo(22.9, -23);
+  ctx.stroke();
+  ctx.fillStyle = 'rgba(30,22,18,1)';
+  ctx.beginPath();
+  ctx.arc(30.6, -17.4, 1, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+/** A tongue of flame at (x, y), flickering. */
+function flameTongue(ctx, x, y, r, t, k) {
+  const f = 1 + Math.sin(t * 13 + k * 1.7) * 0.18;
+  const h = r * 2.2 * f;
+  const g = ctx.createRadialGradient(x, y - h * 0.25, 0, x, y - h * 0.3, h);
+  g.addColorStop(0, 'rgba(255,240,170,0.95)');
+  g.addColorStop(0.45, 'rgba(250,150,50,0.85)');
+  g.addColorStop(1, 'rgba(220,60,20,0)');
+  ctx.fillStyle = g;
+  ctx.beginPath();
+  ctx.moveTo(x - r * 0.8, y);
+  ctx.quadraticCurveTo(x - r * 0.6, y - h * 0.6, x + Math.sin(t * 9 + k) * r * 0.4, y - h);
+  ctx.quadraticCurveTo(x + r * 0.7, y - h * 0.5, x + r * 0.8, y);
+  ctx.closePath();
+  ctx.fill();
+}
+
 function skeleton(ctx, t, moving) {
   const bone = 'rgba(226,220,204,1)';
   const ph = moving ? Math.sin(t * 8) * 2 : 0;
@@ -254,7 +362,7 @@ function skeleton(ctx, t, moving) {
 /** The big ones: a demon wolf, the wolf king, the python, the iron-backed bear, the skeleton general. */
 export function drawBigBeast(ctx, kind, { t = 0, face = 1, moving = false } = {}) {
   ctx.save();
-  groundShadow(ctx, 0, 0, { demon_wolf: 15, wolf_king: 22, python: 24, bear: 22, skeleton: 12 }[kind] || 14, 3);
+  groundShadow(ctx, 0, 0, { demon_wolf: 15, wolf_king: 22, python: 24, bear: 22, skeleton: 12, fire_tiger: 25 }[kind] || 14, 3);
   ctx.scale(face, 1);
   switch (kind) {
     case 'demon_wolf':
@@ -274,13 +382,17 @@ export function drawBigBeast(ctx, kind, { t = 0, face = 1, moving = false } = {}
     case 'skeleton':
       skeleton(ctx, t, moving);
       break;
+    case 'fire_tiger':
+      ctx.scale(1.15, 1.15);
+      fireTiger(ctx, t, moving);
+      break;
     default:
       break;
   }
   ctx.restore();
 }
 
-export const BIG_BEASTS = new Set(['demon_wolf', 'wolf_king', 'python', 'bear', 'skeleton']);
+export const BIG_BEASTS = new Set(['demon_wolf', 'wolf_king', 'python', 'bear', 'skeleton', 'fire_tiger']);
 
 /** Props that flicker or sway (repainted as they go); the rest are still. */
 export const LIVE_PROPS = new Set(['campfire', 'ginseng', 'wisp']);

@@ -245,6 +245,8 @@ export const BEASTS = [
   // 黑風林: 獨眼龍 and his men; a lone demon wolf where the wood thins toward 青石鎮
   { id: 'bandits_a', kind: 'bandit', lead: 'bandit_chief', n: 3, title: '黑風寨', x: 2120, y: 1610, r: 200, event: 'forest_bandits', respawn: 90, power: 32 },
   { id: 'demon_wolf_a', kind: 'demon_wolf', x: 2400, y: 2150, r: 170, respawn: 5, power: 28, tier: 1 },
+  // 古戰場北緣的焦土: a wild boss, alone
+  { id: 'fire_tiger_a', kind: 'fire_tiger', title: '赤炎妖虎', x: 1800, y: 380, r: 160, respawn: 30, power: 80 },
   // the road east: someone waiting at the bend
   { id: 'robber_road', kind: 'cultivator', name: '劫修', n: 1, x: 3060, y: 2420, r: 140, event: 'travel_robber', respawn: 120, power: 30 },
   // 古戰場: the restless dead

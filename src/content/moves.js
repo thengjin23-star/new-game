@@ -121,8 +121,21 @@ export const PILL_CD = 8;
  *   'fan'  a blow in front of it: reach, arc (the whole fan); lunge: how far it steps into it
  *   'leap' a straight rush along a line: from min to max off, at speed, width wide, carrying on overshoot
  *   'shot' something loosed along a line: from min to max off, flying range at speed, width wide
+ *          (count of them at once, fanned spread apart — in radians)
+ *   'ring' a blow all round it, radius wide; push: how far it throws whoever it catches
+ *   'zone' the ground where you stand (min to max off) bursts, radius wide (count of them: the rest
+ *          spread about you); pool: what it leaves there
+ *   'call' it calls others to it: call { kind, n, max (at once), share (of its strength), secs, line };
+ *          first: how long into a fight before it first can
+ *   'blink' gone from where it stood, and there, the other side of you (when you come within near)
  * mult: as a multiple of its plain blow. poison: [seconds, share of a blow each second] it leaves
  * in you; drain: the share of what it takes that it keeps as its own blood. fx: how the blow looks.
+ * combo: it does it this many times running, each after the first gathered in again seconds.
+ * pool: ground that hurts a while after — { secs, r, dps (share of a blow each second), kind:
+ *   'venom' | 'fire' | 'blood', poison }; on a fan it lies along its reach.
+ * trail: a rush that leaves the ground burning behind it ({ secs, width, dps }).
+ * hold: a rush that, catching you, holds you fast — [seconds, share of a blow each half-second]
+ *   (step aside to break free).
  */
 export const BEAST_MOVES = {
   // 妖狼 — 撕咬: a short lunge with the jaws
@@ -149,4 +162,33 @@ export const BEAST_MOVES = {
   // 殘魂: a slow bolt of cold that drinks what it takes; a clutch at your heart
   soul: { shape: 'shot', min: 40, max: 260, range: 300, windup: 0.62, speed: 230, width: 22, recover: 0.5, cd: 2.4, mult: 1, drain: 0.5, fx: 'soul' },
   grasp: { shape: 'fan', reach: 50, arc: 1.6, windup: 0.5, recover: 0.6, cd: 2, mult: 1.1, lunge: 16, drain: 0.5, fx: 'grasp' },
+
+  // ── bosses ──
+  // 狼王: the king's spring, three times running; a howl that brings the pack
+  kingpounce: { shape: 'leap', min: 90, max: 240, windup: 0.75, speed: 680, width: 40, overshoot: 40, recover: 1.1, cd: 9, mult: 1.5, combo: 3, again: 0.42 },
+  packcall: { shape: 'call', windup: 1, recover: 0.6, cd: 16, first: 5, fx: 'howl', call: { kind: 'wolf', n: 2, max: 3, share: 0.3, line: '狼王一聲長嚎，林子裡又竄出了狼！' } },
+  // 靈溪蟒: the tail all round it; venom spat where you stand (it lies there a while); coils
+  tail: { shape: 'ring', radius: 80, windup: 0.8, recover: 0.8, cd: 5, mult: 1.4, push: 60, fx: 'ring' },
+  spit: { shape: 'zone', min: 60, max: 280, radius: 44, windup: 0.9, recover: 0.6, cd: 4.5, mult: 0.9, fx: 'venom', pool: { secs: 5, r: 44, dps: 0.3, kind: 'venom', poison: [3, 0.12] } },
+  spitrain: { shape: 'zone', min: 0, max: 300, radius: 40, windup: 1, recover: 0.7, cd: 8, mult: 0.9, count: 3, spread: 80, fx: 'venom', pool: { secs: 5, r: 40, dps: 0.3, kind: 'venom', poison: [3, 0.12] } },
+  constrict: { shape: 'leap', min: 30, max: 160, windup: 0.7, speed: 520, width: 34, overshoot: 20, recover: 1, cd: 9, mult: 0.8, hold: [1.6, 0.35] },
+  // 骷髏將軍: the halberd all the way round; the ground where you stand split open; a charge
+  whirl: { shape: 'ring', radius: 92, windup: 0.95, recover: 0.9, cd: 6, mult: 1.8, push: 70, fx: 'ring' },
+  smash: { shape: 'zone', min: 0, max: 260, radius: 62, windup: 1.05, recover: 0.8, cd: 5, mult: 2.1, fx: 'quake' },
+  bonecharge: { shape: 'leap', min: 100, max: 280, windup: 0.9, speed: 560, width: 46, overshoot: 40, recover: 1.1, cd: 8, mult: 1.9 },
+  // 血袍人: blood qi that drinks what it takes (three at once, later); a ring of blood about him
+  bloodqi: { shape: 'shot', min: 60, max: 300, range: 340, windup: 0.6, speed: 380, width: 20, recover: 0.45, cd: 2.6, mult: 1.1, drain: 0.5, fx: 'bloodqi' },
+  bloodfan: { shape: 'shot', min: 40, max: 300, range: 340, windup: 0.75, speed: 380, width: 20, recover: 0.5, cd: 6, mult: 1, drain: 0.5, count: 3, spread: 0.32, fx: 'bloodqi' },
+  bloodring: { shape: 'ring', radius: 115, windup: 1, recover: 0.8, cd: 9, mult: 1.3, push: 40, drain: 0.6, fx: 'bloodring' },
+  // 胡三娘: fox fire, three at once; gone from where she stood; shadows of herself
+  foxvolley: { shape: 'shot', min: 50, max: 300, range: 330, windup: 0.6, speed: 330, width: 18, recover: 0.4, cd: 3.2, mult: 1, count: 3, spread: 0.3, fx: 'foxfire' },
+  foxbolt: { shape: 'shot', min: 50, max: 280, range: 300, windup: 0.7, speed: 300, width: 16, recover: 0.5, cd: 3.4, mult: 1, fx: 'foxfire' },
+  blink: { shape: 'blink', near: 90, windup: 0.3, recover: 0.3, cd: 6, fx: 'blink' },
+  phantoms: { shape: 'call', windup: 0.9, recover: 0.5, cd: 18, first: 2, fx: 'blink', call: { kind: 'fox_phantom', phantom: true, n: 2, max: 2, share: 0.35, secs: 14, line: '白衣女子的身影一晃，分出了兩個一模一樣的她！' } },
+  // 赤炎妖虎: claws, three in a row; a spring that leaves the ground burning; a roar that throws you
+  // back; fire from its jaws
+  fireclaw: { shape: 'fan', reach: 62, arc: 1.7, windup: 0.5, recover: 0.75, cd: 3.2, mult: 1.05, lunge: 12, fx: 'claw', combo: 3, again: 0.26 },
+  firepounce: { shape: 'leap', min: 100, max: 250, windup: 0.75, speed: 660, width: 40, overshoot: 40, recover: 0.9, cd: 6.5, mult: 1.6, trail: { secs: 3.5, width: 30, dps: 0.3 } },
+  roar: { shape: 'ring', radius: 130, windup: 0.8, recover: 0.7, cd: 10, mult: 0.6, push: 110, fx: 'roar' },
+  breath: { shape: 'fan', reach: 150, arc: 0.85, windup: 0.95, recover: 1, cd: 8, mult: 1.8, lunge: 0, fx: 'breath', pool: { secs: 3, r: 30, dps: 0.3, kind: 'fire' } },
 };

@@ -48,6 +48,12 @@ const ALLY_SHARE = 0.55;
 const ALLY_LIFT = 0.45;
 /** Far stronger than a beast, and it runs. */
 const FAR_STRONGER = 2.2;
+/** A boss is a fight of its own: this much more blood than another of its strength (by simulation). */
+let BOSS_HP = 2;
+/** For tuning by simulation. */
+export function tune(k, v) {
+  if (k === 'BOSS_HP') BOSS_HP = v;
+}
 /** Further off than this, a beast rests at home and is not thought about. */
 const AWAKE = 1700;
 /** Ground a beast will not follow you onto. */
@@ -60,7 +66,7 @@ export const TIER_NAME = ['凡獸', '一階', '二階', '三階', '四階'];
 const PERSON_RANK = ['凡人', '煉氣', '築基', '金丹', '元嬰'];
 
 /** What a beast is doing that means it is after you. */
-const HUNTING = new Set(['chase', 'windup', 'leap', 'recover', 'hop', 'howl', 'stun']);
+const HUNTING = new Set(['chase', 'windup', 'leap', 'recover', 'hop', 'howl', 'roar', 'stun']);
 /**
  * Out of the fight: dead and fading, gone until it comes back, running off,
  * on its knees, on its way (the matter settled).
@@ -69,6 +75,7 @@ const DOWN = new Set(['dead', 'gone', 'vanish', 'flee', 'yield', 'leave', 'down'
 
 const FALL_TEXT = {
   demon_wolf: '妖狼把你撲倒在地。牠的牙擦過你的喉嚨，眼前一黑——\n\n醒來時，天色已經變了。那頭狼不見了，大概是嫌你不好吃。你身上多了好幾道血口。',
+  fire_tiger: '赤炎妖虎把你撲倒在地，一股熱浪燎得你睜不開眼——\n\n醒來時，你躺在焦土邊上，衣衫燒得破破爛爛，渾身是傷。那頭大虎早已不見蹤影。',
   beast: '你倒下了，眼前一黑——\n\n醒來時，天色已經變了。四下無人，只剩一身的傷。',
 };
 
@@ -80,7 +87,7 @@ export function combatOf(s) {
   let C = LIVE.get(s);
   if (!C) {
     C = {
-      on: false, t: 0, me: null, beasts: null, shots: [], fx: [], pops: [], preview: null, notes: [], signals: [],
+      on: false, t: 0, me: null, beasts: null, shots: [], fx: [], pops: [], pools: [], preview: null, notes: [], signals: [],
       beaten: 0, foes: new Set(), quiet: 0, outcome: null, trial: null, rt: null, heard: {}, told: {}, uid: 0,
     };
     LIVE.set(s, C);
@@ -230,7 +237,7 @@ function spawn(s, def, k = 0) {
   const R = { ...K.rt, ...(def.rt || null) };
   const who = def.who?.[k] || null;
   const b = {
-    uid: n > 1 ? `${def.id}:${k}` : def.id, k, def, kind, K, R, phantom: !!def.phantom, story: !!def.story, side: def.side || 'foe',
+    uid: n > 1 ? `${def.id}:${k}` : def.id, k, def, kind, K, R, phantom: !!def.phantom, story: !!def.story, summon: !!def.summon, side: def.side || 'foe',
     lead: k === 0 && !!(def.lead || def.leader), talker: !!(R.talk && def.event && !def.story), cond: (def.event && !def.story && EVENTS[def.event]?.cond) || null,
     baseName: who?.name || (k === 0 && def.name) || K.name, baseRank: who?.rank || null, baseTier: who?.tier ?? null, npcId: who?.npcId || null,
     home: [x, y], x, y, vx: 0, vy: 0, face: 1, dir: [1, 0], moving: false,
@@ -260,7 +267,7 @@ function groupOf(s, C, b) {
  * you in). Those you are dealing with stay until the matter is settled.
  */
 function present(s, b) {
-  if (b.phantom || b.stay || b.story) return true;
+  if (b.phantom || b.stay || b.story || b.summon) return true;
   const m = s.world.mobs || {};
   if (s.day < (m[b.def.id] ?? -1)) return false;
   if (b.uid !== b.def.id && s.day < (m[b.uid] ?? -1)) return false;
@@ -291,6 +298,25 @@ export function fightingPeople(s) {
   return new Set(beastsOf(s).filter((b) => b.story && b.npcId && b.state !== 'vanished').map((b) => b.npcId));
 }
 
+/** The boss you are fighting, if it is one (for the bar across the top): its blood, the marks where it changes, its rage. */
+export function bossOf(s) {
+  const C = combatOf(s);
+  if (!C.on) return null;
+  const w = s.world;
+  let best = null;
+  let bd = Infinity;
+  for (const b of beastsOf(s, C)) {
+    if (!b.K.boss || !foe(b) || !b.aggro || !b.armed || !alive(b) || !present(s, b)) continue;
+    const d = Math.hypot(b.x - w.x, b.y - w.y);
+    if (d < bd) {
+      bd = d;
+      best = b;
+    }
+  }
+  if (!best) return null;
+  return { uid: best.uid, name: best.name, rank: rankOf(best), hp: best.hp, maxHp: best.maxHp, marks: (best.R.phases || []).map((p) => p.at), phase: best.phase, enraged: !!best.enraged, gap: best.gap };
+}
+
 /** Beasts you could go for (they show the act button: 出手). */
 export function beastTargets(s) {
   return beastsInWorld(s, 700)
@@ -314,9 +340,15 @@ function reset(b) {
     x: b.home[0], y: b.home[1], tx: b.home[0], ty: b.home[1], state: homeState(b), st: 0, wait: 1, aggro: false,
     hp: b.maxHp, armed: false, burn: null, enraged: false, howled: false, fade: 0, lostT: 0, calm: 0, move: null, moving: false,
     token: false, rest: 0, pause: 0, stay: false, Dset: null, tierSet: b.baseTier, rank: b.baseRank, name: b.baseName, tgt: null,
+    phase: 0, moves: null, combo: 0, zones: null, holding: false,
   });
-  // a leap or a shot takes a moment to come: it does not open with one
-  b.cds = Object.fromEntries((b.R.moves || []).map((id) => [id, BEAST_MOVES[id].shape === 'fan' ? 0 : 1.2]));
+  // a leap or a shot takes a moment to come: it does not open with one (nor with a call to others)
+  b.cds = Object.fromEntries((b.R.moves || []).map((id) => [id, BEAST_MOVES[id].first ?? (BEAST_MOVES[id].shape === 'fan' ? 0 : 1.2)]));
+}
+
+/** What it can do now (a boss worn past a mark fights another way). */
+function movesNow(b) {
+  return b.moves || b.R.moves || [];
 }
 
 /**
@@ -342,7 +374,7 @@ function arm(s, C, b) {
   b.D = D;
   b.tier = tier;
   b.gap = gap;
-  b.maxHp = Math.max(6, Math.round((me.atk * HITS * rel * K.hp) / shape));
+  b.maxHp = Math.max(6, Math.round(((me.atk * HITS * rel * K.hp) / shape) * (K.boss ? BOSS_HP : 1)));
   b.hp = Math.max(1, Math.round(b.maxHp * frac));
   // 境界壓制: a realm above yours bites harder, moves faster, and shrugs off most of what you do
   // (one below yours, a little the other way)
@@ -527,7 +559,34 @@ function hurtBeast(s, C, b, base, io, { kind = 'phys', by = null } = {}) {
     b.st = 0;
     engage(s, C, b, io);
   }
+  if (R.phases) phaseUp(s, C, b, io);
   return true;
+}
+
+/**
+ * A boss worn down past a mark (R.phases: { at: its share of blood, moves,
+ * enrage, line }): it gathers itself with a roar, and comes on another way —
+ * near the end, in a rage.
+ */
+function phaseUp(s, C, b, io) {
+  const P = b.R.phases;
+  let up = false;
+  while (b.phase < P.length && b.hp <= b.maxHp * P[b.phase].at) {
+    const ph = P[b.phase];
+    b.phase += 1;
+    if (ph.moves) {
+      b.moves = ph.moves;
+      // what it has newly come to, it comes to soon (not all at once)
+      for (const id of ph.moves) if (!(id in b.cds)) b.cds[id] = BEAST_MOVES[id].first ?? 0.8;
+    }
+    if (ph.enrage) b.enraged = true;
+    if (ph.line) io.feed('bad', ph.line);
+    up = true;
+  }
+  if (!up) return;
+  Object.assign(b, { state: 'roar', st: 0, moving: false, move: null, combo: 0, zones: null, kb: null });
+  C.fx.push({ kind: 'roar', x: b.x, y: b.y, t0: C.t, dur: 0.9 });
+  io.signal({ combat: 'phase', name: b.name, phase: b.phase, enraged: b.enraged });
 }
 
 /**
@@ -616,6 +675,10 @@ function fell(s, C, b, io) {
     io.feed('good', `${b.name}散成了一縷青煙。`);
     return;
   }
+  if (b.summon) {
+    io.feed('good', `${b.name}倒下了。`);
+    return;
+  }
   if (!b.story) away(s, b.uid, b.def.respawn ?? 10);
   const report = newReport();
   const gains = [['xw', Math.max(1, Math.round(b.D * (b.K.boss ? 0.4 : 0.25)))]];
@@ -641,9 +704,10 @@ function giveUp(s, C, b, io) {
 function bested(s, C, io) {
   const me = C.me;
   me.hp = 1;
-  Object.assign(me, { act: null, dash: null, kb: null, auto: false, hold: false, press: 0, steer: null, target: null, poison: null });
+  Object.assign(me, { act: null, dash: null, kb: null, auto: false, hold: false, press: 0, steer: null, target: null, poison: null, held: null });
   for (const b of beastsOf(s, C)) if (hunting(b)) Object.assign(b, { state: 'talk', st: 0, aggro: false, moving: false, move: null });
   C.shots = [];
+  C.pools = [];
   C.on = false;
   C.outcome = 'fell';
   io.signal({ combat: 'spar' });
@@ -663,8 +727,8 @@ function rout(s, C, b, io, line = null) {
 
 /** Knocked reeling (whatever it was gathering itself for comes to nothing); push: thrown back along (ux, uy). */
 function stagger(b, secs, push = null) {
-  if (!alive(b) || b.state === 'talk') return;
-  if (push) b.kb = { ux: push[0], uy: push[1], left: push[2] };
+  if (!alive(b) || b.state === 'talk' || b.state === 'roar') return;
+  if (push) b.kb = { ux: push[0], uy: push[1], left: push[2] * (b.K.boss ? 0.35 : 1) };
   if (!(secs > 0)) return;
   Object.assign(b, { state: 'stun', st: 0, stunT: secs * (b.K.boss ? 0.5 : 1), move: null, moving: false });
 }
@@ -695,9 +759,10 @@ function morale(s, C, b, io) {
 /** You go down. The beasts lose interest; you wake later, hurt (and the story, if there is one, says how). */
 function fallen(s, C, b, io) {
   const me = C.me;
-  Object.assign(me, { act: null, dash: null, kb: null, auto: false, hold: false, press: 0, steer: null, target: null, shield: 0, shieldT: 0, poison: null, regen: null, ward: null });
+  Object.assign(me, { act: null, dash: null, kb: null, auto: false, hold: false, press: 0, steer: null, target: null, shield: 0, shieldT: 0, poison: null, regen: null, ward: null, held: null });
   for (const x of beastsOf(s, C)) if (hunting(x) || x.state === 'notice') calmDown(x, true);
   C.shots = [];
+  C.pools = [];
   C.on = false;
   C.outcome = 'fell';
   io.signal({ combat: 'fell' });
@@ -761,12 +826,14 @@ function engage(s, C, b, io, line = null) {
 
 /** It gives up on you and goes home (and its wounds close as it goes). */
 function calmDown(b, heal = false) {
-  Object.assign(b, { state: 'return', st: 0, aggro: false, calm: 4, move: null, burn: null, enraged: false, howled: false, lostT: 0, token: false, pause: 0 });
+  Object.assign(b, { state: 'return', st: 0, aggro: false, calm: 4, move: null, burn: null, enraged: false, howled: false, lostT: 0, token: false, pause: 0, phase: 0, moves: null, combo: 0, zones: null, holding: false });
   if (heal && b.maxHp) b.hp = b.maxHp;
 }
 
 function finish(s, C, io) {
   C.on = false;
+  C.pools = [];
+  C.me.held = null;
   // won: you beat at least one of them, and none of those you fought is still standing
   const standing = beastsOf(s, C).some((b) => C.foes.has(b.uid) && alive(b) && present(s, b));
   const won = C.beaten > 0 && !standing;
@@ -1001,7 +1068,7 @@ export function updateCombat(s, dt, io) {
     if (b.state === 'gone') reset(b);
     // the matter settled (you paid, they spoke, the fight is over): on their way
     if ((b.stay || b.story) && (b.state === 'talk' || b.state === 'yield') && !s.rtFight && !C.rt) leave(b);
-    if (!b.phantom && !b.stay && !b.story && !hunting(b) && Math.hypot(b.x - w.x, b.y - w.y) > AWAKE) {
+    if (!b.phantom && !b.stay && !b.story && !b.summon && !hunting(b) && Math.hypot(b.x - w.x, b.y - w.y) > AWAKE) {
       if (b.state !== homeState(b) || b.x !== b.home[0]) reset(b);
       continue;
     }
@@ -1024,6 +1091,8 @@ export function updateCombat(s, dt, io) {
   if (s.pending || s.dead) return STILL;
   flyShots(s, C, dt, io);
   if (s.pending || s.dead) return STILL;
+  poolsTick(s, C, dt, io);
+  if (s.pending || s.dead) return STILL;
   C.fx = C.fx.filter((f) => C.t - f.t0 < (f.dur || 0.6));
   C.pops = C.pops.filter((p) => C.t - p.t0 < 1.1);
   if (C.on) {
@@ -1034,7 +1103,7 @@ export function updateCombat(s, dt, io) {
   }
   const act = me.act;
   const mult = act && !act.done ? (act.kind === 'cast' ? 0.35 : 0.55) : act ? 0.75 : 1;
-  return { on: C.on, moved, hold: !!(me.dash || me.kb), mult, steer: me.auto ? me.steer : null };
+  return { on: C.on, moved, hold: !!(me.dash || me.kb || me.held), mult, steer: me.auto ? me.steer : null };
 }
 
 /** You hear them before they come (once, as you draw near a group). */
@@ -1061,6 +1130,11 @@ function think(s, C, b, dt, io) {
   const w = s.world;
   const R = b.R;
   b.st += dt;
+  // one called into the fight: gone with whoever called it (or when its time is up)
+  if (b.summon && alive(b) && (!alive(b.master) || !b.master.aggro || (b.until && C.t > b.until))) {
+    Object.assign(b, { state: b.phantom ? 'vanish' : 'flee', st: 0, aggro: false, moving: false, move: null, token: false });
+    untarget(C, b);
+  }
   for (const k of Object.keys(b.cds)) b.cds[k] = Math.max(0, b.cds[k] - dt);
   if (b.burn && alive(b)) {
     b.burn.left -= dt;
@@ -1162,19 +1236,50 @@ function think(s, C, b, dt, io) {
       if (M.shape === 'fan') {
         // the blow lands: a short lunge into it, and whoever is in the fan is caught
         beastStep(s, b, b.aim[0], b.aim[1], M.lunge || 0);
-        C.fx.push({ kind: M.fx || 'bite', x: b.x, y: b.y, dir: b.aim, reach: M.reach, arc: M.arc, t0: C.t, dur: 0.3, foe: foe(b) });
+        C.fx.push({ kind: M.fx || 'bite', x: b.x, y: b.y, dir: b.aim, reach: M.reach, arc: M.arc, t0: C.t, dur: M.pool ? 0.5 : 0.3, foe: foe(b) });
         spent(b, M);
         strikeFan(s, C, b, M, io);
+        if (M.pool) poolsAlong(C, b, M);
       } else if (M.shape === 'leap') {
-        Object.assign(b, { state: 'leap', st: 0, went: 0, hit: false, hitSet: new Set(), from: [b.x, b.y] });
+        Object.assign(b, { state: 'leap', st: 0, went: 0, hit: false, hitSet: new Set(), from: [b.x, b.y], trailAt: 0 });
+        break;
+      } else if (M.shape === 'ring') {
+        // all round it at once
+        C.fx.push({ kind: M.fx || 'ring', x: b.x, y: b.y, r: M.radius, t0: C.t, dur: 0.55 });
+        spent(b, M);
+        strikeAround(s, C, b, M, b.x, b.y, M.radius, io, M.push || 0);
+      } else if (M.shape === 'zone') {
+        // the ground bursts where it marked (where you stood)
+        spent(b, M);
+        for (const [zx, zy] of b.zones || []) {
+          C.fx.push({ kind: M.fx || 'quake', x: zx, y: zy, r: M.radius, t0: C.t, dur: 0.6 });
+          strikeAround(s, C, b, M, zx, zy, M.radius, io);
+          if (s.pending || s.dead) return;
+          if (M.pool) pool(C, b, zx, zy, M.pool);
+        }
+        b.zones = null;
+      } else if (M.shape === 'call') {
+        spent(b, M);
+        summon(s, C, b, M, io);
+      } else if (M.shape === 'blink') {
+        spent(b, M);
+        blinkAway(s, C, b, at);
       } else {
-        // loosed: it flies on its own now (one of yours: at them)
-        const sh = { kind: M.fx, by: b, move: M, x: b.x + b.aim[0] * 12, y: b.y + b.aim[1] * 12, ux: b.aim[0], uy: b.aim[1], speed: M.speed, left: M.range, r: M.width / 2, mult: M.mult };
-        if (foe(b)) sh.foe = true;
-        else Object.assign(sh, { dmg: b.dmg * M.mult, hurt: 'spirit', by: b });
-        shoot(C, sh);
+        // loosed (one, or several fanned out): it flies on its own now (one of yours: at them)
+        const n = M.count || 1;
+        const a0 = Math.atan2(b.aim[1], b.aim[0]);
+        for (let k = 0; k < n; k++) {
+          const a = a0 + (k - (n - 1) / 2) * (M.spread || 0);
+          const [vx, vy] = [Math.cos(a), Math.sin(a)];
+          const sh = { kind: M.fx, by: b, move: M, x: b.x + vx * 12, y: b.y + vy * 12, ux: vx, uy: vy, speed: M.speed, left: M.range, r: M.width / 2, mult: M.mult };
+          if (foe(b)) sh.foe = true;
+          else Object.assign(sh, { dmg: b.dmg * M.mult, hurt: 'spirit', by: b });
+          shoot(C, sh);
+        }
         spent(b, M);
       }
+      if (s.pending || s.dead) break;
+      if (b.state === 'recover') again(b, M, ux, uy, d);
       break;
     }
     case 'leap': {
@@ -1187,10 +1292,20 @@ function think(s, C, b, dt, io) {
       b.moving = true;
       strikeLine(s, C, b, M, x0, y0, io);
       if (s.pending || s.dead) break;
+      // a rush that sets the ground alight behind it
+      if (M.trail && b.went - b.trailAt >= 24) {
+        b.trailAt = b.went;
+        pool(C, b, b.x, b.y, M.trail, M.trail.width / 2);
+      }
       if (b.state === 'leap' && (b.went >= b.len - 0.5 || went < want * 0.3)) {
         spent(b, M);
         b.moving = false;
         C.fx.push({ kind: 'land', x: b.x, y: b.y, t0: C.t, dur: 0.45 });
+        // coiled about you: it holds on, where it is, for as long as it has you
+        if (b.holding) {
+          b.rec = Math.max(b.rec, M.hold[0] + 0.15);
+          b.holding = false;
+        } else again(b, M, ux, uy, d);
       }
       break;
     }
@@ -1242,6 +1357,15 @@ function think(s, C, b, dt, io) {
       }
       break;
     }
+    case 'roar': {
+      // worn past a mark: it gathers itself, and comes on another way
+      b.moving = false;
+      if (b.st >= 0.85) {
+        b.state = 'chase';
+        b.st = 0;
+      }
+      break;
+    }
     case 'return': {
       const hx = b.home[0] - b.x;
       const hy = b.home[1] - b.y;
@@ -1270,10 +1394,10 @@ function think(s, C, b, dt, io) {
       if (!b.moving) b.moving = beastStep(s, b, -uy * b.strafe, ux * b.strafe, R.speed * dt) > 0.01;
       if (b.st > 1.6) b.fade = Math.min(1, b.fade + dt * 1.5);
       if (b.fade >= 1) {
-        // gone for the day (one from a story, for good)
-        if (!b.story) away(s, b.def.id, 1);
+        // gone for the day (one from a story, or called in, for good)
+        if (!b.story && !b.summon) away(s, b.def.id, 1);
         b.stay = false;
-        b.state = b.story ? 'vanished' : 'gone';
+        b.state = b.story || b.summon ? 'vanished' : 'gone';
       }
       break;
     }
@@ -1282,7 +1406,7 @@ function think(s, C, b, dt, io) {
       if (b.st > 1.2) b.fade = Math.min(1, b.fade + dt * 1.2);
       if (b.fade >= 1) {
         b.stay = false;
-        b.state = b.story ? 'vanished' : 'gone';
+        b.state = b.story || b.summon ? 'vanished' : 'gone';
       }
       break;
     }
@@ -1291,7 +1415,7 @@ function think(s, C, b, dt, io) {
       if (b.st > 0.9) b.fade = Math.min(1, b.fade + dt * 1.2);
       if (b.fade >= 1) {
         b.stay = false;
-        b.state = b.phantom || b.story ? 'vanished' : 'gone';
+        b.state = b.phantom || b.story || b.summon ? 'vanished' : 'gone';
       }
       break;
     }
@@ -1319,7 +1443,7 @@ function spotted(s, C, b, io, d, ux, uy) {
     // it was waiting for you: it strikes before you know it is there
     b.state = 'chase';
     engage(s, C, b, io);
-    const move = (b.R.moves || [])[0];
+    const move = movesNow(b)[0];
     if (move) windup(b, move, ux, uy, d, 0.75);
     return;
   }
@@ -1392,23 +1516,38 @@ function standOff(b, may) {
   if (R.keep) return R.keep;
   if (!may) return [R.ring - 14, R.ring + 14];
   let reach = Infinity;
-  for (const id of R.moves || []) if (BEAST_MOVES[id].shape === 'fan') reach = Math.min(reach, BEAST_MOVES[id].reach);
+  for (const id of movesNow(b)) if (BEAST_MOVES[id].shape === 'fan') reach = Math.min(reach, BEAST_MOVES[id].reach);
   return [0, reach < Infinity ? reach - 12 : 30];
 }
 
 /** What it can do from where it stands, if anything (its moves, tried in order). */
 function pickMove(s, C, b, d, ux, uy, dt) {
   const w = s.world;
-  for (const id of b.R.moves || []) {
+  for (const id of movesNow(b)) {
     const M = BEAST_MOVES[id];
     if ((b.cds[id] || 0) > 0) continue;
     if (M.shape === 'fan') {
       if (d <= M.reach + PLAYER_R * 0.4) return id;
     } else if (M.shape === 'leap') {
       if (d >= M.min && d <= M.max && b.rng() < dt * 2.4 && clearPath(s, b, ux, uy, d)) return id;
+    } else if (M.shape === 'ring') {
+      if (d <= M.radius * 0.8 && b.rng() < dt * 3) return id;
+    } else if (M.shape === 'zone') {
+      if (d >= M.min && d <= M.max + 40 && b.rng() < dt * 1.6) return id;
+    } else if (M.shape === 'call') {
+      if (calledBy(s, C, b) < M.call.max && b.rng() < dt) return id;
+    } else if (M.shape === 'blink') {
+      if (d < M.near && b.rng() < dt * 4) return id;
     } else if (d >= M.min && d <= M.max && b.rng() < dt * 2 && clearShot(b.x, b.y, w.x, w.y)) return id;
   }
   return null;
+}
+
+/** How many it has called into the fight that are still in it. */
+function calledBy(s, C, b) {
+  let n = 0;
+  for (const x of beastsOf(s, C)) if (x.master === b && alive(x)) n++;
+  return n;
 }
 
 /** Ambling about its own ground. */
@@ -1437,15 +1576,45 @@ function wander(s, b, dt) {
   }
 }
 
-/** It gathers itself for a move (quick: a share of the usual time, for one that was lying in wait). */
-function windup(b, move, ux, uy, d, quick = 1) {
+/**
+ * It gathers itself for a move (quick: a share of the usual time, for one that
+ * was lying in wait; more: the next of a run of blows, which comes quicker).
+ */
+function windup(b, move, ux, uy, d, quick = 1, more = false) {
   const M = BEAST_MOVES[move];
   Object.assign(b, { state: 'windup', st: 0, move, moving: false, aim: [ux, uy] });
   look(b, ux, uy);
-  b.wind = M.windup * (b.enraged ? 0.82 : 1) * quick;
+  if (!more) b.combo = M.combo || 0;
+  b.wind = (more ? M.again : M.windup) * (b.enraged ? 0.82 : 1) * quick;
   b.from = [b.x, b.y];
   if (M.shape === 'leap') b.len = Math.min(M.max + M.overshoot, d + M.overshoot);
   else if (M.shape === 'shot') b.len = M.range;
+  else if (M.shape === 'zone') b.zones = zonesOf(b, M, ux, uy, d);
+}
+
+/** One of a run of blows (or springs): straight into the next, turned to whoever it is after. */
+function again(b, M, ux, uy, d) {
+  if (!(b.combo > 1)) {
+    b.combo = 0;
+    return;
+  }
+  b.combo -= 1;
+  windup(b, b.last, ux, uy, d, 1, true);
+}
+
+/** Where the ground will burst: where whoever it is after stands (as far as it reaches), and the rest round about. */
+function zonesOf(b, M, ux, uy, d) {
+  const r = Math.min(d, M.max);
+  const x = b.x + ux * r;
+  const y = b.y + uy * r;
+  const out = [[x, y]];
+  const n = M.count || 1;
+  const a0 = b.rng() * Math.PI * 2;
+  for (let k = 1; k < n; k++) {
+    const a = a0 + ((k - 1) / (n - 1)) * Math.PI * 2;
+    out.push([x + Math.cos(a) * M.spread, y + Math.sin(a) * M.spread]);
+  }
+  return out;
 }
 
 /**
@@ -1514,7 +1683,103 @@ function strikeLine(s, C, b, M, x0, y0, io) {
   }
   if (foe(b) && !b.hit && segDist(x0, y0, b.x, b.y, w.x, w.y) <= b.R.body + PLAYER_R) {
     b.hit = true;
-    hurtMe(s, C, b, M.mult, io, [b.aim[0], b.aim[1], 34], M);
+    const took = hurtMe(s, C, b, M.mult, io, M.hold ? null : [b.aim[0], b.aim[1], 34], M);
+    if (M.hold && took >= 0 && !s.pending && !s.dead) hold(C, b, M);
+  }
+}
+
+/** Coiled about you: you cannot go anywhere, and it squeezes — until you step aside out of it. */
+function hold(C, b, M) {
+  C.me.held = { left: M.hold[0], tick: 0.5, mult: M.hold[1], by: b };
+  C.me.kb = null;
+  b.holding = true;
+  b.went = b.len;
+  say(C, 'bad', `${b.name}纏住了你！快閃避掙脫！`);
+}
+
+/** Everyone against it within r of (x, y) is caught (and you thrown out from there by push). */
+function strikeAround(s, C, b, M, x, y, r, io, push = 12) {
+  const w = s.world;
+  for (const o of beastsOf(s, C)) {
+    if (!alive(o) || !present(s, o) || o === b || foe(o) === foe(b)) continue;
+    if (Math.hypot(o.x - x, o.y - y) > r + o.R.body) continue;
+    if (foe(b)) hurtAlly(s, C, o, b, M.mult, io, M);
+    else hurtBeast(s, C, o, b.dmg * M.mult, io, { by: b });
+    if (s.pending || s.dead) return;
+  }
+  const d = Math.hypot(w.x - x, w.y - y);
+  if (!foe(b) || d > r + PLAYER_R) return;
+  const [ux, uy] = d > 1 ? [(w.x - x) / d, (w.y - y) / d] : b.aim;
+  hurtMe(s, C, b, M.mult, io, push ? [ux, uy, push] : null, M);
+}
+
+// ── what a boss does besides ──
+
+/** Ground that hurts a while: venom where it was spat, fire where it burned. */
+function pool(C, b, x, y, P, r = P.r) {
+  C.pools.push({ x, y, r, kind: P.kind || 'fire', t0: C.t, until: C.t + P.secs, mult: P.dps * 0.5, poison: P.poison || null, by: b, tick: 0.25 });
+}
+
+/** A fan that leaves the ground burning: along its reach. */
+function poolsAlong(C, b, M) {
+  for (const f of [0.35, 0.65, 0.95]) pool(C, b, b.x + b.aim[0] * M.reach * f, b.y + b.aim[1] * M.reach * f, M.pool);
+}
+
+/** Whoever stands in it is hurt every half second (stepping through it in a dash, you are not). */
+function poolsTick(s, C, dt, io) {
+  if (!C.pools.length) return;
+  C.pools = C.pools.filter((p) => p.until > C.t);
+  const me = C.me;
+  const w = s.world;
+  for (const p of C.pools) {
+    p.tick -= dt;
+    if (p.tick > 0) continue;
+    p.tick = 0.5;
+    for (const a of beastsOf(s, C)) {
+      if (a.side !== 'ally' || !alive(a) || Math.hypot(a.x - p.x, a.y - p.y) > p.r + a.R.body * 0.5) continue;
+      hurtAlly(s, C, a, p.by, p.mult, io);
+    }
+    if (!C.on || me.dash || me.inv > 0 || Math.hypot(w.x - p.x, w.y - p.y) > p.r + PLAYER_R * 0.5) continue;
+    hurtMe(s, C, p.by, p.mult, io, null, p.poison ? { poison: p.poison } : null);
+    if (s.pending || s.dead) return;
+  }
+}
+
+/** It calls others into the fight: they come in from about it (no more than max of them at once). */
+function summon(s, C, b, M, io) {
+  const K = M.call;
+  const list = beastsOf(s, C);
+  const n = Math.min(K.n, K.max - calledBy(s, C, b));
+  if (n <= 0) return;
+  for (let k = 0; k < n; k++) {
+    const a = b.rng() * Math.PI * 2;
+    const [x, y] = nearestOpen(s, b.x + Math.cos(a) * 150, b.y + Math.sin(a) * 150, 6) || [b.x, b.y];
+    const def = { id: `${b.uid}~${++C.uid}`, kind: K.kind, n: 1, x, y, r: 60, power: b.D, story: b.story, summon: true, phantom: !!K.phantom, rt: { share: K.share ?? 0.3 } };
+    const x2 = spawn(s, def, 0);
+    Object.assign(x2, { master: b, until: K.secs ? C.t + K.secs : null, npcId: K.phantom ? b.npcId : null });
+    arm(s, C, x2);
+    Object.assign(x2, { state: 'chase', st: 0, aggro: true, pause: 0.35 + k * 0.2 });
+    list.push(x2);
+    C.foes.add(x2.uid);
+    C.fx.push({ kind: K.phantom ? 'blink' : 'land', x, y, t0: C.t, dur: 0.6 });
+  }
+  C.fx.push({ kind: M.fx || 'howl', x: b.x, y: b.y, t0: C.t, dur: 0.9 });
+  if (K.line) io.feed('bad', K.line);
+}
+
+/** Gone from where it stood, and there: the other side of whoever it is after, at its distance. */
+function blinkAway(s, C, b, at) {
+  const far = (b.R.keep?.[1] ?? 200) * 0.85;
+  const a0 = Math.atan2(b.y - at.y, b.x - at.x) + Math.PI;
+  for (let k = 0; k < 9; k++) {
+    const a = a0 + (k % 2 ? 1 : -1) * Math.ceil(k / 2) * 0.5 + (b.rng() - 0.5) * 0.4;
+    const x = at.x + Math.cos(a) * far;
+    const y = at.y + Math.sin(a) * far;
+    if (collides(s, x, y, 12) || !isReachable(x, y)) continue;
+    C.fx.push({ kind: 'blink', x: b.x, y: b.y, t0: C.t, dur: 0.5 });
+    Object.assign(b, { x, y, kb: null, path: null });
+    C.fx.push({ kind: 'blink', x, y, t0: C.t, dur: 0.5 });
+    return;
   }
 }
 
@@ -1589,6 +1854,18 @@ function heroTick(s, C, dt, io) {
       }
     }
     if (P.left <= 0) me.poison = null;
+  }
+  // coiled about: nothing to do but take it — or break free with a step aside
+  if (me.held) {
+    const H = me.held;
+    H.left -= dt;
+    H.tick -= dt;
+    if (H.tick <= 0 && H.left > 0 && alive(H.by)) {
+      H.tick = 0.5;
+      hurtMe(s, C, H.by, H.mult, io);
+      if (s.pending || s.dead) return 0;
+    }
+    if (me.held && (H.left <= 0 || !alive(H.by) || H.by.state !== 'recover')) me.held = null;
   }
   // 回春: blood coming back a little at a time; 金剛: braced, for a while
   if (me.regen) {
@@ -2049,6 +2326,13 @@ export function dashCmd(s, dir = null) {
   ux /= n;
   uy /= n;
   me.cds.dash = dashCd(s);
+  // held fast: a step aside breaks free (and it is slow to come at you again)
+  if (me.held) {
+    const H = me.held.by;
+    if (H.state === 'recover') H.rec = Math.min(H.rec, H.st + 0.5);
+    me.held = null;
+    say(C, 'good', '你掙脫了！');
+  }
   // a dash cuts off what you were only starting
   if (me.act && !me.act.done) me.act = null;
   Object.assign(me, { auto: false, hold: false, press: 0, steer: null });

@@ -29,6 +29,8 @@
  *   talk: it comes up to have a word first (its event), from this far off
  *   warn: what you hear before it comes; cry: what you see as it does; scared: what it does instead
  *     when you are far too much for it ([alone, a group]); broke: when a group gives up
+ *   phases (a boss): worn down to a share of its blood (at), it roars and fights another way —
+ *     moves: what it does from then on; enrage: in a rage (quicker, harder); line: what you see
  */
 export const FOES = {
   wolf: {
@@ -50,7 +52,11 @@ export const FOES = {
     name: '狼王', hp: 1.5, atk: 1.1, boss: true, loot: [[1, 'wolf_pelt', 2]],
     rt: {
       tier: 1, speed: 190, walk: 50, sight: 300, lose: 520, loseT: 1.6, leash: 1000, body: 20, bulk: 1.6, tall: 36,
-      notice: 0.6, moves: ['bite', 'pounce'], hop: 0.3, howl: 0.5, cry: '狼王仰起頭，一聲長嚎震得樹葉簌簌直落！',
+      notice: 0.6, moves: ['bite', 'pounce', 'packcall'], hop: 0.3, cry: '狼王仰起頭，一聲長嚎震得樹葉簌簌直落！',
+      phases: [
+        { at: 0.6, moves: ['bite', 'kingpounce', 'packcall'], line: '狼王弓起了背，眼裡透出凶光——牠要一撲接著一撲了！' },
+        { at: 0.3, enrage: true, line: '狼王仰天長嚎，渾身的毛都豎了起來——牠發狂了！' },
+      ],
     },
   },
   snake: {
@@ -65,7 +71,11 @@ export const FOES = {
     name: '靈溪蟒', hp: 1.55, atk: 1.1, boss: true,
     rt: {
       tier: 1, speed: 105, walk: 30, sight: 260, lose: 400, loseT: 1.6, leash: 700, body: 22, bulk: 0.9, tall: 30,
-      notice: 0.6, moves: ['bite', 'strike'], cry: '大蟒昂起頭，豎瞳死死盯住了你！',
+      notice: 0.6, moves: ['tail', 'bite', 'spit'], cry: '大蟒昂起頭，豎瞳死死盯住了你！',
+      phases: [
+        { at: 0.55, moves: ['tail', 'bite', 'constrict', 'spitrain'], line: '大蟒吃痛，毒涎四濺，身子一圈圈盤了起來！' },
+        { at: 0.25, enrage: true, line: '靈溪蟒狂怒地翻騰起來，攪得溪水都渾了！' },
+      ],
     },
   },
   bear: {
@@ -124,7 +134,11 @@ export const FOES = {
     name: '血袍人', hp: 1.3, atk: 1.15, boss: true,
     rt: {
       tier: 1, person: true, look: 'foe', weapon: 'fists', speed: 182, walk: 40, sight: 280, lose: 460, loseT: 1.6, leash: 900, body: 11, tall: 37,
-      notice: 0.4, moves: ['grasp', 'qi'], keep: [110, 210], cry: '血袍人的袖子一抖，一股血腥氣撲面而來！',
+      notice: 0.4, moves: ['grasp', 'bloodqi'], keep: [110, 210], cry: '血袍人的袖子一抖，一股血腥氣撲面而來！',
+      phases: [
+        { at: 0.5, moves: ['bloodring', 'grasp', 'bloodfan', 'bloodqi'], line: '血袍人渾身血氣翻湧，周身亮起一圈血光！' },
+        { at: 0.25, enrage: true, line: '血袍人咬破舌尖，一口血霧噴出——他拚命了！' },
+      ],
     },
   },
   swordsman: {
@@ -153,14 +167,41 @@ export const FOES = {
     name: '骷髏將軍', hp: 1.8, atk: 1.25, boss: true, loot: [[1, 'beast_core', 1]],
     rt: {
       tier: 1, speed: 118, walk: 30, sight: 260, lose: 420, loseT: 1.6, leash: 800, body: 15, bulk: 1.3, tall: 70,
-      notice: 0.6, moves: ['cleave', 'rush'], cry: '骷髏將軍的眼眶裡燃起兩點鬼火，斷戟一橫！',
+      notice: 0.6, moves: ['whirl', 'cleave', 'bonecharge'], cry: '骷髏將軍的眼眶裡燃起兩點鬼火，斷戟一橫！',
+      phases: [
+        { at: 0.5, moves: ['whirl', 'cleave', 'smash', 'bonecharge'], line: '骷髏將軍把斷戟往地上一頓——大地裂開了！' },
+        { at: 0.25, enrage: true, line: '骷髏將軍眼中的鬼火暴漲，渾身骨節咯咯作響！' },
+      ],
     },
   },
   fox_spirit: {
     name: '胡三娘', hp: 1.1, atk: 1.1, boss: true,
     rt: {
       tier: 1, person: true, look: 'foe', weapon: 'fists', speed: 190, walk: 40, sight: 300, lose: 480, loseT: 1.6, leash: 900, body: 10, tall: 37,
-      notice: 0.4, moves: ['grasp', 'soul'], keep: [120, 230], flee: 0.2, cry: '白衣女子笑了一聲，指尖燃起一朵藍火。',
+      notice: 0.4, moves: ['blink', 'grasp', 'foxvolley'], keep: [120, 230], flee: 0.2, cry: '白衣女子笑了一聲，指尖燃起一朵藍火。',
+      phases: [{ at: 0.55, moves: ['blink', 'phantoms', 'grasp', 'foxvolley'], line: '白衣女子輕笑一聲，身影晃了晃。' }],
+    },
+  },
+  // 胡三娘 made twice over: shadows of her that cast fox fire and go to nothing at a touch
+  fox_phantom: {
+    name: '狐影', hp: 0.5, atk: 0.8,
+    rt: {
+      tier: 1, person: true, look: 'foe', weapon: 'fists', speed: 170, walk: 40, sight: 300, lose: 600, loseT: 3, leash: 2000, body: 10, tall: 37,
+      notice: 0, moves: ['foxbolt', 'grasp'], keep: [110, 220],
+    },
+  },
+  // 古戰場北緣的焦土上: a tiger of fire. Worn down, it roars and breathes flame; near the end, in a rage
+  fire_tiger: {
+    name: '赤炎妖虎', hp: 1.6, atk: 1.2, boss: true, loot: [[1, 'beast_core', 2], [1, 'fire_tiger_pelt', 1]],
+    rt: {
+      tier: 1, speed: 196, walk: 46, sight: 250, lose: 520, loseT: 1.8, leash: 900, body: 22, bulk: 1.5, tall: 38,
+      notice: 0.7, moves: ['fireclaw', 'firepounce'], hop: 0.2,
+      phases: [
+        { at: 0.66, moves: ['roar', 'fireclaw', 'breath', 'firepounce'], line: '赤炎妖虎渾身騰起烈焰，一聲咆哮震得你耳中嗡嗡作響！' },
+        { at: 0.33, enrage: true, line: '赤炎妖虎的皮毛燒得通紅——牠發狂了！' },
+      ],
+      warn: '空氣裡一股焦糊味，地上的草全都枯黃了。', cry: '赤炎妖虎一聲咆哮，從焦土上撲了過來！',
+      scared: ['那頭大虎看了你一眼，慢慢走開了。', '那頭大虎看了你一眼，慢慢走開了。'],
     },
   },
 };

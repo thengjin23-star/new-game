@@ -29,8 +29,11 @@ const SOUL = [170, 200, 240];
 const FOX = [110, 160, 255];
 const GOLD = [214, 170, 70];
 const LEAF = [96, 168, 96];
+const BLOOD = [176, 28, 36];
+const VENOM = [96, 150, 60];
+const DUST = [120, 100, 80];
 /** The light a move gathers into as you cast it. */
-const GLOW = { fire: FIRE, shield: [120, 170, 230], foeqi: FOE_QI, foxfire: FOX, mend: LEAF, iron: GOLD, sweep: GOLD, charge: GOLD };
+const GLOW = { fire: FIRE, shield: [120, 170, 230], foeqi: FOE_QI, foxfire: FOX, mend: LEAF, iron: GOLD, sweep: GOLD, charge: GOLD, bloodqi: BLOOD, bloodring: BLOOD, blink: FOX };
 
 // ── figures ──
 
@@ -88,12 +91,16 @@ export function paintBeast(ctx, b, t, now, { tint = true, pic = null } = {}) {
     ctx.translate(0, -Math.sin(Math.min(1, b.st / 0.26) * Math.PI) * 9);
   } else if (st === 'recover' && !person && !spirit) {
     ctx.scale(1.03, 0.94);
-  } else if (st === 'howl') {
+  } else if (st === 'howl' || st === 'roar' || (st === 'windup' && M?.shape === 'call' && !person)) {
+    // head thrown back (a roar shakes it)
     ctx.rotate(-b.face * 0.2 * Math.min(1, b.st / 0.2));
+    if (st === 'roar') ctx.translate(Math.sin(now * 50) * 0.7, 0);
   } else if (st === 'stun') {
     // reeling: a sway it cannot help
     ctx.rotate(Math.sin(now * 14) * 0.12);
   }
+  // about to be somewhere else: fading as it gathers itself
+  if (st === 'windup' && M?.shape === 'blink') ctx.globalAlpha *= 1 - 0.75 * p;
   if (pic) pic(ctx);
   else figure(ctx, b, t, now, p);
   if (tint) {
@@ -177,7 +184,7 @@ function personOf(ctx, b, t, now, p) {
   }
   const M = b.move ? BEAST_MOVES[b.move] : null;
   const last = b.last ? BEAST_MOVES[b.last] : null;
-  if (st === 'windup' && M?.shape === 'shot') cast(ctx, { fx: 'foeqi' }, face, p, 0, now);
+  if (st === 'windup' && M && M.shape !== 'fan' && M.shape !== 'leap') cast(ctx, { fx: GLOW[M.fx] ? M.fx : 'foeqi' }, face, p, 0, now);
   else if (st === 'windup') swing(ctx, P.weapon, face, p * 0.98, 0, P.blade);
   else if (st === 'leap') swing(ctx, P.weapon, face, 0.6, 0, P.blade);
   else if (st === 'recover' && last && last.shape !== 'shot') swing(ctx, P.weapon, face, 1, Math.min(1, b.st / 0.3), P.blade);
@@ -346,6 +353,28 @@ export function drawGroundMarks(g, s, C, kit, u = 1) {
     const M = BEAST_MOVES[b.move];
     if (!M) continue;
     const p = b.state === 'windup' ? Math.min(1, b.st / b.wind) : 1;
+    if (M.shape === 'call' || M.shape === 'blink') continue;
+    if (M.shape === 'ring' || M.shape === 'zone') {
+      // all round it, or where you stand: a circle filling as it gathers itself
+      if (b.state !== 'windup') continue;
+      const spots = M.shape === 'ring' ? [[b.x, b.y]] : b.zones || [];
+      const r = M.radius + (M.shape === 'ring' ? 6 : 0);
+      for (const [zx, zy] of spots) {
+        g.fillStyle = rgba(RED, 0.13);
+        ring(g, zx, zy, r);
+        g.fill();
+        g.fillStyle = rgba(RED, 0.3);
+        ring(g, zx, zy, r * p);
+        g.fill();
+        g.strokeStyle = rgba(RED, 0.8);
+        g.lineWidth = lw(M.shape === 'ring' ? 2.2 : 1.8);
+        if (M.shape === 'zone') g.setLineDash([lw(7), lw(4)]);
+        ring(g, zx, zy, r);
+        g.stroke();
+        g.setLineDash([]);
+      }
+      continue;
+    }
     if (M.shape === 'fan') {
       if (b.state !== 'windup') continue;
       const r = M.reach + 8;
@@ -362,32 +391,51 @@ export function drawGroundMarks(g, s, C, kit, u = 1) {
       continue;
     }
     if (M.shape === 'shot' && b.state !== 'windup') continue;
-    // a leap (a rush, a strike) or a shot: a lane along the ground, an arrow at its far end
+    // a leap (a rush, a strike) or a shot (or a volley of them): a lane along the ground, an arrow at its far end
     const [fx, fy] = b.from || [b.x, b.y];
     const shot = M.shape === 'shot';
     const width = shot ? M.width + 8 : Math.max(M.width, b.R.body * 2 + 8);
     const fade = b.state === 'leap' ? 0.6 : 1;
-    g.fillStyle = rgba(RED, (shot ? 0.1 : 0.14) * fade);
-    band(g, fx, fy, b.aim[0], b.aim[1], b.len, width);
+    const n = shot ? M.count || 1 : 1;
+    const a0 = Math.atan2(b.aim[1], b.aim[0]);
+    for (let k = 0; k < n; k++) {
+      const a = a0 + (k - (n - 1) / 2) * (M.spread || 0);
+      const [ux, uy] = n > 1 ? [Math.cos(a), Math.sin(a)] : b.aim;
+      g.fillStyle = rgba(RED, (shot ? 0.1 : 0.14) * fade);
+      band(g, fx, fy, ux, uy, b.len, width);
+      g.fill();
+      g.fillStyle = rgba(RED, (shot ? 0.26 : 0.32) * fade);
+      band(g, fx, fy, ux, uy, b.len * p, width);
+      g.fill();
+      g.strokeStyle = rgba(RED, 0.75 * fade);
+      g.lineWidth = lw(shot ? 1.2 : 1.6);
+      if (shot) g.setLineDash([lw(8), lw(5)]);
+      band(g, fx, fy, ux, uy, b.len, width);
+      g.stroke();
+      g.setLineDash([]);
+      const ex = fx + ux * b.len;
+      const ey = fy + uy * b.len;
+      g.fillStyle = rgba(RED, 0.6 * fade);
+      g.beginPath();
+      g.moveTo(ex + ux * 10, ey + uy * 10);
+      g.lineTo(ex - uy * 9, ey + ux * 9);
+      g.lineTo(ex + uy * 9, ey - ux * 9);
+      g.closePath();
+      g.fill();
+    }
+  }
+  // ground that hurts: venom spat, fire, blood (fading in, and out as it ends)
+  for (const pl of C.pools || []) {
+    const a = Math.min(1, (now - pl.t0) / 0.25) * Math.max(0, Math.min(1, (pl.until - now) / 0.6));
+    const col = pl.kind === 'venom' ? VENOM : pl.kind === 'blood' ? BLOOD : FIRE;
+    const fl = pl.kind === 'fire' ? 0.06 * Math.sin(now * 13 + pl.x * 0.3) : 0.03 * Math.sin(now * 4 + pl.y);
+    g.fillStyle = rgba(col, (pl.kind === 'fire' ? 0.3 : 0.34) * a);
+    ring(g, pl.x, pl.y, pl.r * (1 + fl));
     g.fill();
-    g.fillStyle = rgba(RED, (shot ? 0.26 : 0.32) * fade);
-    band(g, fx, fy, b.aim[0], b.aim[1], b.len * p, width);
-    g.fill();
-    g.strokeStyle = rgba(RED, 0.75 * fade);
-    g.lineWidth = lw(shot ? 1.2 : 1.6);
-    if (shot) g.setLineDash([lw(8), lw(5)]);
-    band(g, fx, fy, b.aim[0], b.aim[1], b.len, width);
+    g.strokeStyle = rgba(col, 0.7 * a);
+    g.lineWidth = lw(1.4);
+    ring(g, pl.x, pl.y, pl.r * (0.94 + fl));
     g.stroke();
-    g.setLineDash([]);
-    const ex = fx + b.aim[0] * b.len;
-    const ey = fy + b.aim[1] * b.len;
-    g.fillStyle = rgba(RED, 0.6 * fade);
-    g.beginPath();
-    g.moveTo(ex + b.aim[0] * 10, ey + b.aim[1] * 10);
-    g.lineTo(ex - b.aim[1] * 9, ey + b.aim[0] * 9);
-    g.lineTo(ex + b.aim[1] * 9, ey - b.aim[0] * 9);
-    g.closePath();
-    g.fill();
   }
   // whom you are after
   const me = C.me;
@@ -536,6 +584,47 @@ export function drawGroundMarks(g, s, C, kit, u = 1) {
       g.lineWidth = lw(2);
       ring(g, f.x, f.y, 14 + p * 26);
       g.stroke();
+    } else if ((f.kind === 'ring' || f.kind === 'roar' || f.kind === 'bloodring') && f.r) {
+      // a shockwave running out to where it reached
+      const col = f.kind === 'bloodring' ? BLOOD : f.kind === 'roar' ? FIRE : DUST;
+      const r = f.r || 70;
+      g.fillStyle = rgba(col, 0.14 * (1 - p));
+      ring(g, f.x, f.y, r);
+      g.fill();
+      g.strokeStyle = rgba(col, 0.8 * (1 - p));
+      g.lineWidth = lw(3.5 * (1 - p) + 1);
+      ring(g, f.x, f.y, r * (0.3 + 0.7 * Math.min(1, p * 1.7)));
+      g.stroke();
+    } else if (f.kind === 'quake') {
+      // the ground split open: cracks running out from the heart of it, and dust
+      g.strokeStyle = `rgba(60,48,38,${0.85 * (1 - p)})`;
+      g.lineWidth = lw(2);
+      for (let n = 0; n < 7; n++) {
+        const a = n * 0.9 + f.x * 0.013;
+        const r = f.r * (0.6 + 0.35 * ((n * 37) % 10) / 10);
+        g.beginPath();
+        g.moveTo(f.x, f.y);
+        g.lineTo(f.x + Math.cos(a) * r * 0.5 + Math.cos(a + 1.2) * 5, f.y + Math.sin(a) * r * 0.5 + Math.sin(a + 1.2) * 5);
+        g.lineTo(f.x + Math.cos(a) * r, f.y + Math.sin(a) * r);
+        g.stroke();
+      }
+      g.strokeStyle = rgba(DUST, 0.6 * (1 - p));
+      g.lineWidth = lw(3);
+      ring(g, f.x, f.y, f.r * (0.5 + p * 0.6));
+      g.stroke();
+    } else if (f.kind === 'venom') {
+      // a splash of venom where it came down
+      g.fillStyle = rgba(VENOM, 0.45 * (1 - p));
+      for (let n = 0; n < 6; n++) {
+        const a = n * 1.05 + f.y * 0.01;
+        ring(g, f.x + Math.cos(a) * f.r * 0.6 * (0.4 + p), f.y + Math.sin(a) * f.r * 0.6 * (0.4 + p), 5 * (1 - p) + 2);
+        g.fill();
+      }
+    } else if (f.kind === 'breath') {
+      // a sheet of fire over the ground in front of it
+      g.fillStyle = rgba(FIRE, 0.42 * (1 - p));
+      fan(g, f.x, f.y, f.dir, f.reach * Math.min(1, 0.4 + p * 2), f.arc);
+      g.fill();
     } else if (f.kind === 'slash' || f.kind === 'punch' || f.kind === 'cut') {
       // the sweep of the blow, along the ground
       g.fillStyle = f.foe ? rgba(RED, 0.2 * (1 - p)) : `rgba(250,246,236,${0.22 * (1 - p)})`;
@@ -627,6 +716,37 @@ export function drawCombatOverlay(ctx, proj, px, s, C, look, t, font) {
       ctx.fillStyle = rgba(LEAF, 0.95 * (1 - q));
       ctx.beginPath();
       ctx.arc(mx, my, (2.6 - q) * k * Math.max(1, px * 2), 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+  // coiled about you: loops of the snake's body, tightening
+  if (me?.held) {
+    const k = unitAt(proj, w.x, w.y);
+    const sq = 1 - 0.08 * Math.sin(now * 9);
+    for (const up of [6, 13, 20]) {
+      const [cx, cy] = proj(w.x, w.y, up);
+      ctx.strokeStyle = 'rgba(70,90,52,0.95)';
+      ctx.lineWidth = 3.4 * k * Math.max(1, px * 2);
+      ctx.beginPath();
+      ctx.ellipse(cx, cy, 11 * k * sq, 4 * k, 0, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.strokeStyle = 'rgba(150,170,110,0.7)';
+      ctx.lineWidth = 1 * k * Math.max(1, px * 2);
+      ctx.stroke();
+    }
+  }
+  // flames dancing off the ground where it burns
+  for (const pl of C.pools || []) {
+    if (pl.kind !== 'fire') continue;
+    const fade = Math.max(0, Math.min(1, (pl.until - now) / 0.6));
+    for (let n = 0; n < 3; n++) {
+      const q = (now * 1.3 + n / 3 + pl.x * 0.01) % 1;
+      const a = n * 2.1 + pl.y * 0.02;
+      const [fx, fy] = proj(pl.x + Math.cos(a) * pl.r * 0.45, pl.y + Math.sin(a) * pl.r * 0.3, 3 + q * 16);
+      const k = unitAt(proj, pl.x, pl.y);
+      ctx.fillStyle = rgba(q < 0.4 ? [255, 210, 110] : FIRE, 0.75 * (1 - q) * fade);
+      ctx.beginPath();
+      ctx.arc(fx, fy, (3.2 - q * 2) * k * Math.max(1, px * 2), 0, Math.PI * 2);
       ctx.fill();
     }
   }
@@ -833,7 +953,7 @@ function drawShot(ctx, proj, px, sh, now) {
   }
   if (sh.kind === 'foxfire') {
     // a flame of cold blue, flickering as it turns
-    const fl = 1 + Math.sin(now * 24 + sh.seek * 2) * 0.15;
+    const fl = 1 + Math.sin(now * 24 + (sh.seek || 0) * 2) * 0.15;
     for (let n = 3; n >= 1; n--) {
       const [tx, ty] = proj(sh.x - sh.ux * n * 7, sh.y - sh.uy * n * 7, 16 + n);
       ctx.fillStyle = rgba(FOX, 0.28 - n * 0.06);
@@ -875,8 +995,8 @@ function drawShot(ctx, proj, px, sh, now) {
     return;
   }
   // sword qi: a crescent of cold light, a faint wake behind it (red, thrown at you)
-  const col = sh.kind === 'foeqi' ? FOE_QI : QI;
-  const core = sh.kind === 'foeqi' ? 'rgba(255,236,230,0.95)' : 'rgba(235,252,255,0.95)';
+  const col = sh.kind === 'foeqi' ? FOE_QI : sh.kind === 'bloodqi' ? BLOOD : QI;
+  const core = sh.kind === 'foeqi' ? 'rgba(255,236,230,0.95)' : sh.kind === 'bloodqi' ? 'rgba(255,200,196,0.95)' : 'rgba(235,252,255,0.95)';
   const [bx, by] = proj(sh.x - sh.ux * 40, sh.y - sh.uy * 40, 15);
   const tail = ctx.createLinearGradient(bx, by, x, y);
   tail.addColorStop(0, rgba(col, 0));
@@ -1064,6 +1184,51 @@ function drawFx(ctx, proj, px, f, now) {
         ctx.beginPath();
         ctx.arc(x, y, (8 + q * 40) * k, -2.4, -0.7);
         ctx.stroke();
+      }
+      break;
+    }
+    case 'roar': {
+      // a roar: arcs of it thrown out from the head, red-gold
+      const [x, y] = proj(f.x, f.y, 26);
+      ctx.strokeStyle = rgba(FIRE, 0.8 * (1 - p));
+      ctx.lineWidth = 2.6 * px;
+      for (let n = 0; n < 4; n++) {
+        const q = (p * 1.4 + n * 0.22) % 1;
+        ctx.beginPath();
+        ctx.arc(x, y, (10 + q * 60) * k, -2.6, -0.5);
+        ctx.stroke();
+      }
+      break;
+    }
+    case 'blink': {
+      // a puff of blue fox fire where she was (or is)
+      const [x, y] = proj(f.x, f.y, 18);
+      for (let n = 0; n < 7; n++) {
+        const a = n * 0.9;
+        const r = (6 + p * 22) * k;
+        ctx.fillStyle = rgba(FOX, 0.6 * (1 - p));
+        ctx.beginPath();
+        ctx.arc(x + Math.cos(a) * r, y + Math.sin(a) * r * 0.7 - p * 10 * k, (3.5 - p * 2) * k * Math.max(1, px * 2), 0, Math.PI * 2);
+        ctx.fill();
+      }
+      break;
+    }
+    case 'breath': {
+      // flame pouring from its jaws over the ground in front
+      for (let n = 0; n < 10; n++) {
+        const q = (n / 10 + p * 0.8) % 1;
+        const side = Math.sin(n * 2.3) * f.arc * 0.4;
+        const a = Math.atan2(f.dir[1], f.dir[0]) + side;
+        const [x, y] = proj(f.x + Math.cos(a) * f.reach * q, f.y + Math.sin(a) * f.reach * q, 14 + q * 6);
+        const r = (4 + q * 9) * k * (1 - p * 0.6);
+        const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+        g.addColorStop(0, `rgba(255,240,170,${0.9 * (1 - p)})`);
+        g.addColorStop(0.5, rgba(FIRE, 0.7 * (1 - p)));
+        g.addColorStop(1, rgba(FIRE, 0));
+        ctx.fillStyle = g;
+        ctx.beginPath();
+        ctx.arc(x, y, r, 0, Math.PI * 2);
+        ctx.fill();
       }
       break;
     }

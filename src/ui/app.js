@@ -780,6 +780,8 @@ export function startApp(root, { speed = 1, view = null } = {}) {
         h('div.cbt-bar.mp', h('i'), h('span')),
       ),
       h('div.cbt-foe', h('div.cbt-foe-name'), h('div.cbt-bar.foe', h('i'))),
+      // a boss: its blood across the top, marked where it will change
+      h('div.cbt-boss', h('div.cbt-boss-name', h('b'), h('span')), h('div.cbt-bar.boss', h('i'))),
     );
   }
 
@@ -913,8 +915,26 @@ export function startApp(root, { speed = 1, view = null } = {}) {
     set($('.cbt-state'), 'textContent', C.trial ? '試煉' : me.poison ? '中毒' : pressed ? '境界壓制' : on ? '戰鬥中' : '');
     $('.cbt-state').classList.toggle('bad', pressed || !!me.poison);
     hpBar.classList.toggle('poison', !!me.poison);
+    const boss = on ? CB.bossOf(s) : null;
+    const bossEl = $('.cbt-boss');
+    bossEl.classList.toggle('on', !!boss);
+    if (boss) {
+      set(bossEl.querySelector('b'), 'textContent', boss.name);
+      set(bossEl.querySelector('span'), 'textContent', `${boss.rank}${boss.gap > 0 ? '・高你一個大境界' : ''}${boss.enraged ? '・狂暴' : ''}`);
+      const bar = bossEl.querySelector('.cbt-bar.boss');
+      bar.querySelector('i').style.width = `${Math.max(0, (boss.hp / boss.maxHp) * 100)}%`;
+      const key = `${boss.uid}:${boss.marks.join(',')}`;
+      if (bar.dataset.key !== key) {
+        bar.dataset.key = key;
+        for (const el of bar.querySelectorAll('em')) el.remove();
+        for (const m of boss.marks) bar.appendChild(h('em', { style: { left: `${m * 100}%` } }));
+      }
+      // the marks it has already passed
+      bar.querySelectorAll('em').forEach((el, k) => el.classList.toggle('past', k < boss.phase));
+      bossEl.classList.toggle('enraged', boss.enraged);
+    }
     const foeEl = $('.cbt-foe');
-    foeEl.classList.toggle('on', !!foe && on);
+    foeEl.classList.toggle('on', !!foe && on && !boss);
     if (foe) {
       const rank = CB.rankOf(foe);
       set(foeEl.querySelector('.cbt-foe-name'), 'textContent', rank ? `${foe.name}・${rank}${foe.gap > 0 ? '（高你一個大境界）' : ''}` : foe.name);
@@ -977,6 +997,7 @@ export function startApp(root, { speed = 1, view = null } = {}) {
       combatBanner('遭遇', sig.rank ? `${sig.name}・${sig.rank}` : sig.name);
     } else if (sig.combat === 'won') combatBanner('戰鬥結束', '勝');
     else if (sig.combat === 'spar') combatBanner('切磋', '負');
+    else if (sig.combat === 'phase' && sig.enraged) combatBanner(sig.name, '狂暴');
     else if (sig.combat === 'escaped') combatBanner('', '已脫離戰鬥');
   }
 

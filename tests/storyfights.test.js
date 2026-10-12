@@ -101,7 +101,7 @@ test('lose, and the story goes on as lost: you come to, hurt, not dead', () => {
 });
 
 test('a fight that breaks out where you meet it: the people there are the ones fighting, and yours fight beside you', () => {
-  const s = ready(3, 1, 3);
+  const s = ready(3, 1, 7);
   s.tod = 10;
   // on the road south of the market
   E.placeAt(s, 4010, 3180);
