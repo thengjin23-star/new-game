@@ -11,9 +11,9 @@
 //     blood over the beasts, your shield, the numbers rising.
 //
 // Positions come through proj(x, y, up) and px is the size of one screen pixel
-// in the drawing's own units (as in battlefx.js).
+// in the drawing's own units.
 
-import { drawPerson, drawWolf, drawSnake, drawGhost } from './figures.js';
+import { drawPerson, drawWolf, drawSnake, drawGhost, LOOKS } from './figures.js';
 import { drawBigBeast, drawPose, lookOf } from './scenery.js';
 import { INK, rgba } from './ink.js';
 import { BEAST_MOVES } from '../content/moves.js';
@@ -34,12 +34,17 @@ const GLOW = { fire: FIRE, shield: [120, 170, 230], foeqi: FOE_QI, foxfire: FOX,
 
 // ── figures ──
 
-/** How the people you fight look: 山賊 masked, 獨眼龍 big and patched, a 劫修 in dark robes. */
+/** How the people you fight look: 山賊 masked, 獨眼龍 big and patched; the rest by their kind's look (or the person they are). */
 const PEOPLE = {
   bandit: { look: { robe: [36, 34, 32], trim: [110, 30, 26], hair: 'bun', short: true }, weapon: 'chaidao', mask: true },
   bandit_chief: { look: { robe: [62, 44, 36], trim: [168, 132, 64], hair: 'bun', big: true }, weapon: 'chaidao', patch: true, blade: 20 },
-  cultivator: { look: lookOf('foe'), weapon: 'qinggang_sword' },
 };
+
+function personLook(b) {
+  const P = PEOPLE[b.kind];
+  if (P) return P;
+  return { look: (b.npcId && LOOKS[b.npcId]) || lookOf(b.R.look || 'foe'), weapon: b.R.weapon || 'qinggang_sword', mask: b.kind === 'masked' };
+}
 
 /**
  * A beast (or a person, or the dead), foot at (0, 0), in the pose of what it
@@ -131,9 +136,13 @@ function figure(ctx, b, t, now, p) {
 
 /** A person: the blade raised as he gathers himself, across as it lands, easing back after; on his knees, or fallen. */
 function personOf(ctx, b, t, now, p) {
-  const P = PEOPLE[b.kind] || PEOPLE.cultivator;
+  const P = personLook(b);
   const st = b.state;
   const face = b.face;
+  // knocked down (one at your side), or fallen
+  if (st === 'down') return drawPose(ctx, P.look, 'lie', { t, face });
+  // a spar ends with a bow, not on one's knees
+  if (st === 'yield' && b.def.spar) return drawPerson(ctx, 0, 0, P.look, { t, face });
   if (st === 'yield') {
     drawPose(ctx, P.look, 'kneel', { t, face });
     // the blade thrown down in front of him
@@ -333,7 +342,7 @@ export function drawGroundMarks(g, s, C, kit, u = 1) {
   const lw = (n) => n / u;
   // a coming blow: the whole of it faint, filling from the one striking out as it gathers itself
   for (const b of C.beasts || []) {
-    if (b.state !== 'windup' && b.state !== 'leap') continue;
+    if ((b.state !== 'windup' && b.state !== 'leap') || b.side === 'ally') continue;
     const M = BEAST_MOVES[b.move];
     if (!M) continue;
     const p = b.state === 'windup' ? Math.min(1, b.st / b.wind) : 1;
@@ -555,6 +564,7 @@ const POP = {
   poison: ['rgba(64,128,58,1)', 14, '700'],
   status: ['rgba(64,128,58,1)', 13, '800'],
   heal: ['rgba(70,130,170,1)', 13, '700'],
+  ally: ['rgba(120,84,60,1)', 13, '700'],
   weak: ['rgba(120,112,104,1)', 13, '700'],
 };
 
@@ -634,8 +644,24 @@ export function drawCombatOverlay(ctx, proj, px, s, C, look, t, font) {
     if (near > 520) continue;
     const [sx, sy] = proj(b.x, b.y, b.R.tall + 9 + (b.K.spirit ? 6 : 0));
     if (b.state === 'stun') reel(ctx, sx, sy + 14 * px, px, now);
+    if (b.side === 'ally') {
+      // one at your side: name and blood in jade
+      if (b.state === 'down') {
+        nameTag(ctx, sx, sy + 18 * px, `${b.name}（倒地）`, 'rgba(90,86,78,0.9)', px, font);
+        continue;
+      }
+      if (!b.armed || b.state === 'leave') continue;
+      const bw = 38 * px;
+      const bh = 4 * px;
+      ctx.fillStyle = 'rgba(30,26,22,0.5)';
+      ctx.fillRect(sx - bw / 2 - px, sy - bh / 2 - px, bw + 2 * px, bh + 2 * px);
+      ctx.fillStyle = 'rgba(59,106,91,0.95)';
+      ctx.fillRect(sx - bw / 2, sy - bh / 2, bw * Math.max(0, Math.min(1, b.hp / b.maxHp)), bh);
+      nameTag(ctx, sx, sy - 9 * px, b.name, 'rgba(46,96,80,1)', px, font);
+      continue;
+    }
     if (b.state === 'notice') mark(ctx, sx, sy - 4 * px, '？', 'rgba(35,32,27,0.9)', px, font);
-    else if (b.state === 'yield') say(ctx, sx, sy - 4 * px, '饒命！', px, font);
+    else if (b.state === 'yield') say(ctx, sx, sy - 4 * px, b.def.spar ? '承讓。' : '饒命！', px, font);
     else if (b.state === 'approach' || b.state === 'talk') nameTag(ctx, sx, sy, b.name, 'rgba(35,32,27,0.92)', px, font);
     else if (b.aggro && b.armed) {
       const bw = 44 * px;
@@ -686,7 +712,7 @@ export function drawCombatOverlay(ctx, proj, px, s, C, look, t, font) {
 }
 
 /** Numbers that are blood lost. */
-const MINUS = new Set(['dmg', 'burn', 'hurt', 'poison', 'weak']);
+const MINUS = new Set(['dmg', 'burn', 'hurt', 'poison', 'weak', 'ally']);
 
 /** A name over someone's head. */
 function nameTag(ctx, x, y, text, col, px, font) {
@@ -976,10 +1002,11 @@ function drawFx(ctx, proj, px, f, now) {
       ctx.stroke();
       break;
     }
+    case 'claw':
     case 'grasp': {
-      // three pale claws raking down
+      // three claws raking down (pale, from the dead)
       const [x, y] = proj(f.x + f.dir[0] * 24, f.y + f.dir[1] * 24, 16);
-      ctx.strokeStyle = rgba(SOUL, 0.95 * (1 - p));
+      ctx.strokeStyle = f.kind === 'claw' ? `rgba(250,246,236,${0.95 * (1 - p)})` : rgba(SOUL, 0.95 * (1 - p));
       ctx.lineWidth = 2 * px;
       for (let n = -1; n <= 1; n++) {
         const r = 10 * k;

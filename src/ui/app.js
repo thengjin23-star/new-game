@@ -4,9 +4,7 @@ import { createWorldView, paintWorldThumb } from '../art/worldview.js';
 import { createWorld3D, canDraw3D } from '../art/world3d.js';
 import { loadAssets, asset } from '../art/assets.js';
 import { newGame, rollFate, ORIGINS, ATTRS, attrWord } from '../core/state.js';
-import { startEvent, choose, continueEvent, finishFight } from '../core/events.js';
-import * as B from '../core/battle.js';
-import { createFightPlayer } from '../art/fightplayer.js';
+import { startEvent, choose, continueEvent } from '../core/events.js';
 import * as A from '../core/actions.js';
 import * as E from '../world/explore.js';
 import * as CB from '../world/combat.js';
@@ -20,7 +18,7 @@ import { POIS } from '../world/places.js';
 import { fogOf, isRevealed, exploredPct } from '../world/fog.js';
 import { ITEMS, displayItem } from '../content/items.js';
 import { TECHS } from '../content/techniques.js';
-import { SCHOOLS } from '../content/moves.js';
+import { SCHOOLS, PILL_CD } from '../content/moves.js';
 import { FRAGMENTS, FRAGMENT_TOTAL } from '../content/fragments.js';
 import { SYS_LEVELS, SYS_FEATURES } from '../world/system.js';
 import { npcAge, npcRealm, NAMED } from '../world/npcs.js';
@@ -110,11 +108,6 @@ export function startApp(root, { speed = 1, view = null } = {}) {
     thumbSeason: null,
     map: null,
     shell: null,
-    fight: null, // the fight as it is being shown
-    fightKey: null,
-    fightMenu: null, // 'skills' | 'items'
-    fightAim: null, // an action waiting for you to pick who
-    fightEndT: null,
   };
 
   // ── persistence ──
@@ -408,7 +401,7 @@ export function startApp(root, { speed = 1, view = null } = {}) {
 
   /** The 3D world where the device can draw it (and the player has not asked for the flat map). */
   function makeView(canvas) {
-    const opts = { onFrame, idle: () => !!(ui.s && !ui.s.battle && (ui.s.pending || ui.sheet || ui.s.dead)), fight: () => ui.fight };
+    const opts = { onFrame, idle: () => !!(ui.s && (ui.s.pending || ui.sheet || ui.s.dead)) };
     if (viewMode() === '3d') {
       try {
         let chosen = null;
@@ -494,7 +487,6 @@ export function startApp(root, { speed = 1, view = null } = {}) {
         if (ui.caption && Math.hypot(s.world.x - ui.caption.at[0], s.world.y - ui.caption.at[1]) > 60) hideCaption();
       }
     }
-    fightTick(dt);
     combatHud();
     for (const f of E.takeFeed(s)) toast(f.text, f.kind);
     for (const sig of E.takeSignals(s)) onSignal(sig);
@@ -519,7 +511,6 @@ export function startApp(root, { speed = 1, view = null } = {}) {
   }
 
   function layerKeyOf(s) {
-    if (s.battle) return 'fight';
     if (s.dead && !s.pending) return 'dead';
     if (s.pending) {
       const p = s.pending;
@@ -570,8 +561,7 @@ export function startApp(root, { speed = 1, view = null } = {}) {
     const joyEl = $('.joy');
     const JOY_R = 56;
     canvas.addEventListener('pointerdown', (e) => {
-      // in a fight the story is open but the field still takes taps (to pick whom to strike)
-      if (!ui.s || (ui.s.pending && !ui.s.battle) || ui.sheet) return;
+      if (!ui.s || ui.s.pending || ui.sheet) return;
       canvas.setPointerCapture?.(e.pointerId);
       pts.set(e.pointerId, { x: e.clientX, y: e.clientY, x0: e.clientX, y0: e.clientY, t0: performance.now() });
       if (pts.size === 2) {
@@ -601,14 +591,13 @@ export function startApp(root, { speed = 1, view = null } = {}) {
       const d = Math.hypot(dx, dy);
       if (!j.active && d > 12) {
         j.active = true;
-        if (ui.s?.battle) return; // no walking off mid-fight: a drag is just not a tap
         hideCaption();
         const rect = canvas.getBoundingClientRect();
         joyEl.style.left = `${j.x0 - rect.left}px`;
         joyEl.style.top = `${j.y0 - rect.top}px`;
         joyEl.classList.add('on');
       }
-      if (j.active && !ui.s?.battle) {
+      if (j.active) {
         const k = Math.min(1, d / JOY_R);
         j.vx = (dx / (d || 1)) * k;
         j.vy = (dy / (d || 1)) * k;
@@ -642,7 +631,6 @@ export function startApp(root, { speed = 1, view = null } = {}) {
   /** A tap on the world: walk there, or to the person or thing you tapped. */
   function tap(cx, cy) {
     const s = ui.s;
-    if (s?.battle) return fightTap(cx, cy);
     if (!s || s.pending || s.secl || ui.sheet) return;
     const rect = ui.shell.querySelector('canvas.world-canvas').getBoundingClientRect();
     const sx = cx - rect.left;
@@ -700,14 +688,14 @@ export function startApp(root, { speed = 1, view = null } = {}) {
   const SKILL_KEYS = { 1: 0, 2: 1, 3: 2 };
   const SLOT_OF = { s1: 0, s2: 1, s3: 2 };
   /** What those out there are doing that is nothing to fight: down, hidden, on their knees, on their way. */
-  const CALM = new Set(['dead', 'flee', 'vanish', 'gone', 'hide', 'yield', 'leave']);
+  const CALM = new Set(['dead', 'flee', 'vanish', 'gone', 'hide', 'yield', 'leave', 'down']);
 
   /** The beast under a tap, if any (they are low to the ground: count a tap on their body). */
   function beastAt(sx, sy) {
     let best = null;
     let bd = 52;
     for (const b of CB.beastsInWorld(ui.s, 800)) {
-      if (CALM.has(b.state) || b.state === 'talk') continue;
+      if (CALM.has(b.state) || b.state === 'talk' || b.side === 'ally') continue;
       for (const up of [0, 12, 24]) {
         const [px, py] = ui.view.worldToScreen(b.x, b.y, up);
         const d = Math.hypot(px - sx, py - sy);
@@ -745,10 +733,10 @@ export function startApp(root, { speed = 1, view = null } = {}) {
     return [(gx - w.x) / n, (gy - w.y) / n];
   }
 
-  /** J strikes, 1 2 3 cast (aimed with the mouse: hold to see where, let go to loose), space or shift steps aside. */
+  /** J strikes, 1 2 3 cast (aimed with the mouse: hold to see where, let go to loose), space or shift steps aside, Q takes a pill. */
   function fightKeys(e, key, down) {
     const s = ui.s;
-    if (!s || s.pending || s.secl || s.dead || ui.sheet || s.battle || e.target?.closest?.('input, textarea')) return false;
+    if (!s || s.pending || s.secl || s.dead || ui.sheet || e.target?.closest?.('input, textarea')) return false;
     if (key === 'j') {
       e.preventDefault();
       if (down) CB.attackCmd(s, mouseAim(), true);
@@ -764,6 +752,11 @@ export function startApp(root, { speed = 1, view = null } = {}) {
         ui.keyAim = null;
         CB.setPreview(s, null);
       }
+      return true;
+    }
+    if (key === 'q' && (CB.inCombat(s) || ui.cbtReady)) {
+      e.preventDefault();
+      if (down && !e.repeat) CB.pillCmd(s);
       return true;
     }
     if ((key === ' ' && (CB.inCombat(s) || ui.cbtReady)) || key === 'shift' || key === 'k') {
@@ -790,7 +783,7 @@ export function startApp(root, { speed = 1, view = null } = {}) {
     );
   }
 
-  /** The buttons on the right: strike, the three moves, step aside. */
+  /** The buttons on the right: strike, the three moves, step aside, a pill. */
   function combatPadEl() {
     const pad = h('div.cbt-pad');
     const make = (id, cls, key) => {
@@ -821,6 +814,14 @@ export function startApp(root, { speed = 1, view = null } = {}) {
       CB.dashCmd(ui.s, moveDir());
     });
     for (const ev of ['pointerup', 'pointercancel', 'pointerleave']) dash.addEventListener(ev, () => dash.classList.remove('down'));
+    const pill = make('pill', 'pill', 'Q');
+    pill.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      if (!ui.s) return;
+      pill.classList.add('down');
+      CB.pillCmd(ui.s);
+    });
+    for (const ev of ['pointerup', 'pointercancel', 'pointerleave']) pill.addEventListener(ev, () => pill.classList.remove('down'));
     return pad;
   }
 
@@ -878,9 +879,9 @@ export function startApp(root, { speed = 1, view = null } = {}) {
     const C = CB.combatOf(s);
     const me = CB.hero(s, C);
     const w = s.world;
-    const free = !s.pending && !s.secl && !s.dead && !ui.sheet && !s.battle;
+    const free = !s.pending && !s.secl && !s.dead && !ui.sheet;
     // a beast close by that might come for you: the buttons are ready before it does
-    const ready = free && (C.on || CB.beastsInWorld(s, 400).some((b) => !CALM.has(b.state) && Math.hypot(b.x - w.x, b.y - w.y) < 300));
+    const ready = free && (C.on || CB.beastsInWorld(s, 400).some((b) => b.side !== 'ally' && !CALM.has(b.state) && Math.hypot(b.x - w.x, b.y - w.y) < 300));
     const on = free && C.on;
     ui.cbtReady = ready;
     shell.classList.toggle('combat', on);
@@ -906,7 +907,7 @@ export function startApp(root, { speed = 1, view = null } = {}) {
     set($('.cbt-name'), 'textContent', s.player.name);
     set($('.cbt-realm'), 'textContent', realmLabel(s.player));
     // whom you are fighting
-    const list = CB.beastsInWorld(s, 900).filter((b) => b.aggro && b.armed && !['dead', 'gone', 'vanish'].includes(b.state));
+    const list = CB.beastsInWorld(s, 900).filter((b) => b.side !== 'ally' && b.aggro && b.armed && !['dead', 'gone', 'vanish'].includes(b.state));
     const foe = list.find((b) => b.uid === me.target) || list[0] || null;
     const pressed = list.some((b) => b.gap > 0);
     set($('.cbt-state'), 'textContent', C.trial ? '試煉' : me.poison ? '中毒' : pressed ? '境界壓制' : on ? '戰鬥中' : '');
@@ -941,6 +942,16 @@ export function startApp(root, { speed = 1, view = null } = {}) {
         name = '閃避';
         left = me.cds.dash || 0;
         total = CB.dashCd(s);
+      } else if (id === 'pill') {
+        // the best you have on you (none: no button)
+        const pid = CB.pillOf(s);
+        el.hidden = !pid;
+        if (!pid) continue;
+        name = ITEMS[pid].name;
+        cost = `×${s.player.items[pid]}`;
+        left = me.cds.pill || 0;
+        total = PILL_CD;
+        off = me.hp >= me.cap && !(pid === 'detox_pill' && me.poison);
       } else {
         const k = kit.find((x) => x.id === id);
         if (!k) continue;
@@ -965,6 +976,7 @@ export function startApp(root, { speed = 1, view = null } = {}) {
       hideCaption();
       combatBanner('遭遇', sig.rank ? `${sig.name}・${sig.rank}` : sig.name);
     } else if (sig.combat === 'won') combatBanner('戰鬥結束', '勝');
+    else if (sig.combat === 'spar') combatBanner('切磋', '負');
     else if (sig.combat === 'escaped') combatBanner('', '已脫離戰鬥');
   }
 
@@ -1251,10 +1263,7 @@ export function startApp(root, { speed = 1, view = null } = {}) {
     ui.layerKey = layerKeyOf(s);
     clear(el);
     el.classList.remove('dim');
-    el.classList.toggle('fight', !!s.battle);
-    ui.shell?.classList.toggle('fighting', !!s.battle);
-    if (s.battle) el.appendChild(fightPanel());
-    else if (s.pending) el.appendChild(eventSheet());
+    if (s.pending) el.appendChild(eventSheet());
     else if (s.dead) el.appendChild(deathScreen());
     else if (ui.sheet) {
       el.appendChild(ui.sheet === 'map' ? mapSheet() : panelSheet(ui.sheet));
@@ -1634,7 +1643,7 @@ export function startApp(root, { speed = 1, view = null } = {}) {
       h('section.card',
         h('h3', '操作'),
         h('p.muted.small', '按住畫面任意處拖動：往那個方向走。點一下地面：自己走過去。點人或東西：走過去並互動。兩指捏合：縮放。鍵盤：WASD 或方向鍵行走，E 互動，M 地圖。'),
-        h('p.muted.small', '戰鬥：左手拖動移動；右下大鈕普攻（按住連續攻擊，點妖獸也會上前攻擊），三顆小鈕是你帶的三招（在「修煉」頁的戰鬥招式換）——點一下自動瞄準，按住拖曳可以自己瞄準，放開施放，拖回按鈕上取消；「閃避」短距離位移，途中不會被打中。逃跑就是真的跑：跑得夠遠、躲進密林或進城，妖獸就會放棄。鍵盤：J 普攻、1 2 3 三招（朝滑鼠方向，按住看範圍、放開施放）、空白鍵或 Shift 閃避。'),
+        h('p.muted.small', '戰鬥：左手拖動移動；右下大鈕普攻（按住連續攻擊，點妖獸也會上前攻擊），三顆小鈕是你帶的三招（在「修煉」頁的戰鬥招式換）——點一下自動瞄準，按住拖曳可以自己瞄準，放開施放，拖回按鈕上取消；「閃避」短距離位移，途中不會被打中。逃跑就是真的跑：跑得夠遠、躲進密林或進城，妖獸就會放棄。左下的小鈕吃身上最好的療傷藥（中了毒就先吃解毒丹），每八息一顆。鍵盤：J 普攻、1 2 3 三招（朝滑鼠方向，按住看範圍、放開施放）、空白鍵或 Shift 閃避、Q 吃藥。'),
       ),
       h('section.card',
         h('h3', '存檔'),
@@ -1700,148 +1709,6 @@ export function startApp(root, { speed = 1, view = null } = {}) {
 
   // ── events ──
   /** A painted scene for the event, if one has been put in its slot. */
-  // ── a fight ──
-
-  /** Each frame: show the fight beat by beat; when it is decided and shown, set the seal, then go on with the story. */
-  function fightTick(dt) {
-    const s = ui.s;
-    if (!s.battle) {
-      ui.fight = null;
-      ui.fightEndT = null;
-      ui.fightShown = false;
-      return;
-    }
-    if (!ui.fight) {
-      ui.fight = createFightPlayer();
-      ui.fightMenu = null;
-      ui.fightAim = null;
-      ui.fightKey = null;
-    }
-    ui.fight.feed(s.battle, B.takeBeats());
-    ui.fight.update(dt);
-    if (s.battle.over && ui.fight.idle()) {
-      ui.fightEndT = (ui.fightEndT ?? 0) + dt;
-      if (ui.fightEndT > 1.6) {
-        ui.fightEndT = null;
-        ui.fight = null;
-        act(finishFight);
-        return;
-      }
-    }
-    const b = s.battle;
-    const key = `${b.turn}:${ui.fight.idle()}:${ui.fightMenu}:${ui.fightAim?.kind}:${b.over}:${ui.fightEndT !== null}`;
-    if (key !== ui.fightKey) {
-      ui.fightKey = key;
-      renderLayer();
-    } else fightLive();
-  }
-
-  /** What changes every beat: the narration and your bars. */
-  function fightLive() {
-    const el = $('.fight-panel');
-    if (!el || !ui.fight) return;
-    const say = el.querySelector('.fight-say');
-    if (say && ui.fight.text && say.textContent !== ui.fight.text) say.textContent = ui.fight.text;
-    const me = B.unitOf(ui.s.battle, 'me');
-    const hp = ui.fight.shown.get('me')?.hp ?? me.hp;
-    const hpBar = el.querySelector('.fight-hp i');
-    if (hpBar) hpBar.style.width = `${Math.max(0, (hp / me.maxHp) * 100)}%`;
-    const hpNum = el.querySelector('.fight-hp-n');
-    if (hpNum) hpNum.textContent = `${hp} / ${me.maxHp}`;
-  }
-
-  function fightDo(action) {
-    const s = ui.s;
-    if (!s.battle || s.battle.turn !== 'me' || !ui.fight?.idle()) return;
-    ui.fightMenu = null;
-    ui.fightAim = null;
-    B.act(s, action);
-    persist();
-    ui.fightKey = null;
-  }
-
-  /** An action that needs someone to aim at: with one foe, at them; else pick by tapping. */
-  function fightAimAt(action) {
-    const o = B.options(ui.s);
-    if (!o) return;
-    if (o.targets.length === 1) return fightDo({ ...action, target: o.targets[0] });
-    ui.fightAim = action;
-    ui.fightMenu = null;
-    ui.fightKey = null;
-  }
-
-  /** A tap on the field: whoever is nearest under your finger. */
-  function fightTap(cx, cy) {
-    const s = ui.s;
-    const o = B.options(s);
-    if (!o || !ui.fight?.idle()) return;
-    const rect = ui.shell.querySelector('canvas.world-canvas').getBoundingClientRect();
-    const field = E.battleField(s);
-    let best = null;
-    let bd = 64;
-    for (const id of o.targets) {
-      const u = B.unitOf(s.battle, id);
-      const [x, y] = field.at({ t: ui.fight.tOf(id), lane: u.lane, side: u.side });
-      for (const up of [8, 24, 40]) {
-        const [sx, sy] = ui.view.worldToScreen(x, y, up);
-        const d = Math.hypot(sx - (cx - rect.left), sy - (cy - rect.top));
-        if (d < bd) {
-          bd = d;
-          best = id;
-        }
-      }
-    }
-    if (!best) return;
-    fightDo({ ...(ui.fightAim || { kind: 'attack' }), target: best });
-  }
-
-  function fightPanel() {
-    const s = ui.s;
-    const b = s.battle;
-    const fx = ui.fight;
-    const me = B.unitOf(b, 'me');
-    const ready = fx && fx.idle() && b.turn === 'me' && !b.over;
-    const o = ready ? B.options(s) : null;
-    const shownHp = fx?.shown.get('me')?.hp ?? me.hp;
-    const order = B.upcoming(b, 7).map((id) => B.unitOf(b, id)).filter(Boolean);
-    const menu = ui.fightMenu && o
-      ? h('div.fight-menu', (ui.fightMenu === 'skills' ? o.skills : o.items).map((k) =>
-          h('button.fight-opt', {
-            disabled: !!k.why,
-            onclick: () => (ui.fightMenu === 'skills'
-              ? k.self ? fightDo({ kind: 'skill', id: k.id }) : fightAimAt({ kind: 'skill', id: k.id })
-              : fightDo({ kind: 'item', id: k.id })),
-          },
-          h('b', k.name),
-          ui.fightMenu === 'skills' ? h('span.cost', k.mp ? `靈力 ${k.mp}` : '') : h('span.cost', `×${k.n}`),
-          h('span.why', k.why || k.desc || (k.all ? '所有對手' : '服下')),
-          )))
-      : null;
-    const btn = (label, onclick, { disabled = false, on = false, sub = null } = {}) =>
-      h('button.fight-btn' + (on ? '.on' : ''), { disabled: !ready || disabled, onclick }, h('b', label), sub ? h('span', sub) : null);
-    const enter = !ui.fightShown;
-    ui.fightShown = true;
-    return h('div.fight-panel' + (enter ? '.enter' : ''), { role: 'region', 'aria-label': '戰鬥' },
-      b.over ? null : h('div.fight-order', order.map((u, k) => h('span.' + (u.side === 'foe' ? 'foe' : 'ally') + (k === 0 && b.turn ? '.now' : ''), u.side === 'me' ? '你' : u.name))),
-      h('p.fight-say', fx?.text || (ready ? '輪到你出手。' : '')),
-      h('div.fight-me',
-        h('div.fight-stat', h('small', '氣血'), h('div.bar.fight-hp', h('i', { style: { width: `${Math.max(0, (shownHp / me.maxHp) * 100)}%` } })), h('span.fight-hp-n', `${shownHp} / ${me.maxHp}`)),
-        me.maxMp ? h('div.fight-stat', h('small', '靈力'), bar(me.mp, me.maxMp, 'fight-mp'), h('span', `${me.mp} / ${me.maxMp}`)) : null,
-      ),
-      ui.fightAim ? h('div.fight-aim', h('span', '點一下要出手的對手'), h('button.btn.small.ghost', { onclick: () => { ui.fightAim = null; ui.fightKey = null; } }, '取消')) : menu,
-      b.over && fx?.idle()
-        ? h('div.fight-stamp.' + b.over, { win: '勝', lose: '敗', flee: '走' }[b.over])
-        : h('div.fight-acts',
-            btn(B.attackName(s), () => fightAimAt({ kind: 'attack' })),
-            btn('招式', () => { ui.fightMenu = ui.fightMenu === 'skills' ? null : 'skills'; ui.fightKey = null; }, { disabled: !o?.skills.length, on: ui.fightMenu === 'skills' }),
-            btn('物品', () => { ui.fightMenu = ui.fightMenu === 'items' ? null : 'items'; ui.fightKey = null; }, { disabled: !o?.items.length, on: ui.fightMenu === 'items' }),
-            btn('防禦', () => fightDo({ kind: 'defend' })),
-            btn('後退', () => fightDo({ kind: 'back' }), { disabled: !o?.canBack }),
-            b.spar ? null : btn('逃跑', () => fightDo({ kind: 'flee' }), { sub: o ? `${Math.round(o.flee * 100)}%` : null }),
-          ),
-    );
-  }
-
   function eventPicture(pend) {
     const img = pend.id && asset(`event/${pend.id}`);
     if (!img) return null;

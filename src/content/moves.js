@@ -100,6 +100,19 @@ export const TRIAL_KIT = ['swordqi', 'fireball', 'guard'];
 export const DASH = { name: '閃避', dist: 120, time: 0.18, inv: 0.24, cd: 2.2 };
 
 /**
+ * 丹藥: what you can swallow in the thick of it (one button takes the best
+ * you have — poisoned, the one that clears it). heal: the share of your
+ * blood it brings back at once; cure: it clears poison. One every PILL_CD seconds.
+ */
+export const PILLS = {
+  heal_pill: { heal: 0.45 },
+  blood_ginseng: { heal: 0.35 },
+  zhixue_grass: { heal: 0.15 },
+  detox_pill: { heal: 0.1, cure: true },
+};
+export const PILL_CD = 8;
+
+/**
  * What those you fight can do. Every move is seen coming: windup is how long
  * it gathers itself (its mark on the ground filling) before it lands; recover
  * is how long it stands open afterwards — your moment.
@@ -128,6 +141,11 @@ export const BEAST_MOVES = {
   cleave: { shape: 'fan', reach: 68, arc: 2.5, windup: 0.8, recover: 0.85, cd: 4.5, mult: 1.9, lunge: 6, fx: 'cut' },
   // 劫修: sword qi from afar
   qi: { shape: 'shot', min: 70, max: 300, range: 340, windup: 0.55, speed: 430, width: 18, recover: 0.4, cd: 2.8, mult: 1.1, fx: 'foeqi' },
+  // 地痞: a fist
+  punch: { shape: 'fan', reach: 40, arc: 1.4, windup: 0.36, recover: 0.5, cd: 1.2, mult: 1, lunge: 8, fx: 'punch' },
+  // 鐵背熊: a swipe of the paw; a charge with its whole weight
+  maul: { shape: 'fan', reach: 60, arc: 1.8, windup: 0.6, recover: 0.7, cd: 2.2, mult: 1.6, lunge: 10, fx: 'claw' },
+  bearcharge: { shape: 'leap', min: 90, max: 220, windup: 0.8, speed: 520, width: 40, overshoot: 30, recover: 1, cd: 7, mult: 1.8 },
   // 殘魂: a slow bolt of cold that drinks what it takes; a clutch at your heart
   soul: { shape: 'shot', min: 40, max: 260, range: 300, windup: 0.62, speed: 230, width: 22, recover: 0.5, cd: 2.4, mult: 1, drain: 0.5, fx: 'soul' },
   grasp: { shape: 'fan', reach: 50, arc: 1.6, windup: 0.5, recover: 0.6, cd: 2, mult: 1.1, lunge: 16, drain: 0.5, fx: 'grasp' },

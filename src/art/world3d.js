@@ -28,7 +28,6 @@ import { makeParticles, drawParticles } from './ink.js';
 import { seasonOf } from '../core/calendar.js';
 import { asset } from './assets.js';
 import { drawActor, drawPose, poseOf, lookOf, drawSpeech, LIVE_PROPS } from './scenery.js';
-import { fighters, paintFighter, drawFightMarks } from './battlefx.js';
 import * as CB from '../world/combat.js';
 import { paintBeast, paintHero, drawGroundMarks, drawCombatOverlay } from './combatfx.js';
 import { stream } from '../core/rng.js';
@@ -48,7 +47,7 @@ export function canDraw3D() {
   }
 }
 
-export function createWorld3D(canvas, { onFrame, idle, quality = 'high', onSlow = null, fight = null } = {}) {
+export function createWorld3D(canvas, { onFrame, idle, quality = 'high', onSlow = null } = {}) {
   // at high pixel densities the pixels are small enough without multisampling
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: (window.devicePixelRatio || 1) < 1.8, powerPreference: 'high-performance' });
   renderer.outputColorSpace = THREE.LinearSRGBColorSpace;
@@ -146,28 +145,6 @@ export function createWorld3D(canvas, { onFrame, idle, quality = 'high', onSlow 
     env.u.uHazeRange.value.set(dist * 1.05, dist * 3.2);
   }
 
-  // in a fight the camera comes in close over the field, and goes back after
-  let field = null;
-  let fightList = null;
-  let zoomBefore = null;
-
-  function followFight(dt, snap) {
-    const list = fightList || [];
-    const live = list.filter((f) => !f.fallen);
-    const pts = live.length ? live : list;
-    if (!pts.length) return false;
-    const tx = pts.reduce((a, f) => a + f.x, 0) / pts.length;
-    const ty = pts.reduce((a, f) => a + f.y, 0) / pts.length + 10;
-    if (zoomBefore === null) zoomBefore = zoom;
-    zoom += (1.42 - zoom) * (snap ? 1 : 1 - Math.exp(-dt * 3));
-    const k = snap ? 1 : 1 - Math.exp(-dt * 4);
-    focus.x += (tx - focus.x) * k;
-    focus.y += (ty - focus.y) * k;
-    focus.h += (heightAt(tx, ty) - focus.h) * k;
-    placeCamera();
-    return true;
-  }
-
   // in a fight as you move, the camera comes in a little, and goes back after
   let cbtZoomFrom = null;
   let cbtZoomT = 0;
@@ -193,11 +170,6 @@ export function createWorld3D(canvas, { onFrame, idle, quality = 'high', onSlow 
 
   function followCamera(dt, snap) {
     const w = s.world;
-    if (s.battle && fightList && followFight(dt, snap)) return;
-    if (zoomBefore !== null) {
-      zoom = zoomBefore;
-      zoomBefore = null;
-    }
     const lead = combatZoom(dt) ? 0.12 : 0.35;
     if (lastPos && dt > 0) {
       const vx = (w.x - lastPos[0]) / dt;
@@ -354,7 +326,7 @@ export function createWorld3D(canvas, { onFrame, idle, quality = 'high', onSlow 
       }, { animated: true, fps: 10 });
     }
     const night = E.isNight(s);
-    const inFight = new Set((s.battle?.units || []).map((u) => u.npcId).filter(Boolean));
+    const inFight = CB.fightingPeople(s);
     for (const n of E.peopleInWorld(s)) {
       if (!near(n.x, n.y) || inFight.has(n.id)) continue;
       const dn = Math.hypot(n.x - w.x, n.y - w.y);
@@ -388,22 +360,11 @@ export function createWorld3D(canvas, { onFrame, idle, quality = 'high', onSlow 
       const alpha = Math.max(0, 1 - sc.fade);
       for (const ac of sc.actors) {
         // a scene that came to blows: its people are in the fight
-        if (s.battle && sc.state === 'met' && ac.a !== 'prop') continue;
+        if (ac.fought) continue;
         const still = ac.a === 'prop' && !LIVE_PROPS.has(ac.prop);
         cards.add(`scene:${sc.uid}:${ac.n}`, ac.x, heightAt(ac.x, ac.y), ac.y, (c) => drawActor(c, ac, { t }), { animated: !still, fps: ac.moving ? 24 : 8, alpha, ghost: sc.inWoods && (!still || ac.prop === 'ginseng') });
         if (!still || ac.prop === 'mule' || ac.prop === 'crates') foot(ac.x, ac.y, ac.pose === 'lie' ? 15 : ac.prop === 'mule' ? 13 : 9, 0.28 * alpha);
       }
-    }
-    if (fightList) {
-      for (const f of fightList) {
-        cards.add(`fight:${f.u.id}`, f.x, heightAt(f.x, f.y), f.y, (c) => paintFighter(c, f, { t }), { animated: true, fps: 30, ghost: f.u.side === 'me' });
-        if (!f.fallen) foot(f.x, f.y, f.big ? 16 : 10, 0.3);
-      }
-      sh.end();
-      FIGURE.shadows = true;
-      SPRITE.shadows = true;
-      cards.end();
-      return;
     }
     const C = CB.combatOf(s);
     for (const b of CB.beastsInWorld(s)) {
@@ -625,11 +586,6 @@ export function createWorld3D(canvas, { onFrame, idle, quality = 'high', onSlow 
     octx.setTransform(dpr, 0, 0, dpr, 0, 0);
     octx.clearRect(0, 0, W, H);
     const w = s.world;
-    if (fightList) {
-      drawFightMarks(octx, worldToScreen, 1, s, fight(), fightList, t, FONT);
-      paperAndWeather(dt);
-      return;
-    }
     // marks on the ground
     if (highlight) groundRing(highlight.x, highlight.y + 2, 16 + Math.sin(t * 4) * 2, 'rgba(168,50,42,0.75)', 1.8);
     const path = E.pathOf(s);
@@ -807,17 +763,8 @@ export function createWorld3D(canvas, { onFrame, idle, quality = 'high', onSlow 
     env.setLight(s.tod, E.darkness(s.tod), season);
     motes = regionMood(dt);
     renderer.setClearColor(env.u.uHaze.value, 1);
-    const fx = s.battle && fight?.();
-    field = fx ? E.battleField(s) : null;
-    fightList = field ? fighters(s, fx, field) : null;
-    // the fight's ground: trees on it stand back
-    if (fightList?.length) {
-      const cx = fightList.reduce((a, f) => a + f.x, 0) / fightList.length;
-      const cy = fightList.reduce((a, f) => a + f.y, 0) / fightList.length;
-      // reaching toward the eye: a tree just in front can hide a fighter with its crown
-      const r = Math.max(...fightList.map((f) => Math.hypot(f.x - cx, f.y - cy))) + 110;
-      env.u.uClear.value.set(cx, cy + 55, r);
-    } else if (CB.inCombat(s)) env.u.uClear.value.set(s.world.x, s.world.y + 40, 125);
+    // a fight's ground: trees on it stand back (reaching toward the eye: a crown just in front could hide a fighter)
+    if (CB.inCombat(s)) env.u.uClear.value.set(s.world.x, s.world.y + 40, 125);
     else env.u.uClear.value.set(0, 0, 0);
     const C = CB.combatOf(s);
     const me = C.me;

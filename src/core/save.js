@@ -48,8 +48,9 @@ export function migrate(s) {
   s.arcIdx ||= 0;
   s.stats ||= { explores: 0, events: 0, travels: 0, seclDays: 0, breakthroughs: 0 };
   s.tod ??= 8;
-  // a fight belongs to the story it is part of
-  if (s.battle && (!s.pending || s.pending.fight === undefined || s.pending.fight === null)) s.battle = null;
+  // a fight from the days when fights were taken in turns: the story waits on the choice again (fights are fought out in the world now)
+  delete s.battle;
+  if (s.pending && s.pending.fight !== undefined) s.pending.fight = null;
   if (s.world) {
     s.world.found ||= {};
     s.world.taken ||= {};

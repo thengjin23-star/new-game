@@ -12,7 +12,6 @@ import { decorSprite, mountainSprite, structureSprite, wallSprite, propSprite } 
 import { drawPerson, aura, LOOKS, FOLK_LOOKS, groundShadow } from './figures.js';
 import { makeParticles, drawParticles, rgba, INK, PAPER } from './ink.js';
 import { drawActor, drawPose, poseOf, lookOf, drawSpeech } from './scenery.js';
-import { fighters, paintFighter, drawFightMarks } from './battlefx.js';
 import * as CB from '../world/combat.js';
 import { paintBeast, paintHero, drawGroundMarks, drawCombatOverlay } from './combatfx.js';
 import { seasonOf } from '../core/calendar.js';
@@ -500,7 +499,7 @@ function cloudTile() {
  * opts.onFrame(dt) is called before each frame is drawn (the UI steps the
  * world there). Returns controls for the UI.
  */
-export function createWorldView(canvas, { onFrame, idle, fight = null } = {}) {
+export function createWorldView(canvas, { onFrame, idle } = {}) {
   const ctx = canvas.getContext('2d');
   const reduce = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
   let s = null;
@@ -667,29 +666,12 @@ export function createWorldView(canvas, { onFrame, idle, fight = null } = {}) {
     raf = requestAnimationFrame(frame);
   }
 
-  // in a fight: the camera over the field, closer
-  let fightList = null;
-  let zoomBefore = null;
   // in a fight as you move: a little closer, and back after
   let cbtZoomFrom = null;
   let cbtZoomT = 0;
 
   function followCamera(dt, snap) {
     const w = s.world;
-    if (fightList?.length) {
-      const live = fightList.filter((f) => !f.fallen);
-      const pts = live.length ? live : fightList;
-      if (zoomBefore === null) zoomBefore = zoom;
-      zoom += (1.4 - zoom) * (snap ? 1 : 1 - Math.exp(-dt * 3));
-      const k = snap ? 1 : 1 - Math.exp(-dt * 4);
-      cam.x += (pts.reduce((a, f) => a + f.x, 0) / pts.length - cam.x) * k;
-      cam.y += (pts.reduce((a, f) => a + f.y, 0) / pts.length - 24 - cam.y) * k;
-      return;
-    }
-    if (zoomBefore !== null) {
-      zoom = zoomBefore;
-      zoomBefore = null;
-    }
     const fighting = CB.inCombat(s);
     if (fighting) {
       if (cbtZoomFrom === null) {
@@ -736,9 +718,6 @@ export function createWorldView(canvas, { onFrame, idle, fight = null } = {}) {
       chunks.clear();
       chunkQueue = [];
     }
-    const fx = s.battle && fight?.();
-    const field = fx ? E.battleField(s) : null;
-    fightList = field ? fighters(s, fx, field) : null;
     followCamera(dt, snap);
     updateFog();
     ctx.setTransform(1, 0, 0, 1, 0, 0);
@@ -779,7 +758,6 @@ export function createWorldView(canvas, { onFrame, idle, fight = null } = {}) {
   // things on the ground that are not standing: rings, marks, miasma
   function drawGroundFx() {
     const w = s.world;
-    if (fightList) return;
     const C = CB.combatOf(s);
     if (C.me || C.beasts) drawGroundMarks(ctx, s, C, CB.kitOf(s), zoom);
     if (highlight) {
@@ -871,7 +849,7 @@ export function createWorldView(canvas, { onFrame, idle, fight = null } = {}) {
       if (h.x < x0 - 20 || h.x > x1 + 20 || h.y < y0 || h.y > y1 + 30) continue;
       if (E.herbReady(s, h)) push(h.y, 'herb', h);
     }
-    const inFight = new Set((s.battle?.units || []).map((u) => u.npcId).filter(Boolean));
+    const inFight = CB.fightingPeople(s);
     for (const n of E.peopleInWorld(s)) {
       if (n.x < x0 - 30 || n.x > x1 + 30 || n.y < y0 || n.y > y1 + 50 || inFight.has(n.id)) continue;
       // at home: they come to the door when you are close
@@ -885,7 +863,7 @@ export function createWorldView(canvas, { onFrame, idle, fight = null } = {}) {
     for (const sc of E.scenesInWorld(s)) {
       for (const ac of sc.actors) {
         if (ac.x < x0 - 60 || ac.x > x1 + 60 || ac.y < y0 || ac.y > y1 + 80) continue;
-        if (s.battle && sc.state === 'met' && ac.a !== 'prop') continue;
+        if (ac.fought) continue;
         push(ac.y, 'scene', ac, sc);
       }
     }
@@ -898,15 +876,9 @@ export function createWorldView(canvas, { onFrame, idle, fight = null } = {}) {
       push(b.y, 'beast', b);
     }
     const w = s.world;
-    if (!fightList) push(w.y, 'player', w);
+    push(w.y, 'player', w);
     list.sort((a, b) => a.y - b.y);
     for (const it of list) drawItem(it);
-    if (fightList) {
-      // the fighters stand clear of whatever grows on the field
-      for (const f of fightList.slice().sort((a, b) => a.y - b.y)) drawItem({ kind: 'fighter', a: f });
-      drawFightMarks(ctx, (x, y, up) => [x, y - up], 1 / zoom, s, fight(), fightList, t, FONT);
-      return above;
-    }
     // show the player through anything tall in front of them
     ctx.globalAlpha = 0.3;
     drawItem({ kind: 'player', a: w });
@@ -1044,21 +1016,6 @@ export function createWorldView(canvas, { onFrame, idle, fight = null } = {}) {
         ctx.save();
         ctx.translate(fk.x, fk.y);
         drawPose(ctx, lookOf(fk.look), poseOf(fk, E.isNight(s)), { t: t + fk.line + fk.x * 0.01, moving: fk.moving, face: fk.face });
-        ctx.restore();
-        break;
-      }
-      case 'fighter': {
-        const f = it.a;
-        ctx.save();
-        ctx.translate(f.x, f.y);
-        if (f.flash > 0) {
-          // a blow lands: a flash of red where they stand
-          ctx.fillStyle = `rgba(214,40,30,${0.35 * f.flash})`;
-          ctx.beginPath();
-          ctx.ellipse(0, -f.tall * 0.45, 16, f.tall * 0.55, 0, 0, Math.PI * 2);
-          ctx.fill();
-        }
-        paintFighter(ctx, f, { t, tint: false });
         ctx.restore();
         break;
       }

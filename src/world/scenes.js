@@ -16,7 +16,8 @@ export const ROAD_REGIONS = ['wilds', 'farmland', 'mirror_lake', 'crane_ferry', 
  * start: 'touch' (walk up and act on it) | 'near' (begins as you come within radius)
  * after: what it does once its event is over: 'leave' (walk off) | 'stay' | 'vanish'
  * life: game hours it lingers if you leave it be
- * actors: [{ a: 'person'|'beast'|'prop', look|beast|prop, pose, at: [dx, dy] }]
+ * actors: [{ a: 'person'|'beast'|'prop', look|beast|prop, pose, at: [dx, dy], side }] — side: 'foe' or
+ *   'ally' if, when its event comes to blows, this one is in the fight (against you, or with you)
  * move: { speed, east } walks off east or west; { speed, toward } runs straight at you
  * orient: the actors' `at` turns with the scene: +y points away from you (who chases whom)
  * faceWater: everyone in it faces the nearest water
@@ -108,7 +109,7 @@ export const SCENES = [
     fx: 'herb',
     actors: [
       { a: 'prop', prop: 'ginseng', at: [0, 0] },
-      { a: 'person', look: 'sanxiu', pose: 'stand', at: [26, -4] },
+      { a: 'person', look: 'sanxiu', pose: 'stand', at: [26, -4], side: 'foe' },
     ],
   },
   {
@@ -123,7 +124,7 @@ export const SCENES = [
     bubble: '！',
     after: 'vanish',
     life: 3,
-    actors: [{ a: 'person', look: 'foe', pose: 'sword', at: [0, 0] }],
+    actors: [{ a: 'person', look: 'foe', pose: 'sword', at: [0, 0], side: 'foe' }],
   },
   {
     id: 'white_fox',
@@ -243,11 +244,11 @@ SCENES.push(
     life: 2,
     actors: [
       { a: 'prop', prop: 'cart', at: [-36, -14] },
-      { a: 'person', look: 'guard', pose: 'fight', at: [-8, 2], face: 1 },
-      { a: 'person', look: 'guard', pose: 'fight', at: [-20, 16], face: 1 },
-      { a: 'person', look: 'thief', pose: 'fight', at: [18, 0], face: -1 },
-      { a: 'person', look: 'thief', pose: 'fight', at: [12, 20], face: -1 },
-      { a: 'person', look: 'thief', pose: 'fight', at: [32, 10], face: -1 },
+      { a: 'person', look: 'guard', pose: 'fight', at: [-8, 2], face: 1, side: 'ally' },
+      { a: 'person', look: 'guard', pose: 'fight', at: [-20, 16], face: 1, side: 'ally' },
+      { a: 'person', look: 'thief', pose: 'fight', at: [18, 0], face: -1, side: 'foe' },
+      { a: 'person', look: 'thief', pose: 'fight', at: [12, 20], face: -1, side: 'foe' },
+      { a: 'person', look: 'thief', pose: 'fight', at: [32, 10], face: -1, side: 'foe' },
     ],
   },
   {

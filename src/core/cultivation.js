@@ -156,6 +156,13 @@ export function basePower(p) {
   }
 }
 
+/** 戰力 before injuries (a wound shows as blood already lost, not as weakness): what a fight measures you by. */
+export function fightPower(s) {
+  const p = s.player;
+  const body = 0.8 + p.attrs.gengu * 0.04;
+  return basePower(p) * body * (1 + weaponPower(s) + artPower(s));
+}
+
 /** 戰力 */
 export function power(s) {
   const p = s.player;

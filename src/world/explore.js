@@ -15,7 +15,6 @@ import { updateWild, wildNow, spawnCritter } from './wildlife.js';
 import { sysGain } from './system.js';
 import { ITEMS, displayItem } from '../content/items.js';
 import { pickEvent, startEvent, takeDue, notice } from '../core/events.js';
-import { arenaOf, placeOf } from './arena.js';
 import { updateCombat, beastTargets, strikeAt, FIGHT_HOURS } from './combat.js';
 import { inquire, visit } from '../core/actions.js';
 import { spendHours, newReport } from '../core/time.js';
@@ -142,7 +141,7 @@ export function step(s, dt, input) {
   updatePeople(s, L, dt);
   updateWild(s, L, dt);
   // a fight goes on in the world as it is: the beasts out there, on this ground, on this clock
-  const fight = updateCombat(s, dt, { input, feed: (kind, text) => L.feed.push({ kind, text }), signal: (x) => L.signals.push(x) });
+  const fight = updateCombat(s, dt, { input, feed: (kind, text) => L.feed.push({ kind, text }), signal: (x) => L.signals.push(x), scene: (id) => scenesOf(L).find((sc) => sc.def.id === id) || null });
   if (busy(s)) {
     // you went down
     stopWalking(L);
@@ -507,24 +506,6 @@ export function sayingOf(s, ent) {
 export function herbReady(s, h) {
   const t = s.world.herbs[h.id];
   return t === undefined || s.day - t >= GATHER_RESPAWN;
-}
-
-// ── a fight ──
-
-/**
- * The ground a fight is on, and everyone's place on it: { arena, at(u) → [x, y] }.
- * The line runs toward where they came from (the pack, the scene), else the way you face.
- */
-export function battleField(s) {
-  if (!s.battle) return null;
-  const data = s.pending?.ctx?.data || {};
-  let toward = data.at || null;
-  if (!toward && data.scene) {
-    const sc = scenesOf(liveOf(s)).find((x) => x.def.id === data.scene);
-    if (sc) toward = [sc.x, sc.y];
-  }
-  const arena = arenaOf(s, toward);
-  return { arena, at: (u) => placeOf(arena, u) };
 }
 
 // ── townsfolk ──

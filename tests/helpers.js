@@ -1,19 +1,21 @@
 import assert from 'node:assert/strict';
 import { newGame, rollFate } from '../src/core/state.js';
-import { startEvent, choose, continueEvent, finishFight } from '../src/core/events.js';
-import { act as fightAct, options as fightOptions } from '../src/core/battle.js';
+import { startEvent, choose, continueEvent, endRealFight } from '../src/core/events.js';
 import { advance, newReport } from '../src/core/time.js';
 import { ensureWorld, placeAt } from '../src/world/explore.js';
 import { nearestOpen } from '../src/world/terrain.js';
 import { POI_BY_ID } from '../src/world/places.js';
 import { NODES } from '../src/world/map.js';
 
-/** Play out whatever is on screen, picking choices with pickChoice. */
-export function resolvePending(s, pickChoice = (opts) => opts[0]) {
+/**
+ * Play out whatever is on screen, picking choices with pickChoice. A fight
+ * (fought out in the world: tests/storyfights.test.js) goes the way `fight` says.
+ */
+export function resolvePending(s, pickChoice = (opts) => opts[0], fight = 'won') {
   let guard = 0;
-  while (s.pending && !s.dead) {
+  while ((s.pending || s.rtFight) && !s.dead) {
     if (++guard > 200) throw new Error('pending loop');
-    if (s.battle) fightOut(s);
+    if (s.rtFight) endRealFight(s, fight);
     else if (s.pending.notice || s.pending.result) continueEvent(s);
     else {
       const opts = s.pending.choices.filter((c) => !c.disabled);
@@ -21,18 +23,6 @@ export function resolvePending(s, pickChoice = (opts) => opts[0]) {
       choose(s, pickChoice(opts).i);
     }
   }
-}
-
-/** Fight a battle through to the end, plainly: strike the nearest foe; heal when low. */
-export function fightOut(s, policy = null) {
-  for (let k = 0; k < 400 && s.battle && !s.battle.over; k++) {
-    const o = fightOptions(s);
-    if (!o) break;
-    const me = s.battle.units.find((u) => u.id === 'me');
-    const pill = o.items.find((x) => x.id === 'heal_pill');
-    fightAct(s, (policy && policy(s, o)) || (pill && me.hp < me.maxHp * 0.3 ? { kind: 'item', id: 'heal_pill' } : { kind: 'attack' }));
-  }
-  finishFight(s);
 }
 
 /** A new life, through the opening, standing in the temple courtyard. */
@@ -70,8 +60,9 @@ export function pickText(s, text) {
 /** Finish the open event with the first usable choices. */
 export function finish(s) {
   let guard = 0;
-  while (s.pending && guard++ < 50) {
-    if (s.pending.result || s.pending.notice) continueEvent(s);
+  while ((s.pending || s.rtFight) && guard++ < 50) {
+    if (s.rtFight) endRealFight(s, 'won');
+    else if (s.pending.result || s.pending.notice) continueEvent(s);
     else choose(s, s.pending.choices.find((c) => !c.disabled).i);
   }
 }

@@ -4,7 +4,7 @@ import { checkChance, CHECK_NAME } from './checks.js';
 import { rand, pickWeighted } from './rng.js';
 import { newReport } from './time.js';
 import { NODES } from '../world/map.js';
-import { startBattle, aftermath, endBattle, fightPower } from './battle.js';
+import { fightPower } from './cultivation.js';
 
 /** Resolve a text field: a string with {name}/{npc}/{loc} tokens, or a function. */
 export function resolve(x, s, ctx = {}) {
@@ -146,7 +146,7 @@ export function enterStep(s, stepId) {
 
 export function choose(s, i) {
   const pend = s.pending;
-  if (!pend || pend.result || pend.notice || s.battle) return;
+  if (!pend || pend.result || pend.notice) return;
   if (i === -1) {
     pend.result = { text: '', check: null, chips: [], toasts: [], next: null, goto: null, saved: false, died: false };
     return;
@@ -165,10 +165,10 @@ export function choose(s, i) {
     s.pending = null;
     return;
   }
-  // a fight is fought, not rolled: the battle decides which way the story goes
+  // any other fight is fought, not rolled — where you stand, with those the story names (world/combat.js)
   if (c.fight) {
-    startBattle(s, fightSpec(c, ctx), { diff: diffOf(s, c, ctx), npc: ctx.npc || null, origin: { event: pend.id, step: pend.step, choice: i }, first: ctx.data?.first || null });
-    pend.fight = i;
+    s.rtFight = { story: true, spec: fightSpec(c, ctx), choice: i, run: false, diff: diffOf(s, c, ctx), npcId: ctx.npcId || null, scene: ctx.data?.scene || null, pend };
+    s.pending = null;
     return;
   }
   let out = c.out || {};
@@ -221,28 +221,12 @@ export function endRealFight(s, how) {
   settle(s, c, out || {}, { ok: how !== 'lost', kind: '戰鬥', fight: how === 'won' ? 'win' : how === 'lost' ? 'lose' : 'flee' });
 }
 
-/** The fight is over: its result takes the story on (and brings what it left you). */
-export function finishFight(s) {
-  const b = s.battle;
-  const pend = s.pending;
-  if (!b?.over || !pend || pend.fight === undefined || pend.fight === null) return;
-  const st = stepsOf(EVENTS[pend.id])[pend.step];
-  const c = (st.choices || [])[pend.fight];
-  const outcome = b.over;
-  const out = (outcome === 'win' ? c.ok : outcome === 'lose' ? c.fail : c.flee || { text: '你且戰且退，總算脫了身。' }) || {};
-  const spoils = aftermath(s);
-  endBattle(s);
-  pend.fight = null;
-  settle(s, c, out, { ok: outcome === 'win', kind: '戰鬥', fight: outcome }, spoils);
-}
-
 /** Apply a choice's outcome and set the result card. */
-function settle(s, c, out, check, more = []) {
+function settle(s, c, out, check) {
   const pend = s.pending;
   const ctx = pend.ctx;
   const report = newReport();
   let effects = typeof out.effects === 'function' ? out.effects(s, ctx) : [...(out.effects || [])];
-  effects.push(...more);
   let extra = '';
   const harmful = (e) => Array.isArray(e) && (e[0] === 'hurt' || e[0] === 'death');
   if (check && !check.ok && check.fight !== 'flee' && c.check?.kind === 'power' && s.player.items.foxfire_talisman > 0 && effects.some(harmful)) {
