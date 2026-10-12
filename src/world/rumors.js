@@ -30,7 +30,7 @@ const TEMPLATES = [
 ];
 
 function near(s) {
-  const known = Object.keys(s.nodes).filter((k) => s.nodes[k].known && NODES[k].kind !== 'cave');
+  const known = Object.keys(s.nodes).filter((k) => s.nodes[k].known && NODES[k].kind !== 'cave' && !NODES[k].air);
   return NODES[pick(s, known)].name;
 }
 

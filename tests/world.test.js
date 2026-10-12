@@ -1,7 +1,7 @@
 // The open world: its ground, walking it, and what you run into.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { world, collides, isReachable, regionIdAt, findPath, nearestOpen, REGION_IDS, terrainAt } from '../src/world/terrain.js';
+import { world, collides, isReachable, isAiry, canStand, regionIdAt, findPath, nearestOpen, REGION_IDS, terrainAt } from '../src/world/terrain.js';
 import { POIS, NPC_SPOTS, BEASTS, STRUCTURES } from '../src/world/places.js';
 import * as CB from '../src/world/combat.js';
 import { NODES } from '../src/world/map.js';
@@ -18,6 +18,11 @@ function standable(x, y) {
   return !!p && Math.hypot(p[0] - x, p[1] - y) <= 50 && isReachable(p[0], p[1]);
 }
 
+/** Up where no road goes: open ground you can come down on, that no walk reaches. */
+function airStandable(x, y) {
+  return canStand(member, x, y) && isAiry(x, y) && !isReachable(x, y);
+}
+
 /** Step the world until the walk is over (or something happens). */
 function walk(s, x, y, then = null, maxSteps = 4000) {
   assert.ok(E.walkTo(s, x, y, then), `a path to (${x}, ${y})`);
@@ -29,19 +34,34 @@ function walk(s, x, y, then = null, maxSteps = 4000) {
 test('every region has ground you can walk to from the temple', () => {
   const g = world();
   for (const id of REGION_IDS) {
-    if (id === 'great_river' || id === 'hidden_cave') continue;
+    if (id === 'great_river' || id === 'hidden_cave' || NODES[id].air) continue;
     assert.ok(g.regionCells[id] > 40, `${id} has reachable ground (${g.regionCells[id]})`);
   }
   for (const [id, n] of Object.entries(NODES)) {
     if (!n.at) continue;
-    assert.ok(standable(...n.at), `${id}: its spot ${n.at} is open`);
+    assert.ok(n.air ? airStandable(...n.at) : standable(...n.at), `${id}: its spot ${n.at} is open`);
     if (id !== 'hidden_cave') assert.equal(regionIdAt(...n.at), id, `${id}: its spot lies inside it`);
+  }
+});
+
+test('up where no road goes: the summits and the sandbar stand apart, with room to stand', () => {
+  const g = world();
+  for (const [id, n] of Object.entries(NODES)) {
+    if (!n.air) continue;
+    assert.ok(g.regionCells[id] >= 10, `${id} has room (${g.regionCells[id]} cells)`);
+    assert.equal(findPath({ flags: {} }, ...NODES.qingxu_temple.at, ...n.at), null, `no walk reaches ${id}`);
+  }
+  // every cell of the air is in an air region, and none of them is walked to
+  for (let k = 0; k < g.air.length; k++) {
+    if (!g.air[k]) continue;
+    assert.ok(NODES[REGION_IDS[g.reg[k]]]?.air, `air cell ${k} lies in an air region`);
+    assert.ok(!g.reach[k]);
   }
 });
 
 test('every place, person and beast stands somewhere reachable, in its region', () => {
   for (const p of POIS) {
-    assert.ok(standable(p.x, p.y), `${p.id} can be walked up to`);
+    assert.ok(NODES[p.region]?.air ? airStandable(p.x, p.y) : standable(p.x, p.y), `${p.id} can be walked up to`);
     assert.equal(regionIdAt(p.x, p.y), p.region, `${p.id} lies in ${p.region}`);
   }
   for (const [id, spots] of Object.entries(NPC_SPOTS)) {

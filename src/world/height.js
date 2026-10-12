@@ -5,7 +5,7 @@
 // keep an even grade and towns sit level. Built once from the same data as
 // the grid, so what you see and where you can walk always agree.
 
-import { WORLD_W, WORLD_H, CELL, COLS, ROWS, T, CLIFF_LINES, SECT, VALLEY, LAKES, PEAKS, BORDER } from './geo.js';
+import { WORLD_W, WORLD_H, CELL, COLS, ROWS, T, CLIFF_LINES, SECT, VALLEY, LAKES, PEAKS, BORDER, AIRY } from './geo.js';
 import { STRUCTURES } from './places.js';
 import { world, REGION_IDS, idxOf, cellX, cellY, colOf, rowOf, vnoise, fbm, segDist, insidePoly } from './terrain.js';
 
@@ -231,6 +231,15 @@ function buildHeights() {
     return m;
   };
   const isRock = (k) => g.terr[k] === T.PEAK || g.terr[k] === T.CLIFF;
+  // a summit's flat top is cut out of its peak afterwards (9.): the peak rises as if it were rock
+  const summit = new Uint8Array(N);
+  for (const A of AIRY) {
+    if (A.kind !== 'summit') continue;
+    for (let j = 0; j < ROWS; j++) {
+      for (let i = 0; i < COLS; i++) if (Math.hypot((cellX(i) - A.at[0]) / A.r[0], (cellY(j) - A.at[1]) / A.r[1]) < 1) summit[idxOf(i, j)] = 1;
+    }
+  }
+  const rockish = (k) => isRock(k) || summit[k] === 1;
   /** Call fn(k, i, j) for each cell a sample point touches (1, 2 or 4 of them). */
   const touching = (x, y, fn) => {
     const ci = x / CELL;
@@ -245,7 +254,7 @@ function buildHeights() {
   const rockDepth = (x, y) => {
     let open = false;
     touching(x, y, (k) => {
-      if (!isRock(k)) open = true;
+      if (!rockish(k)) open = true;
     });
     if (open) return 0;
     const ci = colOf(x);
@@ -253,7 +262,7 @@ function buildHeights() {
     let best = 2 * CELL;
     for (let j = Math.max(0, cj - 2); j <= Math.min(ROWS - 1, cj + 2); j++) {
       for (let i = Math.max(0, ci - 2); i <= Math.min(COLS - 1, ci + 2); i++) {
-        if (isRock(idxOf(i, j))) continue;
+        if (rockish(idxOf(i, j))) continue;
         const dx = Math.max(i * CELL - x, 0, x - (i + 1) * CELL);
         const dy = Math.max(j * CELL - y, 0, y - (j + 1) * CELL);
         best = Math.min(best, Math.hypot(dx, dy));
@@ -515,6 +524,43 @@ function buildHeights() {
         if (!wet && h[k] < z + 1.5) h[k] = z + 1.5;
       });
     }
+  }
+
+  // 9. up where no road goes: a summit's top is cut level, with the rock
+  //    falling away all round it; the sandbar stands just clear of the river
+  for (const A of AIRY) {
+    const [cx, cy] = A.at;
+    const [rx, ry] = A.r;
+    eachIn(cx - rx * 2, cy - ry * 2, cx + rx * 2, cy + ry * 2, (k, x, y) => {
+      const e = Math.hypot((x - cx) / rx, (y - cy) / ry);
+      let on = e < 1;
+      if (!on && e < 1.35) {
+        touching(x, y, (c, i, j) => {
+          if (!isRock(c) && !isWet(g.terr[c]) && Math.hypot((cellX(i) - cx) / rx, (cellY(j) - cy) / ry) < 1) on = true;
+        });
+      }
+      if (A.kind === 'isle') {
+        const top = LEVEL.river + 7 + 3 * vnoise(x / 60, y / 60, 87);
+        if (on) h[k] = top;
+        // its sand slopes down into the river (and stays under the water where the water is)
+        else if (e < 1.6) h[k] = Math.max(h[k], Math.min(top - (e - 1) * 40, isWet(cellAt(x, y)) ? LEVEL.river - 2 : Infinity));
+        return;
+      }
+      if (on) {
+        h[k] = A.level + 3 * (vnoise(x / 70, y / 70, 88) - 0.5);
+        return;
+      }
+      if (e >= 2.2) return;
+      // the rock round it swells up to meet the rim (where it is all rock),
+      // and nothing stands over the edge
+      let rock = true;
+      touching(x, y, (c) => {
+        if (!rockish(c)) rock = false;
+      });
+      const shoulder = A.level - 2 - (e - 1) * (e - 1) * 230;
+      if (rock) h[k] = Math.max(h[k], shoulder);
+      if (e < 1.2) h[k] = Math.min(h[k], A.level - 2);
+    });
   }
 
   return { h, ground, water, bridges, streams, lakes };

@@ -4,7 +4,7 @@
 
 import {
   WORLD_W, WORLD_H, CELL, COLS, ROWS, T, TERRAIN, REGION_SHAPES, PEAKS, CLIFF_LINES,
-  VALLEY, SECT, RIVERS, LAKES, ROADS, BORDER, MARKET_WALL,
+  VALLEY, SECT, RIVERS, LAKES, ROADS, BORDER, MARKET_WALL, AIRY,
 } from './geo.js';
 import { STRUCTURES, POIS, GATHER, NPC_SPOTS } from './places.js';
 
@@ -231,6 +231,17 @@ function build() {
       } else if (NATURAL.has(terr[k])) terr[k] = T.SAND;
     });
   }
+  // up where no road goes: a summit's flat top in the rock, a sandbar in the river
+  for (const A of AIRY) {
+    const [cx, cy] = A.at;
+    const [rx, ry] = A.r;
+    each((k, x, y) => {
+      if (Math.abs(x - cx) > rx + CELL || Math.abs(y - cy) > ry + CELL || ellipseE(cx, cy, rx, ry, x, y) >= 1) return;
+      const n = fbm(x / 90, y / 90, A.kind === 'isle' ? 57 : 58);
+      terr[k] = A.kind === 'isle' ? (n > 0.56 ? T.TALLGRASS : T.SAND) : n > 0.62 ? T.HILL : T.GRASS;
+      greatRiver[k] = 0;
+    });
+  }
   // beyond the great river: mist
   for (let j = 0; j < ROWS; j++) {
     let last = -1;
@@ -296,6 +307,7 @@ function build() {
 
   const g = { terr, reg, solids, solidCell, rivers, roads };
   g.reach = reachable(g);
+  g.air = airborne(g);
   g.regionCells = countRegionCells(g);
   g.decor = makeDecor(g);
   g.mountains = makeMountains(g);
@@ -350,6 +362,33 @@ function reachable(g) {
   return seen;
 }
 
+/** Ground you can stand on that no walk reaches: the places up in the air (AIRY), found from their middles. */
+function airborne(g) {
+  const N = COLS * ROWS;
+  const seen = new Uint8Array(N);
+  for (const A of AIRY) {
+    const start = idxOf(colOf(A.at[0]), rowOf(A.at[1]));
+    if (g.reach[start] || !cellOpen(g, start, true)) continue;
+    const queue = [start];
+    seen[start] = 1;
+    while (queue.length) {
+      const k = queue.pop();
+      const i = k % COLS;
+      const j = (k - i) / COLS;
+      for (const [di, dj] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        const ni = i + di;
+        const nj = j + dj;
+        if (ni < 0 || nj < 0 || ni >= COLS || nj >= ROWS) continue;
+        const nk = idxOf(ni, nj);
+        if (seen[nk] || g.reach[nk] || !cellOpen(g, nk, true)) continue;
+        seen[nk] = 1;
+        queue.push(nk);
+      }
+    }
+  }
+  return seen;
+}
+
 function cellOpen(g, k, gateOpen) {
   const t = g.terr[k];
   if (t === T.GATE) return gateOpen;
@@ -359,7 +398,7 @@ function cellOpen(g, k, gateOpen) {
 function countRegionCells(g) {
   const counts = {};
   for (let k = 0; k < g.terr.length; k++) {
-    if (!g.reach[k]) continue;
+    if (!g.reach[k] && !g.air[k]) continue;
     const id = REGION_IDS[g.reg[k]];
     counts[id] = (counts[id] || 0) + 1;
   }
@@ -428,6 +467,20 @@ export function collides(s, x, y, r = PLAYER_R) {
 export function isReachable(x, y) {
   const g = world();
   return !!g.reach[idxOf(colOf(x), rowOf(y))];
+}
+
+/** Ground up in the air (a summit, the sandbar): you stand here only if you flew (or leapt) here. */
+export function isAiry(x, y) {
+  if (x < 0 || y < 0 || x >= WORLD_W || y >= WORLD_H) return false;
+  return !!world().air[idxOf(colOf(x), rowOf(y))];
+}
+
+/** Can a foot come down here, walked to or not: open ground that is somewhere (not a pocket in the rock). */
+export function canStand(s, x, y) {
+  if (collides(s, x, y)) return false;
+  const g = world();
+  const k = idxOf(colOf(x), rowOf(y));
+  return !!(g.reach[k] || g.air[k]);
 }
 
 function pathOpen(g, k, gateOpen) {
@@ -643,6 +696,9 @@ const TREE_MIX = {
   fox_shrine: [['leaf', 50], ['dead', 20], ['pine', 30]],
   crane_ferry: [['willow', 60], ['leaf', 40]],
   qingxu_temple: [['pine', 70], ['leaf', 30]],
+  crane_peak: [['pine', 85], ['leaf', 15]],
+  sword_peak: [['pine', 45], ['dead', 55]],
+  river_isle: [['willow', 100]],
 };
 
 function pickMix(mix, r) {

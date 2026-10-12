@@ -489,6 +489,10 @@ const ENCOUNTER = {
   lingxi_valley: [1700, 0.25],
   qingshi_town: [1500, 0.5],
   luoxia_market: [1400, 0.4],
+  // up where no road goes, nothing comes along; only the wind
+  crane_peak: [700, 0],
+  sword_peak: [700, 0],
+  river_isle: [900, 0],
 };
 const ON_THE_ROAD = new Set(['wilds', 'farmland', 'mirror_lake', 'crane_ferry', 'fox_shrine']);
 
@@ -526,6 +530,8 @@ const AMBIENT = {
   valley: ['溪水叮咚。', '霧氣在谷裡慢慢地流。'],
   shrine: ['荒草裡有一雙發亮的眼睛，一眨就不見了。'],
   ferry: ['江風很大。'],
+  peak: ['山風很大，吹得衣袍獵獵作響。', '雲從腳下流過去。', '一隻鷹在你腳下盤旋。', '往下看，青石鎮小得像一把撒在地上的米。'],
+  isle: ['江水從兩邊流過去，嘩嘩地響。', '蘆葦叢裡飛起一隻水鳥。', '江霧漫上來，又退下去。'],
 };
 const NIGHT_AMBIENT = ['夜很靜。你聽得見自己的腳步聲。', '月亮被雲遮住了。', '遠處有一點燈火。', '貓頭鷹叫了兩聲。'];
 

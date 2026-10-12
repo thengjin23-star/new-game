@@ -63,10 +63,23 @@ export const NODES = {
     name: '大江', kind: 'river', qi: 0.6, danger: 3, start: true, at: null, label: [4800, 2700],
     desc: '東荒的盡頭。江的那一邊，是中州。',
   },
+  // up where no road goes (air: you get there by flying, or leaping)
+  crane_peak: {
+    name: '孤鶴峰', kind: 'peak', air: true, qi: 1.2, danger: 0, at: [1620, 2212],
+    desc: '青石山東頭的孤峰，峰頂平得像被一劍削過，只有白鶴飛得上來。',
+  },
+  sword_peak: {
+    name: '斷劍峰', kind: 'peak', air: true, qi: 1.5, danger: 0, at: [3620, 425],
+    desc: '古戰場北邊的孤峰，高出雲海。峰頂裂著一道深溝，像是有人在這裡斬下過一劍。',
+  },
+  river_isle: {
+    name: '江心洲', kind: 'isle', air: true, qi: 0.8, danger: 1, at: [4862, 2150],
+    desc: '大江中間的一片沙洲，蘆葦比人還高。江霧一起，兩岸都看不見。',
+  },
 };
 
-/** Places a wandering stranger might be found (not rivers, not secret caves). */
-export const PEOPLE_PLACES = Object.keys(NODES).filter((id) => NODES[id].at && id !== 'hidden_cave');
+/** Places a wandering stranger might be found (not rivers, not secret caves, not up where only the flying go). */
+export const PEOPLE_PLACES = Object.keys(NODES).filter((id) => NODES[id].at && id !== 'hidden_cave' && !NODES[id].air);
 
 /** Effective 靈氣 at a node, including changes the story makes. */
 export function nodeQi(s, id) {
@@ -86,5 +99,6 @@ export function canSecludeAt(s, id) {
   if (id === 'lingxi_valley' && !s.flags.valley_safe) return '谷中那頭妖蟒還在，在這裡閉關無異於送死。';
   if (id === 'crane_ferry') return '渡口風大人雜，不宜閉關。';
   if (id === 'great_river') return '這裡是江面。';
+  if (id === 'river_isle') return '沙洲太低，江水一漲就淹過來，不是閉關的地方。';
   return null;
 }

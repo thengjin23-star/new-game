@@ -57,6 +57,10 @@ export const TERRAIN = {
  */
 export const REGION_SHAPES = [
   { id: 'hidden_cave', circle: [1176, 2590, 70], requires: 'cave_found' },
+  // up where no road goes (see AIRY)
+  { id: 'crane_peak', ellipse: [1620, 2212, 96, 60] },
+  { id: 'sword_peak', ellipse: [3620, 425, 92, 70] },
+  { id: 'river_isle', ellipse: [4862, 2150, 62, 165] },
   { id: 'qingshi_town', poly: [[1820, 2860], [2700, 2850], [2760, 3420], [1860, 3440], [1760, 3200]] },
   { id: 'luoxia_market', poly: [[3600, 2240], [4320, 2240], [4320, 2880], [3600, 2880]] },
   { id: 'qingxu_temple', poly: [[760, 2960], [1380, 2940], [1420, 3470], [800, 3490]] },
@@ -100,6 +104,19 @@ export const PEAKS = [
   [3350, 1950, 120, 100],
   [2700, 2350, 110, 90],
   [3850, 3300, 120, 110],
+];
+
+/**
+ * Places no road goes: the flat tops of two peaks, and a sandbar out in the
+ * great river. You get there through the air — a 飛行法器 reaches the lower
+ * peak and the sandbar, only a flying sword the higher peak — or, to the
+ * sandbar, on 踏雲步's long leaps over the water. Each matches its shape in
+ * REGION_SHAPES. level: how high a summit's ground stands.
+ */
+export const AIRY = [
+  { id: 'crane_peak', kind: 'summit', at: [1620, 2212], r: [96, 60], level: 248 },
+  { id: 'sword_peak', kind: 'summit', at: [3620, 425], r: [92, 70], level: 384 },
+  { id: 'river_isle', kind: 'isle', at: [4862, 2150], r: [62, 165] },
 ];
 
 /** The cliff of 斷魂崖, as a thick line. */
