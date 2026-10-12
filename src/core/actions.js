@@ -7,6 +7,7 @@ import { advance, newReport, resetLifeWarnings, spendHours } from './time.js';
 import { applyEffects, logLife, techValue } from './effects.js';
 import { pickEvent, startEvent, takeDue, notice } from './events.js';
 import { breakthroughInfo, realmLabel, REALMS, stageReq } from './cultivation.js';
+import { restore, wear, unwearGone } from './body.js';
 import { rand, randInt, chance, pick, pickWeighted } from './rng.js';
 import { fmtDuration, cnNum } from './calendar.js';
 import { checkChance } from './checks.js';
@@ -206,6 +207,8 @@ function finishSeclusion(s) {
     return;
   }
   logLife(s, `於${NODES[x.node].name}閉關${fmtDuration(x.done)}`);
+  // days of stillness: blood and 靈力 full again
+  restore(s, 1, 1);
   notice(s, '出關', lines.join('\n'), { chips, toasts: x.toasts });
   const due = takeDue(s, p.loc);
   if (due) s.queue.push(due.id);
@@ -290,10 +293,10 @@ export function useItem(s, id) {
   notice(s, displayItem(s, id).name, it.use.text || '你用了它。', { chips: report.chips, toasts: report.toasts });
 }
 
+/** Put it on (or take it off): a weapon in your hand, a robe, a charm, a 法器. */
 export function equip(s, id) {
   if (busy(s)) return;
-  if (ITEMS[id]?.kind !== 'weapon' || !(s.player.items[id] > 0)) return;
-  s.player.weapon = s.player.weapon === id ? null : id;
+  wear(s, id);
 }
 
 export function setTech(s, id) {
@@ -321,6 +324,29 @@ export function buy(s, id) {
   s.player.items[id] = (s.player.items[id] || 0) + 1;
 }
 
+/** What it takes to have it made: the 靈石 and the things you bring. */
+export function craftCost(id) {
+  return ITEMS[id]?.craft || null;
+}
+
+/** Could this shop make it for you now (have you what it takes)? */
+export function canCraft(s, id) {
+  const shop = shopHere(s);
+  const c = craftCost(id);
+  if (!shop || !c || !(shop.recipes || []).includes(id)) return false;
+  if (s.player.ls < (c.ls || 0)) return false;
+  return Object.entries(c.items || {}).every(([k, n]) => (s.player.items[k] || 0) >= n);
+}
+
+/** Have it made: what you brought goes into it. */
+export function craft(s, id) {
+  if (busy(s) || !canCraft(s, id)) return;
+  const c = craftCost(id);
+  const report = newReport();
+  applyEffects(s, [['ls', -(c.ls || 0)], ...Object.entries(c.items || {}).map(([k, n]) => ['item', k, -n]), ['item', id, 1]], {}, report);
+  notice(s, '打造', `${shopHere(s)?.keeper || '師傅'}收下東西，叮叮噹噹敲了大半天，把一件${ITEMS[id].name}交到你手上。`, { chips: report.chips });
+}
+
 export function sellPrice(s, id) {
   const it = ITEMS[id];
   if (!it) return 0;
@@ -335,7 +361,7 @@ export function sell(s, id) {
   if (!price || !(s.player.items[id] > 0)) return;
   s.player.items[id] -= 1;
   if (!s.player.items[id]) delete s.player.items[id];
-  if (s.player.weapon === id && !s.player.items[id]) s.player.weapon = null;
+  unwearGone(s);
   s.player.ls += price;
 }
 

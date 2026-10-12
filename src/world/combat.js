@@ -15,21 +15,21 @@
 import { collides, speedAt, terrainAt, regionAt, isReachable, findPath, nearestOpen, world, PLAYER_R } from './terrain.js';
 import { T } from './geo.js';
 import { BEASTS } from './places.js';
-import { NODES } from './map.js';
+import { NODES, nodeQi } from './map.js';
 import { npcRealm } from './npcs.js';
 import { FOES } from '../content/foes.js';
 import { EVENTS } from '../content/index.js';
 import { MOVES, STRIKES, DASH, PILLS, PILL_CD, BEAST_MOVES, KIT_ORDER, TRIAL_KIT } from '../content/moves.js';
 import { TECHS } from '../content/techniques.js';
 import { ITEMS } from '../content/items.js';
-import { fightPower, power } from '../core/cultivation.js';
+import { power } from '../core/cultivation.js';
+import { pools, gearOf } from '../core/body.js';
 import { applyEffects, addItem } from '../core/effects.js';
 import { notice, startEvent, choose, fightChoice, endRealFight, resolve } from '../core/events.js';
 import { newReport, spendHours } from '../core/time.js';
 import { rand } from '../core/rng.js';
 
 /** Blood a wound holds back: 輕傷 leaves you three quarters of it, and so on. */
-const HP_CAP = [1, 0.75, 0.5, 0.3];
 /** A beast of your own strength falls to about this many plain blows… */
 const HITS = 18;
 /** …and fells you with about this many bites, if you never get out of the way. */
@@ -102,39 +102,50 @@ export function inCombat(s) {
 
 // ── you ──
 
-/** Your blood, 靈力, cooldowns: they go with you from fight to fight, and come back as you rest. */
+/**
+ * You in a fight: cooldowns, what you are doing, what is on you. Your blood
+ * and 靈力 are the ones in the save (core/body.js), worked on where they are,
+ * so what a fight takes you carry away from it.
+ */
 export function hero(s, C = combatOf(s)) {
   const p = s.player;
-  const P = Math.max(3, fightPower(s));
-  const maxHp = Math.round(20 + 2.6 * P);
-  const own = p.realm === 0 ? 0 : p.realm === 1 ? 18 + 4 * p.stage : p.realm === 2 ? 90 + 15 * p.stage : 260;
-  const maxMp = Math.max(own, C.trial?.lend || 0);
-  const cap = Math.max(1, Math.round(maxHp * HP_CAP[p.injury || 0]));
+  const V = pools(s);
+  const maxMp = Math.max(V.maxMp, C.trial?.lend || 0);
   let me = C.me;
   if (!me) {
     me = C.me = {
-      hp: cap, mp: maxMp, cds: {}, act: null, dash: null, kb: null, inv: 0, shield: 0, shieldT: 0, poison: null, regen: null, ward: null,
+      cds: {}, act: null, dash: null, kb: null, inv: 0, shield: 0, shieldT: 0, poison: null, regen: null, ward: null,
       hurtT: -99, flashT: -99, target: null, auto: false, hold: false, press: 0, steer: null, dir: [1, 0], trail: [],
     };
+    Object.defineProperty(me, 'hp', { get: () => p.hp, set: (v) => { p.hp = v; }, enumerable: true });
+    Object.defineProperty(me, 'mp', { get: () => p.mp, set: (v) => { p.mp = v; }, enumerable: true });
   }
   // grown stronger (a breakthrough, a wound healed, 靈力 lent): the new room comes filled
-  if (me.cap > 0 && cap > me.cap) me.hp += cap - me.cap;
+  if (me.cap > 0 && V.cap > me.cap) me.hp += V.cap - me.cap;
   if (maxMp > (me.maxMp ?? maxMp)) me.mp += maxMp - me.maxMp;
-  me.P = P;
-  me.maxHp = maxHp;
-  me.cap = cap;
+  me.P = V.P;
+  me.maxHp = V.maxHp;
+  me.cap = V.cap;
   me.maxMp = maxMp;
-  me.atk = 1.5 + 0.5 * P;
-  me.crit = 0.05 + (p.attrs.jiyuan ?? 5) * 0.008;
+  me.gear = V.G;
+  me.atk = 1.5 + 0.5 * V.P;
+  me.crit = 0.05 + (p.attrs.jiyuan ?? 5) * 0.008 + V.G.crit;
   me.realm = p.realm;
-  if (me.hp > cap) me.hp = cap;
+  if (me.hp > V.cap) me.hp = V.cap;
   if (me.mp > maxMp) me.mp = maxMp;
   return me;
 }
 
 /** Your plain blow, by what you hold. */
 export function strikeOf(s) {
-  return STRIKES[s.player.weapon] || STRIKES.fists;
+  const w = s.player.weapon;
+  return STRIKES[w] || STRIKES[ITEMS[w]?.strike] || STRIKES.fists;
+}
+
+/** What your weapon looks like in your hand (one that borrows another's swing looks like it too). */
+export function weaponLook(s) {
+  const w = s.player.weapon;
+  return (w && !STRIKES[w] && ITEMS[w]?.strike) || w;
 }
 
 const REALM_WORD = ['', '需引氣入體', '需築基', '需結丹'];
@@ -144,6 +155,8 @@ function lockOf(s, m) {
   const p = s.player;
   const realm = m.realm ?? 1;
   if (p.realm < realm) return REALM_WORD[realm] || '境界不足';
+  // what a 法器 does, you can do while you wear it
+  if (m.relic) return gearOf(s).relic === m.relic ? null : `需戴${ITEMS[m.relic]?.name || m.relic}`;
   const knows = (ids) => ids.some((a) => (p.arts || []).includes(a) || (p.techs || []).includes(a) || p.tech === a);
   // a move of the body comes to you at 築基, whatever else it asks
   if (m.school === '體修' && p.realm >= 2) return null;
@@ -522,7 +535,7 @@ function hurtBeast(s, C, b, base, io, { kind = 'phys', by = null } = {}) {
   const crit = kind !== 'burn' && rand(s) < me.crit;
   const roll = kind === 'burn' ? 1 : 0.85 + rand(s) * 0.3;
   // a thing of spirit: a blade goes through it; fire and 靈力 do not
-  const spirit = b.K.spirit ? (kind === 'phys' ? 0.5 : kind === 'fox' ? 1.5 : kind === 'fire' || kind === 'burn' ? 1.3 : 1.15) : 1;
+  const spirit = b.K.spirit ? (kind === 'phys' ? 0.5 : kind === 'holy' ? 2.2 : kind === 'fox' ? 1.5 : kind === 'fire' || kind === 'burn' ? 1.3 : 1.15) : 1;
   const dmg = Math.max(1, Math.round(base * roll * (crit ? 1.6 : 1) * b.taken * spirit * (sneak ? 1.5 : 1)));
   b.hp -= dmg;
   b.flashT = C.t;
@@ -603,6 +616,9 @@ function hurtMe(s, C, b, mult, io, push = null, M = null) {
     return -1;
   }
   let dmg = Math.max(1, Math.round(b.dmg * mult * (0.85 + rand(s) * 0.3) * (b.enraged ? 1.2 : 1)));
+  // what you wear keeps some of it off (fire, what keeps fire off)
+  const G = me.gear;
+  if (G && (G.def || (M?.fire && G.fire))) dmg = Math.max(1, Math.round(dmg * (1 - G.def) * (M?.fire ? 1 - G.fire : 1)));
   // 金剛: braced, the body takes only part of it
   if (me.ward) dmg = Math.max(1, Math.round(dmg * (1 - me.ward.k)));
   if (me.shield > 0) {
@@ -1740,7 +1756,7 @@ function poolsTick(s, C, dt, io) {
       hurtAlly(s, C, a, p.by, p.mult, io);
     }
     if (!C.on || me.dash || me.inv > 0 || Math.hypot(w.x - p.x, w.y - p.y) > p.r + PLAYER_R * 0.5) continue;
-    hurtMe(s, C, p.by, p.mult, io, null, p.poison ? { poison: p.poison } : null);
+    hurtMe(s, C, p.by, p.mult, io, null, p.poison ? { poison: p.poison } : p.kind === 'fire' ? { fire: true } : null);
     if (s.pending || s.dead) return;
   }
 }
@@ -1877,9 +1893,16 @@ function heroTick(s, C, dt, io) {
     me.ward.left -= dt;
     if (me.ward.left <= 0) me.ward = null;
   }
-  // 靈力 comes back slowly in a fight, quickly out of one; blood only once it is over
-  me.mp = Math.min(me.maxMp, me.mp + me.maxMp * (C.on ? 0.03 : 0.1) * dt);
-  if (!C.on && C.t - me.hurtT > 3 && me.hp < me.cap) me.hp = Math.min(me.cap, me.hp + me.cap * 0.05 * dt);
+  // 靈力 comes back a little in a fight, and as you go (quicker where 靈氣 gathers); blood only once it is
+  // over, and slowly — rest (歇息), a pill or 回春 brings it back faster
+  const G = me.gear;
+  const qi = C.on ? 1 : (C.qi ??= nodeQi(s, s.player.loc));
+  if (!C.on && C.t - (C.qiT ?? -9) > 2) {
+    C.qi = nodeQi(s, s.player.loc);
+    C.qiT = C.t;
+  }
+  me.mp = Math.min(me.maxMp, me.mp + me.maxMp * (C.on ? 0.03 : 0.012 * qi * (1 + G.mpRegen)) * dt);
+  if (!C.on && C.t - me.hurtT > 3 && me.hp < me.cap) me.hp = Math.min(me.cap, me.hp + me.cap * 0.006 * (1 + G.regen) * dt);
   let moved = 0;
   if (me.dash) {
     const D = me.dash;
@@ -1991,7 +2014,7 @@ function release(s, C, a, io) {
   }
   const k = a.k;
   if (k.aim === 'line') {
-    shoot(C, { kind: k.fx, x: w.x + a.ux * 12, y: w.y + a.uy * 12, ux: a.ux, uy: a.uy, speed: k.speed, left: k.range, r: k.width / 2, dmg: me.atk * k.mult, pierce: !!k.pierce, hurt: 'spirit' });
+    shoot(C, { kind: k.fx, x: w.x + a.ux * 12, y: w.y + a.uy * 12, ux: a.ux, uy: a.uy, speed: k.speed, left: k.range, r: k.width / 2, dmg: me.atk * k.mult, pierce: !!k.pierce, hurt: k.holy ? 'holy' : 'spirit', stun: k.stun || 0 });
   } else if (k.aim === 'ground') {
     const dx = a.pt[0] - w.x;
     const dy = a.pt[1] - w.y;
@@ -2012,14 +2035,18 @@ function release(s, C, a, io) {
   } else if (k.aim === 'dash') {
     startDash(s, C, a.ux, a.uy, k);
   } else if (k.aim === 'around') {
-    // a sweep all round you: whoever is in it is caught, and reels
-    C.fx.push({ kind: 'sweep', x: w.x, y: w.y, r: k.radius, t0: C.t, dur: 0.4 });
+    // a sweep all round you (or a bell rung): whoever is in it is caught, and reels
+    C.fx.push({ kind: k.fx === 'bell' ? 'bell' : 'sweep', x: w.x, y: w.y, r: k.radius, t0: C.t, dur: k.fx === 'bell' ? 0.6 : 0.4 });
     for (const b of beastsOf(s, C)) {
       const d = Math.hypot(b.x - w.x, b.y - w.y) || 1;
       if (!alive(b) || !foe(b) || !present(s, b) || d > k.radius + b.R.body) continue;
       hurtBeast(s, C, b, me.atk * k.mult, io);
       if (s.pending || s.dead) return;
-      stagger(b, k.stun, [(b.x - w.x) / d, (b.y - w.y) / d, 18]);
+      stagger(b, k.stun, [(b.x - w.x) / d, (b.y - w.y) / d, k.push ?? 18]);
+    }
+    if (k.shield) {
+      me.shield = Math.round(me.maxHp * k.shield);
+      me.shieldT = k.last;
     }
   } else if (k.aim === 'seek') {
     // flames fanning out, each finding its own way
@@ -2119,6 +2146,7 @@ function flyShots(s, C, dt, io) {
         hurtBeast(s, C, b, sh.dmg, io, { kind: sh.hurt || 'phys', by: sh.by || null });
         if (s.pending || s.dead) return;
         if (sh.burn && alive(b)) b.burn = { left: sh.burnT, tick: 0.5, dps: sh.burn };
+        if (sh.stun && alive(b)) stagger(b, sh.stun);
         C.fx.push({ kind: 'spark', x: sh.x, y: sh.y, t0: C.t, dur: 0.25, of: sh.kind });
         if (!sh.pierce) sh.done = true;
       }

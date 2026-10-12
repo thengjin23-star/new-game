@@ -6,6 +6,7 @@ import { rumor } from '../world/rumors.js';
 import { sysGain, trySubstitute } from '../world/system.js';
 import { reveal, unseenSpot } from '../world/fog.js';
 import { addXiuwei, stageReq, INJURY } from './cultivation.js';
+import { restore, unwearGone } from './body.js';
 import { advance } from './time.js';
 import { schedule, unschedule } from './schedule.js';
 import { rand, randInt, pickWeighted } from './rng.js';
@@ -57,7 +58,10 @@ export function addItem(s, id, n, report) {
   const before = p.items[id] || 0;
   const after = Math.max(0, before + n);
   if (after) p.items[id] = after;
-  else delete p.items[id];
+  else {
+    delete p.items[id];
+    unwearGone(s);
+  }
   const shown = displayItem(s, id).name;
   if (n > 0) chip(report, `獲得：${shown}${n > 1 ? ' ×' + n : ''}`, 'good');
   else if (before > 0) chip(report, `失去：${shown}${-n > 1 ? ' ×' + -n : ''}`, 'bad');
@@ -230,6 +234,17 @@ export function applyEffects(s, effects, ctx, report) {
           chip(report, '傷口好轉', 'good');
         }
         break;
+      case 'hp': {
+        // blood back: a share of what a wound leaves you
+        const [n] = restore(s, a, 0);
+        if (n > 0) chip(report, `氣血 +${n}`, 'good');
+        break;
+      }
+      case 'mp': {
+        const [, n] = restore(s, 0, a);
+        if (n > 0) chip(report, `靈力 +${n}`, 'good');
+        break;
+      }
       case 'mind': {
         const before = p.mind;
         p.mind = clamp(p.mind + a, 0, 100);

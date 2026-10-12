@@ -33,7 +33,7 @@ const BLOOD = [176, 28, 36];
 const VENOM = [96, 150, 60];
 const DUST = [120, 100, 80];
 /** The light a move gathers into as you cast it. */
-const GLOW = { fire: FIRE, shield: [120, 170, 230], foeqi: FOE_QI, foxfire: FOX, mend: LEAF, iron: GOLD, sweep: GOLD, charge: GOLD, bloodqi: BLOOD, bloodring: BLOOD, blink: FOX };
+const GLOW = { fire: FIRE, shield: [120, 170, 230], foeqi: FOE_QI, foxfire: FOX, mend: LEAF, iron: GOLD, sweep: GOLD, charge: GOLD, bloodqi: BLOOD, bloodring: BLOOD, blink: FOX, mirror: [246, 232, 170], bell: GOLD };
 
 // ── figures ──
 
@@ -584,9 +584,9 @@ export function drawGroundMarks(g, s, C, kit, u = 1) {
       g.lineWidth = lw(2);
       ring(g, f.x, f.y, 14 + p * 26);
       g.stroke();
-    } else if ((f.kind === 'ring' || f.kind === 'roar' || f.kind === 'bloodring') && f.r) {
-      // a shockwave running out to where it reached
-      const col = f.kind === 'bloodring' ? BLOOD : f.kind === 'roar' ? FIRE : DUST;
+    } else if ((f.kind === 'ring' || f.kind === 'roar' || f.kind === 'bloodring' || f.kind === 'bell') && f.r) {
+      // a shockwave running out to where it reached (a bell's, gold)
+      const col = f.kind === 'bloodring' ? BLOOD : f.kind === 'roar' ? FIRE : f.kind === 'bell' ? GOLD : DUST;
       const r = f.r || 70;
       g.fillStyle = rgba(col, 0.14 * (1 - p));
       ring(g, f.x, f.y, r);
@@ -931,6 +931,24 @@ function drawShot(ctx, proj, px, sh, now) {
     ctx.moveTo(x - Math.cos(a) * 12 * k, y - Math.sin(a) * 12 * k);
     ctx.lineTo(x, y);
     ctx.stroke();
+    return;
+  }
+  if (sh.kind === 'mirror') {
+    // a shaft of pale gold light off the mirror
+    const [bx, by] = proj(sh.x - sh.ux * 60, sh.y - sh.uy * 60, 15);
+    const beam = ctx.createLinearGradient(bx, by, x, y);
+    beam.addColorStop(0, 'rgba(246,232,170,0)');
+    beam.addColorStop(1, 'rgba(250,240,190,0.75)');
+    ctx.strokeStyle = beam;
+    ctx.lineWidth = 12 * k;
+    ctx.beginPath();
+    ctx.moveTo(bx, by);
+    ctx.lineTo(x, y);
+    ctx.stroke();
+    ctx.fillStyle = 'rgba(255,252,236,0.95)';
+    ctx.beginPath();
+    ctx.arc(x, y, 5 * k, 0, Math.PI * 2);
+    ctx.fill();
     return;
   }
   if (sh.kind === 'qi') {

@@ -382,7 +382,7 @@ export function createWorld3D(canvas, { onFrame, idle, quality = 'high', onSlow 
     cards.add('player', w.x, heightAt(w.x, w.y), w.y, (c) => {
       if (sit) aura(c, 0, 0, t, 1);
       if (pic) pic(c);
-      else if (me && !sit) paintHero(c, LOOKS.player, { act: me.act, dash: me.dash, flashT: me.flashT, face: w.face || 1, moving, weapon: s.player.weapon }, t, C.t);
+      else if (me && !sit) paintHero(c, LOOKS.player, { act: me.act, dash: me.dash, flashT: me.flashT, face: w.face || 1, moving, weapon: CB.weaponLook(s) }, t, C.t);
       else drawPerson(c, 0, 0, LOOKS.player, { t, moving, face: w.face || 1, sit });
     }, { animated: true, fps: moving || sit || C.on ? 30 : 10, ghost: true });
     foot(w.x, w.y, sit ? 13 : 9.5, 0.34);

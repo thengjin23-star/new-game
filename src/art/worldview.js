@@ -1046,7 +1046,7 @@ export function createWorldView(canvas, { onFrame, idle } = {}) {
           ctx.save();
           ctx.translate(w.x, w.y);
           hurtHalo(Math.max(0, 1 - (C.t - me.flashT) / 0.22), 36);
-          paintHero(ctx, LOOKS.player, { act: me.act, dash: me.dash, flashT: me.flashT, face: w.face || 1, moving, weapon: s.player.weapon }, t, C.t, { tint: false });
+          paintHero(ctx, LOOKS.player, { act: me.act, dash: me.dash, flashT: me.flashT, face: w.face || 1, moving, weapon: CB.weaponLook(s) }, t, C.t, { tint: false });
           ctx.restore();
         } else drawPerson(ctx, w.x, w.y, LOOKS.player, { t, moving, face: w.face || 1, sit });
         break;

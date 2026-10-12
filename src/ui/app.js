@@ -9,6 +9,7 @@ import * as A from '../core/actions.js';
 import * as E from '../world/explore.js';
 import * as CB from '../world/combat.js';
 import { ROOTS, INJURY, BUFFS, realmLabel, stageReq, age, lifespan, rateParts, breakthroughInfo, power, atBottleneck, techOf } from '../core/cultivation.js';
+import { SLOTS, STAT_WORD, gearOf, slotOf } from '../core/body.js';
 import { fmtDate, fmtDuration, seasonOf, SEASON_NAME } from '../core/calendar.js';
 import { NODES, canSecludeAt, nodeQi } from '../world/map.js';
 import { WORLD_W, WORLD_H, COLS, ROWS } from '../world/geo.js';
@@ -18,7 +19,7 @@ import { POIS } from '../world/places.js';
 import { fogOf, isRevealed, exploredPct } from '../world/fog.js';
 import { ITEMS, displayItem } from '../content/items.js';
 import { TECHS } from '../content/techniques.js';
-import { SCHOOLS, PILL_CD } from '../content/moves.js';
+import { SCHOOLS, PILL_CD, MOVES } from '../content/moves.js';
 import { FRAGMENTS, FRAGMENT_TOTAL } from '../content/fragments.js';
 import { SYS_LEVELS, SYS_FEATURES } from '../world/system.js';
 import { npcAge, npcRealm, NAMED } from '../world/npcs.js';
@@ -26,8 +27,8 @@ import { saveGame, loadGame, clearGame, exportCode, importCode, migrate, saveMet
 import { connectCloud } from '../platform/cloud.js';
 
 const VERSION = '0.8';
-const ITEM_ORDER = ['pill', 'herb', 'material', 'book', 'weapon', 'treasure', 'talisman', 'token', 'unknown'];
-const ITEM_KIND = { pill: '丹藥', herb: '靈草', material: '材料', book: '典籍', weapon: '兵器', treasure: '寶物', talisman: '符籙', token: '信物', unknown: '未知' };
+const ITEM_ORDER = ['weapon', 'gear', 'pill', 'talisman', 'herb', 'material', 'book', 'treasure', 'token', 'unknown'];
+const ITEM_KIND = { pill: '丹藥', herb: '靈草', material: '材料', book: '典籍', weapon: '兵器', gear: '裝備', treasure: '寶物', talisman: '符籙', token: '信物', unknown: '未知' };
 const DOCK = [
   ['map', '地圖'],
   ['bag', '行囊'],
@@ -1013,6 +1014,24 @@ export function startApp(root, { speed = 1, view = null } = {}) {
   }
 
   // ── HUD ──
+  /** The two thin bars under your name: blood (and what a wound holds back of it), 靈力. */
+  function vitalsHud() {
+    const s = ui.s;
+    const el = $('.hud-vitals');
+    if (!el) return;
+    const me = CB.hero(s);
+    const hp = el.querySelector('.vbar.hp');
+    const mp = el.querySelector('.vbar.mp');
+    hp.querySelector('i').style.width = `${Math.max(0, (me.hp / me.maxHp) * 100)}%`;
+    hp.style.setProperty('--cap', `${(me.cap / me.maxHp) * 100}%`);
+    const ht = `氣血 ${Math.ceil(me.hp)}/${me.cap}`;
+    if (hp.querySelector('span').textContent !== ht) hp.querySelector('span').textContent = ht;
+    mp.querySelector('i').style.width = `${me.maxMp ? Math.max(0, (me.mp / me.maxMp) * 100) : 0}%`;
+    const mt = me.maxMp ? `靈力 ${Math.floor(me.mp)}/${me.maxMp}` : '靈力 —';
+    if (mp.querySelector('span').textContent !== mt) mp.querySelector('span').textContent = mt;
+    hp.classList.toggle('low', me.hp < me.cap * 0.3);
+  }
+
   function renderHud(force = false) {
     const s = ui.s;
     if (!s || !ui.shell) return;
@@ -1032,8 +1051,11 @@ export function startApp(root, { speed = 1, view = null } = {}) {
         ),
         h('div.hud-line.sub', h('span', fmtDate(s.day)), h('span', timeWord(s))),
         h('div.hud-xw', bar(p.xw, req, neck ? 'full' : ''), h('span', neck ? '修為圓滿・可突破' : `修為 ${Math.floor(p.xw)} / ${req}`)),
+        // your blood and 靈力, always (they are what a fight takes, and rest gives back)
+        h('div.hud-vitals', h('div.vbar.hp', h('i'), h('span')), h('div.vbar.mp', h('i'), h('span'))),
       );
     }
+    vitalsHud();
     const loc = s.player.loc;
     const pct = exploredPct(s, loc);
     const placeKey = `${loc}|${pct}`;
@@ -1329,7 +1351,7 @@ export function startApp(root, { speed = 1, view = null } = {}) {
         opt('歇到天明', '卯時', (x) => E.rest(x, 'dawn')),
         h('button.action', { onclick: () => openSheet('cult') }, h('b', '閉關'), h('span', blocker ? '此地不宜' : '修煉頁')),
       ),
-      h('p.muted.small', '有些人只在夜裡出現，有些東西只在月光下發亮。'),
+      h('p.muted.small', '歇息時氣血與靈力會回來（每個時辰約兩成氣血、三成多靈力；靈氣濃的地方靈力回得更快）。有些人只在夜裡出現，有些東西只在月光下發亮。'),
     );
   }
 
@@ -1487,6 +1509,15 @@ export function startApp(root, { speed = 1, view = null } = {}) {
     );
   }
 
+  /** What a piece of gear gives, in words. */
+  function statLine(id) {
+    const it = ITEMS[id];
+    const parts = Object.entries(it?.stats || {}).map(([k, v]) => STAT_WORD[k]?.(v)).filter(Boolean);
+    if (it?.power) parts.unshift(`戰力 +${Math.round(it.power * 100)}%`);
+    if (it?.move) parts.push(`可帶「${MOVES[it.move]?.name || it.move}」上陣`);
+    return parts.join('・');
+  }
+
   // ── 行囊 ──
   function panelBag() {
     const s = ui.s;
@@ -1499,15 +1530,46 @@ export function startApp(root, { speed = 1, view = null } = {}) {
           h('h3', `${shop.name}・${shop.keeper}`),
           h('ul.items', shop.stock.map((id) => {
             const it = ITEMS[id];
+            const stats = statLine(id);
             return h('li',
               h('div.item-head', h('b', it.name), h('span.price', `${it.price} 靈石`)),
+              stats ? h('p.gearstats', stats) : null,
               h('p', it.desc),
               h('div.item-acts', h('button.btn.small', { disabled: p.ls < it.price || !!s.secl, onclick: () => act((x) => A.buy(x, id)) }, '買下')),
             );
           })),
+          shop.recipes?.length ? h('h3.sub', '打造（帶材料來）') : null,
+          shop.recipes?.length ? h('ul.items', shop.recipes.map((id) => {
+            const it = ITEMS[id];
+            const c = A.craftCost(id);
+            const need = Object.entries(c.items || {}).map(([k, n]) => `${ITEMS[k].name} ${p.items[k] || 0}/${n}`);
+            return h('li',
+              h('div.item-head', h('b', it.name), h('span.price', `${c.ls || 0} 靈石`)),
+              h('p.gearstats', statLine(id)),
+              h('p.need', `材料：${need.join('、')}`),
+              h('p', it.desc),
+              h('div.item-acts', h('button.btn.small', { disabled: !A.canCraft(s, id) || !!s.secl, onclick: () => act((x) => A.craft(x, id)) }, '打造')),
+            );
+          })) : null,
         ),
       );
     }
+    // what you have on: a weapon in your hand, a robe, a charm, a 法器
+    const worn = gearOf(s);
+    put(wrap,
+      h('section.card.worn',
+        h('h3', '身上'),
+        h('ul.slots', Object.entries(SLOTS).map(([slot, label]) => {
+          const id = worn[slot];
+          return h('li' + (id ? '' : '.empty'),
+            h('span.slot', label),
+            h('b', id ? ITEMS[id].name : '—'),
+            id ? h('span.gearstats', statLine(id)) : null,
+            id ? h('button.btn.small.ghost', { disabled: !!s.secl, onclick: () => act((x) => A.equip(x, id)) }, '卸下') : null,
+          );
+        })),
+      ),
+    );
     const ids = Object.keys(p.items).filter((id) => ITEMS[id]);
     ids.sort((a, b) => ITEM_ORDER.indexOf(ITEMS[a].kind) - ITEM_ORDER.indexOf(ITEMS[b].kind));
     put(wrap, 
@@ -1528,11 +1590,12 @@ export function startApp(root, { speed = 1, view = null } = {}) {
     const busy = !!s.secl;
     const price = A.sellPrice(s, id);
     return h('li',
-      h('div.item-head', h('b', shown.name, n > 1 ? ` ×${n}` : ''), h('span.kindtag', ITEM_KIND[it.kind] || '')),
+      h('div.item-head', h('b', shown.name, n > 1 ? ` ×${n}` : ''), h('span.kindtag', slotOf(id) ? SLOTS[slotOf(id)] : ITEM_KIND[it.kind] || '')),
+      slotOf(id) && statLine(id) ? h('p.gearstats', statLine(id)) : null,
       h('p', shown.desc),
       h('div.item-acts',
         it.use ? h('button.btn.small', { disabled: busy, onclick: () => act((x) => A.useItem(x, id)) }, it.kind === 'book' ? '研讀' : '使用') : null,
-        it.kind === 'weapon' ? h('button.btn.small' + (p.weapon === id ? '.on' : ''), { disabled: busy, onclick: () => act((x) => A.equip(x, id)) }, p.weapon === id ? '卸下' : '裝備') : null,
+        slotOf(id) ? h('button.btn.small' + (gearOf(s)[slotOf(id)] === id ? '.on' : ''), { disabled: busy, onclick: () => act((x) => A.equip(x, id)) }, gearOf(s)[slotOf(id)] === id ? '卸下' : '裝備') : null,
         A.canIdentify(s, id) ? h('button.btn.small', { disabled: busy, onclick: () => act((x) => A.identify(x, id)) }, A.identifyCost(s) ? '鑑定（10 靈石）' : '系統鑑定') : null,
         shop && price > 0 ? h('button.btn.small.ghost', { disabled: busy, onclick: () => act((x) => A.sell(x, id)) }, `出售 ${price}`) : null,
       ),

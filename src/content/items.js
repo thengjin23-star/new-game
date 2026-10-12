@@ -1,18 +1,25 @@
 // 物品. `use` runs effects when the player uses it from the bag; `power` on a
 // weapon or treasure adds to 戰力 while carried; `disguise` makes an item
 // look like another until identified.
+//
+// 裝備 (kind 'gear', and weapons): slot — where it is worn (core/body.js:
+// robe 衣袍, charm 佩飾, relic 法器); stats — what it gives while worn
+// (hp, mp, def, regen, mpRegen, crit, speed, sense, fire); move — a move
+// it lets you carry into a fight (content/moves.js); craft — made at a
+// shop from what you bring ({ ls, items }), not bought. A weapon's strike:
+// whose swing it borrows (STRIKES), if it has none of its own.
 
 export const ITEMS = {
   // ── 藥草與材料 ──
   ningqi_grass: {
     name: '凝氣草', kind: 'herb', sell: 3,
     desc: '最常見的低階靈草，葉脈泛著微光。',
-    use: { text: '你嚼下凝氣草，一縷清涼沉入丹田。', effects: [['xw', 15]] },
+    use: { text: '你嚼下凝氣草，一縷清涼沉入丹田。', effects: [['xw', 15], ['mp', 0.3]] },
   },
   zhixue_grass: {
     name: '止血草', kind: 'herb', sell: 1,
     desc: '凡人也認得的草藥，敷在傷處能好得快些。',
-    use: { text: '你把止血草搗碎敷上，傷口不再滲血。', effects: [['healdays', 20]] },
+    use: { text: '你把止血草搗碎敷上，傷口不再滲血。', effects: [['healdays', 20], ['hp', 0.15]] },
   },
   ziyun_zhi: {
     name: '紫雲芝', kind: 'herb', sell: 150,
@@ -44,7 +51,7 @@ export const ITEMS = {
   blood_ginseng: {
     name: '三葉血參', kind: 'herb', sell: 25,
     desc: '參鬚泛紅，像是浸過血。補氣血的好東西。',
-    use: { text: '血參入腹，渾身燥熱，像是喝了一大碗烈酒。', effects: [['xw', 70], ['healdays', 15]] },
+    use: { text: '血參入腹，渾身燥熱，像是喝了一大碗烈酒。', effects: [['xw', 70], ['healdays', 15], ['hp', 0.35]] },
   },
   wolf_pelt: {
     name: '狼皮', kind: 'material', sell: 4,
@@ -72,8 +79,8 @@ export const ITEMS = {
   },
   heal_pill: {
     name: '療傷丹', kind: 'pill', price: 25, sell: 10,
-    desc: '修士常備的傷藥，可治一級傷勢。',
-    use: { text: '藥力化作暖流，傷處的疼痛漸漸退去。', effects: [['heal', 1]] },
+    desc: '修士常備的傷藥，可治一級傷勢，並回復四成半氣血。',
+    use: { text: '藥力化作暖流，傷處的疼痛漸漸退去。', effects: [['heal', 1], ['hp', 0.45]] },
   },
   detox_pill: {
     name: '解毒丹', kind: 'pill', price: 15, sell: 6,
@@ -142,6 +149,52 @@ export const ITEMS = {
     name: '古劍殘片', kind: 'treasure', sell: 0, power: 0.2,
     desc: '劍身只剩三寸，寒光不減。帶在身上，戰力 +20%。',
   },
+  iron_saber: {
+    name: '精鐵刀', kind: 'weapon', price: 90, sell: 30, power: 0.22, strike: 'chaidao',
+    desc: '百煉坊打的刀，比柴刀沉，也比柴刀利。',
+  },
+  hantie_sword: {
+    name: '寒鐵劍', kind: 'weapon', price: 520, sell: 200, power: 0.55, strike: 'qinggang_sword',
+    desc: '寒鐵鍛的劍，劍身泛著冷光，已摸到了法器的門檻。',
+  },
+
+  // ── 衣袍、佩飾、法器 ──
+  cloth_robe: {
+    name: '青布道袍', kind: 'gear', slot: 'robe', price: 60, sell: 20, stats: { hp: 0.08, mpRegen: 0.3 },
+    desc: '坊市裁縫的道袍，針腳細密，穿著透氣。',
+  },
+  wolf_coat: {
+    name: '狼皮襖', kind: 'gear', slot: 'robe', sell: 25, stats: { hp: 0.12, def: 0.04 }, craft: { ls: 30, items: { wolf_pelt: 4 } },
+    desc: '幾張狼皮縫成的短襖，擋得住風，也擋得住一點刀。',
+  },
+  scale_armor: {
+    name: '蟒鱗甲', kind: 'gear', slot: 'robe', sell: 120, stats: { def: 0.15, hp: 0.06, speed: -0.03 }, craft: { ls: 120, items: { python_scale: 2 } },
+    desc: '靈溪蟒的鱗一片片綴成的甲，刀劍難入，就是沉了些。',
+  },
+  tiger_robe: {
+    name: '赤炎虎皮袍', kind: 'gear', slot: 'robe', sell: 160, stats: { hp: 0.2, def: 0.08, fire: 0.5 }, craft: { ls: 200, items: { fire_tiger_pelt: 1 } },
+    desc: '赤炎妖虎的皮做的袍子，終年溫熱，火燒不透。',
+  },
+  peace_buckle: {
+    name: '平安扣', kind: 'gear', slot: 'charm', price: 40, sell: 15, stats: { def: 0.04, regen: 0.3 },
+    desc: '青玉磨成的平安扣，說是開過光。受的傷輕一點，好得也快一點。',
+  },
+  fang_pendant: {
+    name: '狼牙墜', kind: 'gear', slot: 'charm', sell: 20, stats: { crit: 0.06 }, craft: { ls: 20, items: { beast_core: 1, wolf_pelt: 2 } },
+    desc: '狼牙上嵌了一顆妖獸內丹，戴著叫人心裡發狠。',
+  },
+  jade_pendant: {
+    name: '青玉佩', kind: 'gear', slot: 'charm', price: 180, sell: 70, stats: { mp: 15, mpRegen: 0.5 },
+    desc: '溫潤的青玉，存得住一點靈氣。',
+  },
+  zhaoyao_mirror: {
+    name: '照妖鏡', kind: 'gear', slot: 'relic', price: 280, sell: 110, stats: { sense: 0.5 }, move: 'mirror',
+    desc: '巴掌大的銅鏡，背面刻著八卦。鏡光照處，妖邪現形。戴著它，可以帶「照妖」上陣，神識也看得更遠。',
+  },
+  zijin_bell: {
+    name: '紫金鈴', kind: 'gear', slot: 'relic', price: 360, sell: 140, stats: { def: 0.04 }, move: 'bell',
+    desc: '紫金打的小鈴，一搖，聲如洪鐘。戴著它，可以帶「金鐘」上陣。',
+  },
 
   // ── 符籙與信物 ──
   foxfire_talisman: {
@@ -186,10 +239,17 @@ export function displayItem(s, id) {
   return { name: it.name, desc: it.desc };
 }
 
+/** Shops: what they sell (stock), and what they make from what you bring (recipes, see craft). */
 export const SHOPS = {
   luoxia: {
     name: '百草堂',
     keeper: '錢掌櫃',
     stock: ['juqi_pill', 'heal_pill', 'detox_pill', 'qingxin_pill', 'qinggang_sword', 'book_lieyan'],
+  },
+  smithy: {
+    name: '百煉坊',
+    keeper: '鐵匠老韓',
+    stock: ['iron_saber', 'hantie_sword', 'cloth_robe', 'peace_buckle', 'zijin_bell'],
+    recipes: ['wolf_coat', 'fang_pendant', 'scale_armor', 'tiger_robe'],
   },
 };

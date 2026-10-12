@@ -43,6 +43,7 @@
  "./src/content/moves.js",
  "./src/content/techniques.js",
  "./src/core/actions.js",
+ "./src/core/body.js",
  "./src/core/calendar.js",
  "./src/core/checks.js",
  "./src/core/cultivation.js",

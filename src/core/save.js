@@ -58,6 +58,8 @@ export function migrate(s) {
     s.world.mobs ||= {};
   }
   s.player.buffs ||= {};
+  // what you wear besides a weapon (blood and 靈力 fill themselves the first time they are asked for)
+  s.player.gear ||= {};
   s.player.arts ||= [];
   s.player.techs ||= [];
   s.sys.known ||= {};

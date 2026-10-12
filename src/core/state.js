@@ -103,6 +103,8 @@ export function newGame({ name, gender, origin, fate, seed, meta }) {
       ls: o.ls || 0,
       items: { ...o.items },
       weapon: o.weapon || null,
+      // a robe, a charm, a 法器 (core/body.js); blood and 靈力 (hp, mp) fill themselves when first asked for
+      gear: {},
       loc: 'qingshi_hill',
       lifeBonus: 0,
       buffs: {},

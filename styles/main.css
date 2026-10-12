@@ -899,6 +899,67 @@ p {
   color: var(--ink-2);
 }
 
+.items p.gearstats,
+.slots .gearstats {
+  font-size: 12.5px;
+  color: var(--jade);
+}
+
+.items p.need {
+  font-size: 12.5px;
+  color: var(--ochre);
+}
+
+.card h3.sub {
+  margin-top: 6px;
+}
+
+/* what you have on */
+.slots {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+
+.slots li {
+  display: grid;
+  grid-template-columns: 2.6em minmax(0, 1fr) auto;
+  grid-template-areas: 'slot name btn' 'slot stats btn';
+  align-items: center;
+  column-gap: 8px;
+  padding: 6px 0;
+  border-top: 1px solid var(--line);
+}
+
+.slots li:first-child {
+  border-top: 0;
+}
+
+.slots .slot {
+  grid-area: slot;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.slots b {
+  grid-area: name;
+}
+
+.slots .gearstats {
+  grid-area: stats;
+}
+
+.slots .btn {
+  grid-area: btn;
+}
+
+.slots li.empty b {
+  color: var(--muted);
+  font-weight: 400;
+}
+
 .kindtag {
   font-size: 12px;
   color: var(--muted);
@@ -1393,6 +1454,65 @@ canvas.world-overlay {
   height: 4px;
 }
 
+/* blood and 靈力, under the 修為 */
+.hud-vitals {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 3px;
+}
+
+.vbar {
+  position: relative;
+  height: 13px;
+  border-radius: 7px;
+  background: rgba(35, 32, 27, 0.13);
+  overflow: hidden;
+}
+
+.vbar i {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 0;
+  transition: width 0.3s;
+}
+
+.vbar.hp i {
+  background: linear-gradient(#c75445, #a8322a);
+}
+
+.vbar.hp::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: var(--cap, 100%);
+  right: 0;
+  background: repeating-linear-gradient(45deg, rgba(35, 32, 27, 0.25) 0 4px, transparent 4px 8px);
+}
+
+.vbar.hp.low {
+  box-shadow: 0 0 0 1.5px rgba(168, 50, 42, 0.8);
+}
+
+.vbar.mp i {
+  background: linear-gradient(#6990c4, #4f73a8);
+}
+
+.vbar span {
+  position: absolute;
+  inset: 0;
+  padding-left: 7px;
+  font-size: 10px;
+  line-height: 13px;
+  color: #f7efe1;
+  text-shadow: 0 0 2px rgba(20, 16, 12, 0.75);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
 .hud-row {
   display: flex;
   align-items: flex-start;
@@ -1443,7 +1563,7 @@ canvas.world-overlay {
 .minimap-btn {
   position: absolute;
   right: 10px;
-  top: calc(var(--fsat) + 96px);
+  top: calc(var(--fsat) + 124px);
   width: 98px;
   height: 98px;
   padding: 0;
@@ -1464,7 +1584,7 @@ canvas.world-overlay {
 .toasts {
   position: absolute;
   left: 50%;
-  top: calc(var(--fsat) + 206px);
+  top: calc(var(--fsat) + 230px);
   transform: translateX(-50%);
   width: min(86vw, 420px);
   display: grid;

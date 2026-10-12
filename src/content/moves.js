@@ -24,8 +24,8 @@ export const STRIKES = {
   hunting_bow: { name: '射箭', aim: 'line', range: 380, width: 8, speed: 720, every: 0.8, windup: 0.16, mult: 0.9, fx: 'arrow' },
 };
 
-/** The schools a move belongs to, in the order they are shown. */
-export const SCHOOLS = ['通用', '劍修', '法修', '體修'];
+/** The schools a move belongs to, in the order they are shown (法器: what a worn 法器 lets you do). */
+export const SCHOOLS = ['通用', '劍修', '法修', '體修', '法器'];
 
 /**
  * What you can call on in a fight, by school: 通用 anyone's, 劍修 the sword,
@@ -36,7 +36,8 @@ export const SCHOOLS = ['通用', '劍修', '法修', '體修'];
  * any, one of: learn (an art or 功法 that teaches it), weapon (holding one of
  * these), gengu (a body this strong, 根骨). Every move of the body comes to
  * you at 築基, when the body is remade. arts + better: what it becomes once you
- * know one of those arts.
+ * know one of those arts. relic: a 法器 you must be wearing (core/body.js).
+ * holy: light that burns the things of spirit most of all.
  */
 export const MOVES = {
   qi: {
@@ -55,7 +56,7 @@ export const MOVES = {
   },
   swordstep: {
     name: '劍影', school: '劍修', aim: 'dash', mp: 8, cd: 7, cast: 0.05, range: 150, width: 36, mult: 1.5, fx: 'swordstep',
-    learn: ['qingyuan_sword'], weapon: ['qinggang_sword'],
+    learn: ['qingyuan_sword'], weapon: ['qinggang_sword', 'hantie_sword'],
     desc: '人隨劍走，一閃而過，沿途的敵人各挨一劍。閃身之時，刀槍不入。',
   },
   fireball: {
@@ -87,6 +88,16 @@ export const MOVES = {
     name: '金剛', school: '體修', aim: 'self', mp: 0, cd: 16, cast: 0.2, ward: 0.5, last: 4, fx: 'iron', realm: 0,
     gengu: 8,
     desc: '一口氣沉下去，渾身筋骨繃得像鐵，四息之內受的傷減半。不耗靈力。',
+  },
+  mirror: {
+    name: '照妖', school: '法器', aim: 'line', mp: 10, cd: 8, cast: 0.15, range: 300, width: 36, speed: 900, mult: 0.7, pierce: true, stun: 1.2, holy: true, fx: 'mirror',
+    relic: 'zhaoyao_mirror',
+    desc: '照妖鏡一照，一道鏡光直直射出：照到的都踉蹌；鬼物陰魂被照中，傷得最重。',
+  },
+  bell: {
+    name: '金鐘', school: '法器', aim: 'around', mp: 14, cd: 14, cast: 0.1, radius: 92, mult: 0.5, stun: 0.8, push: 50, shield: 0.25, last: 4, fx: 'bell',
+    relic: 'zijin_bell',
+    desc: '紫金鈴一搖：身邊的都被震開、踉蹌，一層金光護住你四息。',
   },
 };
 
@@ -136,6 +147,7 @@ export const PILL_CD = 8;
  * trail: a rush that leaves the ground burning behind it ({ secs, width, dps }).
  * hold: a rush that, catching you, holds you fast — [seconds, share of a blow each half-second]
  *   (step aside to break free).
+ * fire: it is fire (what you wear against fire keeps some of it off).
  */
 export const BEAST_MOVES = {
   // 妖狼 — 撕咬: a short lunge with the jaws
@@ -188,7 +200,7 @@ export const BEAST_MOVES = {
   // 赤炎妖虎: claws, three in a row; a spring that leaves the ground burning; a roar that throws you
   // back; fire from its jaws
   fireclaw: { shape: 'fan', reach: 62, arc: 1.7, windup: 0.5, recover: 0.75, cd: 3.2, mult: 1.05, lunge: 12, fx: 'claw', combo: 3, again: 0.26 },
-  firepounce: { shape: 'leap', min: 100, max: 250, windup: 0.75, speed: 660, width: 40, overshoot: 40, recover: 0.9, cd: 6.5, mult: 1.6, trail: { secs: 3.5, width: 30, dps: 0.3 } },
+  firepounce: { shape: 'leap', min: 100, max: 250, windup: 0.75, speed: 660, width: 40, overshoot: 40, recover: 0.9, cd: 6.5, mult: 1.6, fire: true, trail: { secs: 3.5, width: 30, dps: 0.3 } },
   roar: { shape: 'ring', radius: 130, windup: 0.8, recover: 0.7, cd: 10, mult: 0.6, push: 110, fx: 'roar' },
-  breath: { shape: 'fan', reach: 150, arc: 0.85, windup: 0.95, recover: 1, cd: 8, mult: 1.8, lunge: 0, fx: 'breath', pool: { secs: 3, r: 30, dps: 0.3, kind: 'fire' } },
+  breath: { shape: 'fan', reach: 150, arc: 0.85, windup: 0.95, recover: 1, cd: 8, mult: 1.8, lunge: 0, fire: true, fx: 'breath', pool: { secs: 3, r: 30, dps: 0.3, kind: 'fire' } },
 };

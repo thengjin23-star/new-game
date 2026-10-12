@@ -19,6 +19,7 @@ import { updateCombat, beastTargets, strikeAt, FIGHT_HOURS } from './combat.js';
 import { inquire, visit } from '../core/actions.js';
 import { spendHours, newReport } from '../core/time.js';
 import { applyEffects, logLife } from '../core/effects.js';
+import { rested, gearStats } from '../core/body.js';
 import { rand, chance, pickWeighted } from '../core/rng.js';
 import { fmtDuration } from '../core/calendar.js';
 
@@ -115,7 +116,7 @@ export function walkMult(s) {
   if (p.realm === 1) m = 1.08 + p.stage * 0.015;
   else if (p.realm === 2) m = 1.6;
   else if (p.realm >= 3) m = 2;
-  return m * [1, 0.9, 0.75, 0.6][p.injury || 0];
+  return m * [1, 0.9, 0.75, 0.6][p.injury || 0] * (1 + gearStats(s).speed);
 }
 
 function revealRadius(s) {
@@ -779,6 +780,9 @@ export function rest(s, until) {
   if (s.dead) return;
   if (s.player.mind < 60 && chance(s, 0.3)) s.player.mind += 1;
   L.feed.push({ kind: 'ambient', text: until === 'dawn' ? '天亮了。' : until === 'dusk' ? '太陽落山了。' : until === 'night' ? '夜深了。' : '你歇了一會兒。' });
+  // blood and 靈力 come back as you rest
+  const [hp, mp] = rested(s, hours);
+  if (hp > 0 || mp > 0) L.feed.push({ kind: 'good', text: [hp > 0 && `氣血 +${hp}`, mp > 0 && `靈力 +${mp}`].filter(Boolean).join('、') });
   L.dayTurned = false;
   fireDue(s, L);
 }
