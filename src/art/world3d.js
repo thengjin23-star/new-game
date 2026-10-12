@@ -368,8 +368,8 @@ export function createWorld3D(canvas, { onFrame, idle, quality = 'high', onSlow 
     }
     const C = CB.combatOf(s);
     for (const b of CB.beastsInWorld(s)) {
-      // a snake in the grass is not seen until it moves
-      if (!near(b.x, b.y) || b.state === 'hide') continue;
+      // a snake in the grass is not seen until it moves (or your 神識 passes over it)
+      if (!near(b.x, b.y) || (b.state === 'hide' && !CB.sensed(s, b))) continue;
       const pic = picture(`mob:${b.kind}`, b.R.tall + 6) || picture(`mob:${b.def.kind}`, b.R.tall + 6);
       const busy = b.moving || b.aggro || b.state === 'dead' || b.state === 'yield' || (b.fade || 0) > 0;
       cards.add(`beast:${b.uid}`, b.x, heightAt(b.x, b.y), b.y, (c) => paintBeast(c, b, t, C.t, { pic }), { animated: true, fps: busy ? 30 : 10, ghost: b.aggro && b.state !== 'dead' });
@@ -384,7 +384,7 @@ export function createWorld3D(canvas, { onFrame, idle, quality = 'high', onSlow 
       if (pic) pic(c);
       else if (me && !sit) paintHero(c, LOOKS.player, { act: me.act, dash: me.dash, flashT: me.flashT, face: w.face || 1, moving, weapon: CB.weaponLook(s) }, t, C.t);
       else drawPerson(c, 0, 0, LOOKS.player, { t, moving, face: w.face || 1, sit });
-    }, { animated: true, fps: moving || sit || C.on ? 30 : 10, ghost: true });
+    }, { animated: true, fps: moving || sit || C.on ? 30 : 10, ghost: true, alpha: me?.hidden > 0 ? 0.5 : 1 });
     foot(w.x, w.y, sit ? 13 : 9.5, 0.34);
     sh.end();
     FIGURE.shadows = true;

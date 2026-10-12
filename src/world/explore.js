@@ -15,7 +15,7 @@ import { updateWild, wildNow, spawnCritter } from './wildlife.js';
 import { sysGain } from './system.js';
 import { ITEMS, displayItem } from '../content/items.js';
 import { pickEvent, startEvent, takeDue, notice } from '../core/events.js';
-import { updateCombat, beastTargets, strikeAt, FIGHT_HOURS } from './combat.js';
+import { updateCombat, beastTargets, strikeAt, FIGHT_HOURS, combatOf } from './combat.js';
 import { inquire, visit } from '../core/actions.js';
 import { spendHours, newReport } from '../core/time.js';
 import { applyEffects, logLife } from '../core/effects.js';
@@ -116,7 +116,9 @@ export function walkMult(s) {
   if (p.realm === 1) m = 1.08 + p.stage * 0.015;
   else if (p.realm === 2) m = 1.6;
   else if (p.realm >= 3) m = 2;
-  return m * [1, 0.9, 0.75, 0.6][p.injury || 0] * (1 + gearStats(s).speed);
+  // (a 神行符 burning: half as fast again)
+  const swift = combatOf(s).me?.swift > 0 ? 1.5 : 1;
+  return m * [1, 0.9, 0.75, 0.6][p.injury || 0] * (1 + gearStats(s).speed) * swift;
 }
 
 function revealRadius(s) {
@@ -404,6 +406,51 @@ function findHidden(s, L, mult) {
     L.feed.push({ kind: 'find', text: `發現：${poiName(s, p)}` });
     flush(s, L, report);
   }
+}
+
+/**
+ * 神識 over everything within r: the hidden places in it are found (each
+ * once), the clouds over it part. Returns the names of what was found.
+ */
+export function senseAround(s, r) {
+  const w = ensureWorld(s);
+  const L = liveOf(s);
+  const out = [];
+  for (const p of POIS) {
+    if (!p.hidden || p.id in w.found) continue;
+    if (p.hidden.cond && !p.hidden.cond(s)) continue;
+    if (Math.hypot(p.x - w.x, p.y - w.y) > r) continue;
+    w.found[p.id] = s.day;
+    const report = newReport();
+    sysGain(s, 2, report);
+    out.push(poiName(s, p));
+    flush(s, L, report);
+  }
+  clearClouds(s, L, w.x, w.y, r);
+  return out;
+}
+
+/** A 歸元符: back to the nearest town you have been to (an hour on the way). Returns where, or null. */
+export function returnTo(s, towns) {
+  const w = ensureWorld(s);
+  const L = liveOf(s);
+  let best = null;
+  let bd = Infinity;
+  for (const id of towns) {
+    if (!s.nodes[id]?.visited || !NODES[id]?.at) continue;
+    const [x, y] = NODES[id].at;
+    const d = Math.hypot(x - w.x, y - w.y);
+    if (d < bd) {
+      bd = d;
+      best = id;
+    }
+  }
+  best ||= towns[towns.length - 1];
+  const spot = nearestOpen(s, ...NODES[best].at) || NODES[best].at;
+  stopWalking(L);
+  placeAt(s, spot[0], spot[1]);
+  passHours(s, L, 1);
+  return best;
 }
 
 function autoTriggers(s, L) {

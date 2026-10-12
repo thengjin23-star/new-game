@@ -1,5 +1,10 @@
 // Small readers for writing event conditions. They only read state.
 
+import { pools } from '../core/body.js';
+
+/** 靈力 you have now. */
+export const mpNow = (s) => pools(s).mp;
+
 export const has = (s, id, n = 1) => (s.player.items[id] || 0) >= n;
 export const flag = (s, k) => !!s.flags[k];
 export const favor = (s, id) => s.npcs[id]?.favor ?? 0;

@@ -58,16 +58,21 @@ function ownMp(p) {
   return p.realm === 0 ? 0 : p.realm === 1 ? 18 + 4 * p.stage : p.realm === 2 ? 90 + 15 * p.stage : 260;
 }
 
-/** How deep your pools are: blood (and what a wound leaves of it), 靈力; your 戰力 and gear with them. */
+/**
+ * How deep your pools are: blood (and what a wound leaves of it), 靈力; your
+ * 戰力 and gear with them. baseHp: your blood without what your gear adds
+ * (what those you fight size their blows by, so gear is a help, not a wash).
+ */
 export function vitals(s) {
   const p = s.player;
   const G = gearStats(s);
   const P = Math.max(3, fightPower(s));
-  const maxHp = Math.round((20 + 2.6 * P) * (1 + G.hp));
+  const baseHp = Math.round(20 + 2.6 * P);
+  const maxHp = Math.round(baseHp * (1 + G.hp));
   const own = ownMp(p);
   const maxMp = own > 0 ? own + G.mp : 0;
   const cap = Math.max(1, Math.round(maxHp * HP_CAP[p.injury || 0]));
-  return { P, maxHp, cap, maxMp, G };
+  return { P, baseHp, maxHp, cap, maxMp, G };
 }
 
 /** Your blood and 靈力 now (a life just begun, or a save from before they were kept, starts full). */

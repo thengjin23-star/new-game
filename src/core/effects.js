@@ -6,7 +6,7 @@ import { rumor } from '../world/rumors.js';
 import { sysGain, trySubstitute } from '../world/system.js';
 import { reveal, unseenSpot } from '../world/fog.js';
 import { addXiuwei, stageReq, INJURY } from './cultivation.js';
-import { restore, unwearGone } from './body.js';
+import { restore, unwearGone, pools } from './body.js';
 import { advance } from './time.js';
 import { schedule, unschedule } from './schedule.js';
 import { rand, randInt, pickWeighted } from './rng.js';
@@ -35,7 +35,7 @@ export function learnTech(s, id, report) {
   const t = TECHS[id];
   const p = s.player;
   if (!t) return;
-  if (t.kind === 'combat') {
+  if (t.kind === 'combat' || t.kind === 'spell') {
     if (!p.arts.includes(id)) {
       p.arts.push(id);
       chip(report, `習得：${t.name}`, 'good');
@@ -241,6 +241,14 @@ export function applyEffects(s, effects, ctx, report) {
         break;
       }
       case 'mp': {
+        // 靈力: a share of what you hold back (or, as a whole number, that much spent)
+        if (a <= -1) {
+          const V = pools(s);
+          const n = Math.min(V.mp, -a);
+          p.mp = V.mp - n;
+          if (n > 0) chip(report, `靈力 -${n}`, 'bad');
+          break;
+        }
         const [, n] = restore(s, 0, a);
         if (n > 0) chip(report, `靈力 +${n}`, 'good');
         break;

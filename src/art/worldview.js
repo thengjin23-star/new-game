@@ -872,7 +872,7 @@ export function createWorldView(canvas, { onFrame, idle } = {}) {
       push(c.y, 'wild', c);
     }
     for (const b of CB.beastsInWorld(s)) {
-      if (b.x < x0 - 40 || b.x > x1 + 40 || b.y < y0 || b.y > y1 + 60 || b.state === 'hide') continue;
+      if (b.x < x0 - 40 || b.x > x1 + 40 || b.y < y0 || b.y > y1 + 60 || (b.state === 'hide' && !CB.sensed(s, b))) continue;
       push(b.y, 'beast', b);
     }
     const w = s.world;
@@ -1045,6 +1045,8 @@ export function createWorldView(canvas, { onFrame, idle } = {}) {
         if (me && !sit) {
           ctx.save();
           ctx.translate(w.x, w.y);
+          // 斂息: you are hardly there
+          if (me.hidden > 0) ctx.globalAlpha *= 0.5;
           hurtHalo(Math.max(0, 1 - (C.t - me.flashT) / 0.22), 36);
           paintHero(ctx, LOOKS.player, { act: me.act, dash: me.dash, flashT: me.flashT, face: w.face || 1, moving, weapon: CB.weaponLook(s) }, t, C.t, { tint: false });
           ctx.restore();

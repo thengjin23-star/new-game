@@ -165,6 +165,7 @@ export const POIS = [
   { id: 'market_alley', region: 'luoxia_market', x: 4250, y: 2760, name: '小巷', verb: '查看', auto: 90, text: '巷子裡堆著破筐和爛菜葉。' },
   { id: 'su_stall', region: 'luoxia_market', x: 3880, y: 2672, name: '雜貨攤', verb: '查看', auto: 110, text: '攤上堆著一堆說不清用途的破爛。' },
   { id: 'smithy_stall', region: 'luoxia_market', x: 4180, y: 2648, name: '百煉坊', verb: '購物', action: 'shop', shop: 'smithy' },
+  { id: 'talisman_stall', region: 'luoxia_market', x: 3700, y: 2638, name: '符籙攤', verb: '購物', action: 'shop', shop: 'talisman' },
   // 靈溪谷
   {
     id: 'python_pool', region: 'lingxi_valley', x: 520, y: 1850, name: '深潭', verb: '查看', auto: 170,

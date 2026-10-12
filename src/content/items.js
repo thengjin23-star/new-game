@@ -126,6 +126,11 @@ export const ITEMS = {
     desc: '古戰場中得來的殘卷。使用後習得。',
     use: { text: '殘卷上的字跡如水波流動，你沉入其中，不知時日。', effects: [['tech', 'xuanshui'], ['days', 10]] },
   },
+  book_lianxi: {
+    name: '《斂息訣》', kind: 'book', price: 120, sell: 40,
+    desc: '一本薄薄的小冊子，教人收斂氣息，不叫野獸察覺。使用後習得斂息術。',
+    use: { text: '你照著冊子上的法門調息，呼吸越來越輕，輕到連自己都聽不見。', effects: [['tech', 'lianxi']] },
+  },
   book_songhe: {
     name: '《松鶴手札》', kind: 'book', sell: 0, keep: true,
     desc: '松鶴道人一生的修行心得，記著他當年築基失敗的每一個細節。持有時，突破築基成功率 +10%。翻閱可習得松鶴吐納術。',
@@ -196,10 +201,38 @@ export const ITEMS = {
     desc: '紫金打的小鈴，一搖，聲如洪鐘。戴著它，可以帶「金鐘」上陣。',
   },
 
-  // ── 符籙與信物 ──
+  // ── 符籙與信物 ──（符燒了有什麼用：content/arts.js）
   foxfire_talisman: {
     name: '狐火符', kind: 'talisman', sell: 0,
     desc: '危急時借狐火遁走。戰鬥失敗時自動使用，免去一次傷勢。',
+  },
+  fire_talisman: {
+    name: '火符', kind: 'talisman', price: 25, sell: 8,
+    desc: '黃紙硃砂畫的火紋。戰鬥中燒出去，一團烈火砸向敵人，比火球術還猛，不耗靈力。',
+  },
+  gold_talisman: {
+    name: '金光符', kind: 'talisman', price: 30, sell: 10,
+    desc: '戰鬥中燒了，一層金光護住周身八息，擋下四成氣血的傷害。',
+  },
+  exorcise_talisman: {
+    name: '驅邪符', kind: 'talisman', price: 20, sell: 6,
+    desc: '戰鬥中燒了，身邊的鬼物陰魂被震退、受創；平時燒了，一百八十息之內孤魂野鬼不敢近身。',
+  },
+  swift_talisman: {
+    name: '神行符', kind: 'talisman', price: 20, sell: 6,
+    desc: '貼在腿上，一百二十息之內腳下生風，走得快一半。',
+  },
+  hide_talisman: {
+    name: '斂息符', kind: 'talisman', price: 25, sell: 8,
+    desc: '燒了，九十息之內氣息全無：野獸要走到跟前才發覺你。一出手就破了。',
+  },
+  miasma_talisman: {
+    name: '避瘴符', kind: 'talisman', price: 15, sell: 5,
+    desc: '遇上瘴氣時燒了，瘴毒近不了身。',
+  },
+  return_talisman: {
+    name: '歸元符', kind: 'talisman', price: 40, sell: 12,
+    desc: '燒了，一陣風把你送回最近去過的城鎮（青石鎮、落霞坊市或清虛觀）。路上要過一個時辰。',
   },
   xuesha_token: {
     name: '血煞令', kind: 'token', sell: 0,
@@ -245,6 +278,11 @@ export const SHOPS = {
     name: '百草堂',
     keeper: '錢掌櫃',
     stock: ['juqi_pill', 'heal_pill', 'detox_pill', 'qingxin_pill', 'qinggang_sword', 'book_lieyan'],
+  },
+  talisman: {
+    name: '符籙攤',
+    keeper: '畫符的柳老道',
+    stock: ['fire_talisman', 'gold_talisman', 'exorcise_talisman', 'swift_talisman', 'hide_talisman', 'miasma_talisman', 'return_talisman', 'zhaoyao_mirror', 'jade_pendant', 'book_lianxi'],
   },
   smithy: {
     name: '百煉坊',

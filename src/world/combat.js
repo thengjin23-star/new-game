@@ -20,6 +20,7 @@ import { npcRealm } from './npcs.js';
 import { FOES } from '../content/foes.js';
 import { EVENTS } from '../content/index.js';
 import { MOVES, STRIKES, DASH, PILLS, PILL_CD, BEAST_MOVES, KIT_ORDER, TRIAL_KIT } from '../content/moves.js';
+import { TALISMANS } from '../content/arts.js';
 import { TECHS } from '../content/techniques.js';
 import { ITEMS } from '../content/items.js';
 import { power } from '../core/cultivation.js';
@@ -124,6 +125,7 @@ export function hero(s, C = combatOf(s)) {
   if (me.cap > 0 && V.cap > me.cap) me.hp += V.cap - me.cap;
   if (maxMp > (me.maxMp ?? maxMp)) me.mp += maxMp - me.maxMp;
   me.P = V.P;
+  me.baseHp = V.baseHp;
   me.maxHp = V.maxHp;
   me.cap = V.cap;
   me.maxMp = maxMp;
@@ -391,7 +393,7 @@ function arm(s, C, b) {
   b.hp = Math.max(1, Math.round(b.maxHp * frac));
   // 境界壓制: a realm above yours bites harder, moves faster, and shrugs off most of what you do
   // (one below yours, a little the other way)
-  b.dmg = (((me.maxHp / BITES) * rel * K.atk) / shape) * (gap > 0 ? 1 + 0.6 * gap : Math.pow(0.85, -gap));
+  b.dmg = ((((me.baseHp ?? me.maxHp) / BITES) * rel * K.atk) / shape) * (gap > 0 ? 1 + 0.6 * gap : Math.pow(0.85, -gap));
   b.speed = R.speed * (gap > 0 ? 1 + 0.08 * gap : 1);
   b.taken = gap > 0 ? Math.pow(0.45, gap) : 1 + 0.15 * -gap;
   b.armed = true;
@@ -423,7 +425,11 @@ function sightOf(s, b) {
   const R = b.R;
   const night = s.tod >= 19.5 || s.tod < 5;
   const noon = s.tod >= 10.5 && s.tod < 14.5;
-  return R.sight * (night ? R.night ?? 1.2 : (noon ? R.noon ?? 1 : 1) * (R.day ?? 1)) * cover(s);
+  const me = combatOf(s).me;
+  // 斂息: it has to come right up to you; 驅邪: the dead will not look your way
+  const hush = me?.hidden > 0 ? 0.3 : 1;
+  if (me?.exorcise > 0 && b.K.spirit) return 0;
+  return R.sight * (night ? R.night ?? 1.2 : (noon ? R.noon ?? 1 : 1) * (R.day ?? 1)) * cover(s) * hush;
 }
 
 /** Inside a town (a temple, a sect), you are out of a beast's reach. */
@@ -615,10 +621,10 @@ function hurtMe(s, C, b, mult, io, push = null, M = null) {
     pop(C, w.x, w.y, '閃', 'miss', 40);
     return -1;
   }
-  let dmg = Math.max(1, Math.round(b.dmg * mult * (0.85 + rand(s) * 0.3) * (b.enraged ? 1.2 : 1)));
   // what you wear keeps some of it off (fire, what keeps fire off)
   const G = me.gear;
-  if (G && (G.def || (M?.fire && G.fire))) dmg = Math.max(1, Math.round(dmg * (1 - G.def) * (M?.fire ? 1 - G.fire : 1)));
+  const kept = G ? (1 - G.def) * (M?.fire ? 1 - G.fire : 1) : 1;
+  let dmg = Math.max(1, Math.round(b.dmg * mult * (0.85 + rand(s) * 0.3) * (b.enraged ? 1.2 : 1) * kept));
   // 金剛: braced, the body takes only part of it
   if (me.ward) dmg = Math.max(1, Math.round(dmg * (1 - me.ward.k)));
   if (me.shield > 0) {
@@ -1480,6 +1486,10 @@ function chase(s, C, b, dt, io, d, ux, uy) {
     calmDown(b);
     return;
   }
+  if (foe(b) && b.K.spirit && C.me?.exorcise > 0 && d < 170 && !b.story) {
+    rout(s, C, b, io, `${b.name}畏懼符上的光，退走了。`);
+    return;
+  }
   if (b.pause > 0) {
     // a moment before it sees what you are about
     b.pause -= dt;
@@ -1848,6 +1858,8 @@ function heroTick(s, C, dt, io) {
   const w = s.world;
   for (const k of Object.keys(me.cds)) me.cds[k] = Math.max(0, me.cds[k] - dt);
   me.inv = Math.max(0, me.inv - dt);
+  // what a 符 or a 術 gave you, wearing off: faster on foot, hidden, the dead kept away
+  for (const k of ['swift', 'hidden', 'exorcise']) if (me[k] > 0) me[k] = Math.max(0, me[k] - dt);
   if (me.shieldT > 0) {
     me.shieldT -= dt;
     if (me.shieldT <= 0) {
@@ -2040,7 +2052,8 @@ function release(s, C, a, io) {
     for (const b of beastsOf(s, C)) {
       const d = Math.hypot(b.x - w.x, b.y - w.y) || 1;
       if (!alive(b) || !foe(b) || !present(s, b) || d > k.radius + b.R.body) continue;
-      hurtBeast(s, C, b, me.atk * k.mult, io);
+      if (k.only === 'spirit' && !b.K.spirit) continue;
+      hurtBeast(s, C, b, me.atk * k.mult, io, { kind: k.holy ? 'holy' : 'phys' });
       if (s.pending || s.dead) return;
       stagger(b, k.stun, [(b.x - w.x) / d, (b.y - w.y) / d, k.push ?? 18]);
     }
@@ -2248,6 +2261,7 @@ export function attackCmd(s, aim = null, hold = true) {
   const C = combatOf(s);
   const me = hero(s, C);
   const w = s.world;
+  me.hidden = 0;
   const b = pickTarget(s, C, aim);
   me.hold = hold;
   if (b) {
@@ -2280,6 +2294,7 @@ export function strikeAt(s, uid) {
   const me = hero(s, C);
   const b = beastsOf(s, C).find((x) => x.uid === uid && seen(x));
   if (!b) return false;
+  me.hidden = 0;
   me.target = b.uid;
   me.auto = true;
   me.hold = false;
@@ -2338,9 +2353,84 @@ export function castCmd(s, id, aim = null) {
   }
   me.mp -= k.mp;
   me.cds[id] = k.cd;
+  me.hidden = 0;
   faceTo(s, me, ux, uy);
   me.act = { kind: 'cast', id, k, t: 0, at: k.cast, dur: k.cast + 0.16, ux, uy, pt: [w.x + ux * reach, w.y + uy * reach], done: false };
   return true;
+}
+
+// ── 符 in a fight ──
+
+/** The 符 you would burn in a fight: the one you carry at hand (隨身), else the first you have. */
+export function talismanOf(s) {
+  const items = s.player.items;
+  const ready = s.player.ready;
+  if (ready && TALISMANS[ready]?.fight && items[ready] > 0) return ready;
+  return Object.keys(TALISMANS).find((id) => TALISMANS[id].fight && items[id] > 0) || null;
+}
+
+/** Burn a 符 in a fight: it goes off like a move of its own (no 靈力; the 符 is gone). */
+export function talismanCmd(s, aim = null) {
+  if (!free(s)) return false;
+  const C = combatOf(s);
+  const me = hero(s, C);
+  const w = s.world;
+  const id = talismanOf(s);
+  if (!id || me.dash || (me.cds.talisman || 0) > 0 || (me.act?.kind === 'cast' && !me.act.done)) return false;
+  const k = { ...TALISMANS[id].fight, id, mp: 0 };
+  const pt = aim || autoAim(s, k);
+  let [ux, uy] = me.dir;
+  const dx = pt[0] - w.x;
+  const dy = pt[1] - w.y;
+  const d = Math.hypot(dx, dy);
+  if (d > 1) [ux, uy] = [dx / d, dy / d];
+  const reach = Math.min(d, k.range || 0);
+  addItem(s, id, -1, newReport());
+  me.cds.talisman = TALISMAN_CD;
+  me.hidden = 0;
+  faceTo(s, me, ux, uy);
+  me.act = { kind: 'cast', id, k, t: 0, at: k.cast, dur: k.cast + 0.16, ux, uy, pt: [w.x + ux * reach, w.y + uy * reach], done: false };
+  say(C, 'sys', `你燒了一張${ITEMS[id].name}。`);
+  return true;
+}
+
+/** Seconds between one 符 and the next. */
+export const TALISMAN_CD = 3;
+
+// ── 術 and 符 out in the world (world/arts.js) ──
+
+/** Something a 符 or a 術 gives you for a while (seconds): swift, hidden, exorcise. */
+export function bless(s, kind, secs) {
+  const me = hero(s);
+  me[kind] = Math.max(me[kind] || 0, secs);
+}
+
+/** 回春 out in the world: blood back over a few breaths, and the venom gone. */
+export function mendSelf(s, share = 0.3, secs = 3) {
+  const C = combatOf(s);
+  const me = hero(s, C);
+  me.regen = { left: secs, hps: (me.cap * share) / secs };
+  if (me.poison) me.poison = null;
+  C.fx.push({ kind: 'mend', x: s.world.x, y: s.world.y, t0: C.t, dur: 0.6 });
+}
+
+/** 神識 passes over whatever lies hidden within r: it shows for a while. Returns their names. */
+export function senseBeasts(s, r) {
+  const C = combatOf(s);
+  const w = s.world;
+  const out = [];
+  for (const b of beastsOf(s, C)) {
+    if (b.state !== 'hide' || !present(s, b) || Math.hypot(b.x - w.x, b.y - w.y) > r) continue;
+    b.sensedT = C.t + 15;
+    out.push(b.name);
+  }
+  C.fx.push({ kind: 'sense', x: w.x, y: w.y, r, t0: C.t, dur: 1.1 });
+  return out;
+}
+
+/** Is it showing to your 神識 just now (one lying hidden)? */
+export function sensed(s, b) {
+  return b.sensedT > combatOf(s).t;
 }
 
 /** Step aside: a quick dash (where you are steering, else where you face), untouchable while it lasts. */

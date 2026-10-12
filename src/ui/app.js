@@ -8,6 +8,7 @@ import { startEvent, choose, continueEvent } from '../core/events.js';
 import * as A from '../core/actions.js';
 import * as E from '../world/explore.js';
 import * as CB from '../world/combat.js';
+import * as AR from '../world/arts.js';
 import { ROOTS, INJURY, BUFFS, realmLabel, stageReq, age, lifespan, rateParts, breakthroughInfo, power, atBottleneck, techOf } from '../core/cultivation.js';
 import { SLOTS, STAT_WORD, gearOf, slotOf } from '../core/body.js';
 import { fmtDate, fmtDuration, seasonOf, SEASON_NAME } from '../core/calendar.js';
@@ -373,9 +374,11 @@ export function startApp(root, { speed = 1, view = null } = {}) {
       h('div.walk-hint', h('span', '按住畫面拖動：往那裡走'), h('span', '點地面：自己走過去'), h('span', '點人或東西：走過去互動')),
       h('div.caption'),
       h('div.actbar',
+        h('button.art-btn', { onclick: toggleArts, 'aria-label': '術：法術與符籙（F）', hidden: true }, '術'),
         h('button.sit-btn', { onclick: () => openSheet('rest'), 'aria-label': '歇息、搜尋、閉關' }, '坐'),
         h('button.act-btn', { onclick: doAct }),
       ),
+      h('div.arts-pop', { role: 'menu', 'aria-label': '術' }),
       h('div.secl-bar'),
       combatHudEl(),
       combatPadEl(),
@@ -549,6 +552,14 @@ export function startApp(root, { speed = 1, view = null } = {}) {
       closeSheet();
       return;
     }
+    if (key === 'escape' && ui.artsOpen) {
+      toggleArts();
+      return;
+    }
+    if (key === 'f' && !ui.s.pending && !ui.sheet && !ui.s.secl) {
+      toggleArts();
+      return;
+    }
     if ((key === 'e' || key === ' ' || key === 'enter') && !ui.s.pending && !ui.sheet && e.target === document.body) {
       e.preventDefault();
       doAct();
@@ -668,6 +679,51 @@ export function startApp(root, { speed = 1, view = null } = {}) {
     E.walkTo(s, wx, wy);
   }
 
+  // ── 術: spells and 符 out in the world ──
+
+  /** Open (or close) the little list of what you can cast or burn here. */
+  function toggleArts() {
+    const s = ui.s;
+    ui.artsOpen = !ui.artsOpen && !!s && !s.pending && !s.secl && !CB.inCombat(s) && AR.artsOf(s).length > 0;
+    renderArts();
+  }
+
+  function renderArts() {
+    const el = $('.arts-pop');
+    if (!el) return;
+    el.classList.toggle('on', !!ui.artsOpen);
+    if (!ui.artsOpen) return;
+    const s = ui.s;
+    const list = AR.artsOf(s);
+    const key = list.map((a) => `${a.id}:${a.n || 0}:${Math.ceil(a.left)}:${a.why || ''}`).join('|');
+    if (el.dataset.key === key) return;
+    el.dataset.key = key;
+    clear(el);
+    put(el, ...list.map((a) => h('button.art' + (a.kind === 'talisman' ? '.fu' : ''), {
+      type: 'button', title: a.desc, disabled: !!a.why,
+      onclick: () => {
+        if (!AR.castArt(ui.s, a.id)) return;
+        ui.artsOpen = false;
+        renderArts();
+        persist();
+      },
+    },
+    h('b', a.name),
+    h('span', a.kind === 'talisman' ? `×${a.n}` : a.left > 0 ? `${Math.ceil(a.left)} 息` : `靈力 ${a.mp}`),
+    )));
+  }
+
+  /** The 術 button shows when there is something to cast or burn; the list keeps up while it is open. */
+  function artsHud() {
+    const s = ui.s;
+    const btn = $('.art-btn');
+    if (!btn) return;
+    const any = !s.pending && !s.secl && !CB.inCombat(s) && AR.artsOf(s).length > 0;
+    btn.hidden = !any;
+    if (!any && ui.artsOpen) ui.artsOpen = false;
+    renderArts();
+  }
+
   function doAct() {
     const s = ui.s;
     if (!s || s.pending || s.secl) return;
@@ -760,6 +816,11 @@ export function startApp(root, { speed = 1, view = null } = {}) {
       if (down && !e.repeat) CB.pillCmd(s);
       return true;
     }
+    if (key === 'f' && (CB.inCombat(s) || ui.cbtReady)) {
+      e.preventDefault();
+      if (down && !e.repeat) CB.talismanCmd(s, mouseAim());
+      return true;
+    }
     if ((key === ' ' && (CB.inCombat(s) || ui.cbtReady)) || key === 'shift' || key === 'k') {
       e.preventDefault();
       if (down && !e.repeat) {
@@ -817,6 +878,14 @@ export function startApp(root, { speed = 1, view = null } = {}) {
       CB.dashCmd(ui.s, moveDir());
     });
     for (const ev of ['pointerup', 'pointercancel', 'pointerleave']) dash.addEventListener(ev, () => dash.classList.remove('down'));
+    const tal = make('tal', 'tal', 'F');
+    tal.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      if (!ui.s) return;
+      tal.classList.add('down');
+      CB.talismanCmd(ui.s);
+    });
+    for (const ev of ['pointerup', 'pointercancel', 'pointerleave']) tal.addEventListener(ev, () => tal.classList.remove('down'));
     const pill = make('pill', 'pill', 'Q');
     pill.addEventListener('pointerdown', (e) => {
       e.preventDefault();
@@ -963,6 +1032,15 @@ export function startApp(root, { speed = 1, view = null } = {}) {
         name = '閃避';
         left = me.cds.dash || 0;
         total = CB.dashCd(s);
+      } else if (id === 'tal') {
+        // the 符 at hand (none: no button)
+        const tid = CB.talismanOf(s);
+        el.hidden = !tid;
+        if (!tid) continue;
+        name = ITEMS[tid].name;
+        cost = `×${s.player.items[tid]}`;
+        left = me.cds.talisman || 0;
+        total = CB.TALISMAN_CD;
       } else if (id === 'pill') {
         // the best you have on you (none: no button)
         const pid = CB.pillOf(s);
@@ -1056,6 +1134,7 @@ export function startApp(root, { speed = 1, view = null } = {}) {
       );
     }
     vitalsHud();
+    artsHud();
     const loc = s.player.loc;
     const pct = exploredPct(s, loc);
     const placeKey = `${loc}|${pct}`;
@@ -1595,6 +1674,8 @@ export function startApp(root, { speed = 1, view = null } = {}) {
       h('p', shown.desc),
       h('div.item-acts',
         it.use ? h('button.btn.small', { disabled: busy, onclick: () => act((x) => A.useItem(x, id)) }, it.kind === 'book' ? '研讀' : '使用') : null,
+        AR.fieldTalisman(id) ? h('button.btn.small', { disabled: busy || CB.inCombat(s), onclick: () => { closeSheet(); act((x) => AR.castArt(x, id)); } }, '燒符') : null,
+        AR.fightTalisman(id) ? h('button.btn.small' + (CB.talismanOf(s) === id ? '.on' : ''), { disabled: busy, onclick: () => act((x) => { x.player.ready = id; }) }, CB.talismanOf(s) === id ? '隨身中' : '隨身') : null,
         slotOf(id) ? h('button.btn.small' + (gearOf(s)[slotOf(id)] === id ? '.on' : ''), { disabled: busy, onclick: () => act((x) => A.equip(x, id)) }, gearOf(s)[slotOf(id)] === id ? '卸下' : '裝備') : null,
         A.canIdentify(s, id) ? h('button.btn.small', { disabled: busy, onclick: () => act((x) => A.identify(x, id)) }, A.identifyCost(s) ? '鑑定（10 靈石）' : '系統鑑定') : null,
         shop && price > 0 ? h('button.btn.small.ghost', { disabled: busy, onclick: () => act((x) => A.sell(x, id)) }, `出售 ${price}`) : null,

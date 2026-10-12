@@ -595,6 +595,16 @@ export function drawGroundMarks(g, s, C, kit, u = 1) {
       g.lineWidth = lw(3.5 * (1 - p) + 1);
       ring(g, f.x, f.y, r * (0.3 + 0.7 * Math.min(1, p * 1.7)));
       g.stroke();
+    } else if (f.kind === 'sense') {
+      // 神識 running out over the ground, a pale ring and a fainter one behind
+      for (const [lag, a] of [[0, 0.6], [0.18, 0.3]]) {
+        const q = Math.max(0, Math.min(1, (now - f.t0 - lag) / (f.dur * 0.8)));
+        if (q <= 0) continue;
+        g.strokeStyle = `rgba(150,190,230,${a * (1 - q)})`;
+        g.lineWidth = lw(2.4);
+        ring(g, f.x, f.y, f.r * q);
+        g.stroke();
+      }
     } else if (f.kind === 'quake') {
       // the ground split open: cracks running out from the heart of it, and dust
       g.strokeStyle = `rgba(60,48,38,${0.85 * (1 - p)})`;
@@ -757,8 +767,11 @@ export function drawCombatOverlay(ctx, proj, px, s, C, look, t, font) {
     if (b.state === 'gone' || b.state === 'vanished' || b.state === 'dead' || (b.fade || 0) > 0.5) continue;
     const near = Math.hypot(b.x - w.x, b.y - w.y);
     if (b.state === 'hide') {
-      // something in the long grass: it stirs as you come near
-      if (near < 260) rustle(ctx, proj, px, b, now, near);
+      // something in the long grass: it stirs as you come near (your 神識 has found it: marked)
+      if (b.sensedT > now) {
+        const [hx, hy] = proj(b.x, b.y, b.R.tall + 10);
+        mark(ctx, hx, hy, '伏', 'rgba(168,50,42,0.9)', px, font);
+      } else if (near < 260) rustle(ctx, proj, px, b, now, near);
       continue;
     }
     if (near > 520) continue;

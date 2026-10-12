@@ -1,4 +1,5 @@
-// 功法. kind 'cultivate' sets the cultivation multiplier; kind 'combat' adds to 戰力.
+// 功法. kind 'cultivate' sets the cultivation multiplier; kind 'combat' adds to 戰力;
+// kind 'spell' teaches a 術 you cast as you go (content/arts.js).
 
 export const TECHS = {
   changchun: {
@@ -65,6 +66,12 @@ export const TECHS = {
     grade: '黃品中',
     power: 0.25,
     desc: '胡三娘傳授的小法術，幽藍的狐火可灼魂魄。',
+  },
+  lianxi: {
+    name: '斂息訣',
+    kind: 'spell',
+    grade: '黃品下',
+    desc: '收斂氣息的小法門。學會之後可施斂息術，叫野獸要走到跟前才發覺你。',
   },
   wild_boxing: {
     name: '莊稼把式',

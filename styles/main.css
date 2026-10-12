@@ -1804,6 +1804,78 @@ canvas.world-overlay {
   box-shadow: 0 2px 8px rgba(30, 24, 16, 0.2);
 }
 
+/* 術: spells and 符, and the little list of them */
+.art-btn {
+  appearance: none;
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  border: 2px solid rgba(59, 106, 91, 0.85);
+  background: rgba(239, 233, 219, 0.92);
+  color: var(--jade);
+  font-size: 19px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(30, 24, 16, 0.2);
+}
+
+.art-btn[hidden] {
+  display: none;
+}
+
+.arts-pop {
+  position: absolute;
+  right: 14px;
+  bottom: calc(var(--fsab) + 160px);
+  width: min(240px, calc(100vw - 28px));
+  padding: 8px;
+  background: rgba(239, 233, 219, 0.97);
+  border: 1px solid rgba(35, 32, 27, 0.22);
+  border-radius: 12px;
+  box-shadow: 0 6px 20px rgba(30, 24, 16, 0.25);
+  display: none;
+  gap: 6px;
+  z-index: 7;
+}
+
+.arts-pop.on {
+  display: grid;
+}
+
+.arts-pop .art {
+  appearance: none;
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  min-height: 44px;
+  padding: 8px 12px;
+  border: 1px solid rgba(59, 106, 91, 0.5);
+  border-radius: 8px;
+  background: var(--paper);
+  font-family: inherit;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.arts-pop .art.fu {
+  border-color: rgba(168, 50, 42, 0.45);
+}
+
+.arts-pop .art b {
+  font-size: 16px;
+}
+
+.arts-pop .art span {
+  font-size: 12px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.arts-pop .art:disabled {
+  opacity: 0.45;
+}
+
 .act-btn {
   appearance: none;
   width: 76px;
@@ -2451,6 +2523,23 @@ canvas.bigmap {
 .cbt-btn.s3 {
   right: 55px;
   bottom: calc(var(--fsab) + 190px);
+}
+
+/* a 符 at hand, over the pill */
+.cbt-btn.tal {
+  --size: 46px;
+  right: 226px;
+  bottom: calc(var(--fsab) + 92px);
+  border-color: rgba(168, 50, 42, 0.75);
+}
+
+.cbt-btn.tal b {
+  font-size: 12px;
+  letter-spacing: 0;
+}
+
+.cbt-btn.tal small {
+  color: var(--ink-2);
 }
 
 /* a pill: small, out of the way of the thumb's arc (none on you: no button) */

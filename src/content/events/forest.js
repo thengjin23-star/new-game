@@ -1,5 +1,5 @@
 import { dayAt } from '../../core/calendar.js';
-import { has, flag, alive, needLs, npcPower, variant } from '../helpers.js';
+import { has, flag, alive, needLs, npcPower, variant, mpNow } from '../helpers.js';
 
 const F = ['black_forest'];
 
@@ -183,6 +183,17 @@ export default [
         text: '服下解毒丹。',
         show: (s) => has(s, 'detox_pill'),
         out: { text: '丹藥入口，一股辛辣直衝腦門。你屏住呼吸，衝出了瘴氣。', effects: [['item', 'detox_pill', -1]] },
+      },
+      {
+        text: '燒一張避瘴符。',
+        show: (s) => has(s, 'miasma_talisman'),
+        out: { text: '符紙一燃，一圈淡淡的清光罩住了你。紫霧碰到清光就散開，你從容走了出去。', effects: [['item', 'miasma_talisman', -1]] },
+      },
+      {
+        text: '提一口靈力，封住口鼻。',
+        show: (s) => s.player.realm >= 1,
+        need: (s) => (mpNow(s) >= 12 ? null : '靈力不足（需 12）'),
+        out: { text: '你提起一口靈力，封住口鼻與周身毛孔，一步一步走出了瘴氣。出來時，丹田空了一大截。', effects: [['mp', -12]] },
       },
       {
         text: '閉氣衝出去。',
