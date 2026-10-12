@@ -3,7 +3,7 @@
 // road itself. The UI feeds it input every frame; it changes the save and
 // starts events, and leaves notes (toasts, banners) for the UI to show.
 
-import { world, regionAt, collides, speedAt, findPath, nearestOpen } from './terrain.js';
+import { world, regionAt, collides, speedAt, findPath, nearestOpen, canStand } from './terrain.js';
 import { heightAt } from './height.js';
 import { POIS, POI_BY_ID, GATHER, GATHER_RESPAWN } from './places.js';
 import { NODES } from './map.js';
@@ -15,11 +15,12 @@ import { updateWild, wildNow, spawnCritter } from './wildlife.js';
 import { sysGain } from './system.js';
 import { ITEMS, displayItem } from '../content/items.js';
 import { pickEvent, startEvent, takeDue, notice } from '../core/events.js';
-import { updateCombat, beastTargets, strikeAt, FIGHT_HOURS, combatOf } from './combat.js';
+import { updateCombat, beastTargets, strikeAt, FIGHT_HOURS, combatOf, inCombat } from './combat.js';
+import { bodyArt, leapLanding, leapTo, leapShape, leapRules, FLIGHT, flyMeans, flyBlocked, landingNear } from './air.js';
 import { inquire, visit } from '../core/actions.js';
 import { spendHours, newReport } from '../core/time.js';
 import { applyEffects, logLife } from '../core/effects.js';
-import { rested, gearStats } from '../core/body.js';
+import { rested, gearStats, pools, spendMp } from '../core/body.js';
 import { rand, chance, pickWeighted } from '../core/rng.js';
 import { fmtDuration } from '../core/calendar.js';
 
@@ -50,7 +51,19 @@ export function darkness(tod) {
 /** Make sure a save has its place in the world (new games and old saves alike). */
 export function ensureWorld(s) {
   if (s.tod === undefined || s.tod === null) s.tod = 8;
-  if (s.world) return s.world;
+  if (s.world) {
+    const L = liveOf(s);
+    if (!L.settled) {
+      // a save made mid-leap (over the water), or on ground that is no longer there: come down somewhere
+      L.settled = true;
+      const w = s.world;
+      if (!w.fly && !canStand(s, w.x, w.y)) {
+        const spot = landingNear(s, w.x, w.y, 2000) || nearestOpen(s, w.x, w.y, 30);
+        if (spot) [w.x, w.y] = spot;
+      }
+    }
+    return s.world;
+  }
   const loc = NODES[s.player.loc]?.at ? s.player.loc : 'qingxu_temple';
   const [x, y] = NODES[loc].at;
   s.world = { x, y, face: 1, fog: '', found: {}, taken: {}, herbs: {}, mobs: {}, walked: 0, enc: 0, region: loc };
@@ -116,14 +129,24 @@ export function walkMult(s) {
   if (p.realm === 1) m = 1.08 + p.stage * 0.015;
   else if (p.realm === 2) m = 1.6;
   else if (p.realm >= 3) m = 2;
-  // (a 神行符 burning: half as fast again)
+  // (a 神行符 burning: half as fast again; a 輕功: a little faster always)
   const swift = combatOf(s).me?.swift > 0 ? 1.5 : 1;
-  return m * [1, 0.9, 0.75, 0.6][p.injury || 0] * (1 + gearStats(s).speed) * swift;
+  const art = bodyArt(s);
+  return m * [1, 0.9, 0.75, 0.6][p.injury || 0] * (1 + gearStats(s).speed) * swift * (1 + (art?.walk || 0));
+}
+
+/** How fast the ground here lets you go: rough ground (woods, slopes, tall grass) holds a 輕功 back less. */
+function footing(s, x, y) {
+  const sp = speedAt(x, y);
+  const art = sp < 1 && bodyArt(s);
+  return art ? sp + (1 - sp) * art.rough : sp;
 }
 
 function revealRadius(s) {
   const base = isNight(s) ? 170 : 260;
-  return base + 20 * Math.min(4, s.player.realm);
+  // up in the air you see further (the higher, the further)
+  const up = s.world?.fly ? (s.world.fly.by === 'sword' ? 1.9 : 1.5) : 1;
+  return (base + 20 * Math.min(4, s.player.realm)) * up;
 }
 
 // ── the frame step ──
@@ -172,6 +195,9 @@ export function step(s, dt, input) {
       return;
     }
   }
+  // up in the air, or in the middle of a leap: that is how you move now
+  if (w.fly) return flyStep(s, L, dt, input);
+  if (L.leap) return leapStep(s, L, dt);
   if (fight.hold) {
     // a dash or a blow is carrying you
     L.moving = fight.moved > 0.01;
@@ -199,6 +225,16 @@ export function step(s, dt, input) {
   } else if (L.path?.length) {
     const [tx, ty] = L.path[0];
     const d = Math.hypot(tx - w.x, ty - w.y);
+    // the path leaps here: from where you stand, if it carries that far
+    if (L.path[0].leap && !fight.on && d >= 7 && leapTo(s, w.x, w.y, tx, ty)) {
+      if (startLeap(s, L, tx, ty)) {
+        L.path.shift();
+        if (!L.path.length) L.path = [[tx, ty]];
+        return;
+      }
+      stopWalking(L);
+      return;
+    }
     if (d < 7) {
       L.path.shift();
       if (!L.path.length) {
@@ -218,7 +254,18 @@ export function step(s, dt, input) {
     if (fight.moved > 0) afterMove(s, L, fight.moved, fight.on);
     return;
   }
-  const want = WALK_SPEED * speedAt(w.x, w.y) * walkMult(s) * mag * dt * climb(w.x, w.y, dx, dy) * fight.mult;
+  const want = WALK_SPEED * footing(s, w.x, w.y) * walkMult(s) * mag * dt * climb(w.x, w.y, dx, dy) * fight.mult;
+  // pushing on into water, a cliff or a wall you could leap: a moment's push, and over you go
+  if (!fight.on && !fight.steer && !L.path && mag > 0.5 && collides(s, w.x + dx * 8, w.y + dy * 8)) {
+    const to = bodyArt(s) && leapLanding(s, w.x, w.y, dx, dy);
+    const same = to && L.leapAim && dx * L.leapAim[0] + dy * L.leapAim[1] > 0.9;
+    L.leapPush = to ? (same ? L.leapPush + dt : 0) : 0;
+    L.leapAim = to ? [dx, dy] : null;
+    if (to && L.leapPush >= 0.12) {
+      L.leapPush = 0;
+      if (startLeap(s, L, to[0], to[1])) return;
+    }
+  } else L.leapPush = 0;
   const n = Math.max(1, Math.ceil(want / 5));
   let moved = 0;
   for (let k = 0; k < n; k++) {
@@ -250,6 +297,282 @@ export function step(s, dt, input) {
     } else L.stuck = 0;
   }
   if (moved + fight.moved > 0) afterMove(s, L, moved + fight.moved, fight.on);
+}
+
+// ── 輕功: a leap ──
+
+/** Leap from where you stand to (x, y) (a 輕功's 靈力 paid). Returns whether you are off. */
+function startLeap(s, L, x, y) {
+  const art = bodyArt(s);
+  const w = s.world;
+  if (!art) return false;
+  if (!spendMp(s, art.mp)) {
+    if (L.t - (L.saidT || -9) > 4) {
+      L.saidT = L.t;
+      L.feed.push({ kind: 'bad', text: '靈力不足，躍不過去。' });
+    }
+    return false;
+  }
+  const { dur, arc } = leapShape(w.x, w.y, x, y);
+  L.leap = { x0: w.x, y0: w.y, x1: x, y1: y, z0: heightAt(w.x, w.y), z1: heightAt(x, y), t: 0, dur, arc };
+  if (Math.abs(x - w.x) > 2) w.face = x < w.x ? -1 : 1;
+  L.moving = true;
+  return true;
+}
+
+function leapStep(s, L, dt) {
+  const w = s.world;
+  const J = L.leap;
+  J.t += dt;
+  const k = Math.min(1, J.t / J.dur);
+  const x = J.x0 + (J.x1 - J.x0) * k;
+  const y = J.y0 + (J.y1 - J.y0) * k;
+  const moved = Math.hypot(x - w.x, y - w.y);
+  w.x = x;
+  w.y = y;
+  L.moving = true;
+  if (k >= 1) {
+    L.leap = null;
+    L.moving = false;
+  }
+  if (moved > 0) afterMove(s, L, moved);
+}
+
+// ── flight ──
+
+/** Are you up in the air? */
+export function airborne(s) {
+  return !!s.world?.fly;
+}
+
+const UP_TEXT = {
+  sword: '你一踏劍身，劍鳴一聲，載著你衝天而起。',
+  boat: '飛梭迎風漲大，你踏上去，它便輕輕離了地。',
+  wind: '御風符一燃，四下風起，托著你飄上了半空。',
+};
+const DOWN_TEXT = {
+  sword: '你收了劍光，落在地上。',
+  boat: '飛梭落了地，縮回巴掌大小。',
+  wind: '風停了，你落回地上。',
+};
+
+/** Go up into the air: on a sword, a 飛行法器, or a 御風符's wind (by). Returns whether you are up. */
+export function takeOff(s, by = flyMeans(s).by) {
+  const w = ensureWorld(s);
+  const L = liveOf(s);
+  if (busy(s) || !by || !FLIGHT[by] || w.fly || L.leap || inCombat(s)) return false;
+  const F = FLIGHT[by];
+  if (F.mp && pools(s).mp < 4) {
+    L.feed.push({ kind: 'bad', text: '靈力不足，飛不起來。' });
+    return false;
+  }
+  stopWalking(L);
+  L.resume = null;
+  w.fly = { by, z: heightAt(w.x, w.y), state: 'up' };
+  if (F.last) w.fly.left = F.last;
+  L.feed.push({ kind: 'sys', text: UP_TEXT[by] });
+  return true;
+}
+
+/** Come down: here if you can stand here, else at the nearest spot you can. Returns whether you are on your way down. */
+export function land(s) {
+  const w = s.world;
+  if (!w?.fly || busy(s)) return false;
+  return comeDown(s, liveOf(s), false);
+}
+
+/** Start down (forced: the 靈力 or the wind has given out — any ground will do, however far). */
+function comeDown(s, L, forced) {
+  const w = s.world;
+  const F = w.fly;
+  const spot = landingNear(s, w.x, w.y, forced ? 6000 : 700);
+  if (!spot) {
+    if (L.t - (L.saidT || -9) > 3) {
+      L.saidT = L.t;
+      L.feed.push({ kind: 'ambient', text: '下面無處落腳。' });
+    }
+    return false;
+  }
+  L.path = null;
+  if (forced) F.forced = true;
+  if (Math.hypot(spot[0] - w.x, spot[1] - w.y) < 6) {
+    F.state = 'down';
+    L.landing = null;
+  } else L.landing = spot;
+  return true;
+}
+
+function flyStep(s, L, dt, input) {
+  const w = s.world;
+  const F = w.fly;
+  const mode = FLIGHT[F.by] || FLIGHT.boat;
+  // what holds you up — 靈力, or the wind of a 符 — until it gives out
+  if (F.state !== 'down' && !F.forced) {
+    if (mode.mp) {
+      const p = s.player;
+      pools(s);
+      p.mp = Math.max(0, p.mp - mode.mp * dt);
+      if (p.mp <= 0) {
+        L.feed.push({ kind: 'bad', text: '靈力將盡，你只得落下。' });
+        comeDown(s, L, true);
+      }
+    } else if (F.left !== undefined) {
+      F.left -= dt;
+      if (F.left <= 8 && !F.warned) {
+        F.warned = true;
+        L.feed.push({ kind: 'sys', text: '御風符快燒完了。' });
+      }
+      if (F.left <= 0) {
+        L.feed.push({ kind: 'bad', text: '符燒盡了，風托不住你。' });
+        comeDown(s, L, true);
+      }
+    }
+  }
+  // which way: where you are coming down, the way you steer, or straight to where you tapped
+  let dx = 0;
+  let dy = 0;
+  let mag = 0;
+  const steer = input && (input.x || input.y) && !F.forced;
+  if (steer) {
+    L.path = null;
+    L.then = null;
+    L.landing = null;
+    if (F.state === 'down') F.state = 'air';
+    const len = Math.hypot(input.x, input.y);
+    mag = Math.min(1, len);
+    dx = input.x / len;
+    dy = input.y / len;
+  } else if (F.state !== 'down') {
+    const target = L.landing || L.path?.[0];
+    if (target) {
+      const d = Math.hypot(target[0] - w.x, target[1] - w.y);
+      if (d < 6) {
+        if (L.landing) {
+          L.landing = null;
+          F.state = 'down';
+        } else {
+          L.path.shift();
+          if (!L.path.length) {
+            L.path = null;
+            // flew to someone or something: come down by it, and see to it there
+            if (L.then) {
+              L.thenAfter = L.then;
+              L.then = null;
+              comeDown(s, L, false);
+            }
+          }
+        }
+      } else {
+        dx = (target[0] - w.x) / d;
+        dy = (target[1] - w.y) / d;
+        mag = Math.min(1, d / 30);
+      }
+    }
+  }
+  // along: as fast as it flies (a little slower while still rising)
+  let moved = 0;
+  if (mag > 0) {
+    const want = WALK_SPEED * mode.speed * mag * dt * (F.state === 'up' ? 0.6 : 1);
+    const n = Math.max(1, Math.ceil(want / 8));
+    for (let k = 0; k < n; k++) {
+      const nx = w.x + (dx * want) / n;
+      const ny = w.y + (dy * want) / n;
+      // (gliding down with nothing left to hold you up, a high ridge on the way is no bar)
+      const why = flyBlocked(s, nx, ny, F.forced ? 'sword' : F.by);
+      if (why) {
+        if (L.t - (L.saidT || -9) > 3) {
+          L.saidT = L.t;
+          L.feed.push({ kind: 'ambient', text: why });
+        }
+        L.path = null;
+        if (F.forced) {
+          // nothing for it: down here, and to the nearest ground from here
+          L.landing = null;
+          F.state = 'down';
+        }
+        break;
+      }
+      w.x = nx;
+      w.y = ny;
+      moved += want / n;
+    }
+    if (Math.abs(dx) > 0.2) w.face = dx < 0 ? -1 : 1;
+  }
+  // up: over the ground by as much as it flies, rising before a slope ahead; or down to it
+  const ground = heightAt(w.x, w.y);
+  let zT = ground;
+  if (F.state !== 'down') {
+    zT = ground + mode.clear;
+    if (mag > 0) for (const a of [40, 90, 150]) zT = Math.max(zT, heightAt(w.x + dx * a, w.y + dy * a) + mode.clear);
+  }
+  F.z += (zT - F.z) * (1 - Math.exp(-dt * (zT > F.z ? 4 : F.state === 'down' ? 3.2 : 1.6)));
+  F.z = Math.max(F.z, ground);
+  if (F.state === 'up' && F.z > zT - 8) F.state = 'air';
+  L.moving = moved > 0.01;
+  if (moved > 0) afterFlight(s, L, moved, mode);
+  if (w.fly && F.state === 'down' && F.z - ground < 2.5) touchDown(s, L);
+}
+
+/** Flying on: the day goes by (slower than on foot), the clouds part wide, you pass over regions (what waits there waits till you land). */
+function afterFlight(s, L, moved, mode) {
+  const w = s.world;
+  w.walked += moved;
+  passHours(s, L, moved / (UNITS_PER_HOUR * mode.time));
+  if (s.dead) return;
+  if (!L.lastReveal || Math.hypot(w.x - L.lastReveal[0], w.y - L.lastReveal[1]) > 30) {
+    L.lastReveal = [w.x, w.y];
+    clearClouds(s, L, w.x, w.y, revealRadius(s));
+  }
+  const region = regionAt(s, w.x, w.y);
+  if (region !== w.region) enterRegion(s, L, region, true);
+  findHidden(s, L, 1.3);
+}
+
+/** On the ground again: what waited for you here comes now; and if you flew to someone, you see to them. */
+function touchDown(s, L) {
+  const w = s.world;
+  const by = w.fly.by;
+  w.fly = null;
+  L.landing = null;
+  L.moving = false;
+  if (!canStand(s, w.x, w.y)) {
+    const spot = landingNear(s, w.x, w.y, 6000) || nearestOpen(s, w.x, w.y, 30);
+    if (spot) [w.x, w.y] = spot;
+  }
+  L.feed.push({ kind: 'ambient', text: DOWN_TEXT[by] || '你落回地上。' });
+  const then = L.thenAfter;
+  L.thenAfter = null;
+  const to = L.arriveLater;
+  L.arriveLater = null;
+  if (to && to === w.region) {
+    arrivals(s, L, to);
+    if (s.pending) return;
+  }
+  findHidden(s, L, 1);
+  L.inAuto.clear();
+  if (autoTriggers(s, L)) return;
+  L.dayTurned = false;
+  if (fireDue(s, L)) return;
+  if (then) {
+    const t = whereNow(s, L, then);
+    if (!t) return;
+    if (Math.hypot(t.x - w.x, t.y - w.y) <= t.reach + 24) interact(s, t);
+    else walkTo(s, t.x, t.y, t);
+  }
+}
+
+/** How far above the ground under you to draw you (a leap's arc, or how high you fly), and on what. */
+export function liftOf(s) {
+  const w = s.world;
+  if (!w) return { z: 0, by: null };
+  if (w.fly) return { z: Math.max(0, w.fly.z - heightAt(w.x, w.y)), by: w.fly.by, state: w.fly.state };
+  const J = liveOf(s).leap;
+  if (J) {
+    const k = Math.min(1, J.t / J.dur);
+    const z = J.z0 + (J.z1 - J.z0) * k + 4 * J.arc * k * (1 - k);
+    return { z: Math.max(0, z - heightAt(w.x, w.y)), by: null, leap: true };
+  }
+  return { z: 0, by: null };
 }
 
 /** Going uphill is slower: a long stair takes its toll; downhill is no faster. */
@@ -613,8 +936,9 @@ export function targetsNear(s, radius = 160) {
   return out;
 }
 
-/** The one thing the act button would act on, if any. */
+/** The one thing the act button would act on, if any (none from up in the air). */
 export function nearestTarget(s) {
+  if (s.world?.fly) return null;
   const list = targetsNear(s, 120);
   return list.find((t) => t.d <= t.reach) || null;
 }
@@ -626,7 +950,19 @@ export function walkTo(s, x, y, then = null) {
   if (busy(s)) return false;
   const w = ensureWorld(s);
   const L = liveOf(s);
-  const path = findPath(s, w.x, w.y, x, y);
+  if (w.fly) {
+    // in the air you go straight there
+    if (w.fly.forced) return false;
+    if (w.fly.state === 'down') w.fly.state = 'air';
+    L.landing = null;
+    L.path = [[x, y]];
+    L.then = then;
+    L.goal = [x, y];
+    L.resume = null;
+    return true;
+  }
+  if (L.leap) return false;
+  const path = findPath(s, w.x, w.y, x, y, leapRules(s));
   if (!path || !path.length) {
     L.feed.push({ kind: 'ambient', text: '那邊過不去。' });
     return false;
@@ -656,7 +992,7 @@ function repath(s, L) {
   const w = s.world;
   const goal = L.goal || L.path?.[L.path.length - 1];
   if (!goal) return stopWalking(L);
-  const path = findPath(s, w.x, w.y, goal[0], goal[1]);
+  const path = findPath(s, w.x, w.y, goal[0], goal[1], leapRules(s));
   if (!path || (L.path && path.length >= L.path.length + 3 && L.repaths > 2)) return stopWalking(L);
   L.repaths = (L.repaths || 0) + 1;
   L.path = path;
@@ -700,6 +1036,10 @@ export function placeAt(s, x, y) {
   const w = ensureWorld(s);
   const L = liveOf(s);
   stopWalking(L);
+  // on your feet, wherever it is
+  w.fly = null;
+  L.leap = null;
+  L.landing = null;
   w.x = x;
   w.y = y;
   L.lastReveal = [x, y];
@@ -718,7 +1058,7 @@ export function placeAt(s, x, y) {
  * the UI: { caption: {title, text, rest?} } or { open: 'shop' }.
  */
 export function interact(s, t) {
-  if (busy(s) || !t) return;
+  if (busy(s) || !t || s.world?.fly) return;
   const L = liveOf(s);
   stopWalking(L);
   L.resume = null;
@@ -800,7 +1140,7 @@ function chatFolk(s, L, f) {
 
 /** Look around properly: two hours, a wide look, maybe something turns up. */
 export function search(s) {
-  if (busy(s)) return;
+  if (busy(s) || s.world?.fly) return;
   const w = ensureWorld(s);
   const L = liveOf(s);
   stopWalking(L);
@@ -824,7 +1164,7 @@ export function search(s) {
 
 /** Sit and let time pass until 'dusk', 'night', 'dawn', or for n hours. */
 export function rest(s, until) {
-  if (busy(s)) return;
+  if (busy(s) || s.world?.fly) return;
   const L = liveOf(s);
   stopWalking(L);
   const target = { dusk: 18, night: 21, dawn: 6 }[until];

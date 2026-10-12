@@ -284,7 +284,8 @@ export function updateScenes(s, L, dt) {
       continue;
     }
     if (sc.def.move) moveStep(s, sc, dt);
-    if (sc.def.start === 'near' && d < sc.def.radius && meetScene(s, L, sc)) return true;
+    // (flying over it, you are not there)
+    if (sc.def.start === 'near' && d < sc.def.radius && !w.fly && meetScene(s, L, sc)) return true;
   }
   return false;
 }

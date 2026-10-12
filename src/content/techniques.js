@@ -1,5 +1,9 @@
 // 功法. kind 'cultivate' sets the cultivation multiplier; kind 'combat' adds to 戰力;
-// kind 'spell' teaches a 術 you cast as you go (content/arts.js).
+// kind 'spell' teaches a 術 you cast as you go (content/arts.js); kind 'move' is
+// a 身法 (輕功): leap: how far you can leap over water, a cliff or a wall; up: how
+// high (above where you leap from) the leap can carry you; mp: 靈力 a leap costs;
+// walk: a share faster on foot; rough: a share of what rough ground takes off
+// your pace given back. The best you know is the one you use (world/air.js).
 
 export const TECHS = {
   changchun: {
@@ -72,6 +76,20 @@ export const TECHS = {
     kind: 'spell',
     grade: '黃品下',
     desc: '收斂氣息的小法門。學會之後可施斂息術，叫野獸要走到跟前才發覺你。',
+  },
+  qingshen: {
+    name: '輕身術',
+    kind: 'move',
+    grade: '黃品下',
+    leap: 110, up: 70, mp: 2, walk: 0.08, rough: 0.35,
+    desc: '最粗淺的身法：提一口靈力，身子就輕了幾分。走得快些，林子、山坡也拖不住你；溪澗、矮牆、斷崖，往前一推就躍過去了。引氣入體才用得上。',
+  },
+  tayun: {
+    name: '踏雲步',
+    kind: 'move',
+    grade: '黃品上',
+    leap: 190, up: 140, mp: 3, walk: 0.15, rough: 0.6,
+    desc: '刻在孤鶴峰石壁上的身法，一步踏出，像踩在雲上。躍得更遠更高：斷魂崖一躍而上，江心的沙洲也踏得過去。',
   },
   wild_boxing: {
     name: '莊稼把式',

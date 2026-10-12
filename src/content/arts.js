@@ -25,7 +25,8 @@ export const SPELLS = {
 /**
  * What a 符 does when you burn it. field: out in the world — swift (faster
  * on foot), hide (as 斂息術), exorcise (the dead keep away), return (back to
- * the nearest town you know); last: how long (seconds). fight: in a fight —
+ * the nearest town you know), fly (up into the air on its wind, see
+ * world/air.js); last: how long (seconds). fight: in a fight —
  * a move, as content/moves.js has them, that costs no 靈力 (the 符 is gone
  * instead). only: it touches only the things of spirit.
  */
@@ -41,6 +42,7 @@ export const TALISMANS = {
     fight: { name: '驅邪符', aim: 'around', cast: 0.05, radius: 150, mult: 1.2, stun: 2, push: 60, holy: true, only: 'spirit', fx: 'bell' },
   },
   swift_talisman: { field: 'swift', last: 120 },
+  wind_talisman: { field: 'fly' },
   hide_talisman: { field: 'hide', last: 90 },
   return_talisman: { field: 'return' },
 };

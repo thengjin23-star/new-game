@@ -422,6 +422,8 @@ function cover(s) {
 
 /** How far off a beast sees you: further in its hunting hours, less when it dozes at noon (the dead walk by night). */
 function sightOf(s, b) {
+  // up in the air, nothing on the ground can get at you
+  if (s.world?.fly) return 0;
   const R = b.R;
   const night = s.tod >= 19.5 || s.tod < 5;
   const noon = s.tod >= 10.5 && s.tod < 14.5;
@@ -435,6 +437,11 @@ function sightOf(s, b) {
 /** Inside a town (a temple, a sect), you are out of a beast's reach. */
 function refuge(s, x, y) {
   return REFUGE.has(NODES[regionAt(s, x, y)]?.kind);
+}
+
+/** Where you are now, can it get at you? Not in a town, not up in the air. */
+function outOfReach(s) {
+  return !!s.world.fly || refuge(s, s.world.x, s.world.y);
 }
 
 /** Move something (with x, y) along (ux, uy) by len, sliding along whatever it bumps into. Returns how far it went. */
@@ -1191,14 +1198,14 @@ function think(s, C, b, dt, io) {
         b.calm -= dt;
         break;
       }
-      if (d < sightOf(s, b) && (b.phantom || !refuge(s, w.x, w.y))) spotted(s, C, b, io, d, ux, uy);
+      if (d < sightOf(s, b) && (b.phantom || !outOfReach(s))) spotted(s, C, b, io, d, ux, uy);
       break;
     }
     case 'notice': {
       // it has seen you: a long look, then it comes
       look(b, ux, uy);
       b.moving = false;
-      if (d > sightOf(s, b) * 1.5 || (!b.phantom && refuge(s, w.x, w.y))) {
+      if (d > sightOf(s, b) * 1.5 || (!b.phantom && outOfReach(s))) {
         b.state = homeState(b);
         b.st = 0;
         break;
@@ -1405,7 +1412,7 @@ function think(s, C, b, dt, io) {
       }
       b.moving = beastStep(s, b, hx / hd, hy / hd, Math.min(hd, (R.walk || 40) * 2.2 * dt)) > 0.01;
       // seeing you again on its way home, once its temper has cooled
-      if (b.calm <= 0 && d < sightOf(s, b) * 0.8 && !refuge(s, w.x, w.y)) {
+      if (b.calm <= 0 && d < sightOf(s, b) * 0.8 && !outOfReach(s)) {
         b.state = 'notice';
         b.st = 0;
       }
@@ -1845,7 +1852,7 @@ function route(s, C, b, d, ux, uy) {
 /** Has it lost you: too far for too long, out of its reach, or too far from home? */
 function lost(s, b, d, dt) {
   const R = b.R;
-  const away = d > R.lose * cover(s) || b.noWay || (!b.phantom && !b.story && refuge(s, s.world.x, s.world.y));
+  const away = d > R.lose * cover(s) || b.noWay || (!b.phantom && !b.story && outOfReach(s));
   b.lostT = away ? b.lostT + dt : 0;
   const strayed = !b.phantom && Math.hypot(b.x - b.home[0], b.y - b.home[1]) > (R.leash ?? 900);
   return b.lostT > (R.loseT ?? 1.4) || strayed;
@@ -1913,7 +1920,8 @@ function heroTick(s, C, dt, io) {
     C.qi = nodeQi(s, s.player.loc);
     C.qiT = C.t;
   }
-  me.mp = Math.min(me.maxMp, me.mp + me.maxMp * (C.on ? 0.03 : 0.012 * qi * (1 + G.mpRegen)) * dt);
+  // (not while it is holding you up in the air)
+  if (!w.fly) me.mp = Math.min(me.maxMp, me.mp + me.maxMp * (C.on ? 0.03 : 0.012 * qi * (1 + G.mpRegen)) * dt);
   if (!C.on && C.t - me.hurtT > 3 && me.hp < me.cap) me.hp = Math.min(me.cap, me.hp + me.cap * 0.006 * (1 + G.regen) * dt);
   let moved = 0;
   if (me.dash) {

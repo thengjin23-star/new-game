@@ -131,6 +131,11 @@ export const ITEMS = {
     desc: '一本薄薄的小冊子，教人收斂氣息，不叫野獸察覺。使用後習得斂息術。',
     use: { text: '你照著冊子上的法門調息，呼吸越來越輕，輕到連自己都聽不見。', effects: [['tech', 'lianxi']] },
   },
+  book_qingshen: {
+    name: '《輕身術》', kind: 'book', price: 150, sell: 50,
+    desc: '坊間常見的身法冊子，紙都翻毛了。使用後習得輕身術：走得快些，溪澗、矮牆、斷崖一躍而過（引氣入體才用得上）。',
+    use: { text: '你照著冊子提氣，腳下一點，整個人輕飄飄地彈了起來，又重重地摔了一跤。多摔幾次，就會了。', effects: [['tech', 'qingshen']] },
+  },
   book_songhe: {
     name: '《松鶴手札》', kind: 'book', sell: 0, keep: true,
     desc: '松鶴道人一生的修行心得，記著他當年築基失敗的每一個細節。持有時，突破築基成功率 +10%。翻閱可習得松鶴吐納術。',
@@ -201,6 +206,12 @@ export const ITEMS = {
     desc: '紫金打的小鈴，一搖，聲如洪鐘。戴著它，可以帶「金鐘」上陣。',
   },
 
+  // ── 飛行法器 ──（怎麼飛：world/air.js）
+  feisuo: {
+    name: '青木飛梭', kind: 'flyer', price: 480, sell: 160,
+    desc: '一截青木削成的梭子，巴掌大小，迎風就長。引氣入體之後，以靈力催動，可以載人低空飛行：江湖溪澗、矮山小嶺都飛得過，太高的山就上不去了。飛著的時候一直耗靈力。',
+  },
+
   // ── 符籙與信物 ──（符燒了有什麼用：content/arts.js）
   foxfire_talisman: {
     name: '狐火符', kind: 'talisman', sell: 0,
@@ -229,6 +240,10 @@ export const ITEMS = {
   miasma_talisman: {
     name: '避瘴符', kind: 'talisman', price: 15, sell: 5,
     desc: '遇上瘴氣時燒了，瘴毒近不了身。',
+  },
+  wind_talisman: {
+    name: '御風符', kind: 'talisman', price: 45, sell: 15,
+    desc: '燒了，一陣風托著你飛上半空，六十息之內任你來去，凡人也用得。太高的山飛不上去。',
   },
   return_talisman: {
     name: '歸元符', kind: 'talisman', price: 40, sell: 12,
@@ -282,7 +297,7 @@ export const SHOPS = {
   talisman: {
     name: '符籙攤',
     keeper: '畫符的柳老道',
-    stock: ['fire_talisman', 'gold_talisman', 'exorcise_talisman', 'swift_talisman', 'hide_talisman', 'miasma_talisman', 'return_talisman', 'zhaoyao_mirror', 'jade_pendant', 'book_lianxi'],
+    stock: ['fire_talisman', 'gold_talisman', 'exorcise_talisman', 'swift_talisman', 'hide_talisman', 'miasma_talisman', 'return_talisman', 'wind_talisman', 'zhaoyao_mirror', 'jade_pendant', 'feisuo', 'book_lianxi', 'book_qingshen'],
   },
   smithy: {
     name: '百煉坊',

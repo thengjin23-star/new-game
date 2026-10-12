@@ -10,7 +10,7 @@ import { gearStats, spendMp } from '../core/body.js';
 import { addItem } from '../core/effects.js';
 import { newReport } from '../core/time.js';
 import { hero, bless, mendSelf, senseBeasts, inCombat } from './combat.js';
-import { senseAround, returnTo, liveOf } from './explore.js';
+import { senseAround, returnTo, liveOf, takeOff } from './explore.js';
 
 const REALM_WORD = ['', '需引氣入體', '需築基', '需結丹'];
 
@@ -81,6 +81,12 @@ export function castArt(s, id) {
   }
   const t = TALISMANS[id];
   if (!t?.field || !(s.player.items[id] > 0)) return false;
+  if (t.field === 'fly') {
+    // the wind takes you up (not if you are up already)
+    if (s.world?.fly || !takeOff(s, 'wind')) return false;
+    addItem(s, id, -1, newReport());
+    return true;
+  }
   addItem(s, id, -1, newReport());
   if (t.field === 'swift') {
     bless(s, 'swift', t.last);

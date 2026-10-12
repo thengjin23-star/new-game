@@ -35,7 +35,7 @@ export function learnTech(s, id, report) {
   const t = TECHS[id];
   const p = s.player;
   if (!t) return;
-  if (t.kind === 'combat' || t.kind === 'spell') {
+  if (t.kind !== 'cultivate') {
     if (!p.arts.includes(id)) {
       p.arts.push(id);
       chip(report, `習得：${t.name}`, 'good');

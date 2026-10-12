@@ -520,8 +520,18 @@ export function nearestOpen(s, x, y, maxRing = 12) {
 
 // A* over cells; roads are cheaper, so paths follow them like people do.
 const MAX_SPEED = 1.3;
+/** What a leap can carry you over (see world/air.js). */
+const LEAP_OVER = new Set([T.WATER, T.CLIFF, T.WALL]);
+/** A leap costs a little more than the same way on foot, so a walk round is taken when it is not much longer. */
+const LEAP_COST = 60;
 
-export function findPath(s, x0, y0, x1, y1) {
+/**
+ * A path from one point to another, as points to walk through. leap: with a
+ * 輕功, { leap, up, ok(x0, y0, x1, y1) } — the path may leap over water, a
+ * cliff or a wall where ok says it can; the point a leap comes down on is
+ * marked `.leap`.
+ */
+export function findPath(s, x0, y0, x1, y1, leap = null) {
   const g = world();
   const gateOpen = !!s?.flags?.sect_member;
   const goal = nearestOpen(s, x1, y1);
@@ -537,7 +547,9 @@ export function findPath(s, x0, y0, x1, y1) {
   if (start === target) return [[gx, gy]];
   const cost = new Float32Array(N).fill(Infinity);
   const prev = new Int32Array(N).fill(-1);
+  const leapt = leap ? new Uint8Array(N) : null;
   const closed = new Uint8Array(N);
+  const maxN = leap ? Math.floor(leap.leap / CELL) + 1 : 0;
   const heap = new Heap();
   cost[start] = 0;
   heap.push(start, 0);
@@ -569,7 +581,37 @@ export function findPath(s, x0, y0, x1, y1) {
         if (c < cost[nk]) {
           cost[nk] = c;
           prev[nk] = k;
+          if (leapt) leapt[nk] = 0;
           heap.push(nk, c + h(ni, nj));
+        }
+      }
+    }
+    // with a 輕功: over the water, the cliff or the wall beside you, to the ground past it
+    if (!leap || k === start && !pathOpen(g, k, gateOpen)) continue;
+    for (let dj = -1; dj <= 1; dj++) {
+      for (let di = -1; di <= 1; di++) {
+        if (!di && !dj) continue;
+        const fi = i + di;
+        const fj = j + dj;
+        if (fi < 0 || fj < 0 || fi >= COLS || fj >= ROWS || !LEAP_OVER.has(g.terr[idxOf(fi, fj)])) continue;
+        for (let n = 2; n <= maxN; n++) {
+          const ni = i + di * n;
+          const nj = j + dj * n;
+          if (ni < 0 || nj < 0 || ni >= COLS || nj >= ROWS) break;
+          const nk = idxOf(ni, nj);
+          if (LEAP_OVER.has(g.terr[nk])) continue;
+          if (!pathOpen(g, nk, gateOpen) || closed[nk]) break;
+          const d = Math.hypot(ni - i, nj - j) * CELL;
+          if (d <= leap.leap && leap.ok(cellX(i), cellY(j), cellX(ni), cellY(nj))) {
+            const c = cost[k] + d + LEAP_COST;
+            if (c < cost[nk]) {
+              cost[nk] = c;
+              prev[nk] = k;
+              leapt[nk] = 1;
+              heap.push(nk, c + h(ni, nj));
+            }
+          }
+          break;
         }
       }
     }
@@ -578,23 +620,38 @@ export function findPath(s, x0, y0, x1, y1) {
   const cells = [];
   for (let k = target; k !== -1 && k !== start; k = prev[k]) cells.push(k);
   cells.reverse();
-  const pts = cells.map((k) => [cellX(k % COLS), cellY(Math.floor(k / COLS))]);
-  pts[pts.length - 1] = [gx, gy];
+  const pts = cells.map((k) => {
+    const p = [cellX(k % COLS), cellY(Math.floor(k / COLS))];
+    if (leapt?.[k]) p.leap = true;
+    return p;
+  });
+  const end = pts[pts.length - 1];
+  pts[pts.length - 1] = Object.assign([gx, gy], end.leap ? { leap: true } : {});
   return smoothWaypoints(s, [x0, y0], pts);
 }
 
-/** Drop waypoints the walker can skip without leaving equally fast ground. */
+/** Drop waypoints the walker can skip without leaving equally fast ground (never the spot a leap goes from). */
 function smoothWaypoints(s, from, pts) {
   const out = [];
   let cur = from;
   let a = 0;
   while (a < pts.length) {
     let b = a;
-    for (let k = pts.length - 1; k > a; k--) {
-      if (k - a > 14) continue;
-      if (clearLine(s, cur, pts[k], minSpeed(pts, a, k))) {
-        b = k;
-        break;
+    if (!pts[a].leap) {
+      // walk no further than the spot the next leap goes from
+      let last = pts.length - 1;
+      for (let k = a + 1; k < pts.length; k++) {
+        if (pts[k].leap) {
+          last = k - 1;
+          break;
+        }
+      }
+      for (let k = last; k > a; k--) {
+        if (k - a > 14) continue;
+        if (clearLine(s, cur, pts[k], minSpeed(pts, a, k))) {
+          b = k;
+          break;
+        }
       }
     }
     out.push(pts[b]);

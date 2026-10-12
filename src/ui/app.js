@@ -28,8 +28,8 @@ import { saveGame, loadGame, clearGame, exportCode, importCode, migrate, saveMet
 import { connectCloud } from '../platform/cloud.js';
 
 const VERSION = '0.9';
-const ITEM_ORDER = ['weapon', 'gear', 'pill', 'talisman', 'herb', 'material', 'book', 'treasure', 'token', 'unknown'];
-const ITEM_KIND = { pill: '丹藥', herb: '靈草', material: '材料', book: '典籍', weapon: '兵器', gear: '裝備', treasure: '寶物', talisman: '符籙', token: '信物', unknown: '未知' };
+const ITEM_ORDER = ['weapon', 'gear', 'flyer', 'pill', 'talisman', 'herb', 'material', 'book', 'treasure', 'token', 'unknown'];
+const ITEM_KIND = { pill: '丹藥', herb: '靈草', material: '材料', book: '典籍', weapon: '兵器', gear: '裝備', flyer: '飛行法器', treasure: '寶物', talisman: '符籙', token: '信物', unknown: '未知' };
 const DOCK = [
   ['map', '地圖'],
   ['bag', '行囊'],
