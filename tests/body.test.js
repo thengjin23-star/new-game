@@ -157,8 +157,12 @@ test('the smithy makes gear from what you bring', () => {
   assert.equal(s.player.ls, 70);
 });
 
-test('every piece of gear is worn somewhere, gives something, and can be had (bought or made)', () => {
+test('every piece of gear is worn somewhere, gives something, and can be had (bought, made, or given)', async () => {
   const sold = new Set(Object.values(SHOPS).flatMap((x) => [...x.stock, ...(x.recipes || [])]));
+  // (or some story gives it to you)
+  const { EVENT_LIST } = await import('../src/content/index.js');
+  const given = JSON.stringify(EVENT_LIST, (k, v) => (typeof v === 'function' ? undefined : v));
+  for (const id of Object.keys(ITEMS)) if (given.includes(`["item","${id}"`)) sold.add(id);
   for (const [id, it] of Object.entries(ITEMS)) {
     if (it.kind !== 'gear') continue;
     assert.ok(['robe', 'charm', 'relic'].includes(it.slot), `${id}: where`);

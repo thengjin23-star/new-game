@@ -1462,6 +1462,93 @@ const PROPS = {
     line(ctx, [[20, 20], [21, 8]], 2.2, rgba([210, 220, 230], 1));
     line(ctx, [[20, 20], [21, 8]], 0.6, rgba(INK, 0.6));
   } },
+  // up where no road goes: a crane on its nest, an old man fishing, a sword's cut in the rock, a wreck
+  crane_nest: { w: 46, h: 46, fx: 23, fy: 42, draw(ctx, rnd) {
+    shadow(ctx, 23, 41, 18, 4, 0.22);
+    // the nest: a ring of twigs
+    for (let i = 0; i < 16; i++) {
+      const a = (i / 16) * Math.PI * 2;
+      line(ctx, [[23 + Math.cos(a) * 15, 38 + Math.sin(a) * 4], [23 + Math.cos(a + 0.9) * 13, 37 + Math.sin(a + 0.9) * 3.5]], 1.1, rgba([96, 76, 52], 0.9));
+    }
+    dab(ctx, 17, 36, 2.6, [244, 242, 232], 1, 0.8);
+    dab(ctx, 22, 37, 2.4, [240, 238, 228], 1, 0.8);
+    // the crane standing over it, one leg drawn up
+    line(ctx, [[30, 37], [30, 26]], 0.9, rgba(INK, 0.9));
+    line(ctx, [[32, 37], [33, 31], [31, 29]], 0.9, rgba(INK, 0.9));
+    ctx.fillStyle = rgba([250, 250, 248], 1);
+    ctx.beginPath();
+    ctx.ellipse(31, 22, 9, 5, -0.25, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = rgba(INK, 0.7);
+    ctx.lineWidth = 0.8;
+    ctx.stroke();
+    // black tail feathers, the long neck, the red crown
+    stroke(ctx, 23, 24, 19, 26, 16, 25, 3, 1, rgba(INK, 0.85));
+    line(ctx, [[37, 19], [38, 10], [36, 5]], 1.5, rgba([250, 250, 248], 1));
+    line(ctx, [[37, 19], [38, 10], [36, 5]], 0.5, rgba(INK, 0.6));
+    dab(ctx, 36, 4, 1.4, [196, 40, 36], 1, 1);
+    line(ctx, [[36, 5], [41, 7]], 0.8, rgba(INK, 0.9));
+  } },
+  fisher: { w: 50, h: 40, fx: 18, fy: 36, draw(ctx) {
+    shadow(ctx, 18, 36, 11, 3, 0.2);
+    // a straw cape, a wide hat, sitting
+    ctx.fillStyle = rgba([150, 128, 84], 0.97);
+    ctx.beginPath();
+    ctx.moveTo(10, 36);
+    ctx.quadraticCurveTo(11, 22, 18, 20);
+    ctx.quadraticCurveTo(25, 22, 26, 36);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = rgba(INK, 0.8);
+    ctx.lineWidth = 0.8;
+    ctx.stroke();
+    for (let y = 24; y < 36; y += 3) line(ctx, [[12, y], [24, y + 1]], 0.4, rgba(INK, 0.35));
+    dab(ctx, 18, 18, 3, [226, 206, 176], 1, 1);
+    ctx.fillStyle = rgba([180, 156, 100], 1);
+    ctx.beginPath();
+    ctx.moveTo(8, 17);
+    ctx.lineTo(18, 9);
+    ctx.lineTo(28, 17);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+    // the rod out over the water, the line down
+    line(ctx, [[24, 26], [37, 12], [49, 4]], 0.9, rgba([96, 76, 52], 1));
+    line(ctx, [[49, 4], [49, 30]], 0.35, rgba(INK, 0.55));
+  } },
+  sword_scar: { w: 70, h: 30, fx: 35, fy: 24, draw(ctx, rnd) {
+    rockLump(ctx, rnd, 35, 26, 66, 12, 'summer', false);
+    // the cut: a long dark cleft, a cold light along its lip
+    ctx.fillStyle = rgba([16, 14, 14], 0.95);
+    ctx.beginPath();
+    ctx.moveTo(4, 22);
+    ctx.quadraticCurveTo(35, 17, 66, 21);
+    ctx.quadraticCurveTo(35, 24, 4, 22);
+    ctx.closePath();
+    ctx.fill();
+    line(ctx, [[8, 20.6], [35, 17.6], [62, 20]], 0.7, rgba([180, 210, 235], 0.85));
+  } },
+  wreck: { w: 60, h: 26, fx: 30, fy: 22, draw(ctx) {
+    shadow(ctx, 30, 22, 26, 4, 0.2);
+    ctx.save();
+    ctx.translate(30, 16);
+    ctx.rotate(-0.12);
+    ctx.fillStyle = rgba([92, 70, 48], 0.95);
+    ctx.beginPath();
+    ctx.moveTo(-26, -2);
+    ctx.quadraticCurveTo(0, 10, 24, -4);
+    ctx.lineTo(18, 2);
+    ctx.quadraticCurveTo(0, 8, -20, 3);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = rgba(INK, 0.8);
+    ctx.lineWidth = 0.9;
+    ctx.stroke();
+    // a broken mast, ribs showing
+    line(ctx, [[-4, 3], [-8, -12]], 1.4, rgba([80, 60, 42], 1));
+    for (let x = -14; x < 16; x += 6) line(ctx, [[x, 1], [x + 1, -3]], 0.8, rgba(INK, 0.6));
+    ctx.restore();
+  } },
   herb: { w: 20, h: 22, fx: 10, fy: 20, draw(ctx, rnd) {
     for (let i = 0; i < 5; i++) {
       const a = -Math.PI / 2 + (i - 2) * 0.45;

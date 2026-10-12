@@ -14,7 +14,9 @@ import { isAiry, isReachable, terrainAt, regionIdAt, findPath, canStand, collide
 import { heightAt } from '../src/world/height.js';
 import { NODES } from '../src/world/map.js';
 import { T } from '../src/world/geo.js';
-import { fresh, resolvePending } from './helpers.js';
+import { POI_BY_ID } from '../src/world/places.js';
+import * as A from '../src/world/map.js';
+import { fresh, resolvePending, pickText } from './helpers.js';
 
 const DT = 1 / 30;
 
@@ -119,6 +121,8 @@ test('the sandbar in the river: 踏雲步 gets you there, 輕身術 does not', (
   assert.ok(isAiry(b.world.x, b.world.y), `on the sandbar (${Math.round(b.world.x)})`);
   assert.equal(regionIdAt(b.world.x, b.world.y), 'river_isle');
   assert.equal(b.player.loc, 'river_isle');
+  assert.equal(b.pending?.id, 'air_isle_arrive', 'someone is fishing there');
+  resolvePending(b);
   // and back
   steps(b, 1.5, { x: -1, y: 0 });
   assert.ok(b.world.x < 4680 && isReachable(b.world.x, b.world.y), 'back on the bank');
@@ -225,6 +229,26 @@ test('when the 靈力 gives out you come down, on ground you can stand on', () =
   assert.ok(canStand(s, s.world.x, s.world.y), `on ground (${Math.round(s.world.x)}, ${Math.round(s.world.y)})`);
 });
 
+test('out over the great river too long, the thing under the water comes for you', () => {
+  const s = ready(16, { at: RIVER_BANK });
+  s.player.items.feisuo = 1;
+  E.takeOff(s);
+  steps(s, 0.6, { x: 1, y: 0 });
+  // north along the middle of the river, away from the sandbar
+  E.walkTo(s, 4840, 1500);
+  steps(s, 2.5);
+  const said = [];
+  for (let t = 0; t < 9 && E.airborne(s) && !s.pending; t += DT) {
+    E.step(s, DT, null);
+    for (const f of E.takeFeed(s)) said.push(f.text);
+    if (!E.pathOf(s) && E.airborne(s)) E.walkTo(s, s.world.x, s.world.y - 400);
+  }
+  assert.ok(said.some((x) => x.includes('黑影')), 'first a shadow under the water');
+  assert.ok(!E.airborne(s), 'then it throws you out of the air');
+  assert.ok(canStand(s, s.world.x, s.world.y) && regionIdAt(s.world.x, s.world.y) !== 'great_river', 'onto a bank');
+  assert.ok(s.player.injury >= 1, 'hurt');
+});
+
 test('a 御風符: even a mortal flies a while, then the wind sets you down', () => {
   const s = ready(12, { realm: 0, at: [2930, 3600] });
   s.player.items.wind_talisman = 1;
@@ -234,7 +258,8 @@ test('a 御風符: even a mortal flies a while, then the wind sets you down', ()
   assert.ok(E.airborne(s));
   assert.equal(s.world.fly.by, 'wind');
   assert.ok(!AR.castArt(s, 'wind_talisman'), 'not twice at once');
-  steps(s, 30, { x: 1, y: 0 });
+  steps(s, 3, { x: 1, y: 0 });
+  steps(s, 27, null);
   assert.ok(E.airborne(s), 'still up after half a minute');
   steps(s, 40, null);
   assert.ok(!E.airborne(s), 'the wind gives out');
@@ -280,4 +305,70 @@ test('the 飛梭 and the books are for sale; the 符 too', async () => {
   }
   assert.ok(FLIGHT.boat.ceil < heightAt(3620, 425) + FLIGHT.boat.clear, 'the high peak is above a 飛梭');
   assert.ok(FLIGHT.boat.ceil >= heightAt(...NODES.crane_peak.at) + FLIGHT.boat.clear, 'the low one is not');
+});
+
+/** Stand by a place up there and see to it. */
+function visitPoi(s, id) {
+  const p = POI_BY_ID[id];
+  E.placeAt(s, p.x, p.y + 14);
+  resolvePending(s);
+  E.interact(s, { kind: 'poi', id, x: p.x, y: p.y, reach: 70 });
+}
+
+test('孤鶴峰: you land to a view; the carving on the rock teaches 踏雲步; the golden-necked crane remembers you', () => {
+  const s = ready(17, { at: [1620, 2030] });
+  s.player.attrs.wuxing = 10;
+  E.placeAt(s, ...NODES.crane_peak.at);
+  assert.equal(s.pending?.id, 'air_crane_arrive');
+  resolvePending(s);
+  visitPoi(s, 'crane_carving');
+  assert.equal(s.pending?.id, 'air_tayun');
+  pickText(s, '照著腳印走一遍');
+  resolvePending(s);
+  assert.ok(s.player.arts.includes('tayun'), 'learned 踏雲步');
+  assert.equal(bodyArt(s).id, 'tayun');
+  // the crane you once saved
+  s.flags.crane_friend = true;
+  visitPoi(s, 'crane_nest');
+  assert.equal(s.pending?.id, 'air_crane_friend');
+  resolvePending(s);
+  assert.equal(s.player.items.crane_plume, 1, 'a feather to wear');
+  // a mortal cannot walk the carving's steps
+  const m = ready(18, { realm: 0, at: [1620, 2030] });
+  E.placeAt(m, ...NODES.crane_peak.at);
+  resolvePending(m);
+  visitPoi(m, 'crane_carving');
+  assert.ok(m.pending.choices.find((c) => c.text.includes('照著腳印')).disabled, 'needs 引氣入體');
+});
+
+test('江心洲: the old man fishing; the wreck in the sand', () => {
+  const s = ready(19, { at: RIVER_BANK });
+  E.placeAt(s, ...NODES.river_isle.at);
+  resolvePending(s);
+  visitPoi(s, 'isle_fisher');
+  assert.equal(s.pending?.id, 'air_isle_fisher');
+  pickText(s, '陪他坐著');
+  resolvePending(s);
+  assert.equal(s.player.items.golden_carp, 1);
+  assert.ok(s.flags.isle_fisher_met);
+  const ls = s.player.ls;
+  visitPoi(s, 'isle_wreck');
+  resolvePending(s);
+  assert.ok(s.player.ls > ls && s.player.items.wind_talisman >= 2, 'a little left behind in the wreck');
+});
+
+test('斷劍峰: the sword cut in the rock, and what it shows', () => {
+  const s = ready(20, { realm: 2, stage: 1, at: [3620, 760] });
+  s.player.attrs.wuxing = 10;
+  E.placeAt(s, ...NODES.sword_peak.at);
+  assert.equal(s.pending?.id, 'air_sword_arrive');
+  resolvePending(s);
+  const insight = s.player.insight;
+  visitPoi(s, 'sword_cleft');
+  assert.equal(s.pending?.id, 'air_sword_scar');
+  pickText(s, '靜坐');
+  resolvePending(s);
+  assert.ok(s.flags.sword_scar_read);
+  assert.ok(s.player.insight >= insight + 3);
+  assert.equal(A.canSecludeAt(s, 'sword_peak'), null, 'a place to shut yourself away, high above the clouds');
 });

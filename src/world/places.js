@@ -206,6 +206,13 @@ export const POIS = [
   { id: 'find_chessboard', region: 'wilds', x: 3700, y: 1180, name: '老松下的棋盤', verb: '查看', hidden: { r: 90 }, treasure: { text: '老松樹下有一張石桌，桌上刻著一局沒下完的棋。你看了很久，看不懂，卻又覺得好像懂了什麼。', effects: [['insight', 1]] } },
   { id: 'find_valleycave', region: 'lingxi_valley', x: 300, y: 1900, name: '谷中石洞', verb: '查看', hidden: { r: 90 }, treasure: { text: '石洞裡長滿了凝氣草，像是很久沒人來過。', effects: [['item', 'ningqi_grass', 4]] } },
   { id: 'find_teagarden', region: 'wilds', x: 2500, y: 4130, name: '荒廢的茶園', verb: '查看', hidden: { r: 100 }, treasure: { text: '一片荒廢的茶園，茶樹長得比人還高。你摘了些嫩葉，用山泉煮了一壺。', effects: [['item', 'ningqi_grass', 2], ['mind', 2]] } },
+
+  // 只有飛（或躍）才到得了的地方
+  { id: 'crane_nest', region: 'crane_peak', x: 1554, y: 2196, name: '鶴巢', verb: '查看', sprite: 'crane_nest', text: '峰頂背風的石凹裡，一個用枯枝搭成的大巢。' },
+  { id: 'crane_carving', region: 'crane_peak', x: 1700, y: 2198, name: '石壁刻痕', verb: '查看', sprite: 'stele', text: '石壁上刻著一串腳印，一步比一步淺，最後一步，淺得像是踩在雲上。' },
+  { id: 'isle_fisher', region: 'river_isle', x: 4872, y: 2062, name: '釣魚的老翁', verb: '上前', sprite: 'fisher', text: '老翁的斗笠壓得很低，看不見臉。魚竿一動也不動。' },
+  { id: 'isle_wreck', region: 'river_isle', x: 4860, y: 2266, name: '擱淺的破船', verb: '查看', sprite: 'wreck', treasure: { text: '一條不知擱淺了多少年的小船，船底朝天，半埋在沙裡。你把它翻過來，船艙的夾板底下藏著一個油布包：幾塊靈石，兩張還沒受潮的符。\n\n不知道它的主人，當年是要過江，還是剛從對岸回來。', effects: [['ls', 40], ['item', 'wind_talisman', 2]] } },
+  { id: 'sword_cleft', region: 'sword_peak', x: 3656, y: 400, name: '劍痕', verb: '參悟', sprite: 'sword_scar', text: '一道把峰頂整個劈開的裂口，深不見底。風從裡面吹出來，冷得像刀。' },
 ];
 
 export const POI_BY_ID = Object.fromEntries(POIS.map((p) => [p.id, p]));

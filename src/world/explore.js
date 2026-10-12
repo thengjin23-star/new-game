@@ -510,7 +510,43 @@ function flyStep(s, L, dt, input) {
   if (F.state === 'up' && F.z > zT - 8) F.state = 'air';
   L.moving = moved > 0.01;
   if (moved > 0) afterFlight(s, L, moved, mode);
+  if (w.fly) riverWatch(s, L, dt);
   if (w.fly && F.state === 'down' && F.z - ground < 2.5) touchDown(s, L);
+}
+
+/**
+ * Over the great river something old lives under the water, and does not
+ * like what flies over its head (the ferryman at 白鶴渡 warned of it): stay
+ * out over the open river too long and it comes up for you. The sandbar is
+ * out of its way.
+ */
+function riverWatch(s, L, dt) {
+  const w = s.world;
+  if (w.fly.state === 'down' || regionAt(s, w.x, w.y) !== 'great_river') {
+    L.riverT = Math.max(0, (L.riverT || 0) - dt * 2);
+    if (!L.riverT) L.riverSaid = false;
+    return;
+  }
+  L.riverT = (L.riverT || 0) + dt;
+  if (L.riverT > 2.5 && !L.riverSaid) {
+    L.riverSaid = true;
+    L.feed.push({ kind: 'bad', text: '江面下，一道比船還長的黑影跟上了你。' });
+  }
+  if (L.riverT < 6.5) return;
+  L.riverT = 0;
+  L.riverSaid = false;
+  // it comes up: thrown from the air onto the nearest bank, hurt
+  const p = s.player;
+  const V = pools(s);
+  p.hp = Math.max(1, p.hp - V.cap * (p.realm >= 2 ? 0.25 : 0.45));
+  const report = newReport();
+  if (p.realm < 2) applyEffects(s, [['hurt', 1]], {}, report);
+  const spot = landingNear(s, w.x, w.y, 6000);
+  if (spot) placeAt(s, spot[0], spot[1]);
+  else w.fly = null;
+  L.feed.push({ kind: 'bad', text: '江水猛地炸開，一張比船還大的嘴從你腳下咬上來——浪頭把你掀翻，摔到了岸上。' });
+  flush(s, L, report);
+  passHours(s, L, 0.5);
 }
 
 /** Flying on: the day goes by (slower than on foot), the clouds part wide, you pass over regions (what waits there waits till you land). */

@@ -126,6 +126,11 @@ export const ITEMS = {
     desc: '古戰場中得來的殘卷。使用後習得。',
     use: { text: '殘卷上的字跡如水波流動，你沉入其中，不知時日。', effects: [['tech', 'xuanshui'], ['days', 10]] },
   },
+  golden_carp: {
+    name: '金鱗鯉', kind: 'herb', sell: 30,
+    desc: '大江裡喝了一千年靈氣的鯉魚，鱗片像金箔。烤了吃，補氣血，也補靈力。',
+    use: { text: '你把金鱗鯉烤了。一口下去，渾身暖洋洋的，靈力像漲潮一樣湧上來。', effects: [['hp', 0.5], ['mp', 0.6], ['xw', 30]] },
+  },
   book_lianxi: {
     name: '《斂息訣》', kind: 'book', price: 120, sell: 40,
     desc: '一本薄薄的小冊子，教人收斂氣息，不叫野獸察覺。使用後習得斂息術。',
@@ -196,6 +201,10 @@ export const ITEMS = {
   jade_pendant: {
     name: '青玉佩', kind: 'gear', slot: 'charm', price: 180, sell: 70, stats: { mp: 15, mpRegen: 0.5 },
     desc: '溫潤的青玉，存得住一點靈氣。',
+  },
+  crane_plume: {
+    name: '金羽鶴翎', kind: 'gear', slot: 'charm', sell: 0, keep: true, stats: { speed: 0.06, regen: 0.25 },
+    desc: '孤鶴峰上，金頸白鶴送你的一根翎羽。羽根是金的，摸上去暖暖的。戴著它，腳下輕快了些，傷也好得快些。',
   },
   zhaoyao_mirror: {
     name: '照妖鏡', kind: 'gear', slot: 'relic', price: 280, sell: 110, stats: { sense: 0.5 }, move: 'mirror',
