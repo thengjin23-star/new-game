@@ -10,6 +10,7 @@ import { restore, unwearGone, pools } from './body.js';
 import { advance } from './time.js';
 import { schedule, unschedule } from './schedule.js';
 import { rand, randInt, pickWeighted } from './rng.js';
+import { addRep } from '../world/factions.js';
 
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const sign = (n) => (n > 0 ? '+' : '');
@@ -306,6 +307,9 @@ export function applyEffects(s, effects, ctx, report) {
         break;
       case 'tech':
         learnTech(s, a, report);
+        break;
+      case 'rep':
+        addRep(s, a, b, report);
         break;
       case 'equip':
         p.weapon = a;

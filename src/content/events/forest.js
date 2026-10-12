@@ -1,5 +1,6 @@
 import { dayAt } from '../../core/calendar.js';
 import { has, flag, alive, needLs, npcPower, variant, mpNow } from '../helpers.js';
+import { banditsFriendly } from '../../world/factions.js';
 
 const F = ['black_forest'];
 
@@ -41,6 +42,11 @@ export default [
         fail: { text: '三打一，你很快就倒在了血泊裡。醒來時，身上所有的靈石都不見了。', effects: [['hurt', 2, '死於劫修刀下'], ['allls']] },
       },
       {
+        text: '抱拳：「道上的朋友。」',
+        show: (s) => banditsFriendly(s),
+        out: { text: '獨眼龍眯起那隻好眼睛，打量了你半天：「原來是你。」\n\n他擺擺手，手下讓出了一條路。', effects: [['mind', -1]] },
+      },
+      {
         text: '「我是青雲宗弟子。」',
         check: { kind: 'jiyuan', diff: 6 },
         ok: { text: '獨眼龍的臉色變了變，罵罵咧咧地帶人走了。\n\n你的後背全是冷汗。', effects: [] },
@@ -52,7 +58,7 @@ export default [
         karma: true,
         out: {
           text: '獨眼龍打量你半天，笑了：「有意思。」\n\n那天晚上，你跟著他們劫了一支商隊。分到的靈石，比你過去一年攢的都多。\n\n你沒有回頭看那些商人的臉。',
-          effects: [['flag', 'bandit_joined'], ['ls', 40], ['mind', -12], ['log', '加入了黑風寨'], ['sched', 'bandit_purge', 180, 420, { expire: 720 }]],
+          effects: [['flag', 'bandit_joined'], ['ls', 40], ['mind', -12], ['rep', 'bandits', 50], ['rep', 'market', -10], ['log', '加入了黑風寨'], ['sched', 'bandit_purge', 180, 420, { expire: 720 }]],
         },
       },
     ],

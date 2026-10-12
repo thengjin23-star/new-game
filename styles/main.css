@@ -1804,6 +1804,36 @@ canvas.world-overlay {
   box-shadow: 0 2px 8px rgba(30, 24, 16, 0.2);
 }
 
+/* a price marked down (or up) by your standing with the 坊市 */
+.price.off {
+  color: var(--jade);
+}
+
+.price.up {
+  color: var(--red);
+}
+
+/* 勢力: where each stands with you */
+.factions {
+  list-style: none;
+  margin: 0;
+  padding: 0 14px;
+}
+
+.factions li {
+  padding: 10px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.factions .tier {
+  color: var(--red);
+  margin-left: 8px;
+}
+
+.factions .muted.small {
+  margin-left: 8px;
+}
+
 /* the weather and signs in the sky, beside the season */
 .pill.weather {
   background: rgba(239, 233, 219, 0.85);

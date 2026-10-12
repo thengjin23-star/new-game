@@ -62,6 +62,9 @@ export function migrate(s) {
   s.player.gear ||= {};
   s.player.arts ||= [];
   s.player.techs ||= [];
+  // where the factions stand with you; the work you have taken from the boards
+  s.rep ||= {};
+  s.quests ||= [];
   s.sys.known ||= {};
   s.sys.frags ||= [];
   s.sys.lv = Math.max(s.sys.lv || 1, levelFor(s.sys.exp || 0));

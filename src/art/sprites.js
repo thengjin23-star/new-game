@@ -1462,6 +1462,35 @@ const PROPS = {
     line(ctx, [[20, 20], [21, 8]], 2.2, rgba([210, 220, 230], 1));
     line(ctx, [[20, 20], [21, 8]], 0.6, rgba(INK, 0.6));
   } },
+  // a notice board: two posts, a roof of boards, papers pinned up
+  board: { w: 44, h: 44, fx: 22, fy: 41, draw(ctx, rnd) {
+    shadow(ctx, 22, 41, 16, 3, 0.2);
+    line(ctx, [[9, 41], [9, 10]], 2.2, rgba([92, 70, 48], 1));
+    line(ctx, [[35, 41], [35, 10]], 2.2, rgba([92, 70, 48], 1));
+    ctx.fillStyle = rgba([150, 116, 78], 1);
+    ctx.fillRect(7, 14, 30, 18);
+    ctx.strokeStyle = rgba(INK, 0.8);
+    ctx.lineWidth = 0.9;
+    ctx.strokeRect(7, 14, 30, 18);
+    // a little roof
+    ctx.fillStyle = rgba([60, 56, 54], 1);
+    ctx.beginPath();
+    ctx.moveTo(4, 12);
+    ctx.lineTo(22, 6);
+    ctx.lineTo(40, 12);
+    ctx.closePath();
+    ctx.fill();
+    // the papers
+    for (let i = 0; i < 4; i++) {
+      const x = 9 + i * 7 + rnd() * 1.5;
+      const y = 16 + (i % 2) * 3 + rnd() * 2;
+      ctx.fillStyle = rgba([240, 234, 214], 1);
+      ctx.fillRect(x, y, 5.5, 8);
+      line(ctx, [[x + 1, y + 2.5], [x + 4.5, y + 2.5]], 0.4, rgba(INK, 0.5));
+      line(ctx, [[x + 1, y + 4.5], [x + 4.5, y + 4.5]], 0.4, rgba(INK, 0.5));
+      dab(ctx, x + 2.7, y + 0.6, 0.6, [168, 50, 42], 1, 1);
+    }
+  } },
   // up where no road goes: a crane on its nest, an old man fishing, a sword's cut in the rock, a wreck
   crane_nest: { w: 46, h: 46, fx: 23, fy: 42, draw(ctx, rnd) {
     shadow(ctx, 23, 41, 18, 4, 0.22);

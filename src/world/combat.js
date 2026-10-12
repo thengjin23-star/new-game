@@ -30,6 +30,7 @@ import { notice, startEvent, choose, fightChoice, endRealFight, resolve } from '
 import { newReport, spendHours } from '../core/time.js';
 import { rand } from '../core/rng.js';
 import { weatherNow, moonTonight } from './weather.js';
+import { onBeaten, banditsHostile } from './factions.js';
 
 /** Blood a wound holds back: 輕傷 leaves you three quarters of it, and so on. */
 /** A beast of your own strength falls to about this many plain blows… */
@@ -254,7 +255,8 @@ function spawn(s, def, k = 0) {
   const who = def.who?.[k] || null;
   const b = {
     uid: n > 1 ? `${def.id}:${k}` : def.id, k, def, kind, K, R, phantom: !!def.phantom, story: !!def.story, summon: !!def.summon, side: def.side || 'foe',
-    lead: k === 0 && !!(def.lead || def.leader), talker: !!(R.talk && def.event && !def.story), cond: (def.event && !def.story && EVENTS[def.event]?.cond) || null,
+    // (the 黑風寨 does not stop to talk with someone who has spilled that much of its blood)
+    lead: k === 0 && !!(def.lead || def.leader), talker: !!(R.talk && def.event && !def.story) && !(def.kind === 'bandit' && banditsHostile(s)), cond: (def.event && !def.story && EVENTS[def.event]?.cond) || null,
     baseName: who?.name || (k === 0 && def.name) || K.name, baseRank: who?.rank || null, baseTier: who?.tier ?? null, npcId: who?.npcId || null,
     home: [x, y], x, y, vx: 0, vy: 0, face: 1, dir: [1, 0], moving: false,
     state: 'idle', st: 0, wait: 1 + k * 0.7, tx: x, ty: y, cds: {}, hp: null, maxHp: null, armed: false, aggro: false,
@@ -717,6 +719,7 @@ function fell(s, C, b, io) {
   }
   if (!b.story) away(s, b.uid, b.def.respawn ?? 10);
   const report = newReport();
+  tally(s, b, report);
   const gains = [['xw', Math.max(1, Math.round(b.D * (b.K.boss ? 0.4 : 0.25)))]];
   for (const [p, item, n] of b.K.loot || []) if (rand(s) < p) gains.push(['item', item, n]);
   gains.push(['sysexp', b.K.boss ? 3 : 1]);
@@ -733,7 +736,22 @@ function giveUp(s, C, b, io) {
   C.beaten += 1;
   untarget(C, b);
   io.feed('good', b.def.spar ? `${b.name}收了手：「好，到此為止。」` : `${b.name}扔下了刀，跪地求饒！`);
+  if (!b.def.spar) {
+    const report = newReport();
+    tally(s, b, report);
+    for (const c of report.chips) io.feed(c.tone === 'bad' ? 'bad' : 'good', c.text);
+    for (const t of report.toasts) io.feed('sys', t);
+  }
   morale(s, C, b, io);
+}
+
+/** One more of its kind beaten by your hand (bounties and sect tasks count them); and what the factions make of it. */
+function tally(s, b, report) {
+  if (b.phantom || b.summon || b.side === 'ally') return;
+  const kind = b.kind || b.def.kind;
+  s.vars.kills ||= {};
+  s.vars.kills[kind] = (s.vars.kills[kind] || 0) + 1;
+  if (!b.story) onBeaten(s, kind, report);
 }
 
 /** Beaten in a spar: you are bested, not felled — it stops there. */

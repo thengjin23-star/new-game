@@ -4,11 +4,13 @@ import { createWorldView, paintWorldThumb } from '../art/worldview.js';
 import { createWorld3D, canDraw3D } from '../art/world3d.js';
 import { loadAssets, asset } from '../art/assets.js';
 import { newGame, rollFate, ORIGINS, ATTRS, attrWord } from '../core/state.js';
-import { startEvent, choose, continueEvent } from '../core/events.js';
+import { startEvent, choose, continueEvent, notice } from '../core/events.js';
 import * as A from '../core/actions.js';
 import * as E from '../world/explore.js';
 import { flyMeans } from '../world/air.js';
 import { weatherNow, skySigns, hoursToClear, SIGNS } from '../world/weather.js';
+import { FACTIONS, standing } from '../world/factions.js';
+import * as Q from '../world/quests.js';
 import * as CB from '../world/combat.js';
 import * as AR from '../world/arts.js';
 import { ROOTS, INJURY, BUFFS, realmLabel, stageReq, age, lifespan, rateParts, breakthroughInfo, power, atBottleneck, techOf } from '../core/cultivation.js';
@@ -769,6 +771,10 @@ export function startApp(root, { speed = 1, view = null } = {}) {
   function onSignal(sig) {
     if (sig.caption) showCaption(sig.caption);
     if (sig.open === 'shop') openSheet('shop');
+    if (sig.open === 'board') {
+      ui.board = sig.board;
+      openSheet('board');
+    }
     if (sig.combat) combatSignal(sig);
   }
 
@@ -1444,13 +1450,49 @@ export function startApp(root, { speed = 1, view = null } = {}) {
   }
 
   function panelSheet(id) {
-    const title = { bag: '行囊', shop: '行囊', cult: '修煉', log: '見聞', sys: '問道系統', rest: '歇息' }[id];
-    const body = { bag: panelBag, shop: panelBag, cult: panelCult, log: panelLog, sys: panelSys, rest: panelRest }[id]();
+    const title = { bag: '行囊', shop: '行囊', cult: '修煉', log: '見聞', sys: '問道系統', rest: '歇息', board: Q.BOARDS[ui.board]?.name || '告示' }[id];
+    const body = { bag: panelBag, shop: panelBag, cult: panelCult, log: panelLog, sys: panelSys, rest: panelRest, board: panelBoard }[id]();
     const sheet = h('div.sheet.panel-sheet', { role: 'dialog', 'aria-label': title },
       h('div.sheet-head', h('h2.sheet-title', title), h('button.btn.small.ghost', { onclick: closeSheet }, '關閉')),
       h('div.sheet-body', body),
     );
     return sheet;
+  }
+
+  // ── 懸賞榜, 任務堂: work put up, work taken ──
+  function panelBoard() {
+    const s = ui.s;
+    const id = ui.board;
+    const B = Q.BOARDS[id];
+    const lock = Q.boardLock(s, id);
+    const taken = Q.takenOf(s).filter((q) => q.board === id).map((q) => Q.progress(s, q)).filter(Boolean);
+    const full = Q.takenOf(s).length >= Q.MAX_TAKEN;
+    const row = (w, acts) => h('li',
+      h('div.item-head', h('b', w.title), h('span.price', Q.payOf(w))),
+      h('p', w.text),
+      h('p.need', Q.askOf(w) + (w.have !== undefined ? `（${w.have}/${w.need}）` : '')),
+      acts ? h('div.item-acts', acts) : null,
+    );
+    return h('div.bag',
+      h('p.muted', lock || `${B.who}每 ${B.every} 天換一批。同時最多接 ${Q.MAX_TAKEN} 件差事。`),
+      taken.length ? h('section.card',
+        h('h3', '接下的差事'),
+        h('ul.items', taken.map((w) => row(w, [
+          h('button.btn.small', { disabled: !w.done || !!s.secl, onclick: () => act((x) => {
+            const report = Q.handIn(x, w.key);
+            if (report) notice(x, '交差', `${B.who}點過了數，把報酬交到你手上。`, { chips: report.chips, toasts: report.toasts });
+          }) }, w.done ? '交差' : '未完成'),
+          h('button.btn.small.ghost', { onclick: () => act((x) => Q.drop(x, w.key)) }, '放棄'),
+        ]))),
+      ) : null,
+      lock ? null : h('section.card',
+        h('h3', '榜上'),
+        h('ul.items', Q.postings(s, id).map((w) => {
+          const done = Q.wasTaken(s, w.key);
+          return row(w, [h('button.btn.small', { disabled: done || full || !!s.secl, onclick: () => act((x) => Q.take(x, id, w.key)) }, done ? '已揭下' : full ? '接滿了' : '揭榜')]);
+        })),
+      ),
+    );
   }
 
   // ── 歇息 ──
@@ -1653,11 +1695,12 @@ export function startApp(root, { speed = 1, view = null } = {}) {
           h('ul.items', shop.stock.map((id) => {
             const it = ITEMS[id];
             const stats = statLine(id);
+            const price = A.priceOf(s, id);
             return h('li',
-              h('div.item-head', h('b', it.name), h('span.price', `${it.price} 靈石`)),
+              h('div.item-head', h('b', it.name), h('span.price' + (price < it.price ? '.off' : price > it.price ? '.up' : ''), `${price} 靈石`)),
               stats ? h('p.gearstats', stats) : null,
               h('p', it.desc),
-              h('div.item-acts', h('button.btn.small', { disabled: p.ls < it.price || !!s.secl, onclick: () => act((x) => A.buy(x, id)) }, '買下')),
+              h('div.item-acts', h('button.btn.small', { disabled: p.ls < price || !!s.secl, onclick: () => act((x) => A.buy(x, id)) }, '買下')),
             );
           })),
           shop.recipes?.length ? h('h3.sub', '打造（帶材料來）') : null,
@@ -1731,11 +1774,12 @@ export function startApp(root, { speed = 1, view = null } = {}) {
     const subs = [
       ['rumors', '傳聞'],
       ['people', '人物'],
+      ['factions', '勢力'],
       ['places', '地點'],
       ['life', '生平'],
       ['frags', '殘頁'],
     ];
-    const body = { rumors: logRumors, people: logPeople, places: logPlaces, life: logLife, frags: logFrags }[ui.logTab]();
+    const body = { rumors: logRumors, people: logPeople, factions: logFactions, places: logPlaces, life: logLife, frags: logFrags }[ui.logTab]();
     return h('div.logpage',
       h('div.subtabs', subs.map(([id, label]) => h('button.subtab' + (ui.logTab === id ? '.on' : ''), { onclick: () => { ui.logTab = id; renderLayer(); } }, label))),
       body,
@@ -1752,6 +1796,30 @@ export function startApp(root, { speed = 1, view = null } = {}) {
         s.sys.lv >= 4 && r.kind === 'false' ? h('span.tag.bad', '系統：此為謠言') : null,
         s.sys.lv >= 4 && r.kind === 'hint' ? h('span.tag.good', '系統：線索') : null,
       )));
+  }
+
+  /** Where the factions stand with you, and the work you have taken (wherever you are). */
+  function logFactions() {
+    const s = ui.s;
+    const taken = Q.takenOf(s).map((q) => Q.progress(s, q)).filter(Boolean);
+    return h('div',
+      h('ul.factions', Object.entries(FACTIONS).map(([id, f]) => {
+        const st = standing(s, id);
+        return h('li',
+          h('div.person-head', h('b', f.name), h('span.tier', st.name), h('span.muted.small', `聲望 ${st.at}`)),
+          h('p.muted.small', f.desc),
+          st.note ? h('p.small', st.note) : null,
+        );
+      })),
+      s.flags.sect_member ? h('p.small.pad', `宗門貢獻：${s.vars.contribution || 0}`) : null,
+      h('h3.pad', '接下的差事'),
+      taken.length
+        ? h('ul.factions', taken.map((w) => h('li',
+          h('div.person-head', h('b', w.title), h('span.muted.small', `${Q.BOARDS[w.board].name}・${Q.payOf(w)}`)),
+          h('p.small', `${Q.askOf(w)}（${w.have}/${w.need}）${w.done ? '——可以回去交差了。' : ''}`),
+        )))
+        : h('p.muted.pad', '沒有接下什麼差事。落霞坊市的懸賞榜上常有活計。'),
+    );
   }
 
   function logPeople() {

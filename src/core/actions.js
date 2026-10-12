@@ -11,6 +11,7 @@ import { restore, wear, unwearGone } from './body.js';
 import { rand, randInt, chance, pick, pickWeighted } from './rng.js';
 import { fmtDuration, cnNum } from './calendar.js';
 import { checkChance } from './checks.js';
+import { priceShare } from '../world/factions.js';
 
 export const MS_PER_DAY = 3000;
 
@@ -315,12 +316,20 @@ export function shopHere(s) {
   return null;
 }
 
+/** What a shop asks of you for it (the 坊市 prices by your standing there). */
+export function priceOf(s, id) {
+  const it = ITEMS[id];
+  if (!it?.price) return 0;
+  return Math.max(1, Math.round(it.price * priceShare(s)));
+}
+
 export function buy(s, id) {
   if (busy(s)) return;
   const shop = shopHere(s);
   const it = ITEMS[id];
-  if (!shop || !shop.stock.includes(id) || !it?.price || s.player.ls < it.price) return;
-  s.player.ls -= it.price;
+  const price = priceOf(s, id);
+  if (!shop || !shop.stock.includes(id) || !price || s.player.ls < price) return;
+  s.player.ls -= price;
   s.player.items[id] = (s.player.items[id] || 0) + 1;
 }
 

@@ -166,6 +166,7 @@ export const POIS = [
   { id: 'su_stall', region: 'luoxia_market', x: 3880, y: 2672, name: '雜貨攤', verb: '查看', auto: 110, text: '攤上堆著一堆說不清用途的破爛。' },
   { id: 'smithy_stall', region: 'luoxia_market', x: 4180, y: 2648, name: '百煉坊', verb: '購物', action: 'shop', shop: 'smithy' },
   { id: 'talisman_stall', region: 'luoxia_market', x: 3700, y: 2638, name: '符籙攤', verb: '購物', action: 'shop', shop: 'talisman' },
+  { id: 'bounty_board', region: 'luoxia_market', x: 4040, y: 2580, name: '懸賞榜', verb: '查看', action: 'board', board: 'market', sprite: 'board' },
   // 靈溪谷
   {
     id: 'python_pool', region: 'lingxi_valley', x: 520, y: 1850, name: '深潭', verb: '查看', auto: 170,
@@ -177,6 +178,7 @@ export const POIS = [
   { id: 'sect_gate', region: 'qingyun_sect', x: 4260, y: 1462, name: '青雲宗山門', verb: '查看', auto: 140, crowd: (s) => !!s.flags.recruit_open, text: '守山弟子抱著劍，靠在牌坊下打盹。' },
   { id: 'sect_steps', region: 'qingyun_sect', x: 4235, y: 1585, name: '山門外石階', verb: '打聽', action: 'inquire' },
   { id: 'sect_woodshed', region: 'qingyun_sect', x: 4440, y: 1224, name: '柴房', verb: '查看', text: '柴堆得比人還高。', rest: true },
+  { id: 'sect_task_hall', region: 'qingyun_sect', x: 4200, y: 1120, name: '任務堂', verb: '查看', action: 'board', board: 'sect', sprite: 'board' },
   // 古戰場
   {
     id: 'realm_gate', region: 'ancient_ruins', x: 2600, y: 655, name: '斷石門', verb: '查看', auto: 170,

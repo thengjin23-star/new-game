@@ -54,7 +54,7 @@ export default [
             show: (s) => ['five', 'four'].includes(s.player.root.type),
             out: {
               text: '執事終於抬起頭：「雜役弟子？管吃管住，砍柴挑水，三年後可考外門。」他在冊子上畫了一筆，「去後山報到吧。」',
-              effects: [['flag', 'sect_member'], ['flag', 'sect_servant'], ['log', '成為青雲宗雜役弟子']],
+              effects: [['flag', 'sect_member'], ['rep', 'sect', 30], ['flag', 'sect_servant'], ['log', '成為青雲宗雜役弟子']],
               next: 'lin',
             },
           },
@@ -63,7 +63,7 @@ export default [
             show: (s) => s.player.root.type === 'three',
             out: {
               text: '你領到了一身青色的外門弟子服，和一冊《青雲心法》。',
-              effects: [['flag', 'sect_member'], ['tech', 'qingyun'], ['log', '成為青雲宗外門弟子']],
+              effects: [['flag', 'sect_member'], ['rep', 'sect', 30], ['tech', 'qingyun'], ['log', '成為青雲宗外門弟子']],
               next: 'lin',
             },
           },
@@ -72,7 +72,7 @@ export default [
             show: (s) => s.player.root.type === 'dual',
             out: {
               text: '一位長老親自走下台來，看了你一眼，點點頭：「跟我來。」',
-              effects: [['flag', 'sect_member'], ['tech', 'qingyun'], ['ls', 50], ['log', '成為青雲宗內門弟子']],
+              effects: [['flag', 'sect_member'], ['rep', 'sect', 30], ['tech', 'qingyun'], ['ls', 50], ['log', '成為青雲宗內門弟子']],
               next: 'lin',
             },
           },

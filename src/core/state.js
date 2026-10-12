@@ -122,6 +122,8 @@ export function newGame({ name, gender, origin, fate, seed, meta }) {
     },
     flags: {},
     vars: { npcSeq: 1 },
+    rep: {},
+    quests: [],
     nodes,
     seen: {},
     sched: [],

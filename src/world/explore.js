@@ -1163,6 +1163,10 @@ function usePoi(s, L, p) {
     L.signals.push({ open: 'shop', poi: p.id });
     return;
   }
+  if (p.action === 'board') {
+    L.signals.push({ open: 'board', board: p.board, poi: p.id });
+    return;
+  }
   if (p.action === 'inquire') return inquire(s, p.region);
   const id = pickEvent(s, 'explore', p.region, { poi: p.id });
   if (id) {
