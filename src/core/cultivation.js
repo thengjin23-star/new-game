@@ -2,6 +2,7 @@ import { TECHS } from '../content/techniques.js';
 import { ITEMS } from '../content/items.js';
 import { nodeQi } from '../world/map.js';
 import { DAYS_PER_YEAR } from './calendar.js';
+import { skySigns } from '../world/weather.js';
 
 export const REALMS = [
   { id: 'fan', name: '凡人', stages: [''], req: [12], base: 1, lifespan: 70, auto: false },
@@ -89,8 +90,11 @@ export function rateParts(s, nodeId = s.player.loc) {
   const injury = INJURY[p.injury].mult;
   let buff = 1;
   for (const [id, left] of Object.entries(p.buffs || {})) if (left > 0 && BUFFS[id]) buff *= BUFFS[id].mult;
-  const total = r.base * root * tech * qi * mind * injury * buff;
-  return { base: r.base, root, tech, qi, mind, injury, buff, total };
+  // the sky: a 靈潮 (half as fast again), the full moon's light (a little)
+  const signs = skySigns(s);
+  const sky = (signs.includes('tide') ? 1.5 : 1) * (signs.includes('fullmoon') || signs.includes('bloodmoon') ? 1.15 : 1);
+  const total = r.base * root * tech * qi * mind * injury * buff * sky;
+  return { base: r.base, root, tech, qi, mind, injury, buff, sky, total };
 }
 
 export function dailyRate(s, nodeId) {

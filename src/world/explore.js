@@ -17,6 +17,7 @@ import { ITEMS, displayItem } from '../content/items.js';
 import { pickEvent, startEvent, takeDue, notice } from '../core/events.js';
 import { updateCombat, beastTargets, strikeAt, FIGHT_HOURS, combatOf, inCombat } from './combat.js';
 import { bodyArt, leapLanding, leapTo, leapShape, leapRules, FLIGHT, flyMeans, flyBlocked, landingNear } from './air.js';
+import { weatherNow } from './weather.js';
 import { inquire, visit } from '../core/actions.js';
 import { spendHours, newReport } from '../core/time.js';
 import { applyEffects, logLife } from '../core/effects.js';
@@ -132,7 +133,9 @@ export function walkMult(s) {
   // (a 神行符 burning: half as fast again; a 輕功: a little faster always)
   const swift = combatOf(s).me?.swift > 0 ? 1.5 : 1;
   const art = bodyArt(s);
-  return m * [1, 0.9, 0.75, 0.6][p.injury || 0] * (1 + gearStats(s).speed) * swift * (1 + (art?.walk || 0));
+  // (rain, snow and mud slow you a little)
+  const sky = weatherNow(s).walk;
+  return m * [1, 0.9, 0.75, 0.6][p.injury || 0] * (1 + gearStats(s).speed) * swift * (1 + (art?.walk || 0)) * sky;
 }
 
 /** How fast the ground here lets you go: rough ground (woods, slopes, tall grass) holds a 輕功 back less. */
@@ -146,7 +149,8 @@ function revealRadius(s) {
   const base = isNight(s) ? 170 : 260;
   // up in the air you see further (the higher, the further)
   const up = s.world?.fly ? (s.world.fly.by === 'sword' ? 1.6 : 1.3) : 1;
-  return (base + 20 * Math.min(4, s.player.realm)) * up;
+  // (in fog or rain you see less)
+  return (base + 20 * Math.min(4, s.player.realm)) * up * weatherNow(s).see;
 }
 
 // ── the frame step ──
@@ -371,6 +375,7 @@ export function takeOff(s, by = flyMeans(s).by) {
   w.fly = { by, z: heightAt(w.x, w.y), state: 'up' };
   if (F.last) w.fly.left = F.last;
   L.feed.push({ kind: 'sys', text: UP_TEXT[by] });
+  if (weatherNow(s).thunder) L.feed.push({ kind: 'bad', text: '雷雨天飛上天，怕是會招雷。' });
   return true;
 }
 
@@ -511,7 +516,33 @@ function flyStep(s, L, dt, input) {
   L.moving = moved > 0.01;
   if (moved > 0) afterFlight(s, L, moved, mode);
   if (w.fly) riverWatch(s, L, dt);
+  if (w.fly) thunderWatch(s, L, dt);
   if (w.fly && F.state === 'down' && F.z - ground < 2.5) touchDown(s, L);
+}
+
+/** In a thunderstorm the lightning looks for what stands highest; up in the air, that is you. */
+function thunderWatch(s, L, dt) {
+  const w = s.world;
+  if (w.fly.state === 'down' || w.fly.forced || !weatherNow(s).thunder) {
+    L.thunderT = 0;
+    return;
+  }
+  L.thunderT = (L.thunderT || 0) + dt;
+  if (L.thunderT < 5) return;
+  L.thunderT = 0;
+  // one in three: struck (the sky is not always so sure of its aim)
+  if (rand(s) > 0.34) return;
+  const p = s.player;
+  const V = pools(s);
+  p.hp = Math.max(1, p.hp - V.cap * 0.3);
+  L.flash = L.t;
+  L.feed.push({ kind: 'bad', text: '一道雷劈在你身邊，渾身一麻，你從半空裡栽了下來。' });
+  comeDown(s, L, true);
+}
+
+/** When the last lightning struck near you (for the painters' flash), in live seconds. */
+export function flashOf(s) {
+  return liveOf(s).flash ?? -99;
 }
 
 /**

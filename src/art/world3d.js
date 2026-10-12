@@ -31,6 +31,7 @@ import { drawActor, drawPose, poseOf, lookOf, drawSpeech, LIVE_PROPS } from './s
 import * as CB from '../world/combat.js';
 import { paintBeast, paintHero, drawGroundMarks, drawCombatOverlay } from './combatfx.js';
 import { stream } from '../core/rng.js';
+import { fallOf, skyLight, drawSkyVeil } from './sky.js';
 
 const DEG = Math.PI / 180;
 const FONT = "'LXGW WenKai TC', 'Kaiti TC', 'STKaiti', 'BiauKai', serif";
@@ -540,6 +541,17 @@ export function createWorld3D(canvas, { onFrame, idle, quality = 'high', onSlow 
     return m.motes;
   }
 
+  // the weather on the light: a grey day is darker and greyer, fog whitens the distance, a blood moon reddens it
+  let sky = { reach: 1 };
+
+  function weatherLight() {
+    sky = skyLight(s);
+    env.u.uAmbient.value.multiplyScalar(sky.amb);
+    env.u.uSunColor.value.multiplyScalar(sky.sun);
+    const hz = env.u.uHaze.value;
+    hz.setRGB(hz.r + (sky.haze[0] - hz.r) * sky.lean, hz.g + (sky.haze[1] - hz.g) * sky.lean, hz.b + (sky.haze[2] - hz.b) * sky.lean);
+  }
+
   function sparkle(c, x, y, a) {
     const r = 3 + Math.sin(t * 5 + x) * 1;
     c.strokeStyle = `rgba(255,248,210,${0.9 * a})`;
@@ -647,14 +659,18 @@ export function createWorld3D(canvas, { onFrame, idle, quality = 'high', onSlow 
     // weather and paper; a region's own motes over the season's
     const dark = E.darkness(s.tod);
     const fireflies = dark > 0.6 && (season === 'summer' || season === 'spring') && !['qingshi_town', 'luoxia_market', 'qingyun_sect'].includes(s.player.loc);
-    const kind = motes || (fireflies ? 'firefly' : { spring: 'petal', summer: 'seed', autumn: 'leaf', winter: 'snow' }[season]);
-    if (!reduce) {
+    // what falls: rain or snow when the weather brings it; else the region's own motes, fireflies, the season's petals and leaves
+    const [fall, count] = fallOf(s, season);
+    const wet = fall === 'rain' || fall === 'storm' || fall === 'snow';
+    const kind = wet ? fall : motes || (fireflies ? 'firefly' : fall);
+    if (!reduce && kind) {
       if (particleKind !== kind) {
         particleKind = kind;
-        particles = makeParticles(kind, stream(5), W, H, kind === 'snow' ? 60 : kind === 'seed' ? 10 : kind === 'mote' ? 26 : kind === 'firefly' ? 18 : 22);
+        particles = makeParticles(kind, stream(5), W, H, kind === motes ? 26 : kind === 'firefly' ? 18 : count);
       }
       drawParticles(octx, kind, particles, W, H, dt * 1000, t * 1000, false);
     }
+    drawSkyVeil(octx, s, W, H, t);
     if (!grain) {
       const gc = document.createElement('canvas');
       gc.width = gc.height = 128;
@@ -786,6 +802,7 @@ export function createWorld3D(canvas, { onFrame, idle, quality = 'high', onSlow 
     env.u.uTime.value = t;
     env.setLight(s.tod, E.darkness(s.tod), season);
     motes = regionMood(dt);
+    weatherLight();
     renderer.setClearColor(env.u.uHaze.value, 1);
     // a fight's ground: trees on it stand back (reaching toward the eye: a crown just in front could hide a fighter)
     if (CB.inCombat(s)) env.u.uClear.value.set(s.world.x, s.world.y + 40, 125);
@@ -795,6 +812,8 @@ export function createWorld3D(canvas, { onFrame, idle, quality = 'high', onSlow 
     const marks = C.on || C.preview || C.fx.length || C.pools.length || (me && (me.shield > 0 || me.target || me.ward || me.regen)) || (C.beasts || []).some((b) => b.state === 'windup' || b.state === 'leap');
     env.groundMarks(s.world.x, s.world.y, marks ? (g, k) => drawGroundMarks(g, s, C, CB.kitOf(s), k) : null);
     followCamera(dt, snap);
+    // in fog (and a little in rain) the haze comes closer
+    env.u.uHazeRange.value.multiplyScalar(sky.reach);
     updateFog();
     terrain.update(focus.x, focus.y, season, dt, snap ? 12 : 1);
     decor.update(season);

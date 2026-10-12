@@ -8,6 +8,7 @@ import { startEvent, choose, continueEvent } from '../core/events.js';
 import * as A from '../core/actions.js';
 import * as E from '../world/explore.js';
 import { flyMeans } from '../world/air.js';
+import { weatherNow, skySigns, hoursToClear, SIGNS } from '../world/weather.js';
 import * as CB from '../world/combat.js';
 import * as AR from '../world/arts.js';
 import { ROOTS, INJURY, BUFFS, realmLabel, stageReq, age, lifespan, rateParts, breakthroughInfo, power, atBottleneck, techOf } from '../core/cultivation.js';
@@ -1177,13 +1178,18 @@ export function startApp(root, { speed = 1, view = null } = {}) {
       clear(el);
       put(el, h('span.place-seal', NODES[loc]?.name || ''), loc !== 'great_river' ? h('span.place-pct', `探索 ${pct}%`) : null);
     }
-    const flagKey = `${!!s.secl}|${p.injury}|${Object.keys(p.buffs).join(',')}|${SEASON_NAME[seasonOf(s.day)]}`;
+    // the season, the weather, and any sign in the sky
+    const wx = weatherNow(s);
+    const signs = skySigns(s);
+    const flagKey = `${!!s.secl}|${p.injury}|${Object.keys(p.buffs).join(',')}|${SEASON_NAME[seasonOf(s.day)]}|${wx.id}|${signs.join(',')}`;
     if (force || ui.hudKeys.flags !== flagKey) {
       ui.hudKeys.flags = flagKey;
       const el = $('.hud-flags');
       clear(el);
       put(el, 
         h('span.pill.season', SEASON_NAME[seasonOf(s.day)]),
+        wx.id !== 'clear' ? h('span.pill.weather', { title: '天氣' }, wx.name) : null,
+        signs.map((k) => h('span.pill.sign.' + k, { title: SIGNS[k].desc }, SIGNS[k].name)),
         p.injury ? h('span.pill.bad', INJURY[p.injury].name) : null,
         Object.keys(p.buffs).filter((b) => BUFFS[b]).map((b) => h('span.pill.good', BUFFS[b].name)),
       );
@@ -1458,6 +1464,10 @@ export function startApp(root, { speed = 1, view = null } = {}) {
       h('div.actions',
         opt('四處搜尋', '兩個時辰', (x) => E.search(x)),
         opt('歇一會兒', '一個時辰', (x) => E.rest(x, 2)),
+        // under the rain (or the snow): wait it out
+        weatherNow(s).wet || weatherNow(s).snow
+          ? opt(weatherNow(s).snow ? '等雪停' : '等雨停', `約 ${Math.ceil(hoursToClear(s) / 2)} 個時辰`, (x) => E.rest(x, hoursToClear(x)))
+          : null,
         opt('歇到黃昏', '酉時', (x) => E.rest(x, 'dusk')),
         opt('歇到入夜', '亥時', (x) => E.rest(x, 'night')),
         opt('歇到天明', '卯時', (x) => E.rest(x, 'dawn')),
@@ -1481,7 +1491,7 @@ export function startApp(root, { speed = 1, view = null } = {}) {
         h('p.muted', `${ROOTS[p.root.type].name}（${p.root.els.join('、')}）・${tech ? tech.name : '未習功法'}・戰力 ${power(s)}`),
         bar(p.xw, stageReq(s), atBottleneck(s) ? 'full' : ''),
         h('p.rate', `閉關時每日修為 +${rp.total.toFixed(2)}`),
-        h('p.breakdown', `基礎 ${rp.base} × 靈根 ${rp.root} × 功法 ${rp.tech.toFixed(2)} × 靈氣 ${rp.qi} × 心境 ${rp.mind.toFixed(2)}${rp.injury < 1 ? ` × 傷勢 ${rp.injury}` : ''}${rp.buff > 1 ? ` × 增益 ${rp.buff.toFixed(2)}` : ''}`),
+        h('p.breakdown', `基礎 ${rp.base} × 靈根 ${rp.root} × 功法 ${rp.tech.toFixed(2)} × 靈氣 ${rp.qi} × 心境 ${rp.mind.toFixed(2)}${rp.injury < 1 ? ` × 傷勢 ${rp.injury}` : ''}${rp.buff > 1 ? ` × 增益 ${rp.buff.toFixed(2)}` : ''}${rp.sky > 1 ? ` × 天時 ${rp.sky.toFixed(2)}` : ''}`),
       ),
       h('section.card',
         h('div.row-between', h('span', '壽元'), h('span', `${Math.floor(age(s))} / ${lifespan(s)} 歲`)),

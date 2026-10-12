@@ -25,9 +25,13 @@ export function resolvePending(s, pickChoice = (opts) => opts[0], fight = 'won')
   }
 }
 
-/** A new life, through the opening, standing in the temple courtyard. */
+/**
+ * A new life, through the opening, standing in the temple courtyard. The
+ * sky is held clear (weather is tested on its own: tests/sky.test.js).
+ */
 export function fresh(seed = 1, origin = 'farmer') {
   const s = newGame({ name: '測試', gender: '男', origin, fate: rollFate(seed), seed });
+  s.vars.sky = 'clear';
   startEvent(s, 'intro_fall');
   resolvePending(s);
   ensureWorld(s);

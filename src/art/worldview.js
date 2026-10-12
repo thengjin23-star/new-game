@@ -11,6 +11,7 @@ import * as E from '../world/explore.js';
 import { decorSprite, mountainSprite, structureSprite, wallSprite, propSprite } from './sprites.js';
 import { drawPerson, aura, drawRide, LOOKS, FOLK_LOOKS, groundShadow } from './figures.js';
 import { makeParticles, drawParticles, rgba, INK, PAPER } from './ink.js';
+import { fallOf, drawSkyVeil } from './sky.js';
 import { drawActor, drawPose, poseOf, lookOf, drawSpeech } from './scenery.js';
 import * as CB from '../world/combat.js';
 import { paintBeast, paintHero, drawGroundMarks, drawCombatOverlay } from './combatfx.js';
@@ -1342,14 +1343,16 @@ export function createWorldView(canvas, { onFrame, idle } = {}) {
 
   function drawScreenFx(dt) {
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    const kind = { spring: 'petal', summer: 'seed', autumn: 'leaf', winter: 'snow' }[season];
-    if (!reduce) {
+    // rain or snow when the weather brings it, else the season's petals and leaves
+    const [kind, count] = fallOf(s, season);
+    if (!reduce && kind) {
       if (particleKind !== kind) {
         particleKind = kind;
-        particles = makeParticles(kind, stream(5), W, H, kind === 'snow' ? 60 : kind === 'seed' ? 10 : 22);
+        particles = makeParticles(kind, stream(5), W, H, count);
       }
       drawParticles(ctx, kind, particles, W, H, dt * 1000, t * 1000, false);
     }
+    drawSkyVeil(ctx, s, W, H, t);
     if (!grainPattern) {
       const gc = document.createElement('canvas');
       gc.width = gc.height = 128;

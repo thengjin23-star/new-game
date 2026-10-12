@@ -877,6 +877,28 @@ export function makeParticles(kind, rnd, W, H, count) {
 
 export function drawParticles(ctx, kind, list, W, H, dt, t, still) {
   if (!list.length) return;
+  if (kind === 'rain' || kind === 'storm') {
+    // rain: thin slanting strokes, falling fast
+    ctx.strokeStyle = 'rgba(70,82,96,0.32)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    for (const p of list) {
+      if (!still) {
+        p.y += (0.6 + p.v) * dt * 0.9;
+        p.x += (0.6 + p.v) * dt * 0.16;
+        if (p.y > H + 20) {
+          p.y = -20;
+          p.x = Math.random() * (W + 60) - 60;
+        }
+        if (p.x > W + 20) p.x -= W + 40;
+      }
+      const len = 10 + p.r * 4;
+      ctx.moveTo(p.x, p.y);
+      ctx.lineTo(p.x - len * 0.17, p.y - len);
+    }
+    ctx.stroke();
+    return;
+  }
   for (const p of list) {
     if (!still && (kind === 'mote' || kind === 'firefly')) {
       // spirit motes rise; fireflies wander

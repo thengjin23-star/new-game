@@ -1,6 +1,7 @@
 import { dayAt, DAYS_PER_YEAR } from '../core/calendar.js';
 import { schedule } from '../core/schedule.js';
 import { rumor } from './rumors.js';
+import { inTide, bloodMoon } from './weather.js';
 
 // The world's own timeline. These beats happen whether or not the player is
 // there; content events let the player witness or change them inside their
@@ -205,10 +206,19 @@ export function runArcs(s) {
   }
 }
 
-/** Recurring world events: yearly auction, sect recruitment every ten years. */
+/** Recurring world events: yearly auction, sect recruitment every ten years; the signs in the sky, told of before they come. */
 export function recurring(s) {
   const doy = s.day % DAYS_PER_YEAR;
   const year = Math.floor(s.day / DAYS_PER_YEAR);
+  // a 靈潮 is felt coming three days ahead
+  if (inTide(s.day + 3) && !inTide(s.day + 2) && s.vars.tideNotice !== s.day) {
+    s.vars.tideNotice = s.day;
+    rumor(s, '坊市的老修士說，再過三天，天地靈氣要起潮了。趁那幾天閉關，事半功倍。', 'hint');
+  }
+  if (bloodMoon(s, s.day) && !s.flags.bloodmoon_seen) {
+    s.flags.bloodmoon_seen = true;
+    rumor(s, '今夜的月亮是紅的。山裡的獵戶都早早關了門，說今夜的狼，眼睛也是紅的。', 'hint');
+  }
   const auctionStart = dayAt(0, 10, 10);
   s.flags.auction_open = doy >= auctionStart && doy < auctionStart + 15 && s.day >= 200;
   if (doy >= auctionStart - 30 && doy < auctionStart && s.vars.auctionNotice !== year && s.day >= 170) {

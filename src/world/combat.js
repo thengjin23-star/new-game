@@ -29,6 +29,7 @@ import { applyEffects, addItem } from '../core/effects.js';
 import { notice, startEvent, choose, fightChoice, endRealFight, resolve } from '../core/events.js';
 import { newReport, spendHours } from '../core/time.js';
 import { rand } from '../core/rng.js';
+import { weatherNow, moonTonight } from './weather.js';
 
 /** Blood a wound holds back: 輕傷 leaves you three quarters of it, and so on. */
 /** A beast of your own strength falls to about this many plain blows… */
@@ -394,6 +395,8 @@ function arm(s, C, b) {
   // 境界壓制: a realm above yours bites harder, moves faster, and shrugs off most of what you do
   // (one below yours, a little the other way)
   b.dmg = ((((me.baseHp ?? me.maxHp) / BITES) * rel * K.atk) / shape) * (gap > 0 ? 1 + 0.6 * gap : Math.pow(0.85, -gap));
+  // under a blood moon, everything out there has red eyes
+  if (!b.story && moonTonight(s, 'bloodmoon')) b.dmg *= 1.15;
   b.speed = R.speed * (gap > 0 ? 1 + 0.08 * gap : 1);
   b.taken = gap > 0 ? Math.pow(0.45, gap) : 1 + 0.15 * -gap;
   b.armed = true;
@@ -431,7 +434,9 @@ function sightOf(s, b) {
   // 斂息: it has to come right up to you; 驅邪: the dead will not look your way
   const hush = me?.hidden > 0 ? 0.3 : 1;
   if (me?.exorcise > 0 && b.K.spirit) return 0;
-  return R.sight * (night ? R.night ?? 1.2 : (noon ? R.noon ?? 1 : 1) * (R.day ?? 1)) * cover(s) * hush;
+  // rain and fog hide you a little; the full moon stirs the dead, a blood moon stirs everything
+  const sky = Math.pow(weatherNow(s).see, 0.8) * (moonTonight(s, 'bloodmoon') ? 1.4 : b.K.spirit && moonTonight(s, 'fullmoon') ? 1.3 : 1);
+  return R.sight * (night ? R.night ?? 1.2 : (noon ? R.noon ?? 1 : 1) * (R.day ?? 1)) * cover(s) * hush * sky;
 }
 
 /** Inside a town (a temple, a sect), you are out of a beast's reach. */
@@ -549,7 +554,9 @@ function hurtBeast(s, C, b, base, io, { kind = 'phys', by = null } = {}) {
   const roll = kind === 'burn' ? 1 : 0.85 + rand(s) * 0.3;
   // a thing of spirit: a blade goes through it; fire and 靈力 do not
   const spirit = b.K.spirit ? (kind === 'phys' ? 0.5 : kind === 'holy' ? 2.2 : kind === 'fox' ? 1.5 : kind === 'fire' || kind === 'burn' ? 1.3 : 1.15) : 1;
-  const dmg = Math.max(1, Math.round(base * roll * (crit ? 1.6 : 1) * b.taken * spirit * (sneak ? 1.5 : 1)));
+  // fire burns weaker in the rain
+  const wet = (kind === 'fire' || kind === 'burn') && weatherNow(s).wet ? 0.75 : 1;
+  const dmg = Math.max(1, Math.round(base * roll * (crit ? 1.6 : 1) * b.taken * spirit * wet * (sneak ? 1.5 : 1)));
   b.hp -= dmg;
   b.flashT = C.t;
   pop(C, b.x, b.y, String(dmg), crit ? 'crit' : kind === 'burn' ? 'burn' : spirit < 1 ? 'weak' : 'dmg', b.R.tall);
