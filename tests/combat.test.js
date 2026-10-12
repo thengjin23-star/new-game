@@ -199,6 +199,8 @@ test('fight well and it falls: its pelt, maybe its core, a little cultivation; a
   assert.ok(s.player.xw > xw, 'something learned');
   assert.ok(s.world.mobs[DEF.id] > s.day, 'its ground is empty for a while');
   assert.ok(!wolfOf(s) || wolfOf(s).state === 'dead', 'it lies there (or is gone)');
+  // (well away, so that it is not after you the moment it is back)
+  near(s, -900, 600);
   s.day += DEF.respawn + 1;
   play(s, 0.2);
   assert.ok(wolfOf(s)?.state === 'idle', 'another one roams there again');

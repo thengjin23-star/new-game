@@ -5,17 +5,25 @@
 // town — and it gives up. All in world units and seconds, on the same ground
 // and the same clock as walking: explore.js runs it every frame, and the
 // beast you fight is the beast that was out there, not a copy of it.
+//
+// What roams comes alone or in a group: a pack takes turns at you and
+// circles while it waits, and breaks once enough of it is down; a snake lies
+// hidden and strikes first; robbers and the restless dead come up to have a
+// word (their event) — and if you choose to fight, or to run, it plays out
+// here, and the story ends the way the fight did (core/events.js).
 
 import { collides, speedAt, terrainAt, regionAt, isReachable, findPath, world, PLAYER_R } from './terrain.js';
 import { T } from './geo.js';
 import { BEASTS } from './places.js';
 import { NODES } from './map.js';
+import { npcRealm } from './npcs.js';
 import { FOES } from '../content/foes.js';
+import { EVENTS } from '../content/index.js';
 import { MOVES, STRIKES, DASH, BEAST_MOVES } from '../content/moves.js';
 import { fightPower } from '../core/battle.js';
 import { power } from '../core/cultivation.js';
 import { applyEffects } from '../core/effects.js';
-import { notice } from '../core/events.js';
+import { notice, startEvent, choose, fightChoice, endRealFight, resolve } from '../core/events.js';
 import { newReport, spendHours } from '../core/time.js';
 import { rand } from '../core/rng.js';
 
@@ -27,6 +35,12 @@ const HITS = 18;
 const BITES = 8;
 /** How sharply a gap in strength tells (as in the old fights). */
 const GAP = 0.42;
+/**
+ * How strong each of a group is, as a share of one alone of the group's power:
+ * fewer of them go at you at once than in the old fights, and a group gives up
+ * before the last of it falls, so each is a larger share than it was there.
+ */
+const SHARE = [0, 1, 0.58, 0.5, 0.42, 0.37];
 /** Far stronger than a beast, and it runs. */
 const FAR_STRONGER = 2.2;
 /** Further off than this, a beast rests at home and is not thought about. */
@@ -37,11 +51,16 @@ const REFUGE = new Set(['town', 'market', 'sect', 'temple']);
 export const FIGHT_HOURS = 1 / 120;
 /** A beast's 境界, as it is named. */
 export const TIER_NAME = ['凡獸', '一階', '二階', '三階', '四階'];
+/** A person's, likewise. */
+const PERSON_RANK = ['凡人', '煉氣', '築基', '金丹', '元嬰'];
 
 /** What a beast is doing that means it is after you. */
-const HUNTING = new Set(['chase', 'windup', 'pounce', 'recover', 'hop', 'howl']);
-/** Beyond hurting: dead and fading, gone until it comes back, running off. */
-const DOWN = new Set(['dead', 'gone', 'vanish', 'flee']);
+const HUNTING = new Set(['chase', 'windup', 'leap', 'recover', 'hop', 'howl']);
+/**
+ * Out of the fight: dead and fading, gone until it comes back, running off,
+ * on its knees, on its way (the matter settled).
+ */
+const DOWN = new Set(['dead', 'gone', 'vanish', 'flee', 'yield', 'leave']);
 
 const FALL_TEXT = {
   demon_wolf: '妖狼把你撲倒在地。牠的牙擦過你的喉嚨，眼前一黑——\n\n醒來時，天色已經變了。那頭狼不見了，大概是嫌你不好吃。你身上多了好幾道血口。',
@@ -55,7 +74,10 @@ const LIVE = new WeakMap();
 export function combatOf(s) {
   let C = LIVE.get(s);
   if (!C) {
-    C = { on: false, t: 0, me: null, beasts: null, shots: [], fx: [], pops: [], preview: null, notes: [], signals: [], killed: 0, quiet: 0, outcome: null, trial: null, uid: 0 };
+    C = {
+      on: false, t: 0, me: null, beasts: null, shots: [], fx: [], pops: [], preview: null, notes: [], signals: [],
+      beaten: 0, foes: new Set(), quiet: 0, outcome: null, trial: null, rt: null, heard: {}, told: {}, uid: 0,
+    };
     LIVE.set(s, C);
   }
   return C;
@@ -79,7 +101,7 @@ export function hero(s, C = combatOf(s)) {
   let me = C.me;
   if (!me) {
     me = C.me = {
-      hp: cap, mp: maxMp, cds: {}, act: null, dash: null, kb: null, inv: 0, shield: 0, shieldT: 0,
+      hp: cap, mp: maxMp, cds: {}, act: null, dash: null, kb: null, inv: 0, shield: 0, shieldT: 0, poison: null,
       hurtT: -99, flashT: -99, target: null, auto: false, hold: false, press: 0, steer: null, dir: [1, 0], trail: [],
     };
   }
@@ -123,37 +145,76 @@ export function dashCd(s) {
 
 // ── the beasts ──
 
-function seedOf(def) {
-  return (Math.abs(Math.round(def.x * 7919 + def.y * 104729)) % 2147483646) + 1;
+function seedOf(def, k) {
+  return (Math.abs(Math.round(def.x * 7919 + def.y * 104729 + k * 7177)) % 2147483646) + 1;
 }
 
-function spawn(def) {
-  const K = FOES[def.kind];
+/** Where it rests when it is not after anyone: a snake lies hidden in the grass. */
+function homeState(b) {
+  return b.R.ambush ? 'hide' : 'idle';
+}
+
+/** One of a group (k: which; the first is its leader, if it has one). */
+function spawn(s, def, k = 0) {
+  const kind = k === 0 && def.lead ? def.lead : def.kind;
+  const K = FOES[kind];
+  const n = def.n || 1;
+  // a group stands about its ground, not on one spot
+  let x = def.x;
+  let y = def.y;
+  if (n > 1) {
+    const a = (k / n) * Math.PI * 2 + 0.7;
+    const nx = def.x + Math.cos(a) * def.r * 0.3;
+    const ny = def.y + Math.sin(a) * def.r * 0.3;
+    if (!collides(s, nx, ny, 12)) [x, y] = [nx, ny];
+  }
+  const R = { ...K.rt, ...(def.rt || null) };
   const b = {
-    uid: def.id, def, kind: def.kind, K, R: { ...K.rt, ...(def.rt || null) }, name: def.name || K.name, phantom: !!def.phantom,
-    home: [def.x, def.y], x: def.x, y: def.y, vx: 0, vy: 0, face: 1, dir: [1, 0], moving: false,
-    state: 'idle', st: 0, wait: 1, tx: def.x, ty: def.y, cds: { bite: 0, pounce: 1.5 },
-    hp: null, maxHp: null, armed: false, aggro: false, strafe: 1, lostT: 0, calm: 0, flashT: -99,
-    burn: null, enraged: false, howled: false, fade: 0, seed: seedOf(def),
+    uid: n > 1 ? `${def.id}:${k}` : def.id, k, def, kind, K, R, name: (k === 0 && def.name) || K.name, phantom: !!def.phantom,
+    lead: k === 0 && !!def.lead, talker: !!(R.talk && def.event), cond: (def.event && EVENTS[def.event]?.cond) || null,
+    home: [x, y], x, y, vx: 0, vy: 0, face: 1, dir: [1, 0], moving: false,
+    state: 'idle', st: 0, wait: 1 + k * 0.7, tx: x, ty: y, cds: {}, hp: null, maxHp: null, armed: false, aggro: false,
+    strafe: k % 2 ? -1 : 1, lostT: 0, calm: 0, flashT: -99, burn: null, enraged: false, howled: false, fade: 0,
+    token: false, rest: 0, pause: 0, stay: false, seed: seedOf(def, k),
   };
   // its own dice for how it moves and what it tries (the save's dice are left for the story)
   b.rng = () => (b.seed = (b.seed * 16807) % 2147483647) / 2147483647;
+  reset(b);
   return b;
 }
 
 function beastsOf(s, C = combatOf(s)) {
-  if (!C.beasts) C.beasts = BEASTS.map((def) => spawn(def));
+  if (!C.beasts) C.beasts = BEASTS.flatMap((def) => Array.from({ length: def.n || 1 }, (_, k) => spawn(s, def, k)));
   return C.beasts;
 }
 
-/** Out there now: not killed (or run off) and waiting to come back. */
+/** It and the rest of its group. */
+function groupOf(s, C, b) {
+  return beastsOf(s, C).filter((x) => x.def === b.def);
+}
+
+/**
+ * Out there now: not killed (or run off) and waiting to come back, and its
+ * story could happen now (the season for snakes; robbers who have not taken
+ * you in). Those you are dealing with stay until the matter is settled.
+ */
 function present(s, b) {
-  if (b.phantom) return true;
-  const until = s.world.mobs?.[b.def.id];
-  return until === undefined || s.day >= until;
+  if (b.phantom || b.stay) return true;
+  const m = s.world.mobs || {};
+  if (s.day < (m[b.def.id] ?? -1)) return false;
+  if (b.uid !== b.def.id && s.day < (m[b.uid] ?? -1)) return false;
+  return !b.cond || !!b.cond(s);
+}
+
+/** Keep it away for a while (the longer of what is already set and this). */
+function away(s, key, days) {
+  const m = s.world.mobs;
+  m[key] = Math.max(m[key] ?? 0, s.day + days);
 }
 
 const alive = (b) => !DOWN.has(b.state) && b.state !== 'vanished';
+/** Alive, and not hidden: something you can see to go for. */
+const seen = (b) => alive(b) && b.state !== 'hide';
 const hunting = (b) => b.aggro && HUNTING.has(b.state);
 
 /** The beasts near you, for drawing and for picking whom to strike (the dead fade out among them). */
@@ -165,39 +226,60 @@ export function beastsInWorld(s, radius = 1400) {
 /** Beasts you could go for (they show the act button: 出手). */
 export function beastTargets(s) {
   return beastsInWorld(s, 700)
-    .filter((b) => alive(b))
+    .filter((b) => seen(b))
     .map((b) => ({ kind: 'beast', id: b.uid, x: b.x, y: b.y, name: b.name, verb: '出手', reach: 300 }));
 }
 
-/** Back home and calm, as if nothing happened. */
-function reset(b) {
-  Object.assign(b, {
-    x: b.home[0], y: b.home[1], tx: b.home[0], ty: b.home[1], state: 'idle', st: 0, wait: 1, aggro: false,
-    hp: b.maxHp, armed: false, burn: null, enraged: false, howled: false, fade: 0, lostT: 0, calm: 0, move: null, moving: false,
-  });
-  b.cds = { bite: 0, pounce: 1.5 };
+function tierOf(b) {
+  return b.tierSet ?? b.def.tier ?? b.R.tier ?? 1;
 }
 
-/** Size a beast against you as you are now: its blood, its bite, its pace, and the gap between your realms. */
+/** What it is, as a fighter: a beast's 階, a person's realm. */
+export function rankOf(b) {
+  if (b.phantom) return '';
+  return b.rank || b.R.rank || (b.R.person ? PERSON_RANK : TIER_NAME)[tierOf(b)] || '';
+}
+
+/** Back home and calm, as if nothing happened (and as it was before any story touched it). */
+function reset(b) {
+  Object.assign(b, {
+    x: b.home[0], y: b.home[1], tx: b.home[0], ty: b.home[1], state: homeState(b), st: 0, wait: 1, aggro: false,
+    hp: b.maxHp, armed: false, burn: null, enraged: false, howled: false, fade: 0, lostT: 0, calm: 0, move: null, moving: false,
+    token: false, rest: 0, pause: 0, stay: false, Dset: null, tierSet: null, rank: null, name: (b.k === 0 && b.def.name) || b.K.name,
+  });
+  // a leap or a shot takes a moment to come: it does not open with one
+  b.cds = Object.fromEntries((b.R.moves || []).map((id) => [id, BEAST_MOVES[id].shape === 'fan' ? 0 : 1.2]));
+}
+
+/**
+ * Size a beast against you as you are now: its blood, its bite, its pace, and
+ * the gap between your realms. A group shares out what a fight with all of it
+ * asks of you (its leader a larger part), as the old fights did.
+ */
 function arm(s, C, b) {
   const me = hero(s, C);
   const K = b.K;
   const R = b.R;
-  const D = b.def.power ?? 20;
+  const def = b.def;
+  const n = def.n || 1;
+  const mean = def.lead && n > 1 ? (n + 0.5) / n : 1;
+  const D = ((b.Dset ?? def.power ?? 20) * (b.lead ? 1.5 : 1)) / mean;
+  const share = SHARE[Math.min(n, SHARE.length - 1)] * (R.share ?? 1);
   const shape = Math.sqrt(K.hp * K.atk);
-  const rel = Math.pow(D / me.P, GAP);
-  const tier = b.def.tier ?? R.tier ?? 1;
+  const rel = Math.pow(D / me.P, GAP) * share;
+  const tier = tierOf(b);
   const gap = tier - me.realm;
   const frac = b.maxHp ? Math.max(0.05, b.hp / b.maxHp) : 1;
   b.D = D;
   b.tier = tier;
   b.gap = gap;
-  b.maxHp = Math.max(8, Math.round((me.atk * HITS * rel * K.hp) / shape));
+  b.maxHp = Math.max(6, Math.round((me.atk * HITS * rel * K.hp) / shape));
   b.hp = Math.max(1, Math.round(b.maxHp * frac));
   // 境界壓制: a realm above yours bites harder, moves faster, and shrugs off most of what you do
-  b.dmg = (((me.maxHp / BITES) * rel * K.atk) / shape) * (gap > 0 ? 1 + 0.6 * gap : Math.pow(0.7, -gap));
+  // (one below yours, a little the other way)
+  b.dmg = (((me.maxHp / BITES) * rel * K.atk) / shape) * (gap > 0 ? 1 + 0.6 * gap : Math.pow(0.85, -gap));
   b.speed = R.speed * (gap > 0 ? 1 + 0.08 * gap : 1);
-  b.taken = gap > 0 ? Math.pow(0.45, gap) : 1 + 0.3 * -gap;
+  b.taken = gap > 0 ? Math.pow(0.45, gap) : 1 + 0.15 * -gap;
   b.armed = true;
 }
 
@@ -207,12 +289,12 @@ function cover(s) {
   return t === T.DEEP ? 0.65 : t === T.FOREST ? 0.8 : 1;
 }
 
-/** How far off a beast sees you: further in its hunting hours, less when it dozes at noon. */
+/** How far off a beast sees you: further in its hunting hours, less when it dozes at noon (the dead walk by night). */
 function sightOf(s, b) {
   const R = b.R;
   const night = s.tod >= 19.5 || s.tod < 5;
   const noon = s.tod >= 10.5 && s.tod < 14.5;
-  return R.sight * (night ? R.night ?? 1.2 : noon ? R.noon ?? 1 : 1) * cover(s);
+  return R.sight * (night ? R.night ?? 1.2 : (noon ? R.noon ?? 1 : 1) * (R.day ?? 1)) * cover(s);
 }
 
 /** Inside a town (a temple, a sect), you are out of a beast's reach. */
@@ -294,6 +376,13 @@ function stopsShot(x, y) {
   return false;
 }
 
+/** Could a shot get from one point to the other? */
+function clearShot(x0, y0, x1, y1) {
+  const d = Math.hypot(x1 - x0, y1 - y0);
+  for (let k = 14; k < d; k += 14) if (stopsShot(x0 + ((x1 - x0) * k) / d, y0 + ((y1 - y0) * k) / d)) return false;
+  return true;
+}
+
 function pop(C, x, y, text, kind, up) {
   C.pops.push({ x, y, up, text, kind, t0: C.t });
 }
@@ -303,18 +392,36 @@ function pop(C, x, y, text, kind, up) {
 /** You land a blow (or a spell) on a beast. kind: 'phys' | 'fire' | 'spirit' | 'burn'. */
 function hurtBeast(s, C, b, base, io, { kind = 'phys' } = {}) {
   if (!alive(b)) return false;
+  // caught unaware, it takes the first blow full
+  const sneak = b.state === 'idle' || b.state === 'hide';
+  // going for those who came to talk (or were coming to): it comes to blows, and the story goes the way of the fight
+  if (b.talker && !b.phantom && !C.rt && !s.rtFight && !provoke(s, C, b, io)) return false;
   if (!b.armed) arm(s, C, b);
   const me = C.me;
-  // caught unaware, it takes the first blow full
-  const sneak = b.state === 'idle';
   const crit = kind !== 'burn' && rand(s) < me.crit;
   const roll = kind === 'burn' ? 1 : 0.85 + rand(s) * 0.3;
-  const dmg = Math.max(1, Math.round(base * roll * (crit ? 1.6 : 1) * b.taken * (sneak ? 1.5 : 1)));
+  // a thing of spirit: a blade goes through it; fire and 靈力 do not
+  const spirit = b.K.spirit ? (kind === 'phys' ? 0.5 : kind === 'fire' || kind === 'burn' ? 1.3 : 1.15) : 1;
+  const dmg = Math.max(1, Math.round(base * roll * (crit ? 1.6 : 1) * b.taken * spirit * (sneak ? 1.5 : 1)));
   b.hp -= dmg;
   b.flashT = C.t;
-  pop(C, b.x, b.y, String(dmg), crit ? 'crit' : kind === 'burn' ? 'burn' : 'dmg', b.R.tall);
+  pop(C, b.x, b.y, String(dmg), crit ? 'crit' : kind === 'burn' ? 'burn' : spirit < 1 ? 'weak' : 'dmg', b.R.tall);
+  if (spirit < 1 && !C.told.spirit) {
+    C.told.spirit = true;
+    io.feed('sys', `兵刃從${b.name}身上穿了過去，傷不了它多少——法術才管用。`);
+  }
   if (b.hp <= 0) {
     fell(s, C, b, io);
+    return true;
+  }
+  const R = b.R;
+  if (R.yield && b.hp <= b.maxHp * R.yield) {
+    giveUp(s, C, b, io);
+    return true;
+  }
+  if (R.flee && b.hp <= b.maxHp * R.flee) {
+    rout(s, C, b, io, `${b.name}捂著傷口逃了！`);
+    morale(s, C, b, io);
     return true;
   }
   if (sneak) {
@@ -324,7 +431,7 @@ function hurtBeast(s, C, b, base, io, { kind = 'phys' } = {}) {
     b.rec = 0.7;
     b.move = null;
     engage(s, C, b, io, '你搶先出手！');
-  } else if (b.state === 'notice' || b.state === 'return') {
+  } else if (!HUNTING.has(b.state)) {
     b.state = 'chase';
     b.st = 0;
     engage(s, C, b, io);
@@ -332,14 +439,18 @@ function hurtBeast(s, C, b, base, io, { kind = 'phys' } = {}) {
   return true;
 }
 
-/** A beast's blow reaches you — unless you are not there to take it. push: [ux, uy, distance] it knocks you. */
-function hurtMe(s, C, b, mult, io, push = null) {
+/**
+ * A blow reaches you — unless you are not there to take it. push: [ux, uy,
+ * distance] it knocks you; M: the move (its venom, what it drinks). Returns
+ * the blood it took, or -1 if you stepped out of it.
+ */
+function hurtMe(s, C, b, mult, io, push = null, M = null) {
   const me = C.me;
   const w = s.world;
   if (!b.armed) arm(s, C, b);
   if (me.inv > 0) {
     pop(C, w.x, w.y, '閃', 'miss', 40);
-    return false;
+    return -1;
   }
   let dmg = Math.max(1, Math.round(b.dmg * mult * (0.85 + rand(s) * 0.3) * (b.enraged ? 1.2 : 1)));
   if (me.shield > 0) {
@@ -357,97 +468,259 @@ function hurtMe(s, C, b, mult, io, push = null) {
     me.hurtT = C.t;
     me.flashT = C.t;
     pop(C, w.x, w.y, String(dmg), 'hurt', 40);
+    if (M?.poison) {
+      if (!me.poison) pop(C, w.x - 12, w.y, '中毒', 'status', 52);
+      me.poison = { left: M.poison[0], dps: b.dmg * M.poison[1], tick: 0.5 };
+    }
+    if (M?.drain && alive(b)) {
+      const back = Math.max(1, Math.round(dmg * M.drain));
+      b.hp = Math.min(b.maxHp, b.hp + back);
+      pop(C, b.x, b.y, String(back), 'heal', b.R.tall);
+    }
   }
   if (push && !me.dash) me.kb = { ux: push[0], uy: push[1], left: push[2] };
   if (me.hp <= 0) {
     me.hp = 0;
     fallen(s, C, b, io);
   }
-  return true;
+  return dmg;
+}
+
+/** It is no longer the one you were going for. */
+function untarget(C, b) {
+  if (C.me?.target !== b.uid) return;
+  C.me.target = null;
+  C.me.auto = false;
+  C.me.steer = null;
 }
 
 /** It goes down: what it leaves, what you learn from it. */
 function fell(s, C, b, io) {
-  b.hp = 0;
-  b.state = 'dead';
-  b.st = 0;
-  b.burn = null;
-  b.moving = false;
-  C.killed += 1;
-  if (C.me.target === b.uid) {
-    C.me.target = null;
-    C.me.auto = false;
-    C.me.steer = null;
-  }
+  Object.assign(b, { hp: 0, state: 'dead', st: 0, burn: null, moving: false, aggro: false, token: false });
+  C.beaten += 1;
+  untarget(C, b);
   if (b.phantom) {
     io.feed('good', `${b.name}散成了一縷青煙。`);
     return;
   }
-  s.world.mobs[b.def.id] = s.day + (b.def.respawn ?? 10);
+  away(s, b.uid, b.def.respawn ?? 10);
   const report = newReport();
   const gains = [['xw', Math.max(1, Math.round(b.D * (b.K.boss ? 0.4 : 0.25)))]];
   for (const [p, item, n] of b.K.loot || []) if (rand(s) < p) gains.push(['item', item, n]);
   gains.push(['sysexp', b.K.boss ? 3 : 1]);
   applyEffects(s, gains, {}, report);
-  io.feed('good', `${b.name}倒下了。`);
+  io.feed('good', b.K.spirit ? `${b.name}化為飛灰。` : `${b.name}倒下了。`);
   for (const c of report.chips) io.feed(c.tone === 'bad' ? 'bad' : 'good', c.text);
   for (const t of report.toasts) io.feed('sys', t);
+  morale(s, C, b, io);
 }
 
-/** You go down. The beasts lose interest; you wake later, hurt. */
+/** It throws down its blade and begs: beaten, though it lives. */
+function giveUp(s, C, b, io) {
+  Object.assign(b, { state: 'yield', st: 0, aggro: false, moving: false, move: null, burn: null, token: false });
+  C.beaten += 1;
+  untarget(C, b);
+  io.feed('good', `${b.name}扔下了刀，跪地求饒！`);
+  morale(s, C, b, io);
+}
+
+/** It runs for it. Beaten, if it was in the fight. */
+function rout(s, C, b, io, line = null) {
+  if (b.aggro) C.beaten += 1;
+  Object.assign(b, { state: 'flee', st: 0, aggro: false, moving: false, move: null, burn: null, token: false });
+  untarget(C, b);
+  if (line) io.feed('good', line);
+}
+
+/**
+ * One of a group is down: with its leader gone, or more than half a pack,
+ * the rest give up and run; a pack that loses one of its own turns savage.
+ */
+function morale(s, C, b, io) {
+  const rest = groupOf(s, C, b).filter((x) => x !== b && alive(x) && x.aggro);
+  if (!rest.length) return;
+  if (b.lead || (b.R.pack && rest.length * 2 < (b.def.n || 1))) {
+    for (const x of rest) rout(s, C, x, io);
+    io.feed('good', b.R.broke || '剩下的一哄而散。');
+    return;
+  }
+  if (!b.R.mourn) return;
+  let howled = false;
+  for (const x of rest) {
+    if (x.enraged || x.state === 'leap') continue;
+    Object.assign(x, { state: 'howl', st: 0, moving: false, howled: true, move: null });
+    C.fx.push({ kind: 'howl', x: x.x, y: x.y, t0: C.t, dur: 0.9 });
+    howled = true;
+  }
+  if (howled) io.feed('bad', '狼群一陣長嚎，眼睛都紅了！');
+}
+
+/** You go down. The beasts lose interest; you wake later, hurt (and the story, if there is one, says how). */
 function fallen(s, C, b, io) {
   const me = C.me;
-  Object.assign(me, { act: null, dash: null, kb: null, auto: false, hold: false, press: 0, steer: null, target: null, shield: 0, shieldT: 0 });
+  Object.assign(me, { act: null, dash: null, kb: null, auto: false, hold: false, press: 0, steer: null, target: null, shield: 0, shieldT: 0, poison: null });
   for (const x of beastsOf(s, C)) if (hunting(x) || x.state === 'notice') calmDown(x, true);
   C.shots = [];
   C.on = false;
   C.outcome = 'fell';
   io.signal({ combat: 'fell' });
   if (C.trial) return endTrial(s, C, io, 'fell');
-  const report = newReport();
-  // you lie there a while
-  spendHours(s, 3, report);
-  applyEffects(s, [['hurt', (b?.gap || 0) > 0 ? 2 : 1]], {}, report);
-  if (s.dead) return;
   hero(s, C);
   me.hp = Math.max(1, Math.round(me.cap * 0.5));
   me.mp = Math.round(me.maxMp * 0.5);
-  notice(s, '倒下', FALL_TEXT[b?.kind] || FALL_TEXT.beast, { chips: report.chips, toasts: report.toasts });
+  if (C.rt) return endTale(s, C, 'lost');
+  const report = newReport();
+  // you lie there a while
+  spendHours(s, 3, report);
+  // what it did to you, as its story tells it (the wolves on the hill, the snake in the grass)
+  const ev = b?.def.event ? EVENTS[b.def.event] : null;
+  const fail = ev ? fightOf(ev)?.fail : null;
+  const hurt = fail ? (typeof fail.effects === 'function' ? fail.effects(s, {}) : fail.effects || []) : [['hurt', (b?.gap || 0) > 0 ? 2 : 1]];
+  applyEffects(s, hurt, {}, report);
+  if (s.dead) return;
+  hero(s, C);
+  me.hp = Math.max(1, Math.round(me.cap * 0.5));
+  const text = fail?.text ? resolve(fail.text, s) : FALL_TEXT[b?.kind] || FALL_TEXT.beast;
+  notice(s, '倒下', text, { chips: report.chips, toasts: report.toasts });
+}
+
+/** The fight in an event's first step, if it has one. */
+function fightOf(ev) {
+  const st = ev.steps ? ev.steps.start : ev;
+  return (st.choices || []).find((c) => c.fight) || null;
 }
 
 // ── the fight begins and ends ──
 
+/** It (and its whole group) is after you now. */
 function engage(s, C, b, io, line = null) {
-  if (!b.armed) arm(s, C, b);
-  b.aggro = true;
-  b.lostT = 0;
-  if (C.on) return;
-  C.on = true;
-  C.killed = 0;
-  C.quiet = 0;
-  C.outcome = null;
-  io.signal({ combat: 'start', name: b.name, tier: b.tier, gap: b.gap, phantom: b.phantom });
-  io.feed('bad', line || `${b.name}盯上了你！`);
-  if (b.gap > 0) io.feed('bad', '境界壓制：牠高出你一個大境界，你的攻擊很難傷到牠。');
+  const start = !C.on;
+  if (start) {
+    C.on = true;
+    C.beaten = 0;
+    C.quiet = 0;
+    C.outcome = null;
+    C.foes = new Set();
+  }
+  for (const x of groupOf(s, C, b)) {
+    if (!alive(x) || !present(s, x)) continue;
+    if (!x.armed) arm(s, C, x);
+    x.aggro = true;
+    x.lostT = 0;
+    C.foes.add(x.uid);
+    if (x !== b && !HUNTING.has(x.state)) {
+      x.state = 'chase';
+      x.st = -x.rng() * 0.3;
+    }
+  }
+  if (!start) return;
+  io.signal({ combat: 'start', name: b.def.title || b.name, rank: rankOf(b), tier: b.tier, gap: b.gap, phantom: b.phantom });
+  io.feed('bad', (line || b.R.cry || '{name}盯上了你！').replaceAll('{name}', b.name));
+  if (b.gap > 0) {
+    const [who, him] = b.R.person ? ['對方', '他'] : b.K.spirit ? ['它', '它'] : ['牠', '牠'];
+    io.feed('bad', `境界壓制：${who}高出你一個大境界，你的攻擊很難傷到${him}。`);
+  }
 }
 
 /** It gives up on you and goes home (and its wounds close as it goes). */
 function calmDown(b, heal = false) {
-  Object.assign(b, { state: 'return', st: 0, aggro: false, calm: 4, move: null, burn: null, enraged: false, howled: false, lostT: 0 });
+  Object.assign(b, { state: 'return', st: 0, aggro: false, calm: 4, move: null, burn: null, enraged: false, howled: false, lostT: 0, token: false, pause: 0 });
   if (heal && b.maxHp) b.hp = b.maxHp;
 }
 
 function finish(s, C, io) {
   C.on = false;
-  const won = C.killed > 0;
+  // won: you beat at least one of them, and none of those you fought is still standing
+  const standing = beastsOf(s, C).some((b) => C.foes.has(b.uid) && alive(b) && present(s, b));
+  const won = C.beaten > 0 && !standing;
   C.outcome = won ? 'won' : 'escaped';
   Object.assign(C.me, { auto: false, hold: false, press: 0, target: null, steer: null });
   io.signal({ combat: C.outcome });
   if (C.trial) return endTrial(s, C, io, C.outcome);
+  if (C.rt) return endTale(s, C, C.outcome);
   io.feed(won ? 'good' : 'sys', won ? '戰鬥結束。' : '已脫離戰鬥。');
 }
 
+// ── the story: those who come to talk, and the fights that come of it ──
+
+/** Close enough for a word: they stop in front of you, and their event begins. */
+function parley(s, C, b) {
+  for (const x of groupOf(s, C, b)) {
+    if (!alive(x) || !present(s, x)) continue;
+    Object.assign(x, { state: 'talk', st: 0, moving: false, stay: true, aggro: false });
+    look(x, s.world.x - x.x, s.world.y - x.y);
+  }
+  // whatever comes of it, they will not be back for a while
+  away(s, b.def.id, b.def.respawn ?? 10);
+  startEvent(s, b.def.event, { data: { beast: b.def.id } });
+}
+
+/** You went for them before a word was said: the event begins as a fight (as if you had chosen to fight). */
+function provoke(s, C, b, io) {
+  for (const x of groupOf(s, C, b)) if (alive(x) && present(s, x)) x.stay = true;
+  away(s, b.def.id, b.def.respawn ?? 10);
+  startEvent(s, b.def.event, { data: { beast: b.def.id, first: 'me' } });
+  const pend = s.pending;
+  const c = pend?.choices.find((x) => !x.disabled && fightChoice(pend, x.i));
+  if (!c) {
+    for (const x of groupOf(s, C, b)) x.stay = false;
+    return false;
+  }
+  choose(s, c.i);
+  if (!s.rtFight) return false;
+  beginTale(s, C, io, true);
+  return true;
+}
+
+/**
+ * The fight (or the run) you chose in their event begins: they are what the
+ * story said they were (as strong as it asked, named as it named them).
+ */
+function beginTale(s, C, io, first = false) {
+  const f = s.rtFight;
+  const group = beastsOf(s, C).filter((b) => b.def.id === f.beast && alive(b) && present(s, b));
+  if (!group.length) return endRealFight(s, 'escaped');
+  f.on = true;
+  C.rt = f;
+  const npc = f.npcId ? s.npcs[f.npcId] : null;
+  for (const b of group) {
+    b.stay = true;
+    if (f.diff) b.Dset = f.diff;
+    if (npc && b.k === 0 && b.R.person) {
+      b.name = npc.name;
+      b.rank = npcRealm(npc);
+      b.tierSet = npc.realm;
+    }
+    b.armed = false;
+    b.maxHp = null;
+    arm(s, C, b);
+    // running for it: a moment before they see what you are about
+    Object.assign(b, { state: 'chase', st: 0, lostT: 0, calm: 0, pause: f.run ? 0.8 : 0, cds: { ...b.cds } });
+  }
+  const lead = group[0];
+  engage(s, C, lead, io, first ? '你搶先出手！' : f.run ? `你轉身就跑——${lead.name}追了上來！` : lead.R.cry);
+}
+
+/** The fight the story started is over: they wait on what comes of it (and then go), and the story picks up. */
+function endTale(s, C, how) {
+  const f = C.rt;
+  C.rt = null;
+  for (const b of beastsOf(s, C)) {
+    if (b.def.id !== f.beast || !alive(b)) continue;
+    Object.assign(b, { state: 'talk', st: 0, aggro: false, moving: false, move: null, burn: null, token: false });
+  }
+  C.shots = C.shots.filter((sh) => !sh.foe);
+  endRealFight(s, how);
+}
+
+/** On their way, the matter settled. */
+function leave(b) {
+  Object.assign(b, { state: 'leave', st: 0, aggro: false, moving: false, move: null, token: false });
+}
+
 // ── the frame ──
+
+const STILL = { on: false, moved: 0, hold: false, mult: 1, steer: null };
 
 /**
  * One frame of fighting (explore.step calls it while the world runs).
@@ -466,6 +739,12 @@ export function updateCombat(s, dt, io) {
   const me = hero(s, C);
   const w = s.world;
   const list = beastsOf(s, C);
+  // a fight (or a run) chosen in an event; one from before the game was closed is long over
+  if (s.rtFight) {
+    if (!s.rtFight.on) beginTale(s, C, io, s.rtFight.pend?.ctx?.data?.first === 'me');
+    else if (C.rt !== s.rtFight) endRealFight(s, 'escaped');
+    if (s.pending || s.dead) return STILL;
+  }
   const steering = !!(io.input && (io.input.x || io.input.y));
   me.press = Math.max(0, me.press - dt);
   // taking the stick yourself ends walking up to someone
@@ -473,15 +752,22 @@ export function updateCombat(s, dt, io) {
     me.auto = false;
     me.steer = null;
   }
+  const heard = new Set();
   for (const b of list) {
     if (!present(s, b)) {
       b.state = 'gone';
       continue;
     }
     if (b.state === 'gone') reset(b);
-    if (!b.phantom && !hunting(b) && Math.hypot(b.x - w.x, b.y - w.y) > AWAKE) {
-      if (b.state !== 'idle' || b.x !== b.home[0]) reset(b);
+    // the matter settled (you paid, they spoke, the fight is over): on their way
+    if (b.stay && (b.state === 'talk' || b.state === 'yield') && !s.rtFight && !C.rt) leave(b);
+    if (!b.phantom && !b.stay && !hunting(b) && Math.hypot(b.x - w.x, b.y - w.y) > AWAKE) {
+      if (b.state !== homeState(b) || b.x !== b.home[0]) reset(b);
       continue;
+    }
+    if (!heard.has(b.def) && (b.state === 'idle' || b.state === 'hide')) {
+      heard.add(b.def);
+      hearing(s, C, b, io);
     }
     const x0 = b.x;
     const y0 = b.y;
@@ -490,22 +776,43 @@ export function updateCombat(s, dt, io) {
       b.vx += ((b.x - x0) / dt - b.vx) * Math.min(1, dt * 8);
       b.vy += ((b.y - y0) / dt - b.vy) * Math.min(1, dt * 8);
     }
-    if (s.pending || s.dead) return { on: false, moved: 0, hold: false, mult: 1, steer: null };
+    if (s.pending || s.dead) return STILL;
   }
   // phantoms that are done, gone
   if (list.some((b) => b.state === 'vanished')) C.beasts = list.filter((b) => b.state !== 'vanished');
   const moved = heroTick(s, C, dt, io);
+  if (s.pending || s.dead) return STILL;
   flyShots(s, C, dt, io);
+  if (s.pending || s.dead) return STILL;
   C.fx = C.fx.filter((f) => C.t - f.t0 < (f.dur || 0.6));
   C.pops = C.pops.filter((p) => C.t - p.t0 < 1.1);
   if (C.on) {
     const still = beastsOf(s, C).some((b) => hunting(b) && present(s, b));
     C.quiet = still ? 0 : C.quiet + dt;
     if (C.quiet > 0.6) finish(s, C, io);
+    if (s.pending || s.dead) return STILL;
   }
   const act = me.act;
   const mult = act && !act.done ? (act.kind === 'cast' ? 0.35 : 0.55) : act ? 0.75 : 1;
   return { on: C.on, moved, hold: !!(me.dash || me.kb), mult, steer: me.auto ? me.steer : null };
+}
+
+/** You hear them before they come (once, as you draw near a group). */
+function hearing(s, C, b, io) {
+  const R = b.R;
+  if (!R.warn || b.phantom) return;
+  const w = s.world;
+  let near = Infinity;
+  for (const x of groupOf(s, C, b)) if (alive(x)) near = Math.min(near, Math.hypot(x.x - w.x, x.y - w.y));
+  const sight = sightOf(s, b);
+  if (near < sight + 160) {
+    if (!C.heard[b.def.id]) {
+      C.heard[b.def.id] = true;
+      // (two groups of the same about you: you hear it once)
+      if (C.t - (C.heard[R.warn] ?? -99) > 20) io.feed('ambient', R.warn);
+      C.heard[R.warn] = C.t;
+    }
+  } else if (near > sight + 400) C.heard[b.def.id] = false;
 }
 
 // ── what a beast does ──
@@ -530,24 +837,15 @@ function think(s, C, b, dt, io) {
   const ux = dx / d;
   const uy = dy / d;
   switch (b.state) {
-    case 'idle': {
-      wander(s, b, dt);
+    case 'idle':
+    case 'hide': {
+      // (a snake lies still in the grass: you see it only when it moves)
+      if (b.state === 'idle') wander(s, b, dt);
       if (b.calm > 0) {
         b.calm -= dt;
         break;
       }
-      if (d < sightOf(s, b) && (b.phantom || !refuge(s, w.x, w.y))) {
-        if (!b.phantom && power(s) >= (b.def.power ?? 20) * FAR_STRONGER) {
-          b.state = 'flee';
-          b.st = 0;
-          io.feed('good', `${b.name}看了你一眼，夾著尾巴跑了。`);
-          break;
-        }
-        b.state = 'notice';
-        b.st = 0;
-        b.moving = false;
-        look(b, ux, uy);
-      }
+      if (d < sightOf(s, b) && (b.phantom || !refuge(s, w.x, w.y))) spotted(s, C, b, io, d, ux, uy);
       break;
     }
     case 'notice': {
@@ -555,95 +853,81 @@ function think(s, C, b, dt, io) {
       look(b, ux, uy);
       b.moving = false;
       if (d > sightOf(s, b) * 1.5 || (!b.phantom && refuge(s, w.x, w.y))) {
-        b.state = 'idle';
+        b.state = homeState(b);
         b.st = 0;
         break;
       }
       if (b.st >= (R.notice ?? 0.5)) {
-        b.state = 'chase';
         b.st = 0;
-        engage(s, C, b, io);
+        if (b.talker && !C.rt) b.state = 'approach';
+        else {
+          b.state = 'chase';
+          engage(s, C, b, io);
+        }
       }
       break;
     }
-    case 'chase': {
+    case 'approach': {
+      // coming up to have a word with you (while you are fighting something else, they hang back and watch)
       look(b, ux, uy);
       if (lost(s, b, d, dt)) {
         calmDown(b);
         break;
       }
-      if (R.howl && !b.howled && b.hp <= b.maxHp * R.howl) {
-        b.howled = true;
-        b.state = 'howl';
-        b.st = 0;
+      if (C.on || s.rtFight) {
         b.moving = false;
-        io.feed('bad', `${b.name}仰天長嚎，眼睛紅了！`);
-        C.fx.push({ kind: 'howl', x: b.x, y: b.y, t0: C.t, dur: 0.9 });
         break;
       }
-      const B = BEAST_MOVES.bite;
-      const P = BEAST_MOVES.pounce;
-      if (d <= B.reach + PLAYER_R * 0.4 && b.cds.bite <= 0) {
-        windup(b, 'bite', ux, uy, d);
+      if (d <= R.talk) {
+        parley(s, C, b);
         break;
       }
-      if ((R.moves || []).includes('pounce') && b.cds.pounce <= 0 && d >= P.min && d <= P.max && b.rng() < dt * 2.4 && clearPath(s, b, ux, uy, d)) {
-        windup(b, 'pounce', ux, uy, d);
-        break;
-      }
-      const stop = B.reach - 12;
-      if (d > stop) {
-        const pace = b.speed * paceOf(b) * (b.enraged ? 1.15 : 1);
-        const [gx, gy] = route(s, C, b, d, ux, uy);
-        b.moving = beastStep(s, b, gx, gy, Math.min(d - stop, pace * dt)) > 0.01;
-      } else {
-        // close in, waiting on its jaws: it edges round you
-        b.moving = beastStep(s, b, -uy * b.strafe, ux * b.strafe, 46 * dt) > 0.01;
-        if (!b.moving) b.strafe = -b.strafe;
-        look(b, ux, uy);
-      }
+      const [gx, gy] = route(s, C, b, d, ux, uy);
+      b.moving = beastStep(s, b, gx, gy, Math.min(d - R.talk * 0.9, (R.walk || 40) * 2.6 * paceOf(b) * dt)) > 0.01;
       break;
     }
+    case 'talk':
+    case 'yield': {
+      // waiting on what you will do (or, on its knees, on what you will do with it)
+      b.moving = false;
+      look(b, ux, uy);
+      break;
+    }
+    case 'chase':
+      chase(s, C, b, dt, io, d, ux, uy);
+      break;
     case 'windup': {
       if (b.st < b.wind) break;
       const M = BEAST_MOVES[b.move];
-      if (b.move === 'bite') {
-        // the jaws snap: a short lunge, and whoever is in the fan is bitten
-        beastStep(s, b, b.aim[0], b.aim[1], M.lunge);
-        C.fx.push({ kind: 'bite', x: b.x, y: b.y, dir: b.aim, reach: M.reach, t0: C.t, dur: 0.3 });
-        b.cds.bite = M.cd;
-        b.state = 'recover';
-        b.st = 0;
-        b.rec = M.recover;
-        b.last = 'bite';
-        if (inFan(b.x, b.y, b.aim, M.reach + PLAYER_R, M.arc, w.x, w.y)) hurtMe(s, C, b, M.mult, io, [b.aim[0], b.aim[1], 16]);
+      if (M.shape === 'fan') {
+        // the blow lands: a short lunge into it, and whoever is in the fan is caught
+        beastStep(s, b, b.aim[0], b.aim[1], M.lunge || 0);
+        C.fx.push({ kind: M.fx || 'bite', x: b.x, y: b.y, dir: b.aim, reach: M.reach, arc: M.arc, t0: C.t, dur: 0.3, foe: true });
+        spent(b, M);
+        if (inFan(b.x, b.y, b.aim, M.reach + PLAYER_R, M.arc, w.x, w.y)) hurtMe(s, C, b, M.mult, io, [b.aim[0], b.aim[1], 16], M);
+      } else if (M.shape === 'leap') {
+        Object.assign(b, { state: 'leap', st: 0, went: 0, hit: false, from: [b.x, b.y] });
       } else {
-        b.state = 'pounce';
-        b.st = 0;
-        b.went = 0;
-        b.hit = false;
-        b.from = [b.x, b.y];
+        // loosed: it flies on its own now
+        shoot(C, { kind: M.fx, foe: true, by: b, move: M, x: b.x + b.aim[0] * 12, y: b.y + b.aim[1] * 12, ux: b.aim[0], uy: b.aim[1], speed: M.speed, left: M.range, r: M.width / 2, mult: M.mult });
+        spent(b, M);
       }
       break;
     }
-    case 'pounce': {
-      const M = BEAST_MOVES.pounce;
+    case 'leap': {
+      const M = BEAST_MOVES[b.move];
       const want = Math.min(M.speed * dt, b.len - b.went);
       const x0 = b.x;
       const y0 = b.y;
-      const went = slide(s, b, b.aim[0], b.aim[1], want, b.R.body * 0.65);
+      const went = slide(s, b, b.aim[0], b.aim[1], want, R.body * 0.65);
       b.went += went;
       b.moving = true;
       if (!b.hit && segDist(x0, y0, b.x, b.y, w.x, w.y) <= R.body + PLAYER_R) {
         b.hit = true;
-        hurtMe(s, C, b, M.mult, io, [b.aim[0], b.aim[1], 34]);
+        hurtMe(s, C, b, M.mult, io, [b.aim[0], b.aim[1], 34], M);
       }
-      if (b.state === 'pounce' && (b.went >= b.len - 0.5 || went < want * 0.3)) {
-        b.cds.pounce = M.cd;
-        b.state = 'recover';
-        b.st = 0;
-        b.rec = M.recover;
-        b.last = 'pounce';
+      if (b.state === 'leap' && (b.went >= b.len - 0.5 || went < want * 0.3)) {
+        spent(b, M);
         b.moving = false;
         C.fx.push({ kind: 'land', x: b.x, y: b.y, t0: C.t, dur: 0.45 });
       }
@@ -653,7 +937,13 @@ function think(s, C, b, dt, io) {
       // spent: open to you for a moment
       b.moving = false;
       if (b.st >= b.rec) {
-        if (b.last === 'bite' && b.rng() < (R.hop ?? 0)) {
+        const M = BEAST_MOVES[b.last];
+        // its turn is over: it falls back and lets another of the pack go
+        if (b.token) {
+          b.token = false;
+          b.rest = 0.5 + b.rng() * 0.8;
+        }
+        if (M?.shape === 'fan' && b.rng() < (R.hop ?? 0)) {
           b.state = 'hop';
           b.hopDir = [-ux, -uy];
         } else b.state = 'chase';
@@ -694,14 +984,10 @@ function think(s, C, b, dt, io) {
         break;
       }
       if (hd < (b.def.r ?? 120) * 0.5 || (b.st > 12 && !b.moving)) {
-        b.state = 'idle';
-        b.st = 0;
-        b.wait = 1;
-        b.tx = b.x;
-        b.ty = b.y;
+        Object.assign(b, { state: homeState(b), st: 0, wait: 1, tx: b.x, ty: b.y, moving: false });
         break;
       }
-      b.moving = beastStep(s, b, hx / hd, hy / hd, Math.min(hd, b.R.walk * 2.2 * dt)) > 0.01;
+      b.moving = beastStep(s, b, hx / hd, hy / hd, Math.min(hd, (R.walk || 40) * 2.2 * dt)) > 0.01;
       // seeing you again on its way home, once its temper has cooled
       if (b.calm <= 0 && d < sightOf(s, b) * 0.8 && !refuge(s, w.x, w.y)) {
         b.state = 'notice';
@@ -711,9 +997,21 @@ function think(s, C, b, dt, io) {
     }
     case 'flee': {
       b.moving = beastStep(s, b, -ux, -uy, R.speed * 1.1 * dt) > 0.01;
+      if (!b.moving) b.moving = beastStep(s, b, -uy * b.strafe, ux * b.strafe, R.speed * dt) > 0.01;
       if (b.st > 1.6) b.fade = Math.min(1, b.fade + dt * 1.5);
       if (b.fade >= 1) {
-        s.world.mobs[b.def.id] = s.day + 1;
+        // gone for the day
+        away(s, b.def.id, 1);
+        b.stay = false;
+        b.state = 'gone';
+      }
+      break;
+    }
+    case 'leave': {
+      b.moving = beastStep(s, b, -ux, -uy, (R.walk || 40) * 1.6 * dt) > 0.01;
+      if (b.st > 1.2) b.fade = Math.min(1, b.fade + dt * 1.2);
+      if (b.fade >= 1) {
+        b.stay = false;
         b.state = 'gone';
       }
       break;
@@ -721,7 +1019,10 @@ function think(s, C, b, dt, io) {
     case 'dead': {
       b.moving = false;
       if (b.st > 0.9) b.fade = Math.min(1, b.fade + dt * 1.2);
-      if (b.fade >= 1) b.state = b.phantom ? 'vanished' : 'gone';
+      if (b.fade >= 1) {
+        b.stay = false;
+        b.state = b.phantom ? 'vanished' : 'gone';
+      }
       break;
     }
     case 'vanish': {
@@ -735,6 +1036,110 @@ function think(s, C, b, dt, io) {
   }
 }
 
+/** It has seen you (and its group with it) — or, far too strong for it, it runs; or, lying in wait, it strikes. */
+function spotted(s, C, b, io, d, ux, uy) {
+  const group = groupOf(s, C, b).filter((x) => alive(x) && present(s, x));
+  if (!b.phantom && power(s) >= (b.def.power ?? 20) * FAR_STRONGER) {
+    for (const x of group) Object.assign(x, { state: 'flee', st: 0, moving: false, aggro: false });
+    const sc = b.R.scared;
+    io.feed('good', Array.isArray(sc) ? sc[group.length > 1 ? 1 : 0] : sc || `${b.name}看了你一眼，夾著尾巴跑了。`);
+    return;
+  }
+  if (b.R.ambush) {
+    // it was waiting for you: it strikes before you know it is there
+    b.state = 'chase';
+    engage(s, C, b, io);
+    const move = (b.R.moves || [])[0];
+    if (move) windup(b, move, ux, uy, d, 0.75);
+    return;
+  }
+  for (const x of group) {
+    if (x.state !== 'idle' && x.state !== 'hide' && x.state !== 'return') continue;
+    // the rest of them look up a moment later
+    Object.assign(x, { state: 'notice', st: x === b ? 0 : -x.rng() * 0.3, moving: false });
+    look(x, s.world.x - x.x, s.world.y - x.y);
+  }
+}
+
+/** After you: closing in, waiting its turn, striking. */
+function chase(s, C, b, dt, io, d, ux, uy) {
+  const R = b.R;
+  look(b, ux, uy);
+  if (lost(s, b, d, dt)) {
+    calmDown(b);
+    return;
+  }
+  if (b.pause > 0) {
+    // a moment before it sees what you are about
+    b.pause -= dt;
+    b.moving = false;
+    return;
+  }
+  if (R.howl && !b.howled && b.hp <= b.maxHp * R.howl) {
+    Object.assign(b, { howled: true, state: 'howl', st: 0, moving: false });
+    io.feed('bad', `${b.name}仰天長嚎，眼睛紅了！`);
+    C.fx.push({ kind: 'howl', x: b.x, y: b.y, t0: C.t, dur: 0.9 });
+    return;
+  }
+  if (b.rest > 0) b.rest -= dt;
+  // in a group, only so many go at you at once: the rest circle, waiting their turn
+  if (R.tokens && !b.token && b.rest <= 0 && turnFree(s, C, b)) b.token = true;
+  const may = !R.tokens || b.token;
+  const move = may ? pickMove(s, C, b, d, ux, uy, dt) : null;
+  if (move) {
+    windup(b, move, ux, uy, d);
+    return;
+  }
+  const [near, far] = standOff(b, may);
+  if (d > far) {
+    const pace = b.speed * paceOf(b) * (b.enraged ? 1.15 : 1);
+    const [gx, gy] = route(s, C, b, d, ux, uy);
+    b.moving = beastStep(s, b, gx, gy, Math.min(d - far + 1, pace * dt)) > 0.01;
+  } else if (d < near) {
+    // too close for how it fights: it backs off, still facing you
+    b.moving = beastStep(s, b, -ux, -uy, b.speed * 0.7 * dt) > 0.01;
+    if (!b.moving) b.moving = beastStep(s, b, -uy * b.strafe, ux * b.strafe, 60 * dt) > 0.01;
+    look(b, ux, uy);
+  } else {
+    // where it wants to be: it edges round you
+    b.moving = beastStep(s, b, -uy * b.strafe, ux * b.strafe, (may ? 46 : 64) * dt) > 0.01;
+    if (!b.moving) b.strafe = -b.strafe;
+    look(b, ux, uy);
+  }
+}
+
+/** Is there a turn free in its group (fewer than its tokens of them at you)? */
+function turnFree(s, C, b) {
+  let n = 0;
+  for (const x of groupOf(s, C, b)) if (x !== b && x.token && hunting(x)) n++;
+  return n < b.R.tokens;
+}
+
+/** How far off it wants to be: on you (its shortest reach), at its ring while it waits, or at its distance if it fights from afar. */
+function standOff(b, may) {
+  const R = b.R;
+  if (R.keep) return R.keep;
+  if (!may) return [R.ring - 14, R.ring + 14];
+  let reach = Infinity;
+  for (const id of R.moves || []) if (BEAST_MOVES[id].shape === 'fan') reach = Math.min(reach, BEAST_MOVES[id].reach);
+  return [0, reach < Infinity ? reach - 12 : 30];
+}
+
+/** What it can do from where it stands, if anything (its moves, tried in order). */
+function pickMove(s, C, b, d, ux, uy, dt) {
+  const w = s.world;
+  for (const id of b.R.moves || []) {
+    const M = BEAST_MOVES[id];
+    if ((b.cds[id] || 0) > 0) continue;
+    if (M.shape === 'fan') {
+      if (d <= M.reach + PLAYER_R * 0.4) return id;
+    } else if (M.shape === 'leap') {
+      if (d >= M.min && d <= M.max && b.rng() < dt * 2.4 && clearPath(s, b, ux, uy, d)) return id;
+    } else if (d >= M.min && d <= M.max && b.rng() < dt * 2 && clearShot(b.x, b.y, w.x, w.y)) return id;
+  }
+  return null;
+}
+
 /** Ambling about its own ground. */
 function wander(s, b, dt) {
   if (b.wait > 0) {
@@ -745,7 +1150,7 @@ function wander(s, b, dt) {
   const dx = b.tx - b.x;
   const dy = b.ty - b.y;
   const d = Math.hypot(dx, dy);
-  if (d < 4) {
+  if (d < 4 || !b.R.walk) {
     const a = b.rng() * Math.PI * 2;
     const r = Math.sqrt(b.rng()) * (b.def.r ?? 120);
     b.tx = b.home[0] + Math.cos(a) * r;
@@ -761,19 +1166,24 @@ function wander(s, b, dt) {
   }
 }
 
-function windup(b, move, ux, uy, d) {
+/** It gathers itself for a move (quick: a share of the usual time, for one that was lying in wait). */
+function windup(b, move, ux, uy, d, quick = 1) {
   const M = BEAST_MOVES[move];
-  b.state = 'windup';
-  b.st = 0;
-  b.move = move;
-  b.moving = false;
-  b.aim = [ux, uy];
+  Object.assign(b, { state: 'windup', st: 0, move, moving: false, aim: [ux, uy] });
   look(b, ux, uy);
-  b.wind = M.windup * (b.enraged ? 0.82 : 1);
-  if (move === 'pounce') {
-    b.from = [b.x, b.y];
-    b.len = Math.min(M.max + M.overshoot, d + M.overshoot);
-  }
+  b.wind = M.windup * (b.enraged ? 0.82 : 1) * quick;
+  b.from = [b.x, b.y];
+  if (M.shape === 'leap') b.len = Math.min(M.max + M.overshoot, d + M.overshoot);
+  else if (M.shape === 'shot') b.len = M.range;
+}
+
+/** Its move is spent: open to you for a moment, and the move must wait to come again. */
+function spent(b, M) {
+  b.cds[b.move] = M.cd;
+  b.state = 'recover';
+  b.st = 0;
+  b.rec = M.recover;
+  b.last = b.move;
 }
 
 /**
@@ -823,6 +1233,22 @@ function heroTick(s, C, dt, io) {
       me.shieldT = 0;
     }
   }
+  // venom in you: it eats at you a while (it will not finish you, but it leaves you little)
+  if (me.poison) {
+    const P = me.poison;
+    P.left -= dt;
+    P.tick -= dt;
+    if (P.tick <= 0) {
+      P.tick = 0.5;
+      const dmg = Math.min(me.hp - 1, Math.max(1, Math.round(P.dps * 0.5)));
+      if (dmg > 0) {
+        me.hp -= dmg;
+        me.hurtT = C.t;
+        pop(C, w.x, w.y, String(dmg), 'poison', 40);
+      }
+    }
+    if (P.left <= 0) me.poison = null;
+  }
   // 靈力 comes back slowly in a fight, quickly out of one; blood only once it is over
   me.mp = Math.min(me.maxMp, me.mp + me.maxMp * (C.on ? 0.03 : 0.1) * dt);
   if (!C.on && C.t - me.hurtT > 3 && me.hp < me.cap) me.hp = Math.min(me.cap, me.hp + me.cap * 0.05 * dt);
@@ -850,6 +1276,7 @@ function heroTick(s, C, dt, io) {
     if (!a.done && a.t >= a.at) {
       a.done = true;
       release(s, C, a, io);
+      if (s.pending || s.dead) return moved;
     }
     if (a.t >= a.dur) me.act = null;
   }
@@ -864,7 +1291,7 @@ function faceTo(s, me, ux, uy) {
 
 function targetOf(s, C) {
   const id = C.me.target;
-  return id ? beastsOf(s, C).find((b) => b.uid === id && alive(b) && present(s, b)) || null : null;
+  return id ? beastsOf(s, C).find((b) => b.uid === id && seen(b) && present(s, b)) || null : null;
 }
 
 /** Walk up to whoever you went for, and strike whenever they are in reach. */
@@ -921,6 +1348,7 @@ function release(s, C, a, io) {
       C.fx.push({ kind: S.fx, x: w.x, y: w.y, dir: [a.ux, a.uy], reach: S.reach, arc: S.arc, t0: C.t, dur: 0.24 });
       for (const b of beastsOf(s, C)) {
         if (alive(b) && present(s, b) && inFan(w.x, w.y, [a.ux, a.uy], S.reach + b.R.body, S.arc, b.x, b.y)) hurtBeast(s, C, b, me.atk * S.mult, io);
+        if (s.pending || s.dead) return;
       }
     } else {
       shoot(C, { kind: 'arrow', x: w.x + a.ux * 10, y: w.y + a.uy * 10, ux: a.ux, uy: a.uy, speed: S.speed, left: S.range, r: S.width / 2, dmg: me.atk * S.mult });
@@ -952,8 +1380,10 @@ function shoot(C, sh) {
 
 function flyShots(s, C, dt, io) {
   if (!C.shots.length) return;
+  const w = s.world;
   const list = beastsOf(s, C);
   for (const sh of C.shots) {
+    if (sh.done) continue;
     const step = Math.min(sh.speed * dt, Math.max(0, sh.left - sh.went));
     const n = Math.max(1, Math.ceil(step / 8));
     for (let k = 0; k < n && !sh.done; k++) {
@@ -965,6 +1395,18 @@ function flyShots(s, C, dt, io) {
         burst(s, C, sh, io);
         break;
       }
+      if (sh.foe) {
+        // theirs, at you: step out of its way, and it flies on past
+        if (sh.missed || !C.on || Math.hypot(w.x - sh.x, w.y - sh.y) > sh.r + PLAYER_R) continue;
+        const took = hurtMe(s, C, sh.by, sh.mult, io, [sh.ux, sh.uy, 12], sh.move);
+        if (took < 0) sh.missed = true;
+        else {
+          sh.done = true;
+          C.fx.push({ kind: 'spark', x: sh.x, y: sh.y, t0: C.t, dur: 0.25, of: sh.kind });
+        }
+        if (s.pending || s.dead) return;
+        continue;
+      }
       for (const b of list) {
         if (sh.done || !alive(b) || !present(s, b) || sh.hit.has(b.uid)) continue;
         if (Math.hypot(b.x - sh.x, b.y - sh.y) > sh.r + b.R.body) continue;
@@ -974,14 +1416,17 @@ function flyShots(s, C, dt, io) {
         }
         sh.hit.add(b.uid);
         hurtBeast(s, C, b, sh.dmg, io, { kind: sh.hurt || 'phys' });
+        if (s.pending || s.dead) return;
         C.fx.push({ kind: 'spark', x: sh.x, y: sh.y, t0: C.t, dur: 0.25, of: sh.kind });
         if (!sh.pierce) sh.done = true;
       }
+      if (s.pending || s.dead) return;
     }
     if (!sh.done && sh.went >= sh.left - 0.01) {
       if (sh.boom) burst(s, C, sh, io);
       else sh.done = true;
     }
+    if (s.pending || s.dead) return;
   }
   C.shots = C.shots.filter((x) => !x.done);
 }
@@ -997,11 +1442,19 @@ function burst(s, C, sh, io) {
   for (const b of beastsOf(s, C)) {
     if (!alive(b) || !present(s, b) || Math.hypot(b.x - sh.x, b.y - sh.y) > sh.radius + b.R.body) continue;
     hurtBeast(s, C, b, sh.dmg, io, { kind: 'fire' });
+    if (s.pending || s.dead) return;
     if (sh.burn && alive(b)) b.burn = { left: sh.burnT, tick: 0.5, dps: sh.burn };
   }
 }
 
 // ── commands (from the buttons, keys, taps) ──
+
+/** A word for the feed — not again and again while a button is held down. */
+function say(C, kind, text) {
+  if (C.t - (C.told[text] ?? -9) < 1.5) return;
+  C.told[text] = C.t;
+  C.notes.push({ kind, text });
+}
 
 function free(s) {
   return !(s.pending || s.dead || s.secl);
@@ -1010,7 +1463,7 @@ function free(s) {
 /** Who a blow or a spell should go for: near the aim, or whoever you are after, or the nearest. */
 function pickTarget(s, C, aim = null, range = 320) {
   const w = s.world;
-  const live = beastsInWorld(s, 900).filter((b) => alive(b));
+  const live = beastsInWorld(s, 900).filter((b) => seen(b));
   if (aim) {
     let best = null;
     let bd = 90;
@@ -1077,7 +1530,7 @@ export function strikeAt(s, uid) {
   if (!free(s)) return false;
   const C = combatOf(s);
   const me = hero(s, C);
-  const b = beastsOf(s, C).find((x) => x.uid === uid && alive(x));
+  const b = beastsOf(s, C).find((x) => x.uid === uid && seen(x));
   if (!b) return false;
   me.target = b.uid;
   me.auto = true;
@@ -1115,12 +1568,12 @@ export function castCmd(s, id, aim = null) {
   const k = kitOf(s).find((x) => x.id === id);
   if (!k) return false;
   if (k.locked) {
-    C.notes.push({ kind: 'sys', text: `${k.name}：${k.locked}` });
+    say(C, 'sys', `${k.name}：${k.locked}`);
     return false;
   }
   if (me.dash || (me.cds[id] || 0) > 0) return false;
   if (me.mp < k.mp) {
-    C.notes.push({ kind: 'bad', text: '靈力不足。' });
+    say(C, 'bad', '靈力不足。');
     return false;
   }
   if (me.act?.kind === 'cast' && !me.act.done) return false;
@@ -1201,8 +1654,9 @@ export function startTrial(s) {
   me.hp = me.cap;
   me.mp = me.maxMp;
   me.cds = {};
+  me.poison = null;
   const def = { id: `trial_${++C.uid}`, kind: 'demon_wolf', name: '幻影妖狼', x: spot[0], y: spot[1], r: 100, power: Math.max(4, Math.round(me.P)), tier: s.player.realm, phantom: true, rt: { lose: 560 } };
-  const b = spawn(def);
+  const b = spawn(s, def);
   b.state = 'notice';
   look(b, w.x - b.x, w.y - b.y);
   beastsOf(s, C).push(b);
@@ -1218,6 +1672,6 @@ function endTrial(s, C, io, how) {
     b.st = 0;
   }
   const me = hero(s, C);
-  Object.assign(me, { hp: me.cap, mp: me.maxMp, shield: 0, shieldT: 0 });
+  Object.assign(me, { hp: me.cap, mp: me.maxMp, shield: 0, shieldT: 0, poison: null });
   io.feed('sys', { won: '叮——試煉完成。系統：「不錯。」', escaped: '叮——你甩掉了幻影。系統：「逃得掉，也是本事。」', fell: '叮——試煉失敗。好在只是幻影，你毫髮無傷。' }[how]);
 }

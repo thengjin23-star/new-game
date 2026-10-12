@@ -5,7 +5,7 @@ import * as B from '../src/core/battle.js';
 import * as E from '../src/world/explore.js';
 import { startEvent, choose, continueEvent, finishFight } from '../src/core/events.js';
 import { serialize, parseSave } from '../src/core/save.js';
-import { MOBS } from '../src/world/places.js';
+import { BEASTS } from '../src/world/places.js';
 import { FOES } from '../src/content/foes.js';
 import { ITEMS } from '../src/content/items.js';
 import { EVENT_LIST } from '../src/content/index.js';
@@ -105,55 +105,6 @@ test('what you can do: strike, skills that cost 靈力, pills that are used up, 
   assert.ok(s.battle.over);
 });
 
-test('the wolves that catch you are the wolves you fight, and the story ends the way the fight did', () => {
-  const s = cultivator(43, 4);
-  const def = MOBS.find((m) => m.id === 'wolves_a');
-  s.tod = 22;
-  const [x, y] = nearestOpen(s, def.x, def.y + 300, 4);
-  E.placeAt(s, x, y);
-  resolvePending(s);
-  E.walkTo(s, def.x, def.y);
-  for (let k = 0; k < 600 && !s.pending; k++) E.step(s, 0.05, null);
-  for (let k = 0; k < 20 && s.pending && s.pending.id !== 'hill_wolves'; k++) {
-    resolvePending(s);
-    E.walkTo(s, def.x, def.y);
-    for (let j = 0; j < 600 && !s.pending; j++) E.step(s, 0.05, null);
-  }
-  assert.equal(s.pending?.id, 'hill_wolves');
-  assert.equal(s.pending.ctx.data.mob, 'wolves_a');
-  const fight = s.pending.choices.find((c) => c.text === '拔刀迎戰。');
-  assert.ok(fight.hint === null || fight.hint.fight, 'it is marked as a fight');
-  choose(s, fight.i);
-  assert.ok(s.battle, 'a fight, not a roll');
-  assert.equal(s.battle.units.filter((u) => u.side === 'foe').length, def.n, 'the whole pack');
-  assert.ok(E.battleField(s).arena, 'on the ground where you stand');
-  fightOut(s);
-  assert.ok(!s.battle);
-  const r = s.pending.result;
-  assert.equal(r.check.kind, '戰鬥');
-  const ev = EVENT_LIST.find((e) => e.id === 'hill_wolves');
-  assert.equal(r.text, r.check.ok ? ev.choices[0].ok.text : r.check.fight === 'lose' ? ev.choices[0].fail.text : '你且戰且退，總算脫了身。');
-  continueEvent(s);
-});
-
-test('you can go for them first', () => {
-  const s = cultivator(44, 6);
-  const def = MOBS.find((m) => m.id === 'snake_a');
-  s.day = 200; // the snakes are out in summer and autumn
-  s.tod = 12;
-  const [x, y] = nearestOpen(s, def.x + 200, def.y, 4);
-  E.placeAt(s, x, y);
-  resolvePending(s);
-  const t = E.targetsNear(s, 300).find((x) => x.kind === 'mob' && x.id === 'snake_a');
-  assert.ok(t && t.verb === '出手');
-  E.interact(s, t);
-  assert.ok(s.battle, 'the fight is on');
-  assert.equal(s.battle.first, 'me');
-  assert.equal(s.pending.ctx.data.first, 'me');
-  fightOut(s);
-  assert.ok(s.pending.result);
-});
-
 test('sparring is not to the death', () => {
   for (let i = 0; i < 30; i++) {
     const s = cultivator(200 + i, 0);
@@ -242,7 +193,7 @@ test('the picture plays the fight a blow at a time, and comes out where the figh
 });
 
 test('a fight stands on open ground near you, the two sides facing each other', () => {
-  for (const def of MOBS) {
+  for (const def of BEASTS) {
     const s = cultivator(47);
     const [x, y] = nearestOpen(s, def.x, def.y + 120, 4);
     E.placeAt(s, x, y);

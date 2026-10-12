@@ -22,7 +22,7 @@ import { createWater } from './gl/water.js';
 import { createClouds } from './gl/clouds.js';
 import { createBuildings } from './gl/buildings.js';
 import { createGlows } from './gl/glows.js';
-import { drawPerson, drawMob, aura, LOOKS, FOLK_LOOKS, FIGURE } from './figures.js';
+import { drawPerson, aura, LOOKS, FOLK_LOOKS, FIGURE } from './figures.js';
 import { propSprite, SPRITE } from './sprites.js';
 import { makeParticles, drawParticles } from './ink.js';
 import { seasonOf } from '../core/calendar.js';
@@ -375,15 +375,6 @@ export function createWorld3D(canvas, { onFrame, idle, quality = 'high', onSlow 
       cards.add(`folk:${fk.id}`, fk.x, heightAt(fk.x, fk.y), fk.y, pic || ((c) => drawPose(c, lookOf(fk.look), pose, { t: t + fk.line + fk.x * 0.01, moving: fk.moving, face: fk.face })), { animated: !pic, fps: fk.moving ? 24 : 8 });
       foot(fk.x, fk.y, pose === 'sit' ? 11 : 8.5);
     }
-    for (const m of E.mobsInWorld(s)) {
-      const alpha = 1 - (m.fade || 0);
-      m.members.forEach((b, i) => {
-        if (!near(b.x, b.y)) return;
-        const pic = picture(`mob:${m.def.kind}`, m.def.kind === 'wolf' ? 26 : 44);
-        cards.add(`mob:${m.def.id}:${i}`, b.x, heightAt(b.x, b.y), b.y, pic || ((c) => drawMob(c, m.def.kind, 0, 0, { t: t + b.x * 0.01, moving: b.moving, face: b.face })), { animated: !pic, fps: b.moving ? 24 : 8, alpha });
-        if (m.def.kind !== 'ghost') foot(b.x, b.y, 12, 0.3 * alpha);
-      });
-    }
     // the small lives of the wild: grazing, hopping, taking wing
     for (const c of E.wildInWorld(s)) {
       if (!near(c.x, c.y)) continue;
@@ -416,9 +407,12 @@ export function createWorld3D(canvas, { onFrame, idle, quality = 'high', onSlow 
     }
     const C = CB.combatOf(s);
     for (const b of CB.beastsInWorld(s)) {
-      if (!near(b.x, b.y)) continue;
-      cards.add(`beast:${b.uid}`, b.x, heightAt(b.x, b.y), b.y, (c) => paintBeast(c, b, t, C.t), { animated: true, fps: 30, ghost: b.aggro && b.state !== 'dead' });
-      if (b.state !== 'dead' && !((b.fade || 0) > 0.5)) foot(b.x, b.y, 15, 0.3);
+      // a snake in the grass is not seen until it moves
+      if (!near(b.x, b.y) || b.state === 'hide') continue;
+      const pic = picture(`mob:${b.kind}`, b.R.tall + 6) || picture(`mob:${b.def.kind}`, b.R.tall + 6);
+      const busy = b.moving || b.aggro || b.state === 'dead' || b.state === 'yield' || (b.fade || 0) > 0;
+      cards.add(`beast:${b.uid}`, b.x, heightAt(b.x, b.y), b.y, (c) => paintBeast(c, b, t, C.t, { pic }), { animated: true, fps: busy ? 30 : 10, ghost: b.aggro && b.state !== 'dead' });
+      if (b.state !== 'dead' && !b.K.spirit && !((b.fade || 0) > 0.5)) foot(b.x, b.y, b.R.body + 3, 0.3);
     }
     const sit = !!s.secl;
     const moving = E.liveOf(s).moving;
@@ -660,22 +654,9 @@ export function createWorld3D(canvas, { onFrame, idle, quality = 'high', onSlow 
       groundRing(tapMark.x, tapMark.y, 6 + k * 18, `rgba(168,50,42,${0.6 * (1 - k)})`, 1.6);
     }
     groundRing(w.x, w.y, 11, 'rgba(168,50,42,0.3)', 2);
-    // a beast that has seen you
-    octx.font = `700 13px ${FONT}`;
-    octx.textAlign = 'center';
-    octx.textBaseline = 'middle';
-    octx.fillStyle = 'rgba(168,50,42,0.92)';
-    for (const m of E.mobsInWorld(s)) {
-      if (m.state !== 'chase') continue;
-      for (const b of m.members) {
-        const [bx, by] = worldToScreen(b.x, b.y, 38);
-        if (bx > -20 && bx < W + 20 && by > -20 && by < H + 20) octx.fillText('！', bx, by);
-      }
-    }
     drawLabels();
     drawSceneBubbles();
     drawSpeechBubbles();
-    drawBeastMarks();
     drawPlaceNames();
     const C = CB.combatOf(s);
     if (C.beasts?.length || C.shots.length || C.fx.length || C.pops.length) drawCombatOverlay(octx, worldToScreen, 1, s, C, LOOKS.player, t, FONT);
@@ -744,26 +725,6 @@ export function createWorld3D(canvas, { onFrame, idle, quality = 'high', onSlow 
       const d = Math.hypot(p.x - w.x, p.y - w.y);
       if (d > 220 || !E.poiVisible(s, p)) continue;
       label(p.x, p.y, 46, E.poiName(s, p), 0.6);
-    }
-  }
-
-  /** Over beasts that have seen you: a question; over those coming for you: a cry. */
-  function drawBeastMarks() {
-    for (const m of E.mobsInWorld(s)) {
-      if (!m.alert && m.state !== 'chase') continue;
-      const mark = m.state === 'chase' ? '！' : '？';
-      for (const b of m.members) {
-        const [sx, sy] = worldToScreen(b.x, b.y, m.def.kind === 'wolf' ? 30 : 46);
-        if (sx < -20 || sx > W + 20 || sy < -20 || sy > H + 20) continue;
-        octx.font = `700 15px ${FONT}`;
-        octx.textAlign = 'center';
-        octx.textBaseline = 'middle';
-        octx.lineWidth = 3;
-        octx.strokeStyle = 'rgba(250,246,236,0.85)';
-        octx.strokeText(mark, sx, sy);
-        octx.fillStyle = mark === '！' ? 'rgba(168,50,42,0.95)' : 'rgba(35,32,27,0.85)';
-        octx.fillText(mark, sx, sy);
-      }
     }
   }
 

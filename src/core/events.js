@@ -4,7 +4,6 @@ import { checkChance, CHECK_NAME } from './checks.js';
 import { rand, pickWeighted } from './rng.js';
 import { newReport } from './time.js';
 import { NODES } from '../world/map.js';
-import { MOBS } from '../world/places.js';
 import { startBattle, aftermath, endBattle, fightPower } from './battle.js';
 
 /** Resolve a text field: a string with {name}/{npc}/{loc} tokens, or a function. */
@@ -85,6 +84,8 @@ function hintFor(s, c, ctx) {
   if (!s.sys.bound) return null;
   const lv = s.sys.lv;
   let h = null;
+  // running, out in the world, is up to your legs: no odds to give
+  if (c.run && !c.fight && ctx.data?.beast) return null;
   if (c.fight) {
     // a fight: how you measure up against what you face
     const diff = typeof c.check.diff === 'function' ? c.check.diff(s, ctx) : c.check.diff;
@@ -157,10 +158,16 @@ export function choose(s, i) {
   const ctx = pend.ctx;
   if (ctx.npcId) ctx.npc = s.npcs[ctx.npcId];
   if (!c || (c.show && !c.show(s, ctx)) || (c.need && c.need(s, ctx))) return;
+  // out in the world, with them standing in front of you: it is fought (or run) there, as it happens
+  if (ctx.data?.beast && (c.fight || c.run)) {
+    const fc = c.fight ? c : raw.find((x) => x.fight);
+    s.rtFight = { beast: ctx.data.beast, choice: i, run: !c.fight, diff: fc?.check ? diffOf(s, fc, ctx) : null, npcId: ctx.npcId || null, pend };
+    s.pending = null;
+    return;
+  }
   // a fight is fought, not rolled: the battle decides which way the story goes
   if (c.fight) {
-    const diff = typeof c.check.diff === 'function' ? c.check.diff(s, ctx) : c.check.diff;
-    startBattle(s, fightSpec(c, ctx), { diff, npc: ctx.npc || null, origin: { event: pend.id, step: pend.step, choice: i }, first: ctx.data?.first || null });
+    startBattle(s, fightSpec(c, ctx), { diff: diffOf(s, c, ctx), npc: ctx.npc || null, origin: { event: pend.id, step: pend.step, choice: i }, first: ctx.data?.first || null });
     pend.fight = i;
     return;
   }
@@ -181,12 +188,37 @@ export function fightChoice(pend, i) {
   return !!(st.choices || [])[i]?.fight;
 }
 
-/** What a fight choice puts against you: its own foes, or whatever caught you. */
+/** The 戰力 a fight choice asks of you. */
+function diffOf(s, c, ctx) {
+  return typeof c.check.diff === 'function' ? c.check.diff(s, ctx) : c.check.diff;
+}
+
+/** What a fight choice puts against you. */
 function fightSpec(c, ctx) {
-  const spec = typeof c.fight === 'function' ? c.fight(ctx) : c.fight;
-  const mob = spec.mob && MOBS.find((m) => m.id === ctx.data?.mob);
-  if (!mob) return spec;
-  return { ...spec, foes: [[spec.foes[0][0], mob.n]], close: ctx.data?.first !== 'me' };
+  return typeof c.fight === 'function' ? c.fight(ctx) : c.fight;
+}
+
+/**
+ * A fight out in the world (s.rtFight, played by world/combat.js) is over:
+ * the story picks up where it left off, and goes the way the fight did.
+ * how: 'won' | 'lost' | 'escaped'. Ran for it (a run choice): getting away
+ * is how it was meant to go; turning and beating them, as if you had fought.
+ */
+export function endRealFight(s, how) {
+  const f = s.rtFight;
+  if (!f) return;
+  s.rtFight = null;
+  if (s.dead) return;
+  const pend = f.pend;
+  s.pending = pend;
+  const ctx = pend.ctx;
+  if (ctx.npcId) ctx.npc = s.npcs[ctx.npcId];
+  const raw = stepsOf(EVENTS[pend.id])[pend.step].choices || [];
+  const c = raw[f.choice];
+  let out;
+  if (f.run) out = how === 'escaped' ? c.ok : how === 'lost' ? c.fail : raw.find((x) => x.fight)?.ok || c.ok;
+  else out = how === 'won' ? c.ok : how === 'lost' ? c.fail : c.flee || { text: '你且戰且退，總算脫了身。' };
+  settle(s, c, out || {}, { ok: how !== 'lost', kind: '戰鬥', fight: how === 'won' ? 'win' : how === 'lost' ? 'lose' : 'flee' });
 }
 
 /** The fight is over: its result takes the story on (and brings what it left you). */

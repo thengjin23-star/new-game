@@ -13,48 +13,76 @@
 // Positions come through proj(x, y, up) and px is the size of one screen pixel
 // in the drawing's own units (as in battlefx.js).
 
-import { drawPerson } from './figures.js';
-import { drawBigBeast } from './scenery.js';
+import { drawPerson, drawWolf, drawSnake, drawGhost } from './figures.js';
+import { drawBigBeast, drawPose, lookOf } from './scenery.js';
 import { INK, rgba } from './ink.js';
 import { BEAST_MOVES } from '../content/moves.js';
-import { TIER_NAME } from '../world/combat.js';
+import { rankOf } from '../world/combat.js';
 
 const RED = [168, 50, 42];
 const JADE = [59, 106, 91];
 const FIRE = [236, 120, 40];
 const QI = [150, 225, 235];
+/** Sword qi thrown at you: a colder, redder light than yours. */
+const FOE_QI = [222, 96, 84];
+const SOUL = [170, 200, 240];
 
 // ── figures ──
 
-/** A beast, foot at (0, 0), in the pose of what it is doing. tint: wash it red as a blow lands (cards only). */
-export function paintBeast(ctx, b, t, now, { tint = true } = {}) {
+/** How the people you fight look: 山賊 masked, 獨眼龍 big and patched, a 劫修 in dark robes. */
+const PEOPLE = {
+  bandit: { look: { robe: [36, 34, 32], trim: [110, 30, 26], hair: 'bun', short: true }, weapon: 'chaidao', mask: true },
+  bandit_chief: { look: { robe: [62, 44, 36], trim: [168, 132, 64], hair: 'bun', big: true }, weapon: 'chaidao', patch: true, blade: 20 },
+  cultivator: { look: lookOf('foe'), weapon: 'qinggang_sword' },
+};
+
+/**
+ * A beast (or a person, or the dead), foot at (0, 0), in the pose of what it
+ * is doing. tint: wash it red as a blow lands (cards only). pic: a picture
+ * to paint in place of the drawing (an asset for its kind), posed the same.
+ */
+export function paintBeast(ctx, b, t, now, { tint = true, pic = null } = {}) {
   ctx.save();
   const st = b.state;
+  const person = !!b.R.person;
+  const spirit = !!b.K.spirit;
   let alpha = 1 - (b.fade || 0);
   if (b.phantom) alpha *= 0.8;
   ctx.globalAlpha *= alpha;
+  const M = b.move ? BEAST_MOVES[b.move] : null;
+  const p = st === 'windup' ? Math.min(1, b.st / (b.wind || 0.5)) : 0;
   if (st === 'dead') {
-    // keels over onto its side
+    // keels over onto its side (a person lies where he fell; the dead come apart and drift up)
     const k = Math.min(1, b.st / 0.35);
-    ctx.rotate(-b.face * 0.9 * k);
+    if (spirit) {
+      ctx.translate(0, -b.st * 16);
+      ctx.scale(1 + b.st * 0.35, 1 - Math.min(0.5, b.st * 0.25));
+    } else if (!person) ctx.rotate(-b.face * 0.9 * k);
   } else if (st === 'windup') {
-    // gathering itself: low and tense, a tremor running through it
-    const p = Math.min(1, b.st / (b.wind || 0.5));
-    ctx.translate(Math.sin(now * 60) * 0.8 * p, 0);
-    ctx.scale(1 + 0.07 * p, 1 - (b.move === 'pounce' ? 0.18 : 0.09) * p);
-  } else if (st === 'pounce') {
-    // in the air
-    const p = Math.min(1, (b.went || 0) / Math.max(1, b.len || 1));
-    ctx.translate(0, -Math.sin(p * Math.PI) * 16);
-    ctx.scale(1.14, 0.9);
+    // gathering itself: low and tense, a tremor running through it (a snake rears; a man sets his feet)
+    if (b.kind === 'snake') ctx.scale(1 - 0.12 * p, 1 + 0.3 * p);
+    else if (person || spirit) ctx.translate(-b.face * p * (M?.shape === 'fan' ? 2 : 0.6), 0);
+    else {
+      ctx.translate(Math.sin(now * 60) * 0.8 * p, 0);
+      ctx.scale(1 + 0.07 * p, 1 - (M?.shape === 'leap' ? 0.18 : 0.09) * p);
+    }
+  } else if (st === 'leap') {
+    // in the air (a man runs at you, low; a snake flies straight)
+    const q = Math.min(1, (b.went || 0) / Math.max(1, b.len || 1));
+    if (person) ctx.rotate(b.face * 0.18);
+    else {
+      ctx.translate(0, -Math.sin(q * Math.PI) * (b.kind === 'snake' ? 6 : 16));
+      ctx.scale(1.14, 0.9);
+    }
   } else if (st === 'hop') {
     ctx.translate(0, -Math.sin(Math.min(1, b.st / 0.26) * Math.PI) * 9);
-  } else if (st === 'recover') {
+  } else if (st === 'recover' && !person && !spirit) {
     ctx.scale(1.03, 0.94);
   } else if (st === 'howl') {
     ctx.rotate(-b.face * 0.2 * Math.min(1, b.st / 0.2));
   }
-  drawBigBeast(ctx, b.kind, { t: t + b.home[0] * 0.01, face: b.face, moving: b.moving || st === 'pounce' || st === 'hop' });
+  if (pic) pic(ctx);
+  else figure(ctx, b, t, now, p);
   if (tint) {
     ctx.globalCompositeOperation = 'source-atop';
     if (b.phantom) {
@@ -71,6 +99,72 @@ export function paintBeast(ctx, b, t, now, { tint = true } = {}) {
       ctx.fillRect(-70, -90, 140, 100);
     }
   }
+  ctx.restore();
+}
+
+/** The drawing itself, by what it is. */
+function figure(ctx, b, t, now, p) {
+  const st = b.state;
+  const tt = t + b.home[0] * 0.01;
+  const face = b.face;
+  const moving = b.moving || st === 'leap' || st === 'hop';
+  const M = b.move ? BEAST_MOVES[b.move] : null;
+  if (b.R.person) return personOf(ctx, b, tt, now, p);
+  if (b.kind === 'wolf') return drawWolf(ctx, 0, 0, { t: tt, moving, face });
+  if (b.kind === 'snake') return drawSnake(ctx, 0, 0, { t: st === 'windup' ? tt * 3 : tt, face });
+  if (b.kind === 'ghost') {
+    drawGhost(ctx, 0, 0, { t: tt, face });
+    // cold gathering in its hands
+    if (st === 'windup') orb(ctx, face * (M?.shape === 'shot' ? 9 : 11), -22, p, now, SOUL);
+    return;
+  }
+  drawBigBeast(ctx, b.kind, { t: tt, face, moving });
+}
+
+/** A person: the blade raised as he gathers himself, across as it lands, easing back after; on his knees, or fallen. */
+function personOf(ctx, b, t, now, p) {
+  const P = PEOPLE[b.kind] || PEOPLE.cultivator;
+  const st = b.state;
+  const face = b.face;
+  if (st === 'yield') {
+    drawPose(ctx, P.look, 'kneel', { t, face });
+    // the blade thrown down in front of him
+    ctx.strokeStyle = 'rgba(190,190,182,1)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(face * 9, -1);
+    ctx.lineTo(face * 24, 1);
+    ctx.stroke();
+    return;
+  }
+  if (st === 'dead') return drawPose(ctx, P.look, 'lie', { t, face });
+  drawPerson(ctx, 0, 0, P.look, { t, moving: b.moving || st === 'leap', face });
+  const k = P.look.big ? 1.15 : 1;
+  ctx.save();
+  ctx.scale(k, k);
+  if (P.mask) {
+    ctx.fillStyle = 'rgba(30,28,26,1)';
+    ctx.fillRect(-3.5 + face * 0.5, -29, 7, 3);
+  }
+  if (P.patch) {
+    ctx.strokeStyle = 'rgba(30,28,26,1)';
+    ctx.lineWidth = 0.7;
+    ctx.beginPath();
+    ctx.moveTo(-4, -31);
+    ctx.lineTo(4, -28);
+    ctx.stroke();
+    ctx.fillStyle = 'rgba(30,28,26,1)';
+    ctx.beginPath();
+    ctx.arc(face * 1.6, -29.4, 1.4, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  const M = b.move ? BEAST_MOVES[b.move] : null;
+  const last = b.last ? BEAST_MOVES[b.last] : null;
+  if (st === 'windup' && M?.shape === 'shot') cast(ctx, { fx: 'foeqi' }, face, p, 0, now);
+  else if (st === 'windup') swing(ctx, P.weapon, face, p * 0.98, 0, P.blade);
+  else if (st === 'leap') swing(ctx, P.weapon, face, 0.6, 0, P.blade);
+  else if (st === 'recover' && last && last.shape !== 'shot') swing(ctx, P.weapon, face, 1, Math.min(1, b.st / 0.3), P.blade);
+  else if (b.aggro || st === 'talk' || st === 'approach') swing(ctx, P.weapon, face, 0.35, 0, P.blade);
   ctx.restore();
 }
 
@@ -101,8 +195,8 @@ export function paintHero(ctx, look, h, t, now, { tint = true } = {}) {
   ctx.restore();
 }
 
-/** The weapon through its swing: raised behind (p 0) to across in front (p 1), then easing back. */
-function swing(ctx, weapon, face, p, after) {
+/** The weapon through its swing: raised behind (p 0) to across in front (p 1), then easing back. blade: its length, if not the usual. */
+function swing(ctx, weapon, face, p, after, blade = null) {
   ctx.lineCap = 'round';
   if (weapon === 'hunting_bow') {
     // the bow held out, the string drawn back, then loosed
@@ -140,7 +234,7 @@ function swing(ctx, weapon, face, p, after) {
   const ang = p < 1 ? -2.3 + p * 2.9 : 0.6 - after * 0.9;
   const hx = face * 5;
   const hy = -18;
-  const len = weapon === 'qinggang_sword' ? 19 : 14;
+  const len = blade || (weapon === 'qinggang_sword' ? 19 : 14);
   ctx.strokeStyle = weapon === 'qinggang_sword' ? 'rgba(214,224,232,1)' : 'rgba(190,190,182,1)';
   ctx.lineWidth = weapon === 'qinggang_sword' ? 1.4 : 2.4;
   ctx.beginPath();
@@ -152,9 +246,22 @@ function swing(ctx, weapon, face, p, after) {
   ctx.stroke();
 }
 
+/** Light gathering into a ball (p 0 to 1) at (x, y). */
+function orb(ctx, x, y, p, now, col) {
+  const r = 2 + p * 4;
+  const g = ctx.createRadialGradient(x, y, 0, x, y, r * 2.4);
+  g.addColorStop(0, 'rgba(250,252,255,0.95)');
+  g.addColorStop(0.35, rgba(col, 0.85));
+  g.addColorStop(1, rgba(col, 0));
+  ctx.fillStyle = g;
+  ctx.beginPath();
+  ctx.arc(x, y, r * 2.4 + Math.sin(now * 30) * 0.4, 0, Math.PI * 2);
+  ctx.fill();
+}
+
 /** Hands out, 靈力 gathering at the fingertips, then thrown. */
 function cast(ctx, k, face, p, after, now) {
-  const col = k?.fx === 'fire' ? FIRE : k?.fx === 'shield' ? [120, 170, 230] : QI;
+  const col = k?.fx === 'fire' ? FIRE : k?.fx === 'shield' ? [120, 170, 230] : k?.fx === 'foeqi' ? FOE_QI : QI;
   ctx.lineCap = 'round';
   ctx.strokeStyle = rgba([52, 58, 74], 1);
   ctx.lineWidth = 3;
@@ -216,12 +323,14 @@ export function drawGroundMarks(g, s, C, kit, u = 1) {
   const now = C.t;
   const w = s.world;
   const lw = (n) => n / u;
-  // a beast's coming blow: the whole of it faint, filling from the beast out as it gathers itself
+  // a coming blow: the whole of it faint, filling from the one striking out as it gathers itself
   for (const b of C.beasts || []) {
-    if (b.state !== 'windup' && b.state !== 'pounce') continue;
-    if (b.move === 'bite' && b.state === 'windup') {
-      const M = BEAST_MOVES.bite;
-      const p = Math.min(1, b.st / b.wind);
+    if (b.state !== 'windup' && b.state !== 'leap') continue;
+    const M = BEAST_MOVES[b.move];
+    if (!M) continue;
+    const p = b.state === 'windup' ? Math.min(1, b.st / b.wind) : 1;
+    if (M.shape === 'fan') {
+      if (b.state !== 'windup') continue;
       const r = M.reach + 8;
       g.fillStyle = rgba(RED, 0.16);
       fan(g, b.x, b.y, b.aim, r, M.arc);
@@ -233,32 +342,35 @@ export function drawGroundMarks(g, s, C, kit, u = 1) {
       g.lineWidth = lw(1.6);
       fan(g, b.x, b.y, b.aim, r, M.arc);
       g.stroke();
-    } else if (b.move === 'pounce') {
-      const [fx, fy] = b.from || [b.x, b.y];
-      const width = b.R.body * 2 + 12;
-      const p = b.state === 'windup' ? Math.min(1, b.st / b.wind) : 1;
-      const fade = b.state === 'pounce' ? 0.6 : 1;
-      g.fillStyle = rgba(RED, 0.14 * fade);
-      band(g, fx, fy, b.aim[0], b.aim[1], b.len, width);
-      g.fill();
-      g.fillStyle = rgba(RED, 0.32 * fade);
-      band(g, fx, fy, b.aim[0], b.aim[1], b.len * p, width);
-      g.fill();
-      g.strokeStyle = rgba(RED, 0.75 * fade);
-      g.lineWidth = lw(1.6);
-      band(g, fx, fy, b.aim[0], b.aim[1], b.len, width);
-      g.stroke();
-      // an arrow at its far end, so you know which way it comes
-      const ex = fx + b.aim[0] * b.len;
-      const ey = fy + b.aim[1] * b.len;
-      g.fillStyle = rgba(RED, 0.6 * fade);
-      g.beginPath();
-      g.moveTo(ex + b.aim[0] * 10, ey + b.aim[1] * 10);
-      g.lineTo(ex - b.aim[1] * 9, ey + b.aim[0] * 9);
-      g.lineTo(ex + b.aim[1] * 9, ey - b.aim[0] * 9);
-      g.closePath();
-      g.fill();
+      continue;
     }
+    if (M.shape === 'shot' && b.state !== 'windup') continue;
+    // a leap (a rush, a strike) or a shot: a lane along the ground, an arrow at its far end
+    const [fx, fy] = b.from || [b.x, b.y];
+    const shot = M.shape === 'shot';
+    const width = shot ? M.width + 8 : Math.max(M.width, b.R.body * 2 + 8);
+    const fade = b.state === 'leap' ? 0.6 : 1;
+    g.fillStyle = rgba(RED, (shot ? 0.1 : 0.14) * fade);
+    band(g, fx, fy, b.aim[0], b.aim[1], b.len, width);
+    g.fill();
+    g.fillStyle = rgba(RED, (shot ? 0.26 : 0.32) * fade);
+    band(g, fx, fy, b.aim[0], b.aim[1], b.len * p, width);
+    g.fill();
+    g.strokeStyle = rgba(RED, 0.75 * fade);
+    g.lineWidth = lw(shot ? 1.2 : 1.6);
+    if (shot) g.setLineDash([lw(8), lw(5)]);
+    band(g, fx, fy, b.aim[0], b.aim[1], b.len, width);
+    g.stroke();
+    g.setLineDash([]);
+    const ex = fx + b.aim[0] * b.len;
+    const ey = fy + b.aim[1] * b.len;
+    g.fillStyle = rgba(RED, 0.6 * fade);
+    g.beginPath();
+    g.moveTo(ex + b.aim[0] * 10, ey + b.aim[1] * 10);
+    g.lineTo(ex - b.aim[1] * 9, ey + b.aim[0] * 9);
+    g.lineTo(ex + b.aim[1] * 9, ey - b.aim[0] * 9);
+    g.closePath();
+    g.fill();
   }
   // whom you are after
   const me = C.me;
@@ -342,9 +454,9 @@ export function drawGroundMarks(g, s, C, kit, u = 1) {
       g.lineWidth = lw(2);
       ring(g, f.x, f.y, 14 + p * 26);
       g.stroke();
-    } else if (f.kind === 'slash' || f.kind === 'punch') {
+    } else if (f.kind === 'slash' || f.kind === 'punch' || f.kind === 'cut') {
       // the sweep of the blow, along the ground
-      g.fillStyle = `rgba(250,246,236,${0.22 * (1 - p)})`;
+      g.fillStyle = f.foe ? rgba(RED, 0.2 * (1 - p)) : `rgba(250,246,236,${0.22 * (1 - p)})`;
       fan(g, f.x, f.y, f.dir, f.reach + 6, f.arc);
       g.fill();
     }
@@ -367,6 +479,10 @@ const POP = {
   hurt: ['rgba(150,20,20,1)', 16, '800'],
   miss: ['rgba(40,36,32,1)', 15, '700'],
   block: ['rgba(60,120,180,1)', 13, '700'],
+  poison: ['rgba(64,128,58,1)', 14, '700'],
+  status: ['rgba(64,128,58,1)', 13, '800'],
+  heal: ['rgba(70,130,170,1)', 13, '700'],
+  weak: ['rgba(120,112,104,1)', 13, '700'],
 };
 
 /**
@@ -410,15 +526,22 @@ export function drawCombatOverlay(ctx, proj, px, s, C, look, t, font) {
     ctx.fill();
     ctx.stroke();
   }
-  // over each beast: what it is, its realm, its blood
+  // over each of them: what it is, its realm, its blood
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   for (const b of C.beasts || []) {
     if (b.state === 'gone' || b.state === 'vanished' || b.state === 'dead' || (b.fade || 0) > 0.5) continue;
-    const [sx, sy] = proj(b.x, b.y, b.R.tall + 9);
-    const near = Math.hypot(b.x - w.x, b.y - w.y) < 520;
-    if (!near) continue;
+    const near = Math.hypot(b.x - w.x, b.y - w.y);
+    if (b.state === 'hide') {
+      // something in the long grass: it stirs as you come near
+      if (near < 260) rustle(ctx, proj, px, b, now, near);
+      continue;
+    }
+    if (near > 520) continue;
+    const [sx, sy] = proj(b.x, b.y, b.R.tall + 9 + (b.K.spirit ? 6 : 0));
     if (b.state === 'notice') mark(ctx, sx, sy - 4 * px, '？', 'rgba(35,32,27,0.9)', px, font);
+    else if (b.state === 'yield') say(ctx, sx, sy - 4 * px, '饒命！', px, font);
+    else if (b.state === 'approach' || b.state === 'talk') nameTag(ctx, sx, sy, b.name, 'rgba(35,32,27,0.92)', px, font);
     else if (b.aggro && b.armed) {
       const bw = 44 * px;
       const bh = 5 * px;
@@ -427,14 +550,8 @@ export function drawCombatOverlay(ctx, proj, px, s, C, look, t, font) {
       ctx.fillRect(sx - bw / 2 - px, sy - bh / 2 - px, bw + 2 * px, bh + 2 * px);
       ctx.fillStyle = 'rgba(186,52,40,0.95)';
       ctx.fillRect(sx - bw / 2, sy - bh / 2, bw * frac, bh);
-      const tier = TIER_NAME[b.tier] || '';
-      const label = b.phantom ? b.name : `${b.name}・${tier}`;
-      ctx.font = `700 ${11 * px}px ${font}`;
-      ctx.lineWidth = 3 * px;
-      ctx.strokeStyle = 'rgba(250,246,236,0.9)';
-      ctx.strokeText(label, sx, sy - 10 * px);
-      ctx.fillStyle = b.gap > 0 ? 'rgba(170,30,24,1)' : 'rgba(110,34,26,1)';
-      ctx.fillText(label, sx, sy - 10 * px);
+      const rank = rankOf(b);
+      nameTag(ctx, sx, sy - 10 * px, rank ? `${b.name}・${rank}` : b.name, b.gap > 0 ? 'rgba(170,30,24,1)' : 'rgba(110,34,26,1)', px, font);
       let bx = sx + bw / 2 + 8 * px;
       for (const [on, ch, col] of [[b.burn, '灼', 'rgba(214,110,40,1)'], [b.enraged, '怒', 'rgba(190,40,30,1)']]) {
         if (!on) continue;
@@ -462,7 +579,7 @@ export function drawCombatOverlay(ctx, proj, px, s, C, look, t, font) {
     ctx.globalAlpha = Math.max(0, Math.min(1, (1.1 - age) / 0.4));
     ctx.font = `${weight} ${size * grow * px}px ${font}`;
     const y = sy0 - (lift + age * 34 + k * 16) * px;
-    const text = pp.kind === 'crit' ? `${pp.text}!` : pp.kind === 'dmg' || pp.kind === 'burn' || pp.kind === 'hurt' ? `-${pp.text}` : pp.text;
+    const text = pp.kind === 'crit' ? `${pp.text}!` : pp.kind === 'heal' ? `+${pp.text}` : MINUS.has(pp.kind) ? `-${pp.text}` : pp.text;
     ctx.lineWidth = 3.2 * px;
     ctx.strokeStyle = 'rgba(250,246,236,0.95)';
     ctx.strokeText(text, sx, y);
@@ -471,6 +588,53 @@ export function drawCombatOverlay(ctx, proj, px, s, C, look, t, font) {
     ctx.globalAlpha = 1;
   });
   ctx.restore();
+}
+
+/** Numbers that are blood lost. */
+const MINUS = new Set(['dmg', 'burn', 'hurt', 'poison', 'weak']);
+
+/** A name over someone's head. */
+function nameTag(ctx, x, y, text, col, px, font) {
+  ctx.font = `700 ${11 * px}px ${font}`;
+  ctx.lineWidth = 3 * px;
+  ctx.strokeStyle = 'rgba(250,246,236,0.9)';
+  ctx.strokeText(text, x, y);
+  ctx.fillStyle = col;
+  ctx.fillText(text, x, y);
+}
+
+/** A few words said aloud, in a bubble. */
+function say(ctx, x, y, text, px, font) {
+  ctx.font = `700 ${12 * px}px ${font}`;
+  const wd = ctx.measureText(text).width + 12 * px;
+  const ht = 18 * px;
+  ctx.fillStyle = 'rgba(250,246,236,0.95)';
+  ctx.strokeStyle = 'rgba(35,32,27,0.7)';
+  ctx.lineWidth = 1 * px;
+  ctx.beginPath();
+  ctx.rect(x - wd / 2, y - ht / 2, wd, ht);
+  ctx.fill();
+  ctx.stroke();
+  ctx.fillStyle = 'rgba(35,32,27,1)';
+  ctx.fillText(text, x, y + 0.5 * px);
+}
+
+/** Grass stirring where something lies hidden: faster, the closer you come. */
+function rustle(ctx, proj, px, b, now, near) {
+  const k = unitAt(proj, b.x, b.y);
+  const fast = near < 140 ? 9 : 4;
+  ctx.strokeStyle = `rgba(62,88,56,${0.75 - near / 520})`;
+  ctx.lineWidth = 1.3 * px;
+  for (let n = 0; n < 5; n++) {
+    const ox = (n - 2) * 4.5;
+    const [x, y] = proj(b.x + ox, b.y + (n % 2) * 2, 0);
+    const sway = Math.sin(now * fast + n * 1.7) * 2.6 * k;
+    const h = (7 + (n % 3) * 2.5) * k;
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.quadraticCurveTo(x + sway * 0.3, y - h * 0.6, x + sway, y - h);
+    ctx.stroke();
+  }
 }
 
 function mark(ctx, x, y, ch, col, px, font) {
@@ -517,11 +681,33 @@ function drawShot(ctx, proj, px, sh, now) {
     ctx.stroke();
     return;
   }
-  // sword qi: a crescent of cold light, a faint wake behind it
+  if (sh.kind === 'soul') {
+    // a pale bolt of cold, wisps trailing off it
+    for (let n = 5; n >= 1; n--) {
+      const [tx, ty] = proj(sh.x - sh.ux * n * 7 + Math.sin(now * 9 + n) * 3, sh.y - sh.uy * n * 7, 15 + Math.cos(now * 7 + n) * 2);
+      ctx.fillStyle = rgba(SOUL, 0.3 - n * 0.05);
+      ctx.beginPath();
+      ctx.arc(tx, ty, (6.5 - n) * k, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    const r = 7 * k;
+    const g = ctx.createRadialGradient(x, y, 0, x, y, r * 1.8);
+    g.addColorStop(0, 'rgba(245,250,255,1)');
+    g.addColorStop(0.4, rgba(SOUL, 0.85));
+    g.addColorStop(1, rgba(SOUL, 0));
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(x, y, r * 1.8, 0, Math.PI * 2);
+    ctx.fill();
+    return;
+  }
+  // sword qi: a crescent of cold light, a faint wake behind it (red, thrown at you)
+  const col = sh.kind === 'foeqi' ? FOE_QI : QI;
+  const core = sh.kind === 'foeqi' ? 'rgba(255,236,230,0.95)' : 'rgba(235,252,255,0.95)';
   const [bx, by] = proj(sh.x - sh.ux * 40, sh.y - sh.uy * 40, 15);
   const tail = ctx.createLinearGradient(bx, by, x, y);
-  tail.addColorStop(0, rgba(QI, 0));
-  tail.addColorStop(1, rgba(QI, 0.45));
+  tail.addColorStop(0, rgba(col, 0));
+  tail.addColorStop(1, rgba(col, 0.45));
   ctx.strokeStyle = tail;
   ctx.lineWidth = 5 * k;
   ctx.beginPath();
@@ -529,8 +715,8 @@ function drawShot(ctx, proj, px, sh, now) {
   ctx.lineTo(x, y);
   ctx.stroke();
   const r = 13 * k;
-  for (const [wd, col] of [[7, rgba(QI, 0.35)], [3.2, 'rgba(235,252,255,0.95)']]) {
-    ctx.strokeStyle = col;
+  for (const [wd, c] of [[7, rgba(col, 0.35)], [3.2, core]]) {
+    ctx.strokeStyle = c;
     ctx.lineWidth = wd * px * Math.max(1, k);
     ctx.beginPath();
     ctx.arc(x - Math.cos(a) * r * 0.55, y - Math.sin(a) * r * 0.55, r, a - 1.15, a + 1.15);
@@ -542,15 +728,17 @@ function drawFx(ctx, proj, px, f, now) {
   const p = Math.min(1, (now - f.t0) / f.dur);
   const k = unitAt(proj, f.x, f.y);
   switch (f.kind) {
+    case 'cut':
     case 'slash': {
-      // the blade's arc sweeping across, bright, then gone
+      // the blade's arc sweeping across, bright, then gone (theirs edged in red)
       const [cx, cy] = proj(f.x, f.y, 15);
       const [ex, ey] = proj(f.x + f.dir[0] * 10, f.y + f.dir[1] * 10, 15);
       const a = Math.atan2(ey - cy, ex - cx);
       const r = (f.reach * 0.75) * k;
       const sweep = Math.min(1, p * 2.2);
       const a0 = a - f.arc / 2;
-      for (const [wd, col] of [[7, `rgba(250,246,236,${0.35 * (1 - p)})`], [2.6, `rgba(255,255,250,${0.95 * (1 - p)})`], [0.8, `rgba(36,33,30,${0.6 * (1 - p)})`]]) {
+      const edge = f.foe ? `rgba(168,50,42,${0.8 * (1 - p)})` : `rgba(36,33,30,${0.6 * (1 - p)})`;
+      for (const [wd, col] of [[7, `rgba(250,246,236,${0.35 * (1 - p)})`], [2.6, `rgba(255,255,250,${0.95 * (1 - p)})`], [0.8, edge]]) {
         ctx.strokeStyle = col;
         ctx.lineWidth = wd * px;
         ctx.beginPath();
@@ -589,9 +777,24 @@ function drawFx(ctx, proj, px, f, now) {
       ctx.stroke();
       break;
     }
+    case 'grasp': {
+      // three pale claws raking down
+      const [x, y] = proj(f.x + f.dir[0] * 24, f.y + f.dir[1] * 24, 16);
+      ctx.strokeStyle = rgba(SOUL, 0.95 * (1 - p));
+      ctx.lineWidth = 2 * px;
+      for (let n = -1; n <= 1; n++) {
+        const r = 10 * k;
+        const down = Math.min(1, p * 3) * r * 1.6;
+        ctx.beginPath();
+        ctx.moveTo(x + n * 5 * k - r * 0.3, y - r);
+        ctx.quadraticCurveTo(x + n * 5 * k + r * 0.25, y - r + down * 0.5, x + n * 5 * k, y - r + down);
+        ctx.stroke();
+      }
+      break;
+    }
     case 'spark': {
       const [x, y] = proj(f.x, f.y, 14);
-      const col = f.of === 'swordqi' ? QI : [255, 246, 220];
+      const col = f.of === 'swordqi' ? QI : f.of === 'foeqi' ? FOE_QI : f.of === 'soul' ? SOUL : [255, 246, 220];
       ctx.strokeStyle = rgba(col, 0.95 * (1 - p));
       ctx.lineWidth = 1.6 * px;
       for (let n = 0; n < 7; n++) {

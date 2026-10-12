@@ -9,7 +9,7 @@ import { NODES } from '../world/map.js';
 import { fogOf } from '../world/fog.js';
 import * as E from '../world/explore.js';
 import { decorSprite, mountainSprite, structureSprite, wallSprite, propSprite } from './sprites.js';
-import { drawPerson, drawMob, aura, LOOKS, FOLK_LOOKS, groundShadow } from './figures.js';
+import { drawPerson, aura, LOOKS, FOLK_LOOKS, groundShadow } from './figures.js';
 import { makeParticles, drawParticles, rgba, INK, PAPER } from './ink.js';
 import { drawActor, drawPose, poseOf, lookOf, drawSpeech } from './scenery.js';
 import { fighters, paintFighter, drawFightMarks } from './battlefx.js';
@@ -882,12 +882,6 @@ export function createWorldView(canvas, { onFrame, idle, fight = null } = {}) {
       if (fk.x < x0 - 30 || fk.x > x1 + 30 || fk.y < y0 || fk.y > y1 + 50) continue;
       push(fk.y, 'folk', fk);
     }
-    for (const m of E.mobsInWorld(s)) {
-      for (const b of m.members) {
-        if (b.x < x0 - 30 || b.x > x1 + 30 || b.y < y0 || b.y > y1 + 50) continue;
-        push(b.y, 'mob', m, b);
-      }
-    }
     for (const sc of E.scenesInWorld(s)) {
       for (const ac of sc.actors) {
         if (ac.x < x0 - 60 || ac.x > x1 + 60 || ac.y < y0 || ac.y > y1 + 80) continue;
@@ -900,7 +894,7 @@ export function createWorldView(canvas, { onFrame, idle, fight = null } = {}) {
       push(c.y, 'wild', c);
     }
     for (const b of CB.beastsInWorld(s)) {
-      if (b.x < x0 - 40 || b.x > x1 + 40 || b.y < y0 || b.y > y1 + 60) continue;
+      if (b.x < x0 - 40 || b.x > x1 + 40 || b.y < y0 || b.y > y1 + 60 || b.state === 'hide') continue;
       push(b.y, 'beast', b);
     }
     const w = s.world;
@@ -1051,21 +1045,6 @@ export function createWorldView(canvas, { onFrame, idle, fight = null } = {}) {
         ctx.translate(fk.x, fk.y);
         drawPose(ctx, lookOf(fk.look), poseOf(fk, E.isNight(s)), { t: t + fk.line + fk.x * 0.01, moving: fk.moving, face: fk.face });
         ctx.restore();
-        break;
-      }
-      case 'mob': {
-        const m = it.a;
-        const b = it.b;
-        ctx.save();
-        ctx.globalAlpha *= 1 - (m.fade || 0);
-        drawMob(ctx, m.def.kind, b.x, b.y, { t: t + b.x * 0.01, moving: b.moving, face: b.face });
-        ctx.restore();
-        if (m.state === 'chase' || m.alert) {
-          ctx.fillStyle = m.state === 'chase' ? 'rgba(168,50,42,0.9)' : 'rgba(35,32,27,0.8)';
-          ctx.font = `700 10px ${FONT}`;
-          ctx.textAlign = 'center';
-          ctx.fillText(m.state === 'chase' ? '！' : '？', b.x, b.y - 38);
-        }
         break;
       }
       case 'fighter': {

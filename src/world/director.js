@@ -6,7 +6,7 @@
 
 import { CELL, T, WORLD_W, WORLD_H } from './geo.js';
 import { world, regionAt, collides, isReachable, idxOf, colOf, rowOf } from './terrain.js';
-import { POIS, MOBS } from './places.js';
+import { POIS, BEASTS } from './places.js';
 import { SCENE_OF_EVENT } from './scenes.js';
 import { EVENTS } from '../content/index.js';
 import { eligible, startEvent } from '../core/events.js';
@@ -94,7 +94,7 @@ function findSpot(s, L, def, around) {
   const w = s.world;
   const [hx, hy] = L.heading || [0, -1];
   const base = Math.atan2(hy, hx);
-  const taken = [...scenesOf(L).map((sc) => [sc.x, sc.y]), ...POIS.map((p) => [p.x, p.y]), ...MOBS.map((m) => [m.x, m.y])];
+  const taken = [...scenesOf(L).map((sc) => [sc.x, sc.y]), ...POIS.map((p) => [p.x, p.y]), ...BEASTS.map((m) => [m.x, m.y])];
   for (let k = 0; k < 80; k++) {
     const a = around ? Math.random() * Math.PI * 2 : base + (Math.random() - 0.5) * (k < 40 ? 1.1 : 2.2);
     const dist = (around ? 150 : 240) + Math.random() * 170;

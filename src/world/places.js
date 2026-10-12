@@ -226,26 +226,31 @@ export const NPC_SHOW = {
   hu_sanniang: (s) => night(s) && s.npcs.hu_sanniang.met,
 };
 
-/** Things that roam and come at you. power: what their fight asks of you (far stronger, and they run). */
-export const MOBS = [
-  { id: 'wolves_a', kind: 'wolf', n: 3, x: 1450, y: 2395, r: 150, event: 'hill_wolves', respawn: 45, speed: 125, power: 20 },
-  { id: 'wolves_b', kind: 'wolf', n: 2, x: 790, y: 2470, r: 120, event: 'hill_wolves', respawn: 60, speed: 125, power: 20 },
-  { id: 'snake_a', kind: 'snake', n: 1, x: 1760, y: 2690, r: 90, event: 'hill_snake', respawn: 90, speed: 70, power: 24 },
-  { id: 'bandits_a', kind: 'bandit', n: 3, x: 2120, y: 1610, r: 200, event: 'forest_bandits', respawn: 90, speed: 110, power: 32 },
-  { id: 'robber_road', kind: 'bandit', n: 1, x: 3060, y: 2420, r: 140, event: 'travel_robber', respawn: 120, speed: 110, power: 30 },
-  { id: 'ghost_a', kind: 'ghost', n: 1, x: 2300, y: 820, r: 150, event: 'ruins_soul', respawn: 30, speed: 80, power: 30 },
-  { id: 'ghost_b', kind: 'ghost', n: 1, x: 2950, y: 620, r: 150, event: 'ruins_soul', respawn: 30, speed: 80, power: 30 },
-  { id: 'ghost_c', kind: 'ghost', n: 1, x: 2760, y: 1000, r: 150, event: 'ruins_soul', respawn: 30, speed: 80, power: 30 },
-];
-
 /**
- * Beasts that fight where they stand (即時戰鬥, world/combat.js): where each
- * roams. power: its strength; tier: its 境界 (1 一階, a match for 煉氣);
- * respawn: days before another takes its place.
+ * What roams the wild and fights where it stands (即時戰鬥, world/combat.js):
+ * where each group keeps to (x, y within r). n: how many (lead: what the
+ * first of them is, if not the same as the rest); power: what a fight with
+ * the whole group asks of you (the 戰力 of the old check; far stronger, and
+ * they run); tier: a 境界 for all of them, if not their kind's; respawn: days
+ * before another takes the place of one that fell. event: its story — those
+ * that talk come up to have a word first (and if it comes to blows, the
+ * story ends the way the fight did); for beasts, how it goes if you fall.
+ * title: the group, as the fight is announced.
  */
 export const BEASTS = [
-  // 黑風林南緣: a lone demon wolf where the wood thins toward 青石鎮
+  // 青石山: two packs of wolves; a snake in the long grass (in summer and autumn)
+  { id: 'wolves_a', kind: 'wolf', n: 3, title: '狼群', x: 1450, y: 2395, r: 150, event: 'hill_wolves', respawn: 45, power: 20 },
+  { id: 'wolves_b', kind: 'wolf', n: 2, title: '狼群', x: 790, y: 2470, r: 120, event: 'hill_wolves', respawn: 60, power: 20 },
+  { id: 'snake_a', kind: 'snake', n: 1, x: 1760, y: 2690, r: 90, event: 'hill_snake', respawn: 90, power: 24 },
+  // 黑風林: 獨眼龍 and his men; a lone demon wolf where the wood thins toward 青石鎮
+  { id: 'bandits_a', kind: 'bandit', lead: 'bandit_chief', n: 3, title: '黑風寨', x: 2120, y: 1610, r: 200, event: 'forest_bandits', respawn: 90, power: 32 },
   { id: 'demon_wolf_a', kind: 'demon_wolf', x: 2400, y: 2150, r: 170, respawn: 5, power: 28, tier: 1 },
+  // the road east: someone waiting at the bend
+  { id: 'robber_road', kind: 'cultivator', name: '劫修', n: 1, x: 3060, y: 2420, r: 140, event: 'travel_robber', respawn: 120, power: 30 },
+  // 古戰場: the restless dead
+  { id: 'ghost_a', kind: 'ghost', n: 1, x: 2300, y: 820, r: 150, event: 'ruins_soul', respawn: 30, power: 30 },
+  { id: 'ghost_b', kind: 'ghost', n: 1, x: 2950, y: 620, r: 150, event: 'ruins_soul', respawn: 30, power: 30 },
+  { id: 'ghost_c', kind: 'ghost', n: 1, x: 2760, y: 1000, r: 150, event: 'ruins_soul', respawn: 30, power: 30 },
 ];
 
 /** Which regions grow herbs, what they give, and roughly how many spots. */

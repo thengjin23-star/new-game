@@ -2,7 +2,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { world, collides, isReachable, regionIdAt, findPath, nearestOpen, REGION_IDS, terrainAt } from '../src/world/terrain.js';
-import { POIS, NPC_SPOTS, MOBS, STRUCTURES } from '../src/world/places.js';
+import { POIS, NPC_SPOTS, BEASTS, STRUCTURES } from '../src/world/places.js';
+import * as CB from '../src/world/combat.js';
 import { NODES } from '../src/world/map.js';
 import { T } from '../src/world/geo.js';
 import { exploredPct, isRevealed } from '../src/world/fog.js';
@@ -49,7 +50,7 @@ test('every place, person and beast stands somewhere reachable, in its region', 
       assert.equal(regionIdAt(x, y), region, `${id} stands in ${region}`);
     }
   }
-  for (const m of MOBS) assert.ok(isReachable(m.x, m.y), `${m.id} roams reachable ground`);
+  for (const m of BEASTS) assert.ok(isReachable(m.x, m.y), `${m.id} roams reachable ground`);
   for (const h of world().herbs) assert.ok(isReachable(h.x, h.y) && !collides(member, h.x, h.y), `herb ${h.id}`);
   for (const st of STRUCTURES.filter((x) => x.sprite && x.block !== false)) {
     assert.ok(collides(member, st.x, st.y), `building at ${st.x},${st.y} is solid`);
@@ -115,15 +116,15 @@ test('hidden places show themselves only when you come close', () => {
 
 test('wolves come for you when you walk into their hills', () => {
   const s = fresh(5);
-  const wolves = MOBS.find((m) => m.id === 'wolves_a');
+  const wolves = BEASTS.find((m) => m.id === 'wolves_a');
   const spot = nearestOpen(s, wolves.x + 120, wolves.y + 120);
   E.placeAt(s, ...spot);
   resolvePending(s);
+  s.tod = 22;
   let n = 0;
-  while (!s.pending && n++ < 400) E.step(s, 0.05, null);
-  assert.equal(s.pending?.id, 'hill_wolves', 'the pack reached you');
-  resolvePending(s);
-  assert.ok(s.world.mobs.wolves_a > s.day, 'they keep away for a while');
+  while (!CB.inCombat(s) && n++ < 400) E.step(s, 0.05, null);
+  assert.ok(CB.inCombat(s), 'the pack came for you');
+  assert.equal(s.pending, null, 'and the fight is where you stand');
 });
 
 test('a gathered herb takes a while to grow back', () => {

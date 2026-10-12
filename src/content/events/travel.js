@@ -58,6 +58,7 @@ export default [
           {
             text: '跑。',
             check: { kind: 'jiyuan', diff: 5 },
+            run: true,
             ok: { text: '你轉身就跑，鑽進樹林，七拐八拐，甩掉了。', effects: [] },
             fail: { text: '{npc}追上來，一腳把你踹倒。', effects: [['hurt', 1], ['halfls']] },
           },

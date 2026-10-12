@@ -36,7 +36,7 @@ export default [
       {
         text: '用兵器斬散他。',
         check: { kind: 'power', diff: 30 },
-        fight: { foes: [['ghost', 1]], mob: true },
+        fight: { foes: [['ghost', 1]] },
         ok: { text: '劍光過處，殘魂發出一聲不甘的嘶吼，化為飛灰。', effects: [['mind', 1]] },
         fail: { text: '劍從他身上穿了過去。他沒有實體，可他的手，卻抓住了你的心。', effects: [['mind', -8], ['hurt', 1, '神魂被殘魂撕碎']] },
       },

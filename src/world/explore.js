@@ -3,20 +3,18 @@
 // road itself. The UI feeds it input every frame; it changes the save and
 // starts events, and leaves notes (toasts, banners) for the UI to show.
 
-import { world, regionAt, collides, speedAt, findPath, nearestOpen, hash2, PLAYER_R } from './terrain.js';
+import { world, regionAt, collides, speedAt, findPath, nearestOpen } from './terrain.js';
 import { heightAt } from './height.js';
-import { POIS, POI_BY_ID, MOBS, GATHER, GATHER_RESPAWN } from './places.js';
+import { POIS, POI_BY_ID, GATHER, GATHER_RESPAWN } from './places.js';
 import { NODES } from './map.js';
 import { NAMED } from './npcs.js';
 import { reveal, fogOf } from './fog.js';
 import { stageScene, updateScenes, sceneTargets, sceneByUid, meetScene, scenesOf } from './director.js';
 import { peopleNow, folkNow, folkChat, updatePeople } from './people.js';
 import { updateWild, wildNow, spawnCritter } from './wildlife.js';
-import { power } from '../core/cultivation.js';
 import { sysGain } from './system.js';
-import { EVENTS } from '../content/index.js';
 import { ITEMS, displayItem } from '../content/items.js';
-import { pickEvent, startEvent, takeDue, notice, choose, fightChoice } from '../core/events.js';
+import { pickEvent, startEvent, takeDue, notice } from '../core/events.js';
 import { arenaOf, placeOf } from './arena.js';
 import { updateCombat, beastTargets, strikeAt, FIGHT_HOURS } from './combat.js';
 import { inquire, visit } from '../core/actions.js';
@@ -70,7 +68,7 @@ const LIVE = new WeakMap();
 export function liveOf(s) {
   let L = LIVE.get(s);
   if (!L) {
-    L = { t: 0, path: null, then: null, stuck: 0, lastReveal: null, inAuto: new Set(), mobs: null, folk: null, feed: [], signals: [], banner: null, moving: false, dayTurned: false, npcCache: new Map() };
+    L = { t: 0, path: null, then: null, stuck: 0, lastReveal: null, inAuto: new Set(), folk: null, feed: [], signals: [], banner: null, moving: false, dayTurned: false, npcCache: new Map() };
     LIVE.set(s, L);
   }
   return L;
@@ -166,7 +164,6 @@ export function step(s, dt, input) {
       L.fought = false;
       if (afterFight(s, L)) return;
     }
-    if (updateMobs(s, L, dt)) return;
     if (updateScenes(s, L, dt)) {
       stopWalking(L);
       L.moving = false;
@@ -548,249 +545,6 @@ export function addCritter(s, kind, x, y, n = 1) {
   return spawnCritter(liveOf(s), kind, x, y, n);
 }
 
-// ── beasts and robbers ──
-
-const AGGRO = { wolf: 210, snake: 80, bandit: 230, ghost: 170 };
-/** You hear them before they come. */
-const WARN = { wolf: '遠處傳來狼嚎。', snake: '草叢裡沙沙作響。', bandit: '林子裡有人在低聲說話。', ghost: '一陣陰風吹過，你打了個寒顫。' };
-/** And when you are far too much for them, they know it. */
-const FLEE = { wolf: '狼群夾著尾巴跑了。', snake: '那條蛇一扭身，鑽進了石縫。', bandit: '那幾個人看了你一眼，扭頭就跑。', ghost: '那道影子一顫，散進了風裡。' };
-const FAR_STRONGER = 2.2;
-
-/** How far off they notice you: wolves hunt by night and doze at noon; the dead walk after dark. */
-function aggroOf(s, kind) {
-  const night = isNight(s);
-  const noon = s.tod >= 10 && s.tod < 15;
-  const k = { wolf: night ? 1.25 : noon ? 0.7 : 1, ghost: night ? 1.5 : 0.6, snake: night ? 0.7 : 1 }[kind] ?? (night ? 1.15 : 1);
-  return AGGRO[kind] * k;
-}
-
-function mobsOf(s, L) {
-  if (L.mobs) return L.mobs;
-  L.mobs = MOBS.map((def, n) => ({
-    def,
-    state: 'idle',
-    t: 0,
-    members: Array.from({ length: def.n }, (_, k) => {
-      const a = hash2(k, n, 501) * Math.PI * 2;
-      const r = hash2(k, n, 502) * def.r * 0.7;
-      const x = def.x + Math.cos(a) * r;
-      const y = def.y + Math.sin(a) * r;
-      return { x, y, tx: x, ty: y, wait: hash2(k, n, 503) * 3, face: 1, moving: false };
-    }),
-  }));
-  return L.mobs;
-}
-
-export function mobsInWorld(s) {
-  const L = liveOf(s);
-  return mobsOf(s, L).filter((m) => mobActive(s, m));
-}
-
-function mobActive(s, m) {
-  const until = s.world.mobs[m.def.id];
-  if (until !== undefined && s.day < until) return false;
-  const ev = EVENTS[m.def.event];
-  if (!ev) return false;
-  if (ev.cond && !ev.cond(s)) return false;
-  return true;
-}
-
-function centroid(list) {
-  const n = list.length || 1;
-  return [Math.round(list.reduce((a, b) => a + b.x, 0) / n), Math.round(list.reduce((a, b) => a + b.y, 0) / n)];
-}
-
-const MOB_NAME = { wolf: ['灰狼', '狼群'], snake: ['青鱗蛇', '蛇群'], bandit: ['劫修', '山賊'], ghost: ['殘魂', '殘魂'] };
-
-/** Beasts you could go for first (before they come for you). */
-function mobTargets(s, L) {
-  const w = s.world;
-  const out = [];
-  for (const m of mobsOf(s, L)) {
-    if (m.state === 'flee' || !mobActive(s, m)) continue;
-    let near = null;
-    for (const b of m.members) if (!near || Math.hypot(b.x - w.x, b.y - w.y) < Math.hypot(near.x - w.x, near.y - w.y)) near = b;
-    if (!near) continue;
-    out.push({ kind: 'mob', id: m.def.id, x: near.x, y: near.y, name: MOB_NAME[m.def.kind][m.members.length > 1 ? 1 : 0], verb: '出手', reach: 260 });
-  }
-  return out;
-}
-
-/** Go for them first: the fight starts where you stand, and you have the first move. */
-function strikeFirst(s, L, id) {
-  const m = mobsOf(s, L).find((x) => x.def.id === id);
-  if (!m || !mobActive(s, m)) return;
-  const def = m.def;
-  const first = m.state === 'chase' ? null : 'me';
-  s.world.mobs[def.id] = s.day + def.respawn;
-  const at = centroid(m.members);
-  homeMembers(m);
-  startEvent(s, def.event, { data: { mob: def.id, at, first } });
-  const pend = s.pending;
-  const i = pend.choices.findIndex((c) => !c.disabled && fightChoice(pend, c.i));
-  if (i < 0) return;
-  if (first) pend.text = '你看準了時機，搶先出手。';
-  choose(s, pend.choices[i].i);
-}
-
-/** Running from someone far too strong: away, out of sight, and not back today. */
-function fleeStep(s, m, dt) {
-  const w = s.world;
-  for (const b of m.members) {
-    const d = Math.hypot(b.x - w.x, b.y - w.y) || 1;
-    const nx = b.x + ((b.x - w.x) / d) * m.def.speed * 1.1 * dt;
-    const ny = b.y + ((b.y - w.y) / d) * m.def.speed * 1.1 * dt;
-    if (!collides(s, nx, ny, 9)) {
-      b.x = nx;
-      b.y = ny;
-    } else if (!collides(s, nx, b.y, 9)) b.x = nx;
-    else if (!collides(s, b.x, ny, 9)) b.y = ny;
-    b.face = b.x < w.x ? -1 : 1;
-    b.moving = true;
-  }
-  if (m.t > 1.8) m.fade = (m.fade || 0) + dt * 1.4;
-  if (m.fade >= 1) {
-    s.world.mobs[m.def.id] = s.day + 1;
-    m.fade = 0;
-    m.members.forEach((b, k) => {
-      const a = hash2(k, m.def.x, 501) * Math.PI * 2;
-      const r = hash2(k, m.def.y, 502) * m.def.r * 0.7;
-      b.x = m.def.x + Math.cos(a) * r;
-      b.y = m.def.y + Math.sin(a) * r;
-    });
-    homeMembers(m);
-  }
-}
-
-function homeMembers(m) {
-  m.state = 'idle';
-  m.t = 0;
-  for (const b of m.members) {
-    b.tx = b.x;
-    b.ty = b.y;
-    b.wait = 1 + Math.random() * 3;
-  }
-}
-
-/** Move beasts; returns true if one reached the player and an event began. */
-function updateMobs(s, L, dt) {
-  const w = s.world;
-  for (const m of mobsOf(s, L)) {
-    const def = m.def;
-    if (Math.abs(def.x - w.x) > 1500 || Math.abs(def.y - w.y) > 1700) {
-      if (m.state !== 'idle') homeMembers(m);
-      continue;
-    }
-    if (!mobActive(s, m)) continue;
-    const range = aggroOf(s, def.kind);
-    m.t += dt;
-    if (m.state === 'flee') {
-      fleeStep(s, m, dt);
-      continue;
-    }
-    // before they come for you, you hear them; close by, they have seen you
-    const dmin = Math.min(...m.members.map((b) => Math.hypot(w.x - b.x, w.y - b.y)));
-    if (m.state === 'idle') {
-      if (dmin < range + 160 && !m.warned) {
-        m.warned = true;
-        L.feed.push({ kind: 'ambient', text: WARN[def.kind] });
-      }
-      if (dmin > range + 400) m.warned = false;
-      m.alert = dmin < range + 110;
-    } else m.alert = false;
-    for (const b of m.members) {
-      const dp = Math.hypot(w.x - b.x, w.y - b.y);
-      if (m.state === 'idle' && dp < range) {
-        m.t = 0;
-        if (power(s) >= (def.power || 20) * FAR_STRONGER) {
-          m.state = 'flee';
-          L.feed.push({ kind: 'good', text: def.n > 1 || def.kind !== 'bandit' ? FLEE[def.kind] : '那人看了你一眼，扭頭就跑。' });
-          break;
-        }
-        m.state = 'chase';
-        L.feed.push({ kind: 'bad', text: { wolf: '狼！', snake: '草叢裡有東西！', bandit: '有人衝了過來！', ghost: '一道影子朝你飄了過來……' }[def.kind] });
-      }
-      if (m.state === 'chase' && dp < 22 + PLAYER_R) {
-        s.world.mobs[def.id] = s.day + def.respawn;
-        const at = centroid(m.members);
-        homeMembers(m);
-        stopWalking(L);
-        // they are upon you: if it comes to a fight, it is with them, from where they came
-        startEvent(s, def.event, { data: { mob: def.id, at } });
-        return true;
-      }
-    }
-    if (m.state === 'chase') {
-      const far = m.members.every((b) => Math.hypot(b.x - def.x, b.y - def.y) > def.r + 520);
-      if (far || m.t > 14 || (def.kind === 'snake' && m.t > 1.5)) {
-        m.state = 'return';
-        m.t = 0;
-      }
-    }
-    for (const b of m.members) {
-      let tx;
-      let ty;
-      let sp;
-      if (m.state === 'chase') {
-        tx = w.x;
-        ty = w.y;
-        sp = def.speed * speedAt(b.x, b.y);
-      } else if (m.state === 'return') {
-        tx = def.x;
-        ty = def.y;
-        sp = def.speed * 0.6;
-        if (Math.hypot(b.x - def.x, b.y - def.y) < def.r * 0.6) {
-          b.tx = b.x;
-          b.ty = b.y;
-          continue;
-        }
-      } else {
-        if (m.alert) {
-          // they have seen you: still, watching
-          b.moving = false;
-          b.face = w.x < b.x ? -1 : 1;
-          continue;
-        }
-        if (b.wait > 0) {
-          b.wait -= dt;
-          b.moving = false;
-          continue;
-        }
-        if (Math.hypot(b.tx - b.x, b.ty - b.y) < 4) {
-          const a = Math.random() * Math.PI * 2;
-          const r = Math.random() * def.r;
-          b.tx = def.x + Math.cos(a) * r;
-          b.ty = def.y + Math.sin(a) * r;
-          b.wait = 1 + Math.random() * 4;
-          continue;
-        }
-        tx = b.tx;
-        ty = b.ty;
-        sp = def.speed * 0.3;
-      }
-      const d = Math.hypot(tx - b.x, ty - b.y);
-      if (d < 1) continue;
-      const stepLen = Math.min(d, sp * dt);
-      const nx = b.x + ((tx - b.x) / d) * stepLen;
-      const ny = b.y + ((ty - b.y) / d) * stepLen;
-      b.moving = true;
-      if (Math.abs(nx - b.x) > 0.05) b.face = nx < b.x ? -1 : 1;
-      if (!collides(s, nx, ny, 9)) {
-        b.x = nx;
-        b.y = ny;
-      } else if (!collides(s, nx, b.y, 9)) b.x = nx;
-      else if (!collides(s, b.x, ny, 9)) b.y = ny;
-      else if (m.state !== 'chase') {
-        b.tx = b.x;
-        b.ty = b.y;
-      }
-    }
-    if (m.state === 'return' && m.members.every((b) => Math.hypot(b.x - def.x, b.y - def.y) < def.r * 0.7)) homeMembers(m);
-  }
-  return false;
-}
-
 // ── what is in reach ──
 
 /** Everything you could interact with, nearest first, each with its distance. */
@@ -819,7 +573,6 @@ export function targetsNear(s, radius = 160) {
     add({ kind: 'folk', id: f.id, x: f.x, y: f.y, name: f.name || '路人', verb: '搭話', reach: REACH.folk, folk: f });
   }
   for (const t of sceneTargets(s, liveOf(s))) add(t);
-  for (const t of mobTargets(s, liveOf(s))) add(t);
   for (const t of beastTargets(s)) add(t);
   out.sort((a, b) => a.d / a.reach - b.d / b.reach);
   return out;
@@ -940,7 +693,6 @@ export function interact(s, t) {
   if (t.kind === 'herb') return gather(s, L, world().herbs[t.id]);
   if (t.kind === 'folk') return chatFolk(s, L, t.folk);
   if (t.kind === 'scene') return meetScene(s, L, sceneByUid(L, t.id));
-  if (t.kind === 'mob') return strikeFirst(s, L, t.id);
   if (t.kind === 'beast') return strikeAt(s, t.id);
 }
 

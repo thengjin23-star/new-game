@@ -1,4 +1,4 @@
-// 即時戰鬥的招式：你的普攻、法術、閃避，和妖獸的撲咬。
+// 即時戰鬥的招式：你的普攻、法術、閃避，和敵人的撲咬、刀劍、暗算。
 //
 // aim — how a move is aimed:
 //   'melee'  a swing in front of you: reach (world units), arc (radians, the whole fan)
@@ -41,13 +41,35 @@ export const MOVES = {
 export const DASH = { name: '閃避', dist: 120, time: 0.18, inv: 0.24, cd: 2.2 };
 
 /**
- * A beast's moves. Every one is seen coming: windup is how long it gathers
- * itself (its mark on the ground filling) before it strikes; recover is how
- * long it stands open afterwards — your moment.
+ * What those you fight can do. Every move is seen coming: windup is how long
+ * it gathers itself (its mark on the ground filling) before it lands; recover
+ * is how long it stands open afterwards — your moment.
+ *
+ * shape — the mark it leaves on the ground before it lands:
+ *   'fan'  a blow in front of it: reach, arc (the whole fan); lunge: how far it steps into it
+ *   'leap' a straight rush along a line: from min to max off, at speed, width wide, carrying on overshoot
+ *   'shot' something loosed along a line: from min to max off, flying range at speed, width wide
+ * mult: as a multiple of its plain blow. poison: [seconds, share of a blow each second] it leaves
+ * in you; drain: the share of what it takes that it keeps as its own blood. fx: how the blow looks.
  */
 export const BEAST_MOVES = {
-  // 撕咬: a short lunge with the jaws, a fan in front of it
-  bite: { reach: 54, arc: 1.5, windup: 0.4, recover: 0.45, cd: 1.15, mult: 1, lunge: 12 },
-  // 撲擊: crouch, then a long straight leap — a line on the ground
-  pounce: { min: 95, max: 235, windup: 0.72, speed: 640, width: 36, overshoot: 46, recover: 0.85, cd: 5.5, mult: 1.8 },
+  // 妖狼 — 撕咬: a short lunge with the jaws
+  bite: { shape: 'fan', reach: 54, arc: 1.5, windup: 0.4, recover: 0.45, cd: 1.15, mult: 1, lunge: 12, fx: 'bite' },
+  // 撲擊: crouch, then a long straight leap
+  pounce: { shape: 'leap', min: 95, max: 235, windup: 0.72, speed: 640, width: 36, overshoot: 46, recover: 0.85, cd: 5.5, mult: 1.8 },
+  // 灰狼: smaller jaws, a shorter spring
+  nip: { shape: 'fan', reach: 46, arc: 1.4, windup: 0.38, recover: 0.55, cd: 1.4, mult: 1, lunge: 10, fx: 'bite' },
+  lunge: { shape: 'leap', min: 80, max: 185, windup: 0.66, speed: 560, width: 28, overshoot: 34, recover: 0.8, cd: 6, mult: 1.5 },
+  // 青鱗蛇: from coiled, quick and short, and the venom stays in you
+  strike: { shape: 'leap', min: 0, max: 125, windup: 0.36, speed: 780, width: 22, overshoot: 18, recover: 0.95, cd: 2.4, mult: 1, poison: [4, 0.2] },
+  // 山賊: a cut of the blade; a running cut
+  slash: { shape: 'fan', reach: 52, arc: 1.7, windup: 0.42, recover: 0.5, cd: 1.3, mult: 1, lunge: 8, fx: 'cut' },
+  rush: { shape: 'leap', min: 90, max: 200, windup: 0.6, speed: 520, width: 30, overshoot: 30, recover: 0.75, cd: 6.5, mult: 1.4 },
+  // 獨眼龍: the great blade swung two-handed
+  cleave: { shape: 'fan', reach: 68, arc: 2.5, windup: 0.8, recover: 0.85, cd: 4.5, mult: 1.9, lunge: 6, fx: 'cut' },
+  // 劫修: sword qi from afar
+  qi: { shape: 'shot', min: 70, max: 300, range: 340, windup: 0.55, speed: 430, width: 18, recover: 0.4, cd: 2.8, mult: 1.1, fx: 'foeqi' },
+  // 殘魂: a slow bolt of cold that drinks what it takes; a clutch at your heart
+  soul: { shape: 'shot', min: 40, max: 260, range: 300, windup: 0.62, speed: 230, width: 22, recover: 0.5, cd: 2.4, mult: 1, drain: 0.5, fx: 'soul' },
+  grasp: { shape: 'fan', reach: 50, arc: 1.6, windup: 0.5, recover: 0.6, cd: 2, mult: 1.1, lunge: 16, drain: 0.5, fx: 'grasp' },
 };

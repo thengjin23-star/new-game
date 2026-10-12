@@ -5,7 +5,9 @@ import { ITEMS } from '../src/content/items.js';
 import { TECHS } from '../src/content/techniques.js';
 import { NODES } from '../src/world/map.js';
 import { NAMED } from '../src/world/npcs.js';
-import { POI_BY_ID, MOBS } from '../src/world/places.js';
+import { POI_BY_ID, BEASTS } from '../src/world/places.js';
+import { FOES } from '../src/content/foes.js';
+import { BEAST_MOVES } from '../src/content/moves.js';
 
 const TRIGGERS = new Set(['intro', 'explore', 'arrive', 'travel', 'inquire', 'visit', 'scheduled', 'fallback']);
 
@@ -85,9 +87,35 @@ test('events placed in the world point at real places and creatures', () => {
       const triggers = Array.isArray(ev.trigger) ? ev.trigger : [ev.trigger];
       assert.ok(triggers.includes('explore'), `${ev.id}: a place-bound event needs the explore trigger`);
     }
-    if (ev.mob) assert.ok(MOBS.some((m) => m.event === ev.id), `${ev.id}: no creature brings it`);
+    if (ev.mob) assert.ok(BEASTS.some((m) => m.event === ev.id), `${ev.id}: no creature brings it`);
   }
-  for (const m of MOBS) assert.ok(EVENTS[m.event]?.mob, `${m.id}: its event ${m.event} should be marked mob`);
+  for (const m of BEASTS) if (m.event) assert.ok(EVENTS[m.event]?.mob, `${m.id}: its event ${m.event} should be marked mob`);
+});
+
+test('what roams the wild fights in real time; those that come to talk have a fight (and a run) in their story', () => {
+  for (const def of BEASTS) {
+    for (const kind of [def.kind, def.lead].filter(Boolean)) {
+      const R = FOES[kind]?.rt;
+      assert.ok(R, `${def.id}: ${kind} has no real-time stats`);
+      for (const k of ['speed', 'sight', 'lose', 'body', 'tall']) assert.ok(R[k] > 0, `${kind}: rt.${k}`);
+      assert.ok(R.moves?.length, `${kind}: nothing to do`);
+      for (const m of R.moves) assert.ok(BEAST_MOVES[m], `${kind}: unknown move ${m}`);
+      if (R.keep) assert.ok(R.keep[0] < R.keep[1], `${kind}: keep is [near, far]`);
+      if (R.tokens) assert.ok(R.ring > 0, `${kind}: waits its turn, but where?`);
+    }
+    const ev = def.event && EVENTS[def.event];
+    if (def.event) assert.ok(ev, `${def.id}: unknown event ${def.event}`);
+    const choices = ev ? stepsOf(ev).start.choices || [] : [];
+    if (FOES[def.kind].rt.talk) assert.ok(choices.some((c) => c.fight), `${def.id}: comes to talk, but its story has no fight`);
+    for (const c of choices) if (c.run) assert.ok(choices.some((x) => x.fight) && c.ok && c.fail, `${def.id}: a run needs a fight beside it, and both ways out`);
+  }
+  for (const [id, M] of Object.entries(BEAST_MOVES)) {
+    assert.ok(['fan', 'leap', 'shot'].includes(M.shape), `${id}: shape`);
+    assert.ok(M.windup > 0 && M.recover > 0 && M.cd > 0 && M.mult > 0, `${id}: seen coming, open after, not again at once`);
+    if (M.shape === 'fan') assert.ok(M.reach > 0 && M.arc > 0, `${id}: reach and arc`);
+    else assert.ok(M.max > M.min && M.speed > 0 && M.width > 0, `${id}: a line, from min to max`);
+    if (M.shape === 'shot') assert.ok(M.range >= M.max, `${id}: it reaches as far as it is thrown from`);
+  }
 });
 
 test('items reference real techniques and effects', () => {

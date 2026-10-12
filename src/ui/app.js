@@ -696,13 +696,15 @@ export function startApp(root, { speed = 1, view = null } = {}) {
   // ── a fight as you move ──
 
   const SKILL_KEYS = { 1: 'swordqi', 2: 'fireball', 3: 'guard' };
+  /** What those out there are doing that is nothing to fight: down, hidden, on their knees, on their way. */
+  const CALM = new Set(['dead', 'flee', 'vanish', 'gone', 'hide', 'yield', 'leave']);
 
   /** The beast under a tap, if any (they are low to the ground: count a tap on their body). */
   function beastAt(sx, sy) {
     let best = null;
     let bd = 52;
     for (const b of CB.beastsInWorld(ui.s, 800)) {
-      if (['dead', 'flee', 'vanish'].includes(b.state)) continue;
+      if (CALM.has(b.state) || b.state === 'talk') continue;
       for (const up of [0, 12, 24]) {
         const [px, py] = ui.view.worldToScreen(b.x, b.y, up);
         const d = Math.hypot(px - sx, py - sy);
@@ -872,7 +874,7 @@ export function startApp(root, { speed = 1, view = null } = {}) {
     const w = s.world;
     const free = !s.pending && !s.secl && !s.dead && !ui.sheet && !s.battle;
     // a beast close by that might come for you: the buttons are ready before it does
-    const ready = free && (C.on || CB.beastsInWorld(s, 400).some((b) => !['dead', 'flee', 'vanish', 'gone'].includes(b.state) && Math.hypot(b.x - w.x, b.y - w.y) < 300));
+    const ready = free && (C.on || CB.beastsInWorld(s, 400).some((b) => !CALM.has(b.state) && Math.hypot(b.x - w.x, b.y - w.y) < 300));
     const on = free && C.on;
     ui.cbtReady = ready;
     shell.classList.toggle('combat', on);
@@ -901,12 +903,14 @@ export function startApp(root, { speed = 1, view = null } = {}) {
     const list = CB.beastsInWorld(s, 900).filter((b) => b.aggro && b.armed && !['dead', 'gone', 'vanish'].includes(b.state));
     const foe = list.find((b) => b.uid === me.target) || list[0] || null;
     const pressed = list.some((b) => b.gap > 0);
-    set($('.cbt-state'), 'textContent', C.trial ? '試煉' : pressed ? '境界壓制' : on ? '戰鬥中' : '');
-    $('.cbt-state').classList.toggle('bad', pressed);
+    set($('.cbt-state'), 'textContent', C.trial ? '試煉' : me.poison ? '中毒' : pressed ? '境界壓制' : on ? '戰鬥中' : '');
+    $('.cbt-state').classList.toggle('bad', pressed || !!me.poison);
+    hpBar.classList.toggle('poison', !!me.poison);
     const foeEl = $('.cbt-foe');
     foeEl.classList.toggle('on', !!foe && on);
     if (foe) {
-      set(foeEl.querySelector('.cbt-foe-name'), 'textContent', foe.phantom ? foe.name : `${foe.name}・${CB.TIER_NAME[foe.tier] || ''}${foe.gap > 0 ? '（高你一個大境界）' : ''}`);
+      const rank = CB.rankOf(foe);
+      set(foeEl.querySelector('.cbt-foe-name'), 'textContent', rank ? `${foe.name}・${rank}${foe.gap > 0 ? '（高你一個大境界）' : ''}` : foe.name);
       foeEl.querySelector('.cbt-bar.foe i').style.width = `${Math.max(0, (foe.hp / foe.maxHp) * 100)}%`;
       foeEl.classList.toggle('enraged', !!foe.enraged);
     }
@@ -949,7 +953,7 @@ export function startApp(root, { speed = 1, view = null } = {}) {
   function combatSignal(sig) {
     if (sig.combat === 'start') {
       hideCaption();
-      combatBanner('遭遇', sig.phantom || !sig.tier ? sig.name : `${sig.name}・${CB.TIER_NAME[sig.tier] || ''}`);
+      combatBanner('遭遇', sig.rank ? `${sig.name}・${sig.rank}` : sig.name);
     } else if (sig.combat === 'won') combatBanner('戰鬥結束', '勝');
     else if (sig.combat === 'escaped') combatBanner('', '已脫離戰鬥');
   }

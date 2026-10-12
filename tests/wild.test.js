@@ -4,7 +4,8 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import * as E from '../src/world/explore.js';
 import { WILDLIFE } from '../src/world/wildlife.js';
-import { MOBS } from '../src/world/places.js';
+import { BEASTS } from '../src/world/places.js';
+import * as CB from '../src/world/combat.js';
 import { regionIdAt, nearestOpen } from '../src/world/terrain.js';
 import { fresh, resolvePending } from './helpers.js';
 
@@ -97,30 +98,39 @@ test('靈溪谷 stays silent until the python is settled', () => {
 
 test('you hear wolves before they come, and they see you before they run at you', () => {
   const s = fresh(25);
-  const def = MOBS.find((m) => m.id === 'wolves_a');
+  const def = BEASTS.find((m) => m.id === 'wolves_a');
   standAt(s, def.x, def.y + 520, 22);
   E.takeFeed(s);
-  approach(s, def.x, def.y, 'hill_wolves');
-  const feed = E.takeFeed(s).map((f) => f.text);
+  const feed = [];
+  E.walkTo(s, def.x, def.y);
+  for (let k = 0; k < 800 && !CB.inCombat(s); k++) {
+    if (s.pending) {
+      resolvePending(s);
+      E.walkTo(s, def.x, def.y);
+    }
+    E.step(s, 0.05, null);
+    feed.push(...E.takeFeed(s).map((f) => f.text));
+    if (!E.liveOf(s).path && !CB.inCombat(s)) E.walkTo(s, def.x, def.y);
+  }
   const heard = feed.indexOf('遠處傳來狼嚎。');
   const seen = feed.indexOf('狼！');
   assert.ok(heard >= 0, `a howl first (${feed.join(' / ')})`);
   assert.ok(seen > heard, 'then they come');
-  assert.equal(s.pending?.id, 'hill_wolves', 'and you are in it');
+  assert.ok(CB.inCombat(s), 'and you are in it, where you stand');
+  assert.equal(s.pending, null, 'no story card: a pack does not talk');
+  const pack = CB.beastsInWorld(s, 3000).filter((b) => b.def.id === def.id);
+  assert.equal(pack.length, def.n, 'the whole pack');
+  assert.ok(pack.every((b) => b.aggro), 'all of them after you');
 });
 
 test('wolves doze at noon: you can pass closer by day than by night', () => {
-  const def = MOBS.find((m) => m.id === 'wolves_a');
+  const def = BEASTS.find((m) => m.id === 'wolves_a');
   const chased = (tod) => {
     const s = fresh(26);
     standAt(s, def.x, def.y + 330, tod);
-    const m = E.mobsInWorld(s).find((x) => x.def.id === def.id);
+    const pack = CB.beastsInWorld(s, 3000).filter((b) => b.def.id === def.id);
     // the pack at rest, together, not wandering; you, standing 185 off
-    for (const b of m.members) {
-      b.x = def.x;
-      b.y = def.y;
-      b.wait = 999;
-    }
+    for (const b of pack) Object.assign(b, { x: def.x, y: def.y, tx: def.x, ty: def.y, wait: 999 });
     let spot = null;
     for (let a = 0; a < 6.28 && !spot; a += 0.2) {
       const x = def.x + Math.cos(a) * 185;
@@ -133,24 +143,25 @@ test('wolves doze at noon: you can pass closer by day than by night', () => {
     resolvePending(s);
     s.tod = tod;
     idle(s, 3);
-    return m.state === 'chase' || s.pending?.id === 'hill_wolves';
+    return pack.some((b) => b.state !== 'idle');
   };
   assert.equal(chased(12.5), false, 'at noon they let you by');
-  assert.equal(chased(23), true, 'at night they come');
+  assert.equal(chased(23), true, 'at night they see you');
 });
 
 test('far too strong for them, and they run instead', () => {
   const s = fresh(27);
   s.player.realm = 2;
   s.player.stage = 1;
-  const def = MOBS.find((m) => m.id === 'bandits_a');
+  const def = BEASTS.find((m) => m.id === 'bandits_a');
   standAt(s, def.x, def.y + 520, 14);
   E.takeFeed(s);
   approach(s, def.x, def.y, 'forest_bandits');
   const feed = E.takeFeed(s).map((f) => f.text);
   assert.ok(feed.includes('那幾個人看了你一眼，扭頭就跑。'), feed.join(' / '));
-  assert.equal(s.pending, null, 'no fight');
+  assert.equal(s.pending, null, 'not a word, no fight');
+  assert.ok(!CB.inCombat(s));
   idle(s, 120);
-  assert.ok(!E.mobsInWorld(s).some((m) => m.def.id === def.id), 'and they are gone for the day');
+  assert.ok(!CB.beastsInWorld(s, 3000).some((b) => b.def.id === def.id), 'and they are gone for the day');
   assert.equal(s.world.mobs[def.id], s.day + 1);
 });
