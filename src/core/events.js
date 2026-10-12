@@ -240,7 +240,8 @@ function settle(s, c, out, check) {
     check,
     chips: report.chips,
     toasts: report.toasts,
-    next: out.next || null,
+    // (the next step may be decided as you go: a 秘境's next room)
+    next: (typeof out.next === 'function' ? out.next(s, ctx) : out.next) || null,
     goto: ctx.goto || out.goto || null,
     saved: !!report.saved,
     died: !!s.dead,

@@ -61,7 +61,8 @@ test('every reference in content points at something real', () => {
   for (const ev of EVENT_LIST) {
     const steps = stepsOf(ev);
     for (const o of allOutcomes(ev)) {
-      if (o.next) assert.ok(steps[o.next], `${ev.id}: next → missing step ${o.next}`);
+      // (a next decided as you go — a 秘境's next room — is checked by its own tests)
+      if (o.next && typeof o.next !== 'function') assert.ok(steps[o.next], `${ev.id}: next → missing step ${o.next}`);
       if (o.goto) assert.ok(EVENTS[o.goto], `${ev.id}: goto → missing event ${o.goto}`);
       for (const e of walkEffects(o.effects)) {
         const [op, a] = e;

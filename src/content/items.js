@@ -126,6 +126,10 @@ export const ITEMS = {
     desc: '古戰場中得來的殘卷。使用後習得。',
     use: { text: '殘卷上的字跡如水波流動，你沉入其中，不知時日。', effects: [['tech', 'xuanshui'], ['days', 10]] },
   },
+  lake_pearl: {
+    name: '鏡湖明珠', kind: 'material', sell: 80,
+    desc: '鏡湖水府裡的明珠，月光下會自己發亮。坊市的珠寶鋪收得起好價錢。',
+  },
   golden_carp: {
     name: '金鱗鯉', kind: 'herb', sell: 30,
     desc: '大江裡喝了一千年靈氣的鯉魚，鱗片像金箔。烤了吃，補氣血，也補靈力。',

@@ -2,6 +2,7 @@ import { dayAt, DAYS_PER_YEAR } from '../core/calendar.js';
 import { schedule } from '../core/schedule.js';
 import { rumor } from './rumors.js';
 import { inTide, bloodMoon } from './weather.js';
+import { SECRET_REALMS } from './realms.js';
 
 // The world's own timeline. These beats happen whether or not the player is
 // there; content events let the player witness or change them inside their
@@ -224,6 +225,10 @@ export function recurring(s) {
   if (doy >= auctionStart - 30 && doy < auctionStart && s.vars.auctionNotice !== year && s.day >= 170) {
     s.vars.auctionNotice = year;
     rumor(s, '落霞坊市的拍賣會下個月開場。據說今年的壓軸，是一顆築基丹。', 'hint');
+  }
+  // a 秘境 about to open: the word goes round a week before
+  for (const R of Object.values(SECRET_REALMS)) {
+    if (R.next(s.day) - s.day === 7) rumor(s, R.name === '古戰場秘境' ? '古戰場那座斷石門又開始發光了。老散修說，再過七天，秘境就要開了。' : '中秋快到了。坊市裡有人在打聽鏡湖的事：說每年中秋月圓，湖心亭底下的水府會開三天。', 'hint');
   }
   // the sect's 大比: the first ten days of the sixth month, every year
   const tourney = dayAt(0, 6, 1);
