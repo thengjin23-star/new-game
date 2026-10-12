@@ -821,7 +821,7 @@ export function createWorld3D(canvas, { onFrame, idle, quality = 'high', onSlow 
     else env.u.uClear.value.set(0, 0, 0);
     const C = CB.combatOf(s);
     const me = C.me;
-    const marks = C.on || C.preview || C.fx.length || (me && (me.shield > 0 || me.target || me.ward)) || (C.beasts || []).some((b) => b.state === 'windup' || b.state === 'leap');
+    const marks = C.on || C.preview || C.fx.length || (me && (me.shield > 0 || me.target || me.ward || me.regen)) || (C.beasts || []).some((b) => b.state === 'windup' || b.state === 'leap');
     env.groundMarks(s.world.x, s.world.y, marks ? (g, k) => drawGroundMarks(g, s, C, CB.kitOf(s), k) : null);
     followCamera(dt, snap);
     updateFog();

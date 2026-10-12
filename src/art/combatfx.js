@@ -470,6 +470,13 @@ export function drawGroundMarks(g, s, C, kit, u = 1) {
       g.stroke();
     }
   }
+  // 回春: green at your feet while it works
+  if (me?.regen) {
+    g.strokeStyle = rgba(LEAF, 0.5 + 0.2 * Math.sin(now * 5));
+    g.lineWidth = lw(2);
+    ring(g, w.x, w.y, 18);
+    g.stroke();
+  }
   // 金剛: a ring of gold at your feet while it holds
   if (me?.ward) {
     g.strokeStyle = rgba(GOLD, 0.6 + 0.2 * Math.sin(now * 8));
@@ -604,12 +611,12 @@ export function drawCombatOverlay(ctx, proj, px, s, C, look, t, font) {
   }
   if (me?.regen) {
     const k = unitAt(proj, w.x, w.y);
-    for (let n = 0; n < 5; n++) {
-      const q = (now * 0.9 + n / 5) % 1;
-      const [mx, my] = proj(w.x + Math.sin(n * 2.3 + now) * 10, w.y, 6 + q * 34);
-      ctx.fillStyle = rgba(LEAF, 0.8 * (1 - q));
+    for (let n = 0; n < 7; n++) {
+      const q = (now * 0.9 + n / 7) % 1;
+      const [mx, my] = proj(w.x + Math.sin(n * 2.3 + now * 1.5) * 12, w.y, 4 + q * 38);
+      ctx.fillStyle = rgba(LEAF, 0.95 * (1 - q));
       ctx.beginPath();
-      ctx.arc(mx, my, 1.8 * k, 0, Math.PI * 2);
+      ctx.arc(mx, my, (2.6 - q) * k * Math.max(1, px * 2), 0, Math.PI * 2);
       ctx.fill();
     }
   }
