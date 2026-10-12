@@ -540,7 +540,7 @@ function buildHeights() {
         });
       }
       if (A.kind === 'isle') {
-        const top = LEVEL.river + 7 + 3 * vnoise(x / 60, y / 60, 87);
+        const top = LEVEL.river + 10 + 3 * vnoise(x / 60, y / 60, 87);
         if (on) h[k] = top;
         // its sand slopes down into the river (and stays under the water where the water is)
         else if (e < 1.6) h[k] = Math.max(h[k], Math.min(top - (e - 1) * 40, isWet(cellAt(x, y)) ? LEVEL.river - 2 : Infinity));

@@ -2,7 +2,7 @@
 // chunks, everything standing on it sorted by depth, clouds over what you
 // have not seen, and the light of the hour.
 
-import { WORLD_W, WORLD_H, CELL, COLS, ROWS, T } from '../world/geo.js';
+import { WORLD_W, WORLD_H, CELL, COLS, ROWS, T, AIRY } from '../world/geo.js';
 import { world, idxOf, cellX, cellY, hash2, REGION_IDS, colOf, rowOf } from '../world/terrain.js';
 import { STRUCTURES, POIS } from '../world/places.js';
 import { NODES } from '../world/map.js';
@@ -340,6 +340,28 @@ function waterLayer(ctx, g, x0, y0, x1, y1, season) {
     strokePath(ctx, r.path, r.width + 6, rgba(INK, 0.32));
     strokePath(ctx, r.path, r.width, rgba(wc, 1));
     strokePath(ctx, r.path, r.width * 0.55, rgba([wc[0] - 14, wc[1] - 8, wc[2] - 4], 0.5));
+  }
+  // a sandbar out in the river: its sand laid back over the water, inked round the edge
+  for (const A of AIRY) {
+    if (A.kind !== 'isle') continue;
+    const [cx, cy] = A.at;
+    const [rx, ry] = A.r;
+    if (cx + rx < x0 - 20 || cx - rx > x1 + 20 || cy + ry < y0 - 20 || cy - ry > y1 + 20) continue;
+    ctx.fillStyle = rgba(groundColor(T.SAND, season), 1);
+    ctx.strokeStyle = rgba(INK, 0.3);
+    ctx.lineWidth = 1.4;
+    ctx.beginPath();
+    for (let k = 0; k <= 40; k++) {
+      const a = (k / 40) * Math.PI * 2;
+      const wob = 1 + 0.08 * Math.sin(a * 3 + 1) + 0.05 * Math.sin(a * 7);
+      const px = cx + Math.cos(a) * (rx + 6) * wob;
+      const py = cy + Math.sin(a) * (ry + 6) * wob;
+      if (k) ctx.lineTo(px, py);
+      else ctx.moveTo(px, py);
+    }
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
   }
   // ripples on every water cell in view
   const rnd = stream(Math.floor(x0 * 3 + y0 * 5) + 11);
