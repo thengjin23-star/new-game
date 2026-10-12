@@ -1,4 +1,14 @@
 import { flag } from '../helpers.js';
+import { power } from '../../core/cultivation.js';
+import { rankOf } from '../../world/sect.js';
+import { DAYS_PER_YEAR } from '../../core/calendar.js';
+
+/** This year's 大比 is over for you (won, lost, or watched). */
+const doneThisYear = (s) => {
+  s.vars.tourneyYear = Math.floor(s.day / DAYS_PER_YEAR);
+};
+/** How hard the one across the stage is, against how strong you are now. */
+const match = (k) => (s) => Math.max(10, Math.round(power(s) * k));
 
 const S = ['qingyun_sect'];
 
@@ -121,7 +131,7 @@ export default [
         text: '老老實實幹活。',
         out: {
           text: '三個月下來，你的手又粗了一圈。貢獻點，攢了一些。',
-          effects: [['days', 90], ['var', 'contribution', 30], ['mind', 2]],
+          effects: [['days', 90], ['gx', 30], ['mind', 2]],
         },
       },
       {
@@ -138,6 +148,64 @@ export default [
         out: { text: '丹房的師姐給了你兩顆聚氣丹，還附贈了一個白眼。', effects: [['var', 'contribution', -30], ['item', 'juqi_pill', 2]] },
       },
     ],
+  },
+
+  {
+    id: 'sect_tourney',
+    trigger: 'explore',
+    poi: 'sect_task_hall',
+    nodes: S,
+    priority: 20,
+    cond: (s) => flag(s, 'tourney_open') && rankOf(s) >= 1 && s.vars.tourneyYear !== Math.floor(s.day / DAYS_PER_YEAR),
+    title: '宗門大比',
+    steps: {
+      start: {
+        text: '一年一度的宗門大比。\n\n任務堂前的廣場上搭起了三座擂台，外門、內門的弟子擠得水洩不通。高台上坐著幾位長老，有人在打瞌睡，有人在看名冊。\n\n連勝三場，就是今年的魁首。',
+        choices: [
+          { text: '報名上台。', out: { next: 'r1' } },
+          { text: '在台下看熱鬧。', out: { text: '你在台下看了一整天。看別人打，也是一種修行。', effects: [['insight', 1], doneThisYear] } },
+        ],
+      },
+      r1: {
+        text: '第一場。對面是個外門的師兄，劍還沒出鞘，先衝你抱了抱拳。',
+        choices: [
+          {
+            text: '抱拳還禮，出手。',
+            check: { kind: 'power', diff: match(0.8) },
+            fight: { foes: [['swordsman', 1, { name: '外門師兄' }]], spar: true },
+            ok: { text: '他退了三步，收劍：「承讓。」台下有人叫好。', effects: [['gx', 30]], next: 'r2' },
+            fail: { text: '你被他一劍點在胸口，止步第一場。\n\n執事在名冊上給你記了一筆：「勇氣可嘉。」', effects: [['gx', 10], doneThisYear] },
+          },
+        ],
+      },
+      r2: {
+        text: '第二場。對面是內門的師姐，出手比剛才那位快了一倍不止。',
+        choices: [
+          {
+            text: '再戰。',
+            check: { kind: 'power', diff: match(1) },
+            fight: { foes: [['swordsman', 1, { name: '內門師姐' }]], spar: true },
+            ok: { text: '最後一招，你的劍停在她喉前三寸。她看了你一眼，收劍下台。', effects: [['gx', 60], ['item', 'juqi_pill', 1]], next: 'r3' },
+            fail: { text: '她的劍太快了。你輸得心服口服。', effects: [['gx', 20], doneThisYear] },
+          },
+        ],
+      },
+      r3: {
+        text: '決賽。擂台四周忽然安靜了。對面那人一直閉著眼睛，直到你走上台，才睜開。\n\n高台上打瞌睡的長老，也醒了。',
+        choices: [
+          {
+            text: '拔劍。',
+            check: { kind: 'power', diff: match(1.15) },
+            fight: { foes: [['swordsman', 1, { name: '內門首席' }]], spar: true },
+            ok: {
+              text: '一炷香之後，你站在擂台中央，台下的歡呼聲像潮水一樣湧上來。\n\n長老親手把魁首的玉牌掛在你腰上：「好。」',
+              effects: [['gx', 150], ['rep', 'sect', 15], ['flag', 'tourney_champion'], ['log', '奪得青雲宗大比魁首'], doneThisYear],
+            },
+            fail: { text: '你撐到了最後一招，終究差了一線。\n\n他扶你起來：「明年再來。」', effects: [['gx', 40], ['rep', 'sect', 5], doneThisYear] },
+          },
+        ],
+      },
+    },
   },
 
   {

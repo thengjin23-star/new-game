@@ -132,9 +132,8 @@ export function handIn(s, key) {
   if (P.kind === 'bring') addItem(s, P.item, -P.n, report);
   const gains = [];
   if (P.ls) gains.push(['ls', P.ls]);
-  if (P.gx) gains.push(['var', 'contribution', P.gx]);
+  if (P.gx) gains.push(['gx', P.gx]);
   applyEffects(s, gains, {}, report);
-  if (P.gx) report.chips.push({ text: `宗門貢獻 +${P.gx}`, tone: 'good' });
   if (P.rep) addRep(s, BOARDS[q.board].faction, P.rep, report);
   for (const [f, n] of Object.entries(P.also || {})) addRep(s, f, n, report);
   s.quests = takenOf(s).filter((x) => x.key !== key);

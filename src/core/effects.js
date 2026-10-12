@@ -311,6 +311,12 @@ export function applyEffects(s, effects, ctx, report) {
       case 'rep':
         addRep(s, a, b, report);
         break;
+      case 'gx':
+        // 貢獻 to the sect: to spend, and earned in all (what a rise in rank is weighed by)
+        s.vars.gxTotal = Math.max(s.vars.gxTotal || 0, s.vars.contribution || 0) + a;
+        s.vars.contribution = (s.vars.contribution || 0) + a;
+        chip(report, `宗門貢獻 ${sign(a)}${a}`, a > 0 ? 'good' : 'bad');
+        break;
       case 'equip':
         p.weapon = a;
         break;

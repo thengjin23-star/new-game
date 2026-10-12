@@ -65,7 +65,8 @@ test('every fight in the stories is fought where you stand: those in it exist an
       }
     }
   }
-  assert.equal(n, 23);
+  // (23 from the story; 3 more, the rounds of the sect's 大比)
+  assert.equal(n, 26);
   for (const f of Object.values(FOES)) for (const [, item] of f.loot || []) assert.ok(ITEMS[item], `loot ${item}`);
 });
 

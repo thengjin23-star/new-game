@@ -4,6 +4,7 @@ import { runArcs, recurring } from '../world/arcs.js';
 import { simulateNpcs, pruneNpcs } from '../world/npcs.js';
 import { ambientRumor, rumor } from '../world/rumors.js';
 import { rechargeTick } from '../world/system.js';
+import { stipend } from '../world/sect.js';
 
 export function newReport() {
   return { days: 0, xw: 0, stageUps: [], toasts: [], logs: [], chips: [], rumorsBefore: null, died: null };
@@ -51,6 +52,8 @@ function monthTick(s, report) {
   if (s.day % 360 === 0) pruneNpcs(s);
   ambientRumor(s);
   rechargeTick(s, report);
+  // the sect's 月例, for its own
+  stipend(s, report);
   // drop scheduled events whose window has passed
   s.sched = s.sched.filter((x) => x.expire === null || x.expire >= s.day);
   const left = lifespan(s) - age(s);

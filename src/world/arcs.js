@@ -225,6 +225,10 @@ export function recurring(s) {
     s.vars.auctionNotice = year;
     rumor(s, '落霞坊市的拍賣會下個月開場。據說今年的壓軸，是一顆築基丹。', 'hint');
   }
+  // the sect's 大比: the first ten days of the sixth month, every year
+  const tourney = dayAt(0, 6, 1);
+  s.flags.tourney_open = doy >= tourney && doy < tourney + 10;
+  if (s.flags.sect_member && doy === tourney - 10) rumor(s, '青雲宗今年的大比，十天後在任務堂前開擂。', 'hint');
   const recruitBase = WINDOWS.recruit[0];
   if (s.day > WINDOWS.recruit[1]) {
     const k = (s.day - recruitBase) % (10 * DAYS_PER_YEAR);

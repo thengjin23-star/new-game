@@ -11,6 +11,7 @@ import { flyMeans } from '../world/air.js';
 import { weatherNow, skySigns, hoursToClear, SIGNS } from '../world/weather.js';
 import { FACTIONS, standing } from '../world/factions.js';
 import * as Q from '../world/quests.js';
+import * as SECT from '../world/sect.js';
 import * as CB from '../world/combat.js';
 import * as AR from '../world/arts.js';
 import { ROOTS, INJURY, BUFFS, realmLabel, stageReq, age, lifespan, rateParts, breakthroughInfo, power, atBottleneck, techOf } from '../core/cultivation.js';
@@ -1473,8 +1474,37 @@ export function startApp(root, { speed = 1, view = null } = {}) {
       h('p.need', Q.askOf(w) + (w.have !== undefined ? `（${w.have}/${w.need}）` : '')),
       acts ? h('div.item-acts', acts) : null,
     );
+    // on 青雲峰, for its own: your place in the sect, and the 寶庫
+    const rank = id === 'sect' ? SECT.rankOf(s) : -1;
+    const next = rank >= 0 ? SECT.nextRank(s) : null;
+    const gx = SECT.gxOf(s);
+    const sectCards = rank < 0 ? [] : [
+      h('section.card',
+        h('h3', `${SECT.RANKS[rank].name}・貢獻 ${gx.now}`),
+        h('p.muted.small', `累計貢獻 ${gx.total}。${SECT.RANKS[rank].pay ? `月例：每月 ${SECT.RANKS[rank].pay} 靈石${SECT.RANKS[rank].pills ? `、聚氣丹 ${SECT.RANKS[rank].pills} 顆` : ''}。` : '雜役弟子沒有月例。'}`),
+        next ? h('p.need', next.why ? `晉升${next.name}：${next.why}` : `可以晉升${next.name}了。`) : h('p.small', '你已是真傳弟子。'),
+        next ? h('div.item-acts', h('button.btn.small', { disabled: !!next.why || !!s.secl, onclick: () => act((x) => {
+          const report = SECT.promote(x);
+          if (report) notice(x, '晉升', `執事在名冊上把你的名字移到了新的一頁：「從今日起，你是${next.name}了。」`, { chips: report.chips, toasts: report.toasts });
+        }) }, '晉升')) : null,
+      ),
+      h('section.card',
+        h('h3', '寶庫（以貢獻兌換）'),
+        h('ul.items', SECT.TREASURY.map((tr) => {
+          const it = ITEMS[tr.item];
+          const locked = rank < tr.rank;
+          return h('li',
+            h('div.item-head', h('b', it.name), h('span.price', `貢獻 ${tr.gx}`)),
+            h('p', it.desc),
+            locked ? h('p.need', `需${SECT.RANKS[tr.rank].name}`) : null,
+            h('div.item-acts', h('button.btn.small', { disabled: locked || gx.now < tr.gx || !!s.secl, onclick: () => act((x) => SECT.exchange(x, tr.item)) }, '兌換')),
+          );
+        })),
+      ),
+    ];
     return h('div.bag',
       h('p.muted', lock || `${B.who}每 ${B.every} 天換一批。同時最多接 ${Q.MAX_TAKEN} 件差事。`),
+      ...sectCards,
       taken.length ? h('section.card',
         h('h3', '接下的差事'),
         h('ul.items', taken.map((w) => row(w, [
@@ -1811,7 +1841,7 @@ export function startApp(root, { speed = 1, view = null } = {}) {
           st.note ? h('p.small', st.note) : null,
         );
       })),
-      s.flags.sect_member ? h('p.small.pad', `宗門貢獻：${s.vars.contribution || 0}`) : null,
+      s.flags.sect_member ? h('p.small.pad', `青雲宗${SECT.rankName(s)}・貢獻 ${SECT.gxOf(s).now}（累計 ${SECT.gxOf(s).total}）`) : null,
       h('h3.pad', '接下的差事'),
       taken.length
         ? h('ul.factions', taken.map((w) => h('li',

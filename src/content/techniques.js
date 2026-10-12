@@ -91,6 +91,12 @@ export const TECHS = {
     leap: 190, up: 140, mp: 3, walk: 0.15, rough: 0.6,
     desc: '刻在孤鶴峰石壁上的身法，一步踏出，像踩在雲上。躍得更遠更高：斷魂崖一躍而上，江心的沙洲也踏得過去。',
   },
+  yujian: {
+    name: '御劍訣',
+    kind: 'flight',
+    grade: '玄品下',
+    desc: '青雲宗的御劍法門，只傳內門。煉氣七層以上，手上有劍就能御劍飛行（還沒築基，飛得比築基時吃力，也更耗靈力）。',
+  },
   wild_boxing: {
     name: '莊稼把式',
     kind: 'combat',

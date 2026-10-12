@@ -16,7 +16,7 @@ import { sysGain } from './system.js';
 import { ITEMS, displayItem } from '../content/items.js';
 import { pickEvent, startEvent, takeDue, notice } from '../core/events.js';
 import { updateCombat, beastTargets, strikeAt, FIGHT_HOURS, combatOf, inCombat } from './combat.js';
-import { bodyArt, leapLanding, leapTo, leapShape, leapRules, FLIGHT, flyMeans, flyBlocked, landingNear } from './air.js';
+import { bodyArt, leapLanding, leapTo, leapShape, leapRules, FLIGHT, flyMeans, flyBlocked, landingNear, flyCost } from './air.js';
 import { weatherNow } from './weather.js';
 import { inquire, visit } from '../core/actions.js';
 import { spendHours, newReport } from '../core/time.js';
@@ -416,7 +416,7 @@ function flyStep(s, L, dt, input) {
     if (mode.mp) {
       const p = s.player;
       pools(s);
-      p.mp = Math.max(0, p.mp - mode.mp * dt);
+      p.mp = Math.max(0, p.mp - flyCost(s, F.by) * dt);
       if (p.mp <= 0) {
         L.feed.push({ kind: 'bad', text: '靈力將盡，你只得落下。' });
         comeDown(s, L, true);
@@ -1164,6 +1164,9 @@ function usePoi(s, L, p) {
     return;
   }
   if (p.action === 'board') {
+    // (something going on there first: the sect's 大比 in front of the 任務堂)
+    const ev = pickEvent(s, 'explore', p.region, { poi: p.id });
+    if (ev) return startEvent(s, ev);
     L.signals.push({ open: 'board', board: p.board, poi: p.id });
     return;
   }

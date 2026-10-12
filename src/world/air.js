@@ -125,10 +125,24 @@ export function isSword(id) {
 export function flyMeans(s) {
   const p = s.player;
   if (p.realm >= 2 && isSword(p.weapon)) return { by: 'sword' };
+  // (青雲宗's 御劍訣 lets 煉氣七層 and up fly a sword too, harder going)
+  if (swordEarly(s) && isSword(p.weapon)) return { by: 'sword' };
   if (p.realm >= 1 && p.items.feisuo > 0) return { by: 'boat' };
   if (p.items.feisuo > 0) return { by: null, why: '飛梭要靈力催動，引氣入體之後才用得上。' };
   if (p.realm >= 2) return { by: null, why: '手上沒有劍，御不了劍。' };
   return { by: null, why: null };
+}
+
+/** Can you fly a sword before 築基 (with the 御劍訣, from 煉氣七層)? */
+export function swordEarly(s) {
+  const p = s.player;
+  return p.realm === 1 && p.stage >= 6 && (p.arts || []).includes('yujian');
+}
+
+/** 靈力 a second a way of flying costs you (a sword flown before 築基: half as much again). */
+export function flyCost(s, by) {
+  const F = FLIGHT[by];
+  return F.mp * (by === 'sword' && s.player.realm < 2 ? 1.5 : 1);
 }
 
 /** The air over the sect is the sect's: its 護山大陣 lets only its own through. */
