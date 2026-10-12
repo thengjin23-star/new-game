@@ -557,7 +557,10 @@ function buildHeights() {
       touching(x, y, (c) => {
         if (!rockish(c)) rock = false;
       });
-      const shoulder = A.level - 2 - (e - 1) * (e - 1) * 230;
+      // (steeper on some sides than others, so it is a peak with a flat top, not a drum)
+      const ang = Math.atan2((y - cy) / ry, (x - cx) / rx);
+      const steep = 0.55 + 0.9 * vnoise(Math.cos(ang) * 1.6 + 5, Math.sin(ang) * 1.6 + 5, 89);
+      const shoulder = A.level - 2 - Math.pow(e - 1, 1.6) * 170 * steep;
       if (rock) h[k] = Math.max(h[k], shoulder);
       if (e < 1.2) h[k] = Math.min(h[k], A.level - 2);
     });

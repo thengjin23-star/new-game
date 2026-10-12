@@ -1804,6 +1804,38 @@ canvas.world-overlay {
   box-shadow: 0 2px 8px rgba(30, 24, 16, 0.2);
 }
 
+/* 飛: up into the air, and 落: down again */
+.fly-btn {
+  appearance: none;
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  border: 2px solid rgba(70, 110, 140, 0.85);
+  background: rgba(239, 233, 219, 0.92);
+  color: #3d6a86;
+  font-size: 19px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(30, 24, 16, 0.2);
+}
+
+.fly-btn.down {
+  background: rgba(61, 106, 134, 0.92);
+  color: #f4efe2;
+}
+
+.fly-btn[hidden] {
+  display: none;
+}
+
+.fly-btn:disabled {
+  opacity: 0.5;
+}
+
+.sit-btn[hidden] {
+  display: none;
+}
+
 /* 術: spells and 符, and the little list of them */
 .art-btn {
   appearance: none;

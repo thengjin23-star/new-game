@@ -22,7 +22,7 @@ import { createWater } from './gl/water.js';
 import { createClouds } from './gl/clouds.js';
 import { createBuildings } from './gl/buildings.js';
 import { createGlows } from './gl/glows.js';
-import { drawPerson, aura, LOOKS, FOLK_LOOKS, FIGURE } from './figures.js';
+import { drawPerson, aura, drawRide, LOOKS, FOLK_LOOKS, FIGURE } from './figures.js';
 import { propSprite, SPRITE } from './sprites.js';
 import { makeParticles, drawParticles } from './ink.js';
 import { seasonOf } from '../core/calendar.js';
@@ -168,8 +168,26 @@ export function createWorld3D(canvas, { onFrame, idle, quality = 'high', onSlow 
     return on;
   }
 
+  // up in the air the camera draws back, to show how far you can see; it comes in again when you land
+  let flyZoomFrom = null;
+
+  function flightZoom(dt) {
+    if (E.airborne(s)) {
+      if (flyZoomFrom === null) flyZoomFrom = zoom;
+      const want = Math.min(flyZoomFrom, s.world.fly.by === 'sword' ? 0.62 : 0.7);
+      zoom += (want - zoom) * (1 - Math.exp(-dt * 1.4));
+    } else if (flyZoomFrom !== null) {
+      zoom += (flyZoomFrom - zoom) * (1 - Math.exp(-dt * 2));
+      if (Math.abs(zoom - flyZoomFrom) < 0.01) {
+        zoom = flyZoomFrom;
+        flyZoomFrom = null;
+      }
+    }
+  }
+
   function followCamera(dt, snap) {
     const w = s.world;
+    flightZoom(dt);
     const lead = combatZoom(dt) ? 0.12 : 0.35;
     if (lastPos && dt > 0) {
       const vx = (w.x - lastPos[0]) / dt;
@@ -180,7 +198,8 @@ export function createWorld3D(canvas, { onFrame, idle, quality = 'high', onSlow 
     lastPos = [w.x, w.y];
     const tx = Math.max(260, Math.min(WORLD_W - 260, w.x + vel.x * lead));
     const ty = Math.max(420, Math.min(WORLD_H - 120, w.y + vel.y * lead));
-    const th = heightAt(w.x, w.y);
+    // (it rises with you when you fly)
+    const th = heightAt(w.x, w.y) + (w.fly ? E.liftOf(s).z * 0.8 : 0);
     if (snap || Math.hypot(tx - focus.x, ty - focus.y) > 900) {
       focus.x = tx;
       focus.y = ty;
@@ -376,16 +395,21 @@ export function createWorld3D(canvas, { onFrame, idle, quality = 'high', onSlow 
       if (b.state !== 'dead' && !b.K.spirit && !((b.fade || 0) > 0.5)) foot(b.x, b.y, b.R.body + 3, 0.3);
     }
     const sit = !!s.secl;
-    const moving = E.liveOf(s).moving;
+    // up in the air (or in the middle of a leap): how high, and on what
+    const lift = E.liftOf(s);
+    const moving = E.liveOf(s).moving && !lift.by;
     const pic = !sit && picture('player', 50);
     const me = C.me;
-    cards.add('player', w.x, heightAt(w.x, w.y), w.y, (c) => {
+    cards.add('player', w.x, heightAt(w.x, w.y) + lift.z, w.y, (c) => {
       if (sit) aura(c, 0, 0, t, 1);
+      if (lift.by) drawRide(c, 0, 0, lift.by, t, w.face || 1);
       if (pic) pic(c);
-      else if (me && !sit) paintHero(c, LOOKS.player, { act: me.act, dash: me.dash, flashT: me.flashT, face: w.face || 1, moving, weapon: CB.weaponLook(s) }, t, C.t);
+      else if (me && !sit) paintHero(c, LOOKS.player, { act: me.act, dash: me.dash, flashT: me.flashT, face: w.face || 1, moving, weapon: lift.by === 'sword' ? null : CB.weaponLook(s) }, t, C.t);
       else drawPerson(c, 0, 0, LOOKS.player, { t, moving, face: w.face || 1, sit });
-    }, { animated: true, fps: moving || sit || C.on ? 30 : 10, ghost: true, alpha: me?.hidden > 0 ? 0.5 : 1 });
-    foot(w.x, w.y, sit ? 13 : 9.5, 0.34);
+    }, { animated: true, fps: moving || sit || C.on || lift.z > 0 ? 30 : 10, ghost: true, alpha: me?.hidden > 0 ? 0.5 : 1, footPad: lift.by ? 9 : 6 });
+    // the shadow stays on the ground, smaller and fainter the higher you go
+    const far = Math.min(1, lift.z / 260);
+    foot(w.x, w.y, (sit ? 13 : 9.5) * (1 - 0.35 * far), 0.34 * (1 - 0.6 * far));
     sh.end();
     FIGURE.shadows = true;
     SPRITE.shadows = true;

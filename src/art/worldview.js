@@ -9,7 +9,7 @@ import { NODES } from '../world/map.js';
 import { fogOf } from '../world/fog.js';
 import * as E from '../world/explore.js';
 import { decorSprite, mountainSprite, structureSprite, wallSprite, propSprite } from './sprites.js';
-import { drawPerson, aura, LOOKS, FOLK_LOOKS, groundShadow } from './figures.js';
+import { drawPerson, aura, drawRide, LOOKS, FOLK_LOOKS, groundShadow } from './figures.js';
 import { makeParticles, drawParticles, rgba, INK, PAPER } from './ink.js';
 import { drawActor, drawPose, poseOf, lookOf, drawSpeech } from './scenery.js';
 import * as CB from '../world/combat.js';
@@ -1039,18 +1039,29 @@ export function createWorldView(canvas, { onFrame, idle } = {}) {
         const w = it.a;
         const sit = !!s.secl;
         if (sit) aura(ctx, w.x, w.y, t, 1);
-        const moving = E.liveOf(s).moving;
+        // up in the air (or mid-leap): drawn above your shadow, on what carries you
+        const lift = E.liftOf(s);
+        const up = lift.z * 0.75;
+        const moving = E.liveOf(s).moving && !lift.by;
         const C = CB.combatOf(s);
         const me = C.me;
+        if (up > 0.5) {
+          const far = Math.min(1, lift.z / 260);
+          ctx.fillStyle = `rgba(20,18,16,${0.22 * (1 - 0.6 * far)})`;
+          ctx.beginPath();
+          ctx.ellipse(w.x, w.y, 9 * (1 - 0.35 * far), 3.4 * (1 - 0.35 * far), 0, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        if (lift.by) drawRide(ctx, w.x, w.y - up, lift.by, t, w.face || 1);
         if (me && !sit) {
           ctx.save();
-          ctx.translate(w.x, w.y);
+          ctx.translate(w.x, w.y - up);
           // 斂息: you are hardly there
           if (me.hidden > 0) ctx.globalAlpha *= 0.5;
           hurtHalo(Math.max(0, 1 - (C.t - me.flashT) / 0.22), 36);
           paintHero(ctx, LOOKS.player, { act: me.act, dash: me.dash, flashT: me.flashT, face: w.face || 1, moving, weapon: CB.weaponLook(s) }, t, C.t, { tint: false });
           ctx.restore();
-        } else drawPerson(ctx, w.x, w.y, LOOKS.player, { t, moving, face: w.face || 1, sit });
+        } else drawPerson(ctx, w.x, w.y - up, LOOKS.player, { t, moving, face: w.face || 1, sit });
         break;
       }
       case 'beast': {

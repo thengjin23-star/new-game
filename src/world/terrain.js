@@ -788,6 +788,13 @@ function makeDecor(g) {
         }
       };
       const nearWater = hasNeighbor(g, i, j, (nt) => nt === T.WATER);
+      // up on a summit: wind-bent pines and bare rock
+      if ((region === 'crane_peak' || region === 'sword_peak') && (t === T.GRASS || t === T.HILL)) {
+        if (r0 < 0.3) place(pickMix(mix, hash2(i, j, 220)), 1, 221, 0.9);
+        else if (r0 < 0.6) place('rock', r0 < 0.42 ? 2 : 1, 222);
+        else if (r0 < 0.8) place('tuft', 1, 223);
+        continue;
+      }
       switch (t) {
         case T.FOREST:
           place(pickMix(mix, r0), r0 < 0.75 ? 1 : 2, 110);

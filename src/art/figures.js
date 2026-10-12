@@ -254,6 +254,89 @@ function seated(ctx, look, t) {
 }
 
 /** The faint glow of qi around a cultivator who sits. */
+/**
+ * What carries you through the air, under your feet at (x, y): a flying
+ * sword (a long blade, point forward, a cold light along it), a 青木飛梭 (a
+ * green shuttle like a willow leaf), or a 御風符's wind (curls of air).
+ */
+export function drawRide(ctx, x, y, by, t, face = 1) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.scale(face < 0 ? -1 : 1, 1);
+  const bob = Math.sin(t * 3.1) * 0.6;
+  if (by === 'sword') {
+    // the light it leaves behind it
+    ctx.strokeStyle = 'rgba(170,210,230,0.35)';
+    ctx.lineWidth = 1.2;
+    for (let n = 0; n < 3; n++) {
+      const yy = 2 + bob + (n - 1) * 1.6;
+      ctx.beginPath();
+      ctx.moveTo(-18 - n * 3, yy);
+      ctx.lineTo(-30 - n * 6 - 4 * Math.sin(t * 9 + n), yy + 0.4);
+      ctx.stroke();
+    }
+    // blade, guard, hilt
+    ctx.fillStyle = 'rgba(214,226,232,0.95)';
+    ctx.beginPath();
+    ctx.moveTo(-14, 1.4 + bob);
+    ctx.lineTo(19, 2.1 + bob);
+    ctx.lineTo(23, 2.6 + bob);
+    ctx.lineTo(19, 3.1 + bob);
+    ctx.lineTo(-14, 3.6 + bob);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = rgba(INK, 0.55);
+    ctx.lineWidth = 0.5;
+    ctx.stroke();
+    ctx.strokeStyle = 'rgba(120,190,220,0.5)';
+    ctx.beginPath();
+    ctx.moveTo(-12, 2.5 + bob);
+    ctx.lineTo(18, 2.6 + bob);
+    ctx.stroke();
+    ctx.fillStyle = 'rgba(150,120,60,0.95)';
+    ctx.fillRect(-16, 0.4 + bob, 2.2, 4.4);
+    ctx.fillStyle = rgba(INK, 0.85);
+    ctx.fillRect(-22, 1.8 + bob, 6, 1.6);
+  } else if (by === 'boat') {
+    // a willow-leaf shuttle of green wood, a darker line down its middle
+    ctx.fillStyle = 'rgba(92,138,104,0.95)';
+    ctx.beginPath();
+    ctx.moveTo(-20, 2.4 + bob);
+    ctx.quadraticCurveTo(0, -1.2 + bob, 21, 2 + bob);
+    ctx.quadraticCurveTo(0, 7.2 + bob, -20, 2.4 + bob);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = rgba(INK, 0.6);
+    ctx.lineWidth = 0.6;
+    ctx.stroke();
+    ctx.strokeStyle = 'rgba(46,80,58,0.8)';
+    ctx.beginPath();
+    ctx.moveTo(-16, 2.6 + bob);
+    ctx.quadraticCurveTo(0, 3.6 + bob, 17, 2.4 + bob);
+    ctx.stroke();
+    // a faint green glow of the 靈力 that drives it
+    ctx.fillStyle = 'rgba(140,210,160,0.18)';
+    ctx.beginPath();
+    ctx.ellipse(0, 3 + bob, 24, 5, 0, 0, Math.PI * 2);
+    ctx.fill();
+  } else if (by === 'wind') {
+    ctx.strokeStyle = 'rgba(236,236,228,0.8)';
+    ctx.lineWidth = 1.1;
+    for (let n = 0; n < 3; n++) {
+      const a0 = t * 5 + n * 2.1;
+      ctx.beginPath();
+      ctx.ellipse(0, 1 - n * 3.5, 12 + n * 3, 3 + n, 0, a0, a0 + 2.4);
+      ctx.stroke();
+    }
+    ctx.strokeStyle = rgba(INK, 0.25);
+    ctx.lineWidth = 0.6;
+    ctx.beginPath();
+    ctx.ellipse(0, 2, 15, 3.5, 0, t * 4, t * 4 + 1.6);
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
 export function aura(ctx, x, y, t, strength = 1) {
   const r = 26 + Math.sin(t * 1.3) * 3;
   const g = ctx.createRadialGradient(x, y - 14, 2, x, y - 14, r);

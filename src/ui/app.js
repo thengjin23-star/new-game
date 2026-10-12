@@ -7,6 +7,7 @@ import { newGame, rollFate, ORIGINS, ATTRS, attrWord } from '../core/state.js';
 import { startEvent, choose, continueEvent } from '../core/events.js';
 import * as A from '../core/actions.js';
 import * as E from '../world/explore.js';
+import { flyMeans } from '../world/air.js';
 import * as CB from '../world/combat.js';
 import * as AR from '../world/arts.js';
 import { ROOTS, INJURY, BUFFS, realmLabel, stageReq, age, lifespan, rateParts, breakthroughInfo, power, atBottleneck, techOf } from '../core/cultivation.js';
@@ -374,6 +375,7 @@ export function startApp(root, { speed = 1, view = null } = {}) {
       h('div.walk-hint', h('span', '按住畫面拖動：往那裡走'), h('span', '點地面：自己走過去'), h('span', '點人或東西：走過去互動')),
       h('div.caption'),
       h('div.actbar',
+        h('button.fly-btn', { onclick: toggleFly, 'aria-label': '飛上天，或落地（R）', hidden: true }, '飛'),
         h('button.art-btn', { onclick: toggleArts, 'aria-label': '術：法術與符籙（F）', hidden: true }, '術'),
         h('button.sit-btn', { onclick: () => openSheet('rest'), 'aria-label': '歇息、搜尋、閉關' }, '坐'),
         h('button.act-btn', { onclick: doAct }),
@@ -560,6 +562,10 @@ export function startApp(root, { speed = 1, view = null } = {}) {
       toggleArts();
       return;
     }
+    if (key === 'r' && !ui.s.pending && !ui.sheet && !ui.s.secl) {
+      toggleFly();
+      return;
+    }
     if ((key === 'e' || key === ' ' || key === 'enter') && !ui.s.pending && !ui.sheet && e.target === document.body) {
       e.preventDefault();
       doAct();
@@ -649,7 +655,9 @@ export function startApp(root, { speed = 1, view = null } = {}) {
     const sy = cy - rect.top;
     const [wx, wy] = ui.view.screenToWorld(sx, sy);
     hideCaption();
-    const beast = beastAt(sx, sy);
+    // (up in the air you strike at nothing on the ground; a tap is where to fly)
+    const up = E.airborne(s);
+    const beast = !up && beastAt(sx, sy);
     if (beast) {
       CB.strikeAt(s, beast.uid);
       return;
@@ -671,7 +679,7 @@ export function startApp(root, { speed = 1, view = null } = {}) {
       }
     }
     if (best) {
-      if (best.d <= best.reach) act((x) => E.interact(x, best));
+      if (best.d <= best.reach && !up) act((x) => E.interact(x, best));
       else E.walkTo(s, best.x, best.y, best);
       return;
     }
@@ -722,6 +730,30 @@ export function startApp(root, { speed = 1, view = null } = {}) {
     btn.hidden = !any;
     if (!any && ui.artsOpen) ui.artsOpen = false;
     renderArts();
+  }
+
+  // ── flight: up, and down again ──
+
+  function toggleFly() {
+    const s = ui.s;
+    if (!s || s.pending || s.secl) return;
+    ui.artsOpen = false;
+    act((x) => (E.airborne(x) ? E.land(x) : E.takeOff(x)));
+  }
+
+  /** The 飛 button: there when you have something to fly on (or are up); 落 while you are up. */
+  function flyHud() {
+    const s = ui.s;
+    const btn = $('.fly-btn');
+    if (!btn) return;
+    const up = E.airborne(s);
+    const can = up || (!!flyMeans(s).by && !s.pending && !s.secl && !CB.inCombat(s));
+    btn.hidden = !can;
+    const word = up ? '落' : '飛';
+    if (btn.textContent !== word) btn.textContent = word;
+    btn.classList.toggle('down', up);
+    btn.disabled = up && !!s.world.fly.forced;
+    $('.sit-btn').hidden = up;
   }
 
   function doAct() {
@@ -953,7 +985,7 @@ export function startApp(root, { speed = 1, view = null } = {}) {
     const w = s.world;
     const free = !s.pending && !s.secl && !s.dead && !ui.sheet;
     // a beast close by that might come for you: the buttons are ready before it does
-    const ready = free && (C.on || CB.beastsInWorld(s, 400).some((b) => b.side !== 'ally' && !CALM.has(b.state) && Math.hypot(b.x - w.x, b.y - w.y) < 300));
+    const ready = free && !w.fly && (C.on || CB.beastsInWorld(s, 400).some((b) => b.side !== 'ally' && !CALM.has(b.state) && Math.hypot(b.x - w.x, b.y - w.y) < 300));
     const on = free && C.on;
     ui.cbtReady = ready;
     shell.classList.toggle('combat', on);
@@ -1135,6 +1167,7 @@ export function startApp(root, { speed = 1, view = null } = {}) {
     }
     vitalsHud();
     artsHud();
+    flyHud();
     const loc = s.player.loc;
     const pct = exploredPct(s, loc);
     const placeKey = `${loc}|${pct}`;
@@ -2054,7 +2087,7 @@ export function startApp(root, { speed = 1, view = null } = {}) {
       put(info, 
         h('div.row-between', h('b', name), path ? h('span.muted.small', hours < 1 ? '不到一個時辰的路' : `約 ${Math.max(1, Math.round(hours / 2))} 個時辰的路`) : null),
         path
-          ? h('button.btn.primary.wide', { onclick: () => { E.walkTo(s, x, y); closeSheet(); } }, '走過去')
+          ? h('button.btn.primary.wide', { onclick: () => { E.walkTo(s, x, y); closeSheet(); } }, E.airborne(s) ? '飛過去' : '走過去')
           : h('p.muted', '從這裡走不過去。也許還有別的路，也許沒有。'),
       );
     }

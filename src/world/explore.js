@@ -145,7 +145,7 @@ function footing(s, x, y) {
 function revealRadius(s) {
   const base = isNight(s) ? 170 : 260;
   // up in the air you see further (the higher, the further)
-  const up = s.world?.fly ? (s.world.fly.by === 'sword' ? 1.9 : 1.5) : 1;
+  const up = s.world?.fly ? (s.world.fly.by === 'sword' ? 1.6 : 1.3) : 1;
   return (base + 20 * Math.min(4, s.player.realm)) * up;
 }
 

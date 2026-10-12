@@ -39,7 +39,7 @@ export function fogOf(s) {
   const bits = decode(s.world.fog);
   const counts = {};
   for (let k = 0; k < N; k++) {
-    if (!bits[k] || !g.reach[k]) continue;
+    if (!bits[k] || !(g.reach[k] || g.air[k])) continue;
     const id = REGION_IDS[g.reg[k]];
     counts[id] = (counts[id] || 0) + 1;
   }
@@ -63,7 +63,7 @@ export function cellRevealed(s, k) {
   return !!fogOf(s).bits[k];
 }
 
-/** Share of a region's walkable ground that has been seen, 0–100 (95% seen counts as all). */
+/** Share of a region's ground (walked to, or flown to) that has been seen, 0–100 (95% seen counts as all). */
 export function exploredPct(s, id) {
   const total = world().regionCells[id];
   if (!total) return 0;
@@ -93,7 +93,7 @@ export function reveal(s, x, y, r) {
       if (dx * dx + dy * dy > (r + CELL * 0.35) ** 2) continue;
       f.bits[k] = 1;
       fresh.push(k);
-      if (g.reach[k]) {
+      if (g.reach[k] || g.air[k]) {
         const id = REGION_IDS[g.reg[k]];
         f.counts[id] = (f.counts[id] || 0) + 1;
         touched.add(id);
