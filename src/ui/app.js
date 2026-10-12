@@ -9,6 +9,7 @@ import * as B from '../core/battle.js';
 import { createFightPlayer } from '../art/fightplayer.js';
 import * as A from '../core/actions.js';
 import * as E from '../world/explore.js';
+import * as CB from '../world/combat.js';
 import { ROOTS, INJURY, BUFFS, realmLabel, stageReq, age, lifespan, rateParts, breakthroughInfo, power, atBottleneck, techOf } from '../core/cultivation.js';
 import { fmtDate, fmtDuration, seasonOf, SEASON_NAME } from '../core/calendar.js';
 import { NODES, canSecludeAt, nodeQi } from '../world/map.js';
@@ -202,7 +203,11 @@ export function startApp(root, { speed = 1, view = null } = {}) {
       if (ui.sheet === 'map') renderLayer();
     });
     window.addEventListener('keydown', onKey);
-    window.addEventListener('keyup', (e) => ui.keys.delete(e.key.toLowerCase()));
+    window.addEventListener('keyup', (e) => {
+      const key = e.key.toLowerCase();
+      ui.keys.delete(key);
+      if (ui.s && ui.shell) fightKeys(e, key, false);
+    });
     window.addEventListener('blur', () => ui.keys.clear());
   }
 
@@ -377,6 +382,8 @@ export function startApp(root, { speed = 1, view = null } = {}) {
         h('button.act-btn', { onclick: doAct }),
       ),
       h('div.secl-bar'),
+      combatHudEl(),
+      combatPadEl(),
       h('nav.dock'),
       h('div.layer'),
     );
@@ -487,6 +494,7 @@ export function startApp(root, { speed = 1, view = null } = {}) {
       }
     }
     fightTick(dt);
+    combatHud();
     for (const f of E.takeFeed(s)) toast(f.text, f.kind);
     for (const sig of E.takeSignals(s)) onSignal(sig);
     // something happened out there: an event, a death
@@ -535,6 +543,8 @@ export function startApp(root, { speed = 1, view = null } = {}) {
   function onKey(e) {
     if (!ui.s || !ui.shell || e.target.closest?.('input, textarea')) return;
     const key = e.key.toLowerCase();
+    ui.kbd = true;
+    if (fightKeys(e, key, true)) return;
     if (['w', 'a', 's', 'd', 'arrowleft', 'arrowright', 'arrowup', 'arrowdown'].includes(key)) {
       if (!ui.s.pending && !ui.sheet) {
         ui.keys.add(key);
@@ -573,6 +583,7 @@ export function startApp(root, { speed = 1, view = null } = {}) {
       }
     });
     canvas.addEventListener('pointermove', (e) => {
+      if (e.pointerType === 'mouse') ui.mouse = { x: e.clientX, y: e.clientY, t: performance.now() };
       const p = pts.get(e.pointerId);
       if (!p) return;
       p.x = e.clientX;
@@ -637,6 +648,12 @@ export function startApp(root, { speed = 1, view = null } = {}) {
     const sy = cy - rect.top;
     const [wx, wy] = ui.view.screenToWorld(sx, sy);
     hideCaption();
+    const beast = beastAt(sx, sy);
+    if (beast) {
+      CB.strikeAt(s, beast.uid);
+      return;
+    }
+    if (CB.inCombat(s)) CB.stopStriking(s);
     // the thing under your finger (people are tall: count a tap on their body)
     let best = null;
     let bd = 34;
@@ -673,6 +690,279 @@ export function startApp(root, { speed = 1, view = null } = {}) {
   function onSignal(sig) {
     if (sig.caption) showCaption(sig.caption);
     if (sig.open === 'shop') openSheet('shop');
+    if (sig.combat) combatSignal(sig);
+  }
+
+  // ── a fight as you move ──
+
+  const SKILL_KEYS = { 1: 'swordqi', 2: 'fireball', 3: 'guard' };
+
+  /** The beast under a tap, if any (they are low to the ground: count a tap on their body). */
+  function beastAt(sx, sy) {
+    let best = null;
+    let bd = 52;
+    for (const b of CB.beastsInWorld(ui.s, 800)) {
+      if (['dead', 'flee', 'vanish'].includes(b.state)) continue;
+      for (const up of [0, 12, 24]) {
+        const [px, py] = ui.view.worldToScreen(b.x, b.y, up);
+        const d = Math.hypot(px - sx, py - sy);
+        if (d < bd) {
+          bd = d;
+          best = b;
+        }
+      }
+    }
+    return best;
+  }
+
+  /** Where the mouse points on the ground (if it has moved lately). */
+  function mouseAim() {
+    const m = ui.mouse;
+    if (!m || performance.now() - m.t > 8000 || !ui.view) return null;
+    const rect = ui.shell.querySelector('canvas.world-canvas').getBoundingClientRect();
+    return ui.view.screenToWorld(m.x - rect.left, m.y - rect.top);
+  }
+
+  /** Which way you are steering (stick or keys), if at all. */
+  function moveDir() {
+    const i = currentInput();
+    if (!i || (!i.x && !i.y)) return null;
+    return [i.x, i.y];
+  }
+
+  /** A drag on the screen as a way across the ground (as it looks: the camera tilts the ground away). */
+  function dragToWorld(dx, dy) {
+    const w = ui.s.world;
+    const d = Math.hypot(dx, dy) || 1;
+    const [px, py] = ui.view.worldToScreen(w.x, w.y);
+    const [gx, gy] = ui.view.screenToWorld(px + (dx / d) * 120, py + (dy / d) * 120);
+    const n = Math.hypot(gx - w.x, gy - w.y) || 1;
+    return [(gx - w.x) / n, (gy - w.y) / n];
+  }
+
+  /** J strikes, 1 2 3 cast (aimed with the mouse: hold to see where, let go to loose), space or shift steps aside. */
+  function fightKeys(e, key, down) {
+    const s = ui.s;
+    if (!s || s.pending || s.secl || s.dead || ui.sheet || s.battle || e.target?.closest?.('input, textarea')) return false;
+    if (key === 'j') {
+      e.preventDefault();
+      if (down) CB.attackCmd(s, mouseAim(), true);
+      else CB.attackRelease(s);
+      return true;
+    }
+    const id = SKILL_KEYS[key];
+    if (id) {
+      e.preventDefault();
+      if (down) ui.keyAim = ui.keyAim || id;
+      else if (ui.keyAim === id) {
+        CB.castCmd(s, id, mouseAim());
+        ui.keyAim = null;
+        CB.setPreview(s, null);
+      }
+      return true;
+    }
+    if ((key === ' ' && (CB.inCombat(s) || ui.cbtReady)) || key === 'shift' || key === 'k') {
+      e.preventDefault();
+      if (down && !e.repeat) {
+        const m = mouseAim();
+        const w = s.world;
+        CB.dashCmd(s, moveDir() || (m ? [m[0] - w.x, m[1] - w.y] : null));
+      }
+      return true;
+    }
+    return false;
+  }
+
+  /** The bars at the top in a fight: your blood and 靈力, and whom you are fighting. */
+  function combatHudEl() {
+    return h('div.cbt-hud',
+      h('div.cbt-top',
+        h('div.cbt-who', h('b.cbt-name'), h('span.cbt-realm'), h('span.cbt-state')),
+        h('div.cbt-bar.hp', h('i'), h('span')),
+        h('div.cbt-bar.mp', h('i'), h('span')),
+      ),
+      h('div.cbt-foe', h('div.cbt-foe-name'), h('div.cbt-bar.foe', h('i'))),
+    );
+  }
+
+  /** The buttons on the right: strike, the three moves, step aside. */
+  function combatPadEl() {
+    const pad = h('div.cbt-pad');
+    const make = (id, cls, key) => {
+      const el = h(`button.cbt-btn.${cls}`, { type: 'button', 'data-id': id }, h('b'), h('small'), h('i.cbt-cd'), h('kbd', key));
+      pad.appendChild(el);
+      return el;
+    };
+    const strike = make('strike', 'strike', 'J');
+    const release = () => {
+      strike.classList.remove('down');
+      if (ui.s) CB.attackRelease(ui.s);
+    };
+    strike.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      if (!ui.s) return;
+      strike.setPointerCapture?.(e.pointerId);
+      strike.classList.add('down');
+      CB.attackCmd(ui.s, null, true);
+    });
+    strike.addEventListener('pointerup', release);
+    strike.addEventListener('pointercancel', release);
+    for (const [id, cls, key] of [['swordqi', 's1', '1'], ['fireball', 's2', '2'], ['guard', 's3', '3']]) aimButton(make(id, cls, key), id);
+    const dash = make('dash', 'dash', '␣');
+    dash.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      if (!ui.s) return;
+      dash.classList.add('down');
+      CB.dashCmd(ui.s, moveDir());
+    });
+    for (const ev of ['pointerup', 'pointercancel', 'pointerleave']) dash.addEventListener(ev, () => dash.classList.remove('down'));
+    return pad;
+  }
+
+  /**
+   * A move's button: a tap casts it at whoever you are after; a drag aims it
+   * (the ground shows where), and letting go casts it — unless you drag back
+   * onto the button, which calls it off.
+   */
+  function aimButton(el, id) {
+    let st = null;
+    el.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      if (!ui.s) return;
+      el.setPointerCapture?.(e.pointerId);
+      st = { pid: e.pointerId, sx: e.clientX, sy: e.clientY, aiming: false, off: false, pt: null };
+      el.classList.add('down');
+    });
+    el.addEventListener('pointermove', (e) => {
+      if (!st || e.pointerId !== st.pid || !ui.s) return;
+      const dx = e.clientX - st.sx;
+      const dy = e.clientY - st.sy;
+      const d = Math.hypot(dx, dy);
+      if (!st.aiming && d > 14) st.aiming = true;
+      if (!st.aiming) return;
+      st.off = d < 16;
+      const k = CB.kitOf(ui.s).find((x) => x.id === id);
+      const [ux, uy] = dragToWorld(dx, dy);
+      const reach = k.aim === 'ground' ? k.range * Math.min(1, d / 90) : k.range || 60;
+      const w = ui.s.world;
+      st.pt = [w.x + ux * reach, w.y + uy * reach];
+      CB.setPreview(ui.s, st.off ? null : { id, pt: st.pt });
+      el.classList.toggle('off', st.off);
+    });
+    const end = (e) => {
+      if (!st || e.pointerId !== st.pid) return;
+      el.classList.remove('down', 'off');
+      if (ui.s) {
+        CB.setPreview(ui.s, null);
+        if (e.type === 'pointerup' && !(st.aiming && st.off)) CB.castCmd(ui.s, id, st.aiming ? st.pt : null);
+      }
+      st = null;
+    };
+    el.addEventListener('pointerup', end);
+    el.addEventListener('pointercancel', end);
+  }
+
+  /** Each frame: show the fight's HUD and buttons when it matters, and keep them true. */
+  function combatHud() {
+    const s = ui.s;
+    const shell = ui.shell;
+    if (!s || !shell) return;
+    const C = CB.combatOf(s);
+    const me = CB.hero(s, C);
+    const w = s.world;
+    const free = !s.pending && !s.secl && !s.dead && !ui.sheet && !s.battle;
+    // a beast close by that might come for you: the buttons are ready before it does
+    const ready = free && (C.on || CB.beastsInWorld(s, 400).some((b) => !['dead', 'flee', 'vanish', 'gone'].includes(b.state) && Math.hypot(b.x - w.x, b.y - w.y) < 300));
+    const on = free && C.on;
+    ui.cbtReady = ready;
+    shell.classList.toggle('combat', on);
+    shell.classList.toggle('cbt-ready', ready);
+    shell.classList.toggle('kbd', !!ui.kbd);
+    if (ui.keyAim) {
+      const k = CB.kitOf(s).find((x) => x.id === ui.keyAim);
+      CB.setPreview(s, { id: ui.keyAim, pt: mouseAim() || CB.autoAim(s, k) });
+    }
+    if (!ready) return;
+    const set = (el, prop, v) => {
+      if (el && el[prop] !== v) el[prop] = v;
+    };
+    // your bars
+    const hpBar = $('.cbt-bar.hp');
+    const mpBar = $('.cbt-bar.mp');
+    hpBar.querySelector('i').style.width = `${(me.hp / me.maxHp) * 100}%`;
+    hpBar.style.setProperty('--cap', `${(me.cap / me.maxHp) * 100}%`);
+    set(hpBar.querySelector('span'), 'textContent', `氣血 ${Math.ceil(me.hp)} / ${me.cap}${me.shield > 0 ? `　護體 ${Math.ceil(me.shield)}` : ''}`);
+    mpBar.querySelector('i').style.width = `${me.maxMp ? (me.mp / me.maxMp) * 100 : 0}%`;
+    set(mpBar.querySelector('span'), 'textContent', me.maxMp ? `靈力 ${Math.floor(me.mp)} / ${me.maxMp}` : '靈力 —');
+    hpBar.classList.toggle('shield', me.shield > 0);
+    set($('.cbt-name'), 'textContent', s.player.name);
+    set($('.cbt-realm'), 'textContent', realmLabel(s.player));
+    // whom you are fighting
+    const list = CB.beastsInWorld(s, 900).filter((b) => b.aggro && b.armed && !['dead', 'gone', 'vanish'].includes(b.state));
+    const foe = list.find((b) => b.uid === me.target) || list[0] || null;
+    const pressed = list.some((b) => b.gap > 0);
+    set($('.cbt-state'), 'textContent', C.trial ? '試煉' : pressed ? '境界壓制' : on ? '戰鬥中' : '');
+    $('.cbt-state').classList.toggle('bad', pressed);
+    const foeEl = $('.cbt-foe');
+    foeEl.classList.toggle('on', !!foe && on);
+    if (foe) {
+      set(foeEl.querySelector('.cbt-foe-name'), 'textContent', foe.phantom ? foe.name : `${foe.name}・${CB.TIER_NAME[foe.tier] || ''}${foe.gap > 0 ? '（高你一個大境界）' : ''}`);
+      foeEl.querySelector('.cbt-bar.foe i').style.width = `${Math.max(0, (foe.hp / foe.maxHp) * 100)}%`;
+      foeEl.classList.toggle('enraged', !!foe.enraged);
+    }
+    // the buttons: names, costs, cooldowns
+    const kit = CB.kitOf(s);
+    const S = CB.strikeOf(s);
+    for (const el of shell.querySelectorAll('.cbt-btn')) {
+      const id = el.dataset.id;
+      let name;
+      let cost = '';
+      let left = 0;
+      let total = 1;
+      let off = false;
+      if (id === 'strike') {
+        name = S.name;
+        left = me.cds.strike || 0;
+        total = S.every;
+      } else if (id === 'dash') {
+        name = '閃避';
+        left = me.cds.dash || 0;
+        total = CB.dashCd(s);
+      } else {
+        const k = kit.find((x) => x.id === id);
+        name = k.name;
+        cost = k.locked ? '需引氣' : String(k.mp);
+        left = me.cds[id] || 0;
+        total = k.cd;
+        off = !!k.locked || me.mp < k.mp;
+        el.classList.toggle('good', !!k.good);
+      }
+      set(el.querySelector('b'), 'textContent', name);
+      set(el.querySelector('small'), 'textContent', cost);
+      el.classList.toggle('off-mp', off);
+      el.style.setProperty('--cd', String(left > 0 ? Math.min(1, left / total) : 0));
+      set(el.querySelector('.cbt-cd'), 'textContent', left > 0.05 && total > 1 ? left.toFixed(1) : '');
+    }
+  }
+
+  /** A fight starts or ends: a word across the screen. */
+  function combatSignal(sig) {
+    if (sig.combat === 'start') {
+      hideCaption();
+      combatBanner('遭遇', sig.phantom || !sig.tier ? sig.name : `${sig.name}・${CB.TIER_NAME[sig.tier] || ''}`);
+    } else if (sig.combat === 'won') combatBanner('戰鬥結束', '勝');
+    else if (sig.combat === 'escaped') combatBanner('', '已脫離戰鬥');
+  }
+
+  function combatBanner(sub, name) {
+    const el = $('.banner');
+    if (!el) return;
+    clear(el);
+    put(el, sub ? h('span.banner-sub', sub) : null, h('span.banner-name', name));
+    el.classList.add('cbt');
+    el.classList.remove('show');
+    void el.offsetWidth;
+    el.classList.add('show');
   }
 
   // ── HUD ──
@@ -718,7 +1008,8 @@ export function startApp(root, { speed = 1, view = null } = {}) {
       );
     }
     // the act button and the ring under its target
-    const t = !s.pending && !s.secl && !ui.sheet ? E.nearestTarget(s) : null;
+    // with a beast close by, the fight's own buttons and marks take over from the act button
+    const t = !s.pending && !s.secl && !ui.sheet && !ui.cbtReady ? E.nearestTarget(s) : null;
     ui.view?.setHighlight(t);
     const actKey = t ? `${t.kind}:${t.id}:${t.verb}:${t.name}` : '';
     if (force || ui.hudKeys.act !== actKey) {
@@ -743,6 +1034,7 @@ export function startApp(root, { speed = 1, view = null } = {}) {
   function showBanner(b) {
     const el = $('.banner');
     clear(el);
+    el.classList.remove('cbt');
     put(el, b.first ? h('span.banner-sub', '初到') : null, h('span.banner-name', b.name));
     el.classList.remove('show');
     void el.offsetWidth;
@@ -921,6 +1213,10 @@ export function startApp(root, { speed = 1, view = null } = {}) {
 
   function openSheet(id) {
     if (!ui.s || ui.s.pending) return;
+    if (id && CB.inCombat(ui.s)) {
+      toast('戰鬥中，無暇他顧。', 'bad');
+      return;
+    }
     ui.sheet = id;
     ui.joy = null;
     ui.keys.clear();
@@ -1282,8 +1578,14 @@ export function startApp(root, { speed = 1, view = null } = {}) {
           : null,
       ),
       h('section.card',
+        h('h3', '戰鬥試煉'),
+        h('p.muted.small', '系統在你身邊幻化出一頭與你旗鼓相當的妖狼，讓你練習即時戰鬥：移動、普攻、三門法術、閃避，打不過也可以跑。幻影傷不了你，也不會留下什麼；還沒引氣入體的話，系統會暫借你靈力與法術。'),
+        h('button.btn', { onclick: () => { closeSheet(); act((x) => CB.startTrial(x)); } }, '開始試煉'),
+      ),
+      h('section.card',
         h('h3', '操作'),
         h('p.muted.small', '按住畫面任意處拖動：往那個方向走。點一下地面：自己走過去。點人或東西：走過去並互動。兩指捏合：縮放。鍵盤：WASD 或方向鍵行走，E 互動，M 地圖。'),
+        h('p.muted.small', '戰鬥：左手拖動移動；右下大鈕普攻（按住連續攻擊，點妖獸也會上前攻擊），三顆小鈕是劍氣、火球、護體——點一下自動瞄準，按住拖曳可以自己瞄準，放開施放，拖回按鈕上取消；「閃避」短距離位移，途中不會被打中。逃跑就是真的跑：跑得夠遠、躲進密林或進城，妖獸就會放棄。鍵盤：J 普攻、1 2 3 法術（朝滑鼠方向，按住看範圍、放開施放）、空白鍵或 Shift 閃避。'),
       ),
       h('section.card',
         h('h3', '存檔'),

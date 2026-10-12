@@ -83,6 +83,9 @@ export function hero(s, C = combatOf(s)) {
       hurtT: -99, flashT: -99, target: null, auto: false, hold: false, press: 0, steer: null, dir: [1, 0], trail: [],
     };
   }
+  // grown stronger (a breakthrough, a wound healed, 靈力 lent): the new room comes filled
+  if (me.cap > 0 && cap > me.cap) me.hp += cap - me.cap;
+  if (maxMp > (me.maxMp ?? maxMp)) me.mp += maxMp - me.maxMp;
   me.P = P;
   me.maxHp = maxHp;
   me.cap = cap;
@@ -423,7 +426,7 @@ function engage(s, C, b, io, line = null) {
   C.killed = 0;
   C.quiet = 0;
   C.outcome = null;
-  io.signal({ combat: 'start', name: b.name, tier: b.tier, gap: b.gap });
+  io.signal({ combat: 'start', name: b.name, tier: b.tier, gap: b.gap, phantom: b.phantom });
   io.feed('bad', line || `${b.name}盯上了你！`);
   if (b.gap > 0) io.feed('bad', '境界壓制：牠高出你一個大境界，你的攻擊很難傷到牠。');
 }

@@ -13,6 +13,8 @@ import { drawPerson, drawMob, aura, LOOKS, FOLK_LOOKS, groundShadow } from './fi
 import { makeParticles, drawParticles, rgba, INK, PAPER } from './ink.js';
 import { drawActor, drawPose, poseOf, lookOf, drawSpeech } from './scenery.js';
 import { fighters, paintFighter, drawFightMarks } from './battlefx.js';
+import * as CB from '../world/combat.js';
+import { paintBeast, paintHero, drawGroundMarks, drawCombatOverlay } from './combatfx.js';
 import { seasonOf } from '../core/calendar.js';
 import { stream } from '../core/rng.js';
 
@@ -668,6 +670,9 @@ export function createWorldView(canvas, { onFrame, idle, fight = null } = {}) {
   // in a fight: the camera over the field, closer
   let fightList = null;
   let zoomBefore = null;
+  // in a fight as you move: a little closer, and back after
+  let cbtZoomFrom = null;
+  let cbtZoomT = 0;
 
   function followCamera(dt, snap) {
     const w = s.world;
@@ -685,6 +690,21 @@ export function createWorldView(canvas, { onFrame, idle, fight = null } = {}) {
       zoom = zoomBefore;
       zoomBefore = null;
     }
+    const fighting = CB.inCombat(s);
+    if (fighting) {
+      if (cbtZoomFrom === null) {
+        cbtZoomFrom = zoom;
+        cbtZoomT = 0;
+      }
+      cbtZoomT += dt;
+      if (cbtZoomT < 1.5) zoom += (Math.max(cbtZoomFrom, 1.1) - zoom) * (1 - Math.exp(-dt * 4));
+    } else if (cbtZoomFrom !== null) {
+      zoom += (cbtZoomFrom - zoom) * (1 - Math.exp(-dt * 3));
+      if (Math.abs(zoom - cbtZoomFrom) < 0.01) {
+        zoom = cbtZoomFrom;
+        cbtZoomFrom = null;
+      }
+    }
     if (lastPos && dt > 0) {
       const vx = (w.x - lastPos[0]) / dt;
       const vy = (w.y - lastPos[1]) / dt;
@@ -692,8 +712,9 @@ export function createWorldView(canvas, { onFrame, idle, fight = null } = {}) {
       vel.y += (vy - vel.y) * Math.min(1, dt * 4);
     }
     lastPos = [w.x, w.y];
-    const tx = w.x + vel.x * 0.35;
-    const ty = w.y + vel.y * 0.35 - 20;
+    const lead = fighting ? 0.12 : 0.35;
+    const tx = w.x + vel.x * lead;
+    const ty = w.y + vel.y * lead - 20;
     if (snap || Math.hypot(tx - cam.x, ty - cam.y) > 900) {
       cam.x = tx;
       cam.y = ty;
@@ -759,6 +780,8 @@ export function createWorldView(canvas, { onFrame, idle, fight = null } = {}) {
   function drawGroundFx() {
     const w = s.world;
     if (fightList) return;
+    const C = CB.combatOf(s);
+    if (C.me || C.beasts) drawGroundMarks(ctx, s, C, CB.kitOf(s), zoom);
     if (highlight) {
       const r = 16 + Math.sin(t * 4) * 2;
       ctx.strokeStyle = 'rgba(168,50,42,0.7)';
@@ -876,6 +899,10 @@ export function createWorldView(canvas, { onFrame, idle, fight = null } = {}) {
       if (c.x < x0 - 30 || c.x > x1 + 30 || c.y < y0 || c.y > y1 + 60) continue;
       push(c.y, 'wild', c);
     }
+    for (const b of CB.beastsInWorld(s)) {
+      if (b.x < x0 - 40 || b.x > x1 + 40 || b.y < y0 || b.y > y1 + 60) continue;
+      push(b.y, 'beast', b);
+    }
     const w = s.world;
     if (!fightList) push(w.y, 'player', w);
     list.sort((a, b) => a.y - b.y);
@@ -891,6 +918,8 @@ export function createWorldView(canvas, { onFrame, idle, fight = null } = {}) {
     drawItem({ kind: 'player', a: w });
     ctx.globalAlpha = 1;
     drawLabels();
+    const C = CB.combatOf(s);
+    if (C.beasts?.length || C.shots.length || C.fx.length || C.pops.length) drawCombatOverlay(ctx, (x, y, up) => [x, y - up], 1 / zoom, s, C, LOOKS.player, t, FONT);
     return above;
   }
 
@@ -1075,12 +1104,46 @@ export function createWorldView(canvas, { onFrame, idle, fight = null } = {}) {
         const sit = !!s.secl;
         if (sit) aura(ctx, w.x, w.y, t, 1);
         const moving = E.liveOf(s).moving;
-        drawPerson(ctx, w.x, w.y, LOOKS.player, { t, moving, face: w.face || 1, sit });
+        const C = CB.combatOf(s);
+        const me = C.me;
+        if (me && !sit) {
+          ctx.save();
+          ctx.translate(w.x, w.y);
+          hurtHalo(Math.max(0, 1 - (C.t - me.flashT) / 0.22), 36);
+          paintHero(ctx, LOOKS.player, { act: me.act, dash: me.dash, flashT: me.flashT, face: w.face || 1, moving, weapon: s.player.weapon }, t, C.t, { tint: false });
+          ctx.restore();
+        } else drawPerson(ctx, w.x, w.y, LOOKS.player, { t, moving, face: w.face || 1, sit });
+        break;
+      }
+      case 'beast': {
+        const b = it.a;
+        const C = CB.combatOf(s);
+        ctx.save();
+        ctx.translate(b.x, b.y);
+        if (b.phantom) {
+          // a phantom: a cold blue haze about it
+          ctx.fillStyle = `rgba(120,170,235,${0.18 * (1 - (b.fade || 0))})`;
+          ctx.beginPath();
+          ctx.ellipse(0, -12, 26, 16, 0, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        hurtHalo(Math.max(0, 1 - (C.t - b.flashT) / 0.2), b.R.tall);
+        paintBeast(ctx, b, t, C.t, { tint: false });
+        ctx.restore();
         break;
       }
       default:
         break;
     }
+  }
+
+  /** A blow lands: a flash of red where they stand (on the flat map nothing can be washed red alone). */
+  function hurtHalo(flash, tall) {
+    if (!(flash > 0)) return;
+    ctx.fillStyle = `rgba(214,40,30,${0.35 * flash})`;
+    ctx.beginPath();
+    ctx.ellipse(0, -tall * 0.45, 18, tall * 0.6, 0, 0, Math.PI * 2);
+    ctx.fill();
   }
 
   function sparkle(x, y, a) {

@@ -29,6 +29,8 @@ import { seasonOf } from '../core/calendar.js';
 import { asset } from './assets.js';
 import { drawActor, drawPose, poseOf, lookOf, drawSpeech, LIVE_PROPS } from './scenery.js';
 import { fighters, paintFighter, drawFightMarks } from './battlefx.js';
+import * as CB from '../world/combat.js';
+import { paintBeast, paintHero, drawGroundMarks, drawCombatOverlay } from './combatfx.js';
 import { stream } from '../core/rng.js';
 
 const DEG = Math.PI / 180;
@@ -166,6 +168,29 @@ export function createWorld3D(canvas, { onFrame, idle, quality = 'high', onSlow 
     return true;
   }
 
+  // in a fight as you move, the camera comes in a little, and goes back after
+  let cbtZoomFrom = null;
+  let cbtZoomT = 0;
+
+  function combatZoom(dt) {
+    const on = CB.inCombat(s);
+    if (on) {
+      if (cbtZoomFrom === null) {
+        cbtZoomFrom = zoom;
+        cbtZoomT = 0;
+      }
+      cbtZoomT += dt;
+      if (cbtZoomT < 1.5) zoom += (Math.max(cbtZoomFrom, 1.05) - zoom) * (1 - Math.exp(-dt * 4));
+    } else if (cbtZoomFrom !== null) {
+      zoom += (cbtZoomFrom - zoom) * (1 - Math.exp(-dt * 3));
+      if (Math.abs(zoom - cbtZoomFrom) < 0.01) {
+        zoom = cbtZoomFrom;
+        cbtZoomFrom = null;
+      }
+    }
+    return on;
+  }
+
   function followCamera(dt, snap) {
     const w = s.world;
     if (s.battle && fightList && followFight(dt, snap)) return;
@@ -173,6 +198,7 @@ export function createWorld3D(canvas, { onFrame, idle, quality = 'high', onSlow 
       zoom = zoomBefore;
       zoomBefore = null;
     }
+    const lead = combatZoom(dt) ? 0.12 : 0.35;
     if (lastPos && dt > 0) {
       const vx = (w.x - lastPos[0]) / dt;
       const vy = (w.y - lastPos[1]) / dt;
@@ -180,8 +206,8 @@ export function createWorld3D(canvas, { onFrame, idle, quality = 'high', onSlow 
       vel.y += (vy - vel.y) * Math.min(1, dt * 4);
     }
     lastPos = [w.x, w.y];
-    const tx = Math.max(260, Math.min(WORLD_W - 260, w.x + vel.x * 0.35));
-    const ty = Math.max(420, Math.min(WORLD_H - 120, w.y + vel.y * 0.35));
+    const tx = Math.max(260, Math.min(WORLD_W - 260, w.x + vel.x * lead));
+    const ty = Math.max(420, Math.min(WORLD_H - 120, w.y + vel.y * lead));
     const th = heightAt(w.x, w.y);
     if (snap || Math.hypot(tx - focus.x, ty - focus.y) > 900) {
       focus.x = tx;
@@ -388,14 +414,22 @@ export function createWorld3D(canvas, { onFrame, idle, quality = 'high', onSlow 
       cards.end();
       return;
     }
+    const C = CB.combatOf(s);
+    for (const b of CB.beastsInWorld(s)) {
+      if (!near(b.x, b.y)) continue;
+      cards.add(`beast:${b.uid}`, b.x, heightAt(b.x, b.y), b.y, (c) => paintBeast(c, b, t, C.t), { animated: true, fps: 30, ghost: b.aggro && b.state !== 'dead' });
+      if (b.state !== 'dead' && !((b.fade || 0) > 0.5)) foot(b.x, b.y, 15, 0.3);
+    }
     const sit = !!s.secl;
     const moving = E.liveOf(s).moving;
-    const me = !sit && picture('player', 50);
+    const pic = !sit && picture('player', 50);
+    const me = C.me;
     cards.add('player', w.x, heightAt(w.x, w.y), w.y, (c) => {
       if (sit) aura(c, 0, 0, t, 1);
-      if (me) me(c);
+      if (pic) pic(c);
+      else if (me && !sit) paintHero(c, LOOKS.player, { act: me.act, dash: me.dash, flashT: me.flashT, face: w.face || 1, moving, weapon: s.player.weapon }, t, C.t);
       else drawPerson(c, 0, 0, LOOKS.player, { t, moving, face: w.face || 1, sit });
-    }, { animated: true, fps: moving || sit ? 30 : 10, ghost: true });
+    }, { animated: true, fps: moving || sit || C.on ? 30 : 10, ghost: true });
     foot(w.x, w.y, sit ? 13 : 9.5, 0.34);
     sh.end();
     FIGURE.shadows = true;
@@ -643,6 +677,8 @@ export function createWorld3D(canvas, { onFrame, idle, quality = 'high', onSlow 
     drawSpeechBubbles();
     drawBeastMarks();
     drawPlaceNames();
+    const C = CB.combatOf(s);
+    if (C.beasts?.length || C.shots.length || C.fx.length || C.pops.length) drawCombatOverlay(octx, worldToScreen, 1, s, C, LOOKS.player, t, FONT);
     paperAndWeather(dt);
   }
 
@@ -820,7 +856,12 @@ export function createWorld3D(canvas, { onFrame, idle, quality = 'high', onSlow 
       // reaching toward the eye: a tree just in front can hide a fighter with its crown
       const r = Math.max(...fightList.map((f) => Math.hypot(f.x - cx, f.y - cy))) + 110;
       env.u.uClear.value.set(cx, cy + 55, r);
-    } else env.u.uClear.value.set(0, 0, 0);
+    } else if (CB.inCombat(s)) env.u.uClear.value.set(s.world.x, s.world.y + 40, 125);
+    else env.u.uClear.value.set(0, 0, 0);
+    const C = CB.combatOf(s);
+    const me = C.me;
+    const marks = C.on || C.preview || C.fx.length || (me && (me.shield > 0 || me.target)) || (C.beasts || []).some((b) => b.state === 'windup' || b.state === 'pounce');
+    env.groundMarks(s.world.x, s.world.y, marks ? (g, k) => drawGroundMarks(g, s, C, CB.kitOf(s), k) : null);
     followCamera(dt, snap);
     updateFog();
     terrain.update(focus.x, focus.y, season, dt, snap ? 12 : 1);

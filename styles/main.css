@@ -2067,3 +2067,340 @@ canvas.bigmap {
   color: #f7efe1;
   border-color: var(--red);
 }
+
+/* ── a fight as you move (即時戰鬥) ── */
+
+.cbt-hud {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 6;
+  display: none;
+}
+
+.game.combat .cbt-hud {
+  display: block;
+}
+
+/* in a fight the top bar is your blood and 靈力, not the date */
+.game.combat .hud-top,
+.game.combat .hud-row,
+.game.combat nav.dock,
+.game.combat .walk-hint,
+.game.combat .caption,
+.game.combat .secl-bar {
+  visibility: hidden;
+}
+
+.cbt-top {
+  margin: calc(var(--fsat) + 8px) 10px 0;
+  padding: 8px 12px 9px;
+  max-width: 520px;
+  background: rgba(239, 233, 219, 0.94);
+  border: 1px solid rgba(35, 32, 27, 0.18);
+  border-radius: 10px;
+  box-shadow: 0 2px 10px rgba(30, 24, 16, 0.14);
+  display: grid;
+  gap: 5px;
+}
+
+.cbt-who {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+}
+
+.cbt-name {
+  font-size: 17px;
+}
+
+.cbt-realm {
+  color: var(--red);
+  font-size: 14px;
+}
+
+.cbt-state {
+  margin-left: auto;
+  font-size: 12px;
+  color: var(--ink-2);
+  padding: 0 8px;
+  border-radius: 9px;
+  background: rgba(35, 32, 27, 0.08);
+}
+
+.cbt-state:empty {
+  display: none;
+}
+
+.cbt-state.bad {
+  color: #f7efe1;
+  background: var(--red);
+}
+
+.cbt-bar {
+  position: relative;
+  height: 16px;
+  border-radius: 8px;
+  background: rgba(35, 32, 27, 0.16);
+  overflow: hidden;
+}
+
+.cbt-bar i {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 0;
+  transition: width 0.12s;
+}
+
+.cbt-bar.hp i {
+  background: linear-gradient(#c75445, #a8322a);
+}
+
+/* blood a wound holds back */
+.cbt-bar.hp::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: var(--cap, 100%);
+  right: 0;
+  background: repeating-linear-gradient(45deg, rgba(35, 32, 27, 0.28) 0 4px, transparent 4px 8px);
+}
+
+.cbt-bar.hp.shield {
+  box-shadow: 0 0 0 2px rgba(110, 165, 225, 0.85);
+}
+
+.cbt-bar.mp {
+  height: 12px;
+}
+
+.cbt-bar.mp i {
+  background: linear-gradient(#6990c4, #4f73a8);
+}
+
+.cbt-bar span {
+  position: absolute;
+  inset: 0;
+  padding-left: 8px;
+  font-size: 11px;
+  line-height: 16px;
+  color: #f7efe1;
+  text-shadow: 0 0 2px rgba(20, 16, 12, 0.7);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.cbt-bar.mp span {
+  font-size: 10px;
+  line-height: 12px;
+}
+
+/* whom you are fighting */
+.cbt-foe {
+  position: absolute;
+  left: 12px;
+  top: calc(var(--fsat) + 104px);
+  width: min(52vw, 240px);
+  display: none;
+  gap: 3px;
+}
+
+.cbt-foe.on {
+  display: grid;
+}
+
+.cbt-foe-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--red);
+  text-shadow: 0 0 3px rgba(250, 246, 236, 0.95), 0 0 6px rgba(250, 246, 236, 0.85);
+}
+
+.cbt-bar.foe {
+  height: 9px;
+  background: rgba(35, 32, 27, 0.35);
+  border: 1px solid rgba(250, 246, 236, 0.6);
+}
+
+.cbt-bar.foe i {
+  background: #a8322a;
+}
+
+.cbt-foe.enraged .cbt-bar.foe i {
+  background: #d8402c;
+}
+
+/* the buttons, under the right thumb */
+.cbt-pad {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 0;
+  height: 0;
+  z-index: 7;
+  display: none;
+}
+
+.game.cbt-ready .cbt-pad {
+  display: block;
+}
+
+.game.cbt-ready .actbar {
+  display: none;
+}
+
+/* a word across the screen as a fight starts or ends: smaller and quicker than a place's name */
+.banner.cbt {
+  top: 26%;
+}
+
+.banner.cbt .banner-name {
+  font-size: clamp(22px, 7vw, 30px);
+  letter-spacing: 0.16em;
+}
+
+.banner.cbt.show {
+  animation-duration: 1.7s;
+}
+
+.cbt-btn {
+  --size: 58px;
+  position: absolute;
+  width: var(--size);
+  height: var(--size);
+  margin: 0 calc(var(--size) / -2) calc(var(--size) / -2) 0;
+  appearance: none;
+  padding: 0;
+  border-radius: 50%;
+  border: 2px solid rgba(35, 32, 27, 0.72);
+  background: rgba(239, 233, 219, 0.93);
+  color: var(--ink);
+  display: grid;
+  place-content: center;
+  gap: 0;
+  font-family: inherit;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  box-shadow: 0 2px 8px rgba(30, 24, 16, 0.28);
+  cursor: pointer;
+  transition: transform 0.08s;
+}
+
+.cbt-btn b {
+  font-size: 15px;
+  line-height: 1.1;
+  letter-spacing: 0.04em;
+}
+
+.cbt-btn small {
+  font-size: 10px;
+  line-height: 1.1;
+  color: #4f73a8;
+}
+
+.cbt-btn small:empty {
+  display: none;
+}
+
+.cbt-btn.down {
+  transform: scale(0.92);
+}
+
+.cbt-btn.off {
+  border-color: var(--red);
+  border-style: dashed;
+}
+
+.cbt-btn.good {
+  border-color: rgba(59, 106, 91, 0.95);
+  box-shadow: 0 0 0 2px rgba(59, 106, 91, 0.25), 0 2px 8px rgba(30, 24, 16, 0.28);
+}
+
+.cbt-btn.off-mp b,
+.cbt-btn.off-mp small {
+  opacity: 0.4;
+}
+
+/* the cooldown, a shadow sweeping round */
+.cbt-cd {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: conic-gradient(rgba(20, 16, 12, 0.58) calc(var(--cd, 0) * 360deg), transparent 0);
+  display: grid;
+  place-items: center;
+  font-style: normal;
+  font-size: 14px;
+  font-weight: 700;
+  color: #f7efe1;
+  text-shadow: 0 0 3px rgba(20, 16, 12, 0.9);
+  pointer-events: none;
+}
+
+.cbt-btn kbd {
+  position: absolute;
+  right: -2px;
+  top: -4px;
+  min-width: 16px;
+  padding: 0 3px;
+  border-radius: 4px;
+  background: rgba(35, 32, 27, 0.8);
+  color: #f7efe1;
+  font: 600 10px/16px sans-serif;
+  display: none;
+}
+
+.game.kbd .cbt-btn kbd {
+  display: block;
+}
+
+.cbt-btn.strike {
+  --size: 84px;
+  right: 62px;
+  bottom: calc(var(--fsab) + 84px);
+  background: var(--red);
+  border-color: rgba(120, 30, 20, 0.9);
+  color: #f7efe1;
+  box-shadow: inset 0 0 0 3px rgba(247, 239, 225, 0.35), 0 3px 12px rgba(120, 30, 20, 0.35);
+}
+
+.cbt-btn.strike b {
+  font-size: 19px;
+  letter-spacing: 0.1em;
+}
+
+.cbt-btn.dash {
+  right: 164px;
+  bottom: calc(var(--fsab) + 66px);
+  background: rgba(59, 106, 91, 0.92);
+  border-color: rgba(30, 60, 50, 0.9);
+  color: #f7efe1;
+}
+
+.cbt-btn.s1 {
+  right: 154px;
+  bottom: calc(var(--fsab) + 137px);
+}
+
+.cbt-btn.s2 {
+  right: 112px;
+  bottom: calc(var(--fsab) + 178px);
+}
+
+.cbt-btn.s3 {
+  right: 55px;
+  bottom: calc(var(--fsab) + 190px);
+}
+
+@media (min-width: 700px) {
+  .cbt-pad {
+    right: 24px;
+    bottom: 12px;
+  }
+}

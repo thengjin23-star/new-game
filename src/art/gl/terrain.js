@@ -37,6 +37,8 @@ uniform sampler2D uPaint;
 uniform sampler2D uGlobal;
 uniform float uPainted;
 uniform float uSnow;
+uniform sampler2D uMarks;
+uniform vec4 uMarkRect;
 varying vec3 vPos;
 varying vec3 vNor;
 varying vec2 vUv;
@@ -64,6 +66,14 @@ void main() {
   float line = abs(fract(hz) - 0.5) / max(fwidth(hz), 1e-4);
   float contour = (1.0 - smoothstep(0.0, 1.1, line)) * smoothstep(0.1, 0.32, steep);
   col = mix(col, vec3(0.15, 0.14, 0.13), contour * 0.26);
+  // marks on the ground near you: a beast's coming blow, where your spell will go
+  if (uMarkRect.w > 0.5) {
+    vec2 muv = (vPos.xz - uMarkRect.xy) / uMarkRect.z;
+    if (muv.x > 0.0 && muv.x < 1.0 && muv.y > 0.0 && muv.y < 1.0) {
+      vec4 m = texture2D(uMarks, muv);
+      col = mix(col, m.rgb, m.a);
+    }
+  }
   // ground you have not seen fades to grey under the clouds
   float seen = seenAt(vPos.xz);
   vec3 grey = vec3(dot(col, vec3(0.299, 0.587, 0.114)));

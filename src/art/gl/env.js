@@ -96,12 +96,53 @@ export function createEnv() {
     // a fight's ground (x, z, radius): trees standing in it fade back so the fighters can be seen
     uClear: { value: new THREE.Vector3(0, 0, 0) },
     uCot: { value: 0.8 },
+    // marks painted on the ground near you (a beast's coming blow, where your spell will go):
+    // the picture, and where it lies (x0, z0, span, on)
+    uMarks: { value: null },
+    uMarkRect: { value: new THREE.Vector4(0, 0, 1, 0) },
   };
+
+  // the marks are drawn on a small canvas each frame, laid on the ground around you
+  const MARK_PX = 512;
+  const MARK_SPAN = 1024;
+  const markCanvas = document.createElement('canvas');
+  markCanvas.width = markCanvas.height = MARK_PX;
+  const markTex = new THREE.CanvasTexture(markCanvas);
+  markTex.flipY = false;
+  markTex.magFilter = THREE.LinearFilter;
+  markTex.minFilter = THREE.LinearFilter;
+  markTex.generateMipmaps = false;
+  u.uMarks.value = markTex;
+  let marksOn = false;
 
   return {
     u,
     fogData,
     fogTex,
+    /**
+     * Paint the ground marks around (cx, cz): paint(g, u) draws in world units
+     * (u: pixels per world unit). With nothing to paint, the ground goes back to bare.
+     */
+    groundMarks(cx, cz, paint) {
+      if (!paint) {
+        if (marksOn) {
+          marksOn = false;
+          u.uMarkRect.value.w = 0;
+        }
+        return;
+      }
+      const g = markCanvas.getContext('2d');
+      const k = MARK_PX / MARK_SPAN;
+      const x0 = Math.round(cx - MARK_SPAN / 2);
+      const z0 = Math.round(cz - MARK_SPAN / 2);
+      g.setTransform(1, 0, 0, 1, 0, 0);
+      g.clearRect(0, 0, MARK_PX, MARK_PX);
+      g.setTransform(k, 0, 0, k, -x0 * k, -z0 * k);
+      paint(g, k);
+      markTex.needsUpdate = true;
+      u.uMarkRect.value.set(x0, z0, MARK_SPAN, 1);
+      marksOn = true;
+    },
     /** Set the light for an hour of the day (dark: 0 day … 1 night). */
     setLight(tod, dark, season) {
       const dusk = tod >= 16 && tod < 19.5 ? Math.sin(((tod - 16) / 3.5) * Math.PI) : tod >= 4.5 && tod < 7 ? Math.sin(((tod - 4.5) / 2.5) * Math.PI) * 0.6 : 0;
