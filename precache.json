@@ -61,6 +61,7 @@
  "./src/core/time.js",
  "./src/main.js",
  "./src/platform/cloud.js",
+ "./src/platform/orient.js",
  "./src/ui/app.js",
  "./src/ui/dom.js",
  "./src/vendor/three.LICENSE.txt",

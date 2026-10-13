@@ -112,21 +112,31 @@ export function createWorld3D(canvas, { onFrame, idle, quality = 'high', onSlow 
   let frameEMA = 16;
 
   function resize() {
-    const rect = canvas.getBoundingClientRect();
-    W = Math.max(1, Math.round(rect.width));
-    H = Math.max(1, Math.round(rect.height));
+    // (the canvas's own size: the page may be turned a quarter round on the screen)
+    W = Math.max(1, canvas.clientWidth);
+    H = Math.max(1, canvas.clientHeight);
     dpr = q === 'low' ? 1 : Math.min(2, window.devicePixelRatio || 1);
     renderer.setPixelRatio(dpr);
     renderer.setSize(W, H, false);
     overlay.width = Math.round(W * dpr);
     overlay.height = Math.round(H * dpr);
     camera.aspect = W / H;
+    camera.fov = fovFor(H);
     camera.updateProjectionMatrix();
     particles = [];
     particleKind = null;
   }
 
   // ── the camera ──
+
+  /**
+   * How much the camera takes in, top to bottom: about the same number of
+   * pixels to a degree on any screen, so a figure is the same size on a
+   * phone held sideways (short, wide) as upright or on a desk.
+   */
+  function fovFor(h) {
+    return Math.max(15, Math.min(40, h / 22.5));
+  }
 
   function pitch() {
     const k = (zoom - ZMIN) / (ZMAX - ZMIN);

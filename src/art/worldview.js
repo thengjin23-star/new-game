@@ -553,9 +553,9 @@ export function createWorldView(canvas, { onFrame, idle } = {}) {
   let lastDraw = 0;
 
   function resize() {
-    const rect = canvas.getBoundingClientRect();
-    W = Math.max(1, Math.round(rect.width));
-    H = Math.max(1, Math.round(rect.height));
+    // (the canvas's own size: the page may be turned a quarter round on the screen)
+    W = Math.max(1, canvas.clientWidth);
+    H = Math.max(1, canvas.clientHeight);
     dpr = Math.min(2, window.devicePixelRatio || 1);
     canvas.width = Math.round(W * dpr);
     canvas.height = Math.round(H * dpr);

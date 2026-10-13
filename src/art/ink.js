@@ -2,6 +2,7 @@
 // Every place has its own seed, so each corner of the world looks different.
 
 import { stream, hashStr } from '../core/rng.js';
+import { pt } from '../platform/orient.js';
 
 export const INK = [36, 33, 30];
 export const RED = [168, 50, 42];
@@ -973,9 +974,8 @@ export function createScene(canvas) {
   let running = false;
 
   function build() {
-    const rect = canvas.getBoundingClientRect();
-    W = Math.max(1, Math.round(rect.width));
-    H = Math.max(1, Math.round(rect.height));
+    W = Math.max(1, canvas.clientWidth);
+    H = Math.max(1, canvas.clientHeight);
     dpr = Math.min(2, window.devicePixelRatio || 1);
     canvas.width = Math.round(W * dpr);
     canvas.height = Math.round(H * dpr);
@@ -1088,12 +1088,12 @@ export function createScene(canvas) {
   }
 
   canvas.addEventListener('pointerdown', (e) => {
-    dragging = { x: e.clientX, pan };
+    dragging = { x: pt(e).x, pan };
     vel = 0;
   });
   window.addEventListener('pointermove', (e) => {
     if (!dragging) return;
-    const dx = e.clientX - dragging.x;
+    const dx = pt(e).x - dragging.x;
     const next = Math.max(-1, Math.min(1, dragging.pan - dx / (W * 0.5)));
     vel = next - pan;
     pan = next;
@@ -1113,8 +1113,7 @@ export function createScene(canvas) {
     },
     resize() {
       if (!canvas.isConnected) return;
-      const rect = canvas.getBoundingClientRect();
-      if (Math.round(rect.width) !== W || Math.round(rect.height) !== H) build();
+      if (canvas.clientWidth !== W || canvas.clientHeight !== H) build();
     },
     start() {
       if (running || reduce) {

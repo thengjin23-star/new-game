@@ -32,6 +32,7 @@ import { SYS_LEVELS, SYS_FEATURES } from '../world/system.js';
 import { npcAge, npcRealm, NAMED } from '../world/npcs.js';
 import { saveGame, loadGame, clearGame, exportCode, importCode, migrate, saveMeta, loadMeta, parseSave } from '../core/save.js';
 import { connectCloud } from '../platform/cloud.js';
+import { pt, rectOf, watchOrient, turnedScrolling } from '../platform/orient.js';
 
 const VERSION = '0.11';
 const ITEM_ORDER = ['weapon', 'gear', 'flyer', 'pill', 'talisman', 'herb', 'material', 'book', 'treasure', 'token', 'unknown'];
@@ -179,6 +180,13 @@ export function startApp(root, { speed = 1, view = null } = {}) {
 
   // ── boot ──
   function boot() {
+    // the page turns with the phone (or is turned for you, held upright): everything takes its new shape
+    watchOrient(() => {
+      ui.view?.resize();
+      ui.titleScene?.resize();
+      if (ui.sheet === 'map') renderLayer();
+    });
+    turnedScrolling(root);
     const s = loadGame();
     if (s) {
       adopt(s);
@@ -198,11 +206,6 @@ export function startApp(root, { speed = 1, view = null } = {}) {
         persist({ now: true });
         ui.view?.stop();
       }
-    });
-    window.addEventListener('resize', () => {
-      ui.view?.resize();
-      ui.titleScene?.resize();
-      if (ui.sheet === 'map') renderLayer();
     });
     window.addEventListener('keydown', onKey);
     window.addEventListener('keyup', (e) => {
@@ -305,13 +308,13 @@ export function startApp(root, { speed = 1, view = null } = {}) {
     root.appendChild(
       h('div.create',
         h('h2.create-title', '入世'),
-        c.meta?.past?.length ? h('p.muted', `第 ${c.meta.past.length + 1} 世。問道系統的記憶仍在。`) : null,
-        h('section.create-block',
+        c.meta?.past?.length ? h('p.muted.past-line', `第 ${c.meta.past.length + 1} 世。問道系統的記憶仍在。`) : null,
+        h('section.create-block.name-block',
           h('label.field-label', { for: 'name' }, '姓名'),
           h('div.name-row', nameInput, h('button.btn.small', { onclick: () => { c.name = randomName(); renderCreate(); } }, '隨機')),
           h('div.toggle', ['男', '女'].map((g) => h('button.btn.small' + (c.gender === g ? '.on' : ''), { onclick: () => { c.gender = g; renderCreate(); } }, g))),
         ),
-        h('section.create-block',
+        h('section.create-block.origin-block',
           h('div.field-label', '出身'),
           h('div.origins', Object.entries(ORIGINS).map(([id, og]) =>
             h('button.origin' + (c.origin === id ? '.on' : ''), { onclick: () => { c.origin = id; renderCreate(); } },
@@ -363,27 +366,31 @@ export function startApp(root, { speed = 1, view = null } = {}) {
 
   function buildShell() {
     clear(root);
-    const canvas = h('canvas.world-canvas', { 'aria-label': '你所在的世界。按住拖動行走，點一下地面走過去。' });
+    const canvas = h('canvas.world-canvas', { 'aria-label': '你所在的世界。左下拖動行走，點一下地面走過去。' });
+    // played sideways: who you are at the top left, the map and the menus at the top right,
+    // the stick under the left thumb, what you can do (or the fight's buttons) under the right
     const shell = h('div.game.worldmode',
       canvas,
       h('div.hud',
-        h('header.hud-top'),
-        h('div.hud-row',
-          h('button.place-tag', { onclick: showPlaceInfo }),
-          h('div.hud-flags'),
+        h('div.hud-left',
+          h('header.hud-top'),
+          h('div.hud-row',
+            h('button.place-tag', { onclick: showPlaceInfo }),
+            h('div.hud-flags'),
+          ),
         ),
         h('button.minimap-btn', { 'aria-label': '打開地圖', onclick: () => openSheet('map') }, h('canvas.minimap', { width: 192, height: 192 })),
         h('div.toasts', { 'aria-live': 'polite' }),
         h('div.banner'),
       ),
       h('div.joy', { 'aria-hidden': 'true' }, h('i')),
-      h('div.walk-hint', h('span', '按住畫面拖動：往那裡走'), h('span', '點地面：自己走過去'), h('span', '點人或東西：走過去互動')),
+      h('div.walk-hint', h('span', '左下拖動：行走'), h('span', '點地面：走過去'), h('span', '點人或東西：互動')),
       h('div.caption'),
       h('div.actbar',
-        h('button.fly-btn', { onclick: toggleFly, 'aria-label': '飛上天，或落地（R）', hidden: true }, '飛'),
-        h('button.art-btn', { onclick: toggleArts, 'aria-label': '術：法術與符籙（F）', hidden: true }, '術'),
-        h('button.sit-btn', { onclick: () => openSheet('rest'), 'aria-label': '歇息、搜尋、閉關' }, '坐'),
         h('button.act-btn', { onclick: doAct }),
+        h('button.sit-btn', { onclick: () => openSheet('rest'), 'aria-label': '歇息、搜尋、閉關' }, '坐'),
+        h('button.art-btn', { onclick: toggleArts, 'aria-label': '術：法術與符籙（F）', hidden: true }, '術'),
+        h('button.fly-btn', { onclick: toggleFly, 'aria-label': '飛上天，或落地（R）', hidden: true }, '飛'),
       ),
       h('div.arts-pop', { role: 'menu', 'aria-label': '術' }),
       h('div.secl-bar'),
@@ -578,69 +585,111 @@ export function startApp(root, { speed = 1, view = null } = {}) {
     if (key === 'm' && !ui.s.pending) openSheet(ui.sheet === 'map' ? null : 'map');
   }
 
+  /**
+   * The world under your fingers (all in the page's terms: see platform/orient.js).
+   * One finger dragged is the stick: its middle where the finger went down,
+   * or, down on the ring at the bottom left, the ring itself (it moves at
+   * once). A finger put down and lifted is a tap. With the stick in one
+   * hand, a finger of the other is a tap of its own (strike the beast it
+   * lands on); two fingers put down together pinch the view nearer or farther.
+   */
   function bindPointer(canvas) {
-    const pts = new Map();
+    const pts = new Map(); // every finger on the world: { x, y, x0, y0, t0 }
     let pinch = null;
     const joyEl = $('.joy');
-    const JOY_R = 56;
+    const knob = joyEl.firstChild;
+    const JOY_R = 58;
+    const steer = (j, x, y) => {
+      const dx = x - j.cx;
+      const dy = y - j.cy;
+      const d = Math.hypot(dx, dy);
+      const k = Math.min(1, d / JOY_R);
+      j.vx = d ? (dx / d) * k : 0;
+      j.vy = d ? (dy / d) * k : 0;
+      knob.style.transform = `translate(${j.vx * JOY_R}px, ${j.vy * JOY_R}px)`;
+    };
+    const hold = (j, x, y) => {
+      j.active = true;
+      j.cx = x;
+      j.cy = y;
+      hideCaption();
+      const r = rectOf(canvas);
+      joyEl.style.left = `${x - r.left}px`;
+      joyEl.style.top = `${y - r.top}px`;
+      joyEl.classList.add('on');
+    };
+    const letGo = () => {
+      ui.joy = null;
+      joyEl.classList.remove('on');
+      joyEl.style.left = '';
+      joyEl.style.top = '';
+      knob.style.transform = '';
+    };
     canvas.addEventListener('pointerdown', (e) => {
       if (!ui.s || ui.s.pending || ui.sheet) return;
       canvas.setPointerCapture?.(e.pointerId);
-      pts.set(e.pointerId, { x: e.clientX, y: e.clientY, x0: e.clientX, y0: e.clientY, t0: performance.now() });
-      if (pts.size === 2) {
+      const q = pt(e);
+      pts.set(e.pointerId, { x: q.x, y: q.y, x0: q.x, y0: q.y, t0: performance.now() });
+      const j = ui.joy;
+      if (!j) {
+        ui.joy = { pid: e.pointerId, active: false, cx: q.x, cy: q.y, vx: 0, vy: 0 };
+        // down on the resting ring: the ring is the stick
+        if (joyEl.classList.contains('idle') && !joyEl.classList.contains('on')) {
+          const r = rectOf(joyEl);
+          const cx = r.left + r.width / 2;
+          const cy = r.top + r.height / 2;
+          if (Math.hypot(q.x - cx, q.y - cy) < r.width * 0.7) {
+            hold(ui.joy, cx, cy);
+            steer(ui.joy, q.x, q.y);
+          }
+        }
+        return;
+      }
+      if (!j.active && pts.size === 2) {
+        // two fingers down before either moved: a pinch, not a walk
         const [a, b] = [...pts.values()];
-        pinch = { d: Math.hypot(a.x - b.x, a.y - b.y), z: ui.view.zoom };
-        ui.joy = null;
-        joyEl.classList.remove('on');
-      } else if (pts.size === 1) {
-        ui.joy = { active: false, x0: e.clientX, y0: e.clientY, vx: 0, vy: 0 };
+        pinch = { d: Math.hypot(a.x - b.x, a.y - b.y) || 1, z: ui.view.zoom };
+        letGo();
       }
     });
     canvas.addEventListener('pointermove', (e) => {
-      if (e.pointerType === 'mouse') ui.mouse = { x: e.clientX, y: e.clientY, t: performance.now() };
+      const q = pt(e);
+      if (e.pointerType === 'mouse') ui.mouse = { x: q.x, y: q.y, t: performance.now() };
       const p = pts.get(e.pointerId);
       if (!p) return;
-      p.x = e.clientX;
-      p.y = e.clientY;
-      if (pinch && pts.size === 2) {
-        const [a, b] = [...pts.values()];
-        ui.view.setZoom(pinch.z * (Math.hypot(a.x - b.x, a.y - b.y) / pinch.d));
+      p.x = q.x;
+      p.y = q.y;
+      if (pinch) {
+        if (pts.size === 2) {
+          const [a, b] = [...pts.values()];
+          ui.view.setZoom(pinch.z * (Math.hypot(a.x - b.x, a.y - b.y) / pinch.d));
+        }
         return;
       }
       const j = ui.joy;
-      if (!j) return;
-      const dx = e.clientX - j.x0;
-      const dy = e.clientY - j.y0;
-      const d = Math.hypot(dx, dy);
-      if (!j.active && d > 12) {
-        j.active = true;
-        hideCaption();
-        const rect = canvas.getBoundingClientRect();
-        joyEl.style.left = `${j.x0 - rect.left}px`;
-        joyEl.style.top = `${j.y0 - rect.top}px`;
-        joyEl.classList.add('on');
-      }
-      if (j.active) {
-        const k = Math.min(1, d / JOY_R);
-        j.vx = (dx / (d || 1)) * k;
-        j.vy = (dy / (d || 1)) * k;
-        const knob = joyEl.firstChild;
-        knob.style.transform = `translate(${j.vx * JOY_R}px, ${j.vy * JOY_R}px)`;
-      }
+      if (!j || j.pid !== e.pointerId) return;
+      if (!j.active && Math.hypot(q.x - p.x0, q.y - p.y0) > 12) hold(j, p.x0, p.y0);
+      if (j.active) steer(j, q.x, q.y);
     });
     const end = (e) => {
       const p = pts.get(e.pointerId);
       pts.delete(e.pointerId);
+      if (!p) return;
       if (pinch) {
-        if (pts.size < 2) pinch = null;
+        if (pts.size === 0) pinch = null;
         return;
       }
+      const quick = e.type === 'pointerup' && performance.now() - p.t0 < 500 && Math.hypot(p.x - p.x0, p.y - p.y0) < 12;
       const j = ui.joy;
-      ui.joy = null;
-      joyEl.classList.remove('on');
-      if (!p || !j) return;
-      if (!j.active && performance.now() - p.t0 < 500 && e.type === 'pointerup') tap(e.clientX, e.clientY);
-      else persist();
+      if (j && j.pid === e.pointerId) {
+        const walked = j.active;
+        letGo();
+        if (!walked && quick) tap(p.x, p.y);
+        else persist();
+        return;
+      }
+      // a finger of the other hand, the stick still held: a tap
+      if (quick) tap(p.x, p.y);
     };
     canvas.addEventListener('pointerup', end);
     canvas.addEventListener('pointercancel', end);
@@ -651,11 +700,11 @@ export function startApp(root, { speed = 1, view = null } = {}) {
     canvas.addEventListener('contextmenu', (e) => e.preventDefault());
   }
 
-  /** A tap on the world: walk there, or to the person or thing you tapped. */
+  /** A tap on the world (where, in the page's terms): walk there, or to the person or thing you tapped. */
   function tap(cx, cy) {
     const s = ui.s;
     if (!s || s.pending || s.secl || ui.sheet) return;
-    const rect = ui.shell.querySelector('canvas.world-canvas').getBoundingClientRect();
+    const rect = rectOf(ui.shell.querySelector('canvas.world-canvas'));
     const sx = cx - rect.left;
     const sy = cy - rect.top;
     const [wx, wy] = ui.view.screenToWorld(sx, sy);
@@ -810,7 +859,7 @@ export function startApp(root, { speed = 1, view = null } = {}) {
   function mouseAim() {
     const m = ui.mouse;
     if (!m || performance.now() - m.t > 8000 || !ui.view) return null;
-    const rect = ui.shell.querySelector('canvas.world-canvas').getBoundingClientRect();
+    const rect = rectOf(ui.shell.querySelector('canvas.world-canvas'));
     return ui.view.screenToWorld(m.x - rect.left, m.y - rect.top);
   }
 
@@ -950,13 +999,15 @@ export function startApp(root, { speed = 1, view = null } = {}) {
       if (!ui.s || !el.dataset.id) return;
       el.setPointerCapture?.(e.pointerId);
       // (the move in this place as you pressed it: it stays the same until you let go)
-      st = { id: el.dataset.id, pid: e.pointerId, sx: e.clientX, sy: e.clientY, aiming: false, off: false, pt: null };
+      const q = pt(e);
+      st = { id: el.dataset.id, pid: e.pointerId, sx: q.x, sy: q.y, aiming: false, off: false, pt: null };
       el.classList.add('down');
     });
     el.addEventListener('pointermove', (e) => {
       if (!st || e.pointerId !== st.pid || !ui.s) return;
-      const dx = e.clientX - st.sx;
-      const dy = e.clientY - st.sy;
+      const q = pt(e);
+      const dx = q.x - st.sx;
+      const dy = q.y - st.sy;
       const d = Math.hypot(dx, dy);
       if (!st.aiming && d > 14) st.aiming = true;
       if (!st.aiming) return;
@@ -1215,8 +1266,11 @@ export function startApp(root, { speed = 1, view = null } = {}) {
       if (t) put(el, h('b', t.verb), h('span', t.name));
     }
     $('.actbar').hidden = !!s.secl;
+    // the stick's ring rests under the left thumb while you are free to walk
+    $('.joy').classList.toggle('idle', !s.pending && !s.secl && !s.dead && !ui.sheet);
+    ui.shell.classList.toggle('secl', !!s.secl);
     // the first steps: how to walk, until you have walked a little
-    $('.walk-hint').classList.toggle('on', (s.world?.walked || 0) < 400 && !s.secl && !s.pending && !ui.sheet);
+    $('.walk-hint').classList.toggle('on', (s.world?.walked || 0) < 400 && !s.secl && !s.pending && !ui.sheet && !ui.caption);
     // region banner
     const b = E.bannerOf(s);
     if (b && b.t !== ui.bannerT) {
@@ -1241,7 +1295,8 @@ export function startApp(root, { speed = 1, view = null } = {}) {
     if (!box || !text) return;
     const el = h('div.toast.' + kind, text);
     box.appendChild(el);
-    while (box.childElementCount > 4) box.firstChild.remove();
+    // (three at a time: a short screen has no room for more)
+    while (box.childElementCount > 3) box.firstChild.remove();
     setTimeout(() => el.classList.add('out'), kind === 'ambient' ? 2600 : 3800);
     setTimeout(() => el.remove(), kind === 'ambient' ? 3200 : 4400);
   }
@@ -1397,6 +1452,7 @@ export function startApp(root, { speed = 1, view = null } = {}) {
       sys: A.deduceReady(s) ? 'dot' : '',
     };
     for (const [id, label] of DOCK) {
+      if (id === 'map') continue;
       const b = badges[id];
       el.appendChild(
         h('button.dock-btn' + (ui.sheet === id ? '.on' : ''), { onclick: () => openSheet(ui.sheet === id ? null : id) },
@@ -1439,6 +1495,7 @@ export function startApp(root, { speed = 1, view = null } = {}) {
       el.classList.add('dim');
     }
     el.classList.toggle('open', el.childElementCount > 0);
+    el.classList.toggle('mapview', !s.pending && !s.dead && ui.sheet === 'map');
     if (s.pending || s.dead) {
       // rumors on screen count as read
     } else if (ui.sheet === 'log' && ui.logTab === 'rumors') {
@@ -1454,11 +1511,15 @@ export function startApp(root, { speed = 1, view = null } = {}) {
   function panelSheet(id) {
     const title = { bag: '行囊', shop: '行囊', cult: '修煉', log: '見聞', sys: '問道系統', rest: '歇息', board: Q.BOARDS[ui.board]?.name || '告示' }[id];
     const body = { bag: panelBag, shop: panelBag, cult: panelCult, log: panelLog, sys: panelSys, rest: panelRest, board: panelBoard }[id]();
-    const sheet = h('div.sheet.panel-sheet', { role: 'dialog', 'aria-label': title },
-      h('div.sheet-head', h('h2.sheet-title', title), h('button.btn.small.ghost', { onclick: closeSheet }, '關閉')),
-      h('div.sheet-body', body),
-    );
-    return sheet;
+    // the menu's own pages (and a shop, in the 行囊): tabs across the head, to go from one to the next
+    const tab = id === 'shop' ? 'bag' : id;
+    const head = DOCK.some(([d]) => d === tab)
+      ? h('div.sheet-head.tabbed',
+          h('div.sheet-tabs', { role: 'tablist' }, DOCK.map(([d, label]) =>
+            h('button.sheet-tab' + (d === tab ? '.on' : ''), { role: 'tab', 'aria-selected': String(d === tab), onclick: () => { if (d !== tab) openSheet(d); } }, label))),
+          h('button.btn.small.ghost', { onclick: closeSheet }, '關閉'))
+      : h('div.sheet-head', h('h2.sheet-title', title), h('button.btn.small.ghost', { onclick: closeSheet }, '關閉'));
+    return h('div.sheet.panel-sheet', { role: 'dialog', 'aria-label': title }, head, h('div.sheet-body', body));
   }
 
   // ── 懸賞榜, 任務堂: work put up, work taken ──
@@ -1962,8 +2023,8 @@ export function startApp(root, { speed = 1, view = null } = {}) {
       ),
       h('section.card',
         h('h3', '操作'),
-        h('p.muted.small', '按住畫面任意處拖動：往那個方向走。點一下地面：自己走過去。點人或東西：走過去並互動。兩指捏合：縮放。鍵盤：WASD 或方向鍵行走，E 互動，M 地圖。'),
-        h('p.muted.small', '戰鬥：左手拖動移動；右下大鈕普攻（按住連續攻擊，點妖獸也會上前攻擊），三顆小鈕是你帶的三招（在「修煉」頁的戰鬥招式換）——點一下自動瞄準，按住拖曳可以自己瞄準，放開施放，拖回按鈕上取消；「閃避」短距離位移，途中不會被打中。逃跑就是真的跑：跑得夠遠、躲進密林或進城，妖獸就會放棄。左下的小鈕吃身上最好的療傷藥（中了毒就先吃解毒丹），每八息一顆。鍵盤：J 普攻、1 2 3 三招（朝滑鼠方向，按住看範圍、放開施放）、空白鍵或 Shift 閃避、Q 吃藥。'),
+        h('p.muted.small', '橫著玩：手機直拿時，畫面會自己轉成橫的，把手機橫過來就好。左下的圓盤是搖桿，按住拖動行走（畫面其他地方按住拖動也行）。點一下地面：自己走過去。點人或東西：走過去並互動。兩指捏合：縮放。右下的大鈕做眼前能做的事（拜訪、查看、採摘……），圍著它的是「坐」「術」「飛」。右上是行囊、修煉、見聞、系統，點小地圖打開大地圖。鍵盤：WASD 或方向鍵行走，E 互動，M 地圖，F 術，R 飛。'),
+        h('p.muted.small', '戰鬥（像 MOBA）：左手搖桿移動；右下大鈕普攻（按住連續攻擊，點妖獸也會上前攻擊），圍著它的三顆是你帶的三招（在「修煉」頁的戰鬥招式換）——點一下自動瞄準，按住拖曳可以自己瞄準，放開施放，拖回按鈕上取消；左下方綠色的「閃避」短距離位移，途中不會被打中。再外圈的兩顆小鈕：上面燒隨身的戰鬥符，下面吃身上最好的療傷藥（中了毒就先吃解毒丹），每八息一顆。逃跑就是真的跑：跑得夠遠、躲進密林或進城，妖獸就會放棄。鍵盤：J 普攻、1 2 3 三招（朝滑鼠方向，按住看範圍、放開施放）、空白鍵或 Shift 閃避、F 燒符、Q 吃藥。'),
       ),
       h('section.card',
         h('h3', '存檔'),
@@ -2042,8 +2103,9 @@ export function startApp(root, { speed = 1, view = null } = {}) {
     const preBits = [];
     if (pre?.days) preBits.push(`經過 ${fmtDuration(pre.days)}`);
     if (pre?.xw) preBits.push(`修為 +${pre.xw}`);
+    // the story on the left (it scrolls); what you can do about it on the right, under the thumb
     const sheet = h('div.sheet.event-sheet', { role: 'dialog', 'aria-label': pend.title },
-      h('div.sheet-inner',
+      h('div.ev-main',
         eventPicture(pend),
         h('h2.sheet-title', pend.title),
         preBits.length ? h('p.pre', preBits.join('・')) : null,
@@ -2052,6 +2114,9 @@ export function startApp(root, { speed = 1, view = null } = {}) {
         h('div.story', paragraphs(pend.text)),
         pend.notice ? chipList(pend.chips) : chipList(pend.enterChips),
         systemLines(pend.toasts),
+        !pend.notice && pend.result ? resultBlock(pend.result) : null,
+      ),
+      h('div.ev-side',
         pend.notice ? h('button.btn.primary.wide', { onclick: () => act(continueEvent) }, '繼續') : null,
         !pend.notice && !pend.result
           ? h('div.choices', pend.choices.map((c) =>
@@ -2063,7 +2128,7 @@ export function startApp(root, { speed = 1, view = null } = {}) {
                 c.hint?.karma ? h('span.hint.karma', '因果') : null,
               )))
           : null,
-        !pend.notice && pend.result ? resultBlock(pend.result) : null,
+        !pend.notice && pend.result ? h('button.btn.primary.wide', { onclick: () => act(continueEvent) }, pend.result.died ? '……' : '繼續') : null,
       ),
     );
     requestAnimationFrame(() => {
@@ -2080,7 +2145,6 @@ export function startApp(root, { speed = 1, view = null } = {}) {
       r.text ? h('div.story', paragraphs(r.text)) : null,
       chipList(r.chips),
       systemLines(r.toasts),
-      h('button.btn.primary.wide', { onclick: () => act(continueEvent) }, r.died ? '……' : '繼續'),
     );
   }
 
@@ -2119,15 +2183,15 @@ export function startApp(root, { speed = 1, view = null } = {}) {
     const s = ui.s;
     const w = s.world;
     const thumb = worldThumb();
-    const width = Math.min(560, window.innerWidth) - 24;
-    const height = Math.round(Math.min(window.innerHeight * 0.56, width * 1.05));
     const m = ui.map || (ui.map = { scale: 0.14, cx: w.x, cy: w.y, sel: null });
     if (!ui.mapOpenedAt || ui.mapOpenedAt !== s.day + w.x) {
       m.cx = w.x;
       m.cy = w.y;
       ui.mapOpenedAt = s.day + w.x;
     }
-    const cv = h('canvas.bigmap', { width: Math.round(width * 2), height: Math.round(height * 2), style: { width: width + 'px', height: height + 'px' } });
+    // the map takes whatever room the sheet leaves it (sized once the sheet is laid out)
+    const cv = h('canvas.bigmap', { width: 2, height: 2 });
+    const box = h('div.map-view', cv);
     const info = h('div.map-info');
     const fog = fogImage(s);
 
@@ -2219,22 +2283,24 @@ export function startApp(root, { speed = 1, view = null } = {}) {
     let gesture = null;
     cv.addEventListener('pointerdown', (e) => {
       cv.setPointerCapture?.(e.pointerId);
-      pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      const q = pt(e);
+      pts.set(e.pointerId, q);
       const vals = [...pts.values()];
       gesture = vals.length === 2
         ? { pinch: Math.hypot(vals[0].x - vals[1].x, vals[0].y - vals[1].y), scale: m.scale }
-        : { x: e.clientX, y: e.clientY, cx: m.cx, cy: m.cy, moved: false };
+        : { x: q.x, y: q.y, cx: m.cx, cy: m.cy, moved: false };
     });
     cv.addEventListener('pointermove', (e) => {
       if (!pts.has(e.pointerId) || !gesture) return;
-      pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      const q = pt(e);
+      pts.set(e.pointerId, q);
       const vals = [...pts.values()];
       if (gesture.pinch && vals.length === 2) {
         m.scale = Math.max(0.06, Math.min(0.5, gesture.scale * (Math.hypot(vals[0].x - vals[1].x, vals[0].y - vals[1].y) / gesture.pinch)));
         draw();
       } else if (!gesture.pinch) {
-        const dx = e.clientX - gesture.x;
-        const dy = e.clientY - gesture.y;
+        const dx = q.x - gesture.x;
+        const dy = q.y - gesture.y;
         if (Math.hypot(dx, dy) > 6) gesture.moved = true;
         m.cx = Math.max(0, Math.min(WORLD_W, gesture.cx - dx / m.scale));
         m.cy = Math.max(0, Math.min(WORLD_H, gesture.cy - dy / m.scale));
@@ -2246,9 +2312,10 @@ export function startApp(root, { speed = 1, view = null } = {}) {
       pts.delete(e.pointerId);
       if (pts.size === 0) gesture = null;
       if (g && !g.pinch && !g.moved) {
-        const rect = cv.getBoundingClientRect();
-        const x = m.cx + (e.clientX - rect.left - rect.width / 2) / m.scale;
-        const y = m.cy + (e.clientY - rect.top - rect.height / 2) / m.scale;
+        const rect = rectOf(cv);
+        const q = pt(e);
+        const x = m.cx + (q.x - rect.left - rect.width / 2) / m.scale;
+        const y = m.cy + (q.y - rect.top - rect.height / 2) / m.scale;
         select(x, y);
       }
     });
@@ -2257,25 +2324,38 @@ export function startApp(root, { speed = 1, view = null } = {}) {
       m.scale = Math.max(0.06, Math.min(0.5, m.scale * (e.deltaY > 0 ? 0.9 : 1.1)));
       draw();
     }, { passive: false });
-    requestAnimationFrame(draw);
+    const fit = () => {
+      if (!box.isConnected) return;
+      const width = Math.max(120, box.clientWidth);
+      const height = Math.max(120, box.clientHeight);
+      cv.width = Math.round(width * 2);
+      cv.height = Math.round(height * 2);
+      cv.style.width = `${width}px`;
+      cv.style.height = `${height}px`;
+      draw();
+    };
+    requestAnimationFrame(fit);
 
     const known = Object.keys(NODES).filter((id) => s.nodes[id]?.known && NODES[id].at && id !== s.player.loc && (id !== 'hidden_cave' || s.flags.cave_found));
     put(info, h('p.muted.small', '拖動地圖查看，點一個地方，選「走過去」。路上遇到什麼，就是什麼。'));
+    // the map wide on the left; on the right, where you picked and the places you know
     return h('div.sheet.map-sheet', { role: 'dialog', 'aria-label': '地圖' },
       h('div.sheet-head', h('h2.sheet-title', '東荒・青石一帶'), h('button.btn.small.ghost', { onclick: closeSheet }, '關閉')),
-      h('div.sheet-body',
-        cv,
-        h('div.map-zoom',
-          h('button.btn.small', { onclick: () => { m.scale = Math.min(0.5, m.scale * 1.4); draw(); } }, '＋'),
-          h('button.btn.small', { onclick: () => { m.scale = Math.max(0.06, m.scale / 1.4); draw(); } }, '－'),
-          h('button.btn.small', { onclick: () => { m.cx = w.x; m.cy = w.y; draw(); } }, '回到自己'),
+      h('div.map-body',
+        box,
+        h('div.map-side',
+          h('div.map-zoom',
+            h('button.btn.small', { onclick: () => { m.scale = Math.min(0.5, m.scale * 1.4); draw(); } }, '＋'),
+            h('button.btn.small', { onclick: () => { m.scale = Math.max(0.06, m.scale / 1.4); draw(); } }, '－'),
+            h('button.btn.small', { onclick: () => { m.cx = w.x; m.cy = w.y; draw(); } }, '回到自己'),
+          ),
+          info,
+          known.length
+            ? h('div.map-places',
+                h('h3', '知道的地方'),
+                h('div.place-chips', known.map((id) => h('button.btn.small', { onclick: () => { m.cx = NODES[id].at[0]; m.cy = NODES[id].at[1]; select(...NODES[id].at); } }, NODES[id].name))))
+            : null,
         ),
-        info,
-        known.length
-          ? h('div.map-places',
-              h('h3', '知道的地方'),
-              h('div.place-chips', known.map((id) => h('button.btn.small', { onclick: () => { m.cx = NODES[id].at[0]; m.cy = NODES[id].at[1]; select(...NODES[id].at); } }, NODES[id].name))))
-          : null,
       ),
     );
   }
