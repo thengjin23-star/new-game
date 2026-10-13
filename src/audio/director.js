@@ -314,7 +314,7 @@ export function tried(ok) {
   if (!ok) FX.breakthrough(false);
 }
 
-export const ui = { open: FX.open, close: FX.close, choose: FX.choose, pill: FX.pill, talisman: FX.talisman, good: FX.good };
+export const ui = { open: FX.open, close: FX.close, choose: FX.choose, pill: FX.pill, talisman: FX.talisman, good: FX.good, flame: FX.flame, fireMark: FX.fireMark, brush: FX.brush };
 
 /** A slow phone: lighter sound (no reverb). */
 export function light(on) {

@@ -7,6 +7,7 @@
 
 import { ITEMS } from '../content/items.js';
 import { fightPower } from './cultivation.js';
+import { refineMult } from './refine.js';
 import { nodeQi } from '../world/map.js';
 
 /** The places you wear things, and what each is called. */
@@ -18,7 +19,7 @@ export const HP_CAP = [1, 0.75, 0.5, 0.3];
 /** What gear can give, and how it reads. */
 export const STAT_WORD = {
   hp: (v) => `氣血 +${Math.round(v * 100)}%`,
-  mp: (v) => `靈力 +${v}`,
+  mp: (v) => `靈力 +${Math.round(v)}`,
   def: (v) => `減傷 ${Math.round(v * 100)}%`,
   regen: (v) => `氣血回復 +${Math.round(v * 100)}%`,
   mpRegen: (v) => `靈力回復 +${Math.round(v * 100)}%`,
@@ -46,7 +47,9 @@ export function gearStats(s) {
   for (const id of Object.values(gearOf(s))) {
     const st = id && ITEMS[id]?.stats;
     if (!st) continue;
-    for (const [k, v] of Object.entries(st)) out[k] = (out[k] || 0) + v;
+    // (refined at the 百煉坊: its gifts that much more)
+    const m = refineMult(s, id);
+    for (const [k, v] of Object.entries(st)) out[k] = (out[k] || 0) + v * m;
   }
   out.def = Math.min(0.5, out.def);
   out.fire = Math.min(0.8, out.fire);

@@ -68,6 +68,8 @@ export function addItem(s, id, n, report) {
   if (after) p.items[id] = after;
   else {
     delete p.items[id];
+    // (a thing gone takes its refining with it)
+    if (p.refine?.[id]) delete p.refine[id];
     unwearGone(s);
   }
   const shown = displayItem(s, id).name;

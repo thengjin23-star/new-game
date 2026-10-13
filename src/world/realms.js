@@ -138,8 +138,8 @@ const HAUL = {
 };
 
 const HOARD = {
-  ruins: [['ls', [150, 260]], ['item', 'juqi_pill', 3], ['maybe', 0.3, [['item', 'zhuji_pill', 1]]], ['maybe', 0.5, [['item', 'zhaoyao_mirror', 1]]]],
-  lake: [['ls', [150, 260]], ['item', 'lake_pearl', 3], ['maybe', 0.3, [['item', 'zhuji_pill', 1]]], ['maybe', 0.5, [['item', 'jade_pendant', 1]]]],
+  ruins: [['ls', [150, 260]], ['item', 'juqi_pill', 3], ['maybe', 0.3, [['item', 'zhuji_pill', 1]]], ['maybe', 0.5, [['item', 'zhaoyao_mirror', 1]]], ['maybe', 0.35, [['item', 'book_zhuji_recipe', 1]]]],
+  lake: [['ls', [150, 260]], ['item', 'lake_pearl', 3], ['maybe', 0.3, [['item', 'zhuji_pill', 1]]], ['maybe', 0.5, [['item', 'jade_pendant', 1]]], ['maybe', 0.35, [['item', 'book_zhuji_recipe', 1]]]],
 };
 
 /** What this room gives up: a pick from the table for this depth. */

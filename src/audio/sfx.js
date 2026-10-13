@@ -366,6 +366,33 @@ export function takeoff(by) {
   else if (by === 'boat') sweep(t, S({ type: 'sawtooth', from: 100, to: 140, dur: 0.8, vel: 0.08, lp: 500, attack: 0.2 }));
 }
 
+// ── the crafts (0.15) ──
+
+/** The furnace takes: fire catching, a low roar. */
+export function flame() {
+  if (!ctx()) return;
+  const t = t0();
+  whoosh(t, S({ from: 160, to: 640, dur: 0.6, vel: 0.2, q: 0.5, peak: 0.5 }));
+  crackle(t + 0.15, S({ dur: 0.5, count: 9, vel: 0.18 }));
+}
+
+/** The fire taken at a moment: just right (a clear chime), or off (a dull knock, a spit of sparks). */
+export function fireMark(hit) {
+  if (!ctx()) return;
+  const t = t0();
+  if (hit) bell('chime', 86, t, S({ vel: 0.45 }));
+  else {
+    drum('muyu', t, S({ vel: 0.5 }));
+    crackle(t, S({ dur: 0.2, count: 6, vel: 0.15 }));
+  }
+}
+
+/** A brush on paper (soft; at most so often while it moves). */
+export function brush() {
+  if (!ctx() || !every('brush', 0.09)) return;
+  burst(t0(), S({ hz: 2200 + Math.random() * 1200, q: 0.8, vel: 0.035, len: 0.05 }));
+}
+
 export function seclusion(start) {
   if (!ctx()) return;
   const t = t0();

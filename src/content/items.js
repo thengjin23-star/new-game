@@ -135,6 +135,28 @@ export const ITEMS = {
     desc: '大江裡喝了一千年靈氣的鯉魚，鱗片像金箔。烤了吃，補氣血，也補靈力。',
     use: { text: '你把金鱗鯉烤了。一口下去，渾身暖洋洋的，靈力像漲潮一樣湧上來。', effects: [['hp', 0.5], ['mp', 0.6], ['xw', 30]] },
   },
+  // 修仙百藝 (0.15): the tools and what they use
+  danlu: {
+    name: '青銅丹爐', kind: 'tool', price: 260, sell: 90,
+    desc: '一尊三足的小丹爐，揹在身上有點沉。有了它，在「坐」裡就能煉丹（引氣入體之後，用靈力控火）。洞府裡另有一尊。',
+  },
+  fubi: {
+    name: '狼毫符筆', kind: 'tool', price: 60, sell: 20,
+    desc: '畫符用的筆，筆桿上刻著符紋。有了它（和符紙、硃砂），在「坐」裡就能畫符——畫過的符才照得出樣子。',
+  },
+  fu_paper: {
+    name: '符紙', kind: 'material', price: 5, sell: 1,
+    desc: '黃色的符紙。畫一張符用一張。',
+  },
+  cinnabar: {
+    name: '硃砂', kind: 'material', price: 8, sell: 2,
+    desc: '研成粉的硃砂，調了靈泉水就是畫符的墨。畫一張符用一份。',
+  },
+  book_zhuji_recipe: {
+    name: '《築基丹方》', kind: 'book', sell: 120,
+    desc: '一頁發黃的丹方，寫著築基丹的配伍與火候。讀過之後就能煉築基丹：紫雲芝兩株、三葉血參兩根、妖獸內丹三顆、鏡湖明珠一顆，火候要穩。',
+    use: { text: '你把丹方從頭到尾背了三遍，連那些塗改過的字也記住了。', effects: [['flag', 'recipe_zhuji'], ['log', '讀懂了築基丹方']] },
+  },
   book_lianxi: {
     name: '《斂息訣》', kind: 'book', price: 120, sell: 40,
     desc: '一本薄薄的小冊子，教人收斂氣息，不叫野獸察覺。使用後習得斂息術。',
@@ -310,12 +332,12 @@ export const SHOPS = {
   luoxia: {
     name: '百草堂',
     keeper: '錢掌櫃',
-    stock: ['juqi_pill', 'heal_pill', 'detox_pill', 'qingxin_pill', 'qinggang_sword', 'book_lieyan'],
+    stock: ['juqi_pill', 'heal_pill', 'detox_pill', 'qingxin_pill', 'qinggang_sword', 'book_lieyan', 'danlu'],
   },
   talisman: {
     name: '符籙攤',
     keeper: '畫符的柳老道',
-    stock: ['fire_talisman', 'gold_talisman', 'exorcise_talisman', 'swift_talisman', 'hide_talisman', 'miasma_talisman', 'return_talisman', 'wind_talisman', 'zhaoyao_mirror', 'jade_pendant', 'feisuo', 'book_lianxi', 'book_qingshen'],
+    stock: ['fire_talisman', 'gold_talisman', 'exorcise_talisman', 'swift_talisman', 'hide_talisman', 'miasma_talisman', 'return_talisman', 'wind_talisman', 'zhaoyao_mirror', 'jade_pendant', 'feisuo', 'book_lianxi', 'book_qingshen', 'fubi', 'fu_paper', 'cinnabar'],
   },
   smithy: {
     name: '百煉坊',

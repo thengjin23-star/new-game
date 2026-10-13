@@ -40,10 +40,13 @@ import { FEATS, checkFeats } from '../world/feats.js';
 import { GUIDE as HOWTO } from '../content/guide.js';
 import { BEAST_NOTES, NOT_IN_BOOK } from '../content/codex.js';
 import { FOES } from '../content/foes.js';
+import * as CR from '../world/crafts.js';
+import { RECIPES, GLYPHS, ARRAY } from '../content/crafts.js';
+import { refineLevel, refineMult } from '../core/refine.js';
 
-const VERSION = '0.14';
-const ITEM_ORDER = ['weapon', 'gear', 'flyer', 'pill', 'talisman', 'herb', 'material', 'book', 'treasure', 'token', 'unknown'];
-const ITEM_KIND = { pill: '丹藥', herb: '靈草', material: '材料', book: '典籍', weapon: '兵器', gear: '裝備', flyer: '飛行法器', treasure: '寶物', talisman: '符籙', token: '信物', unknown: '未知' };
+const VERSION = '0.15';
+const ITEM_ORDER = ['weapon', 'gear', 'flyer', 'tool', 'pill', 'talisman', 'herb', 'material', 'book', 'treasure', 'token', 'unknown'];
+const ITEM_KIND = { pill: '丹藥', herb: '靈草', material: '材料', book: '典籍', weapon: '兵器', gear: '裝備', flyer: '飛行法器', tool: '工具', treasure: '寶物', talisman: '符籙', token: '信物', unknown: '未知' };
 const DOCK = [
   ['map', '地圖'],
   ['bag', '行囊'],
@@ -856,6 +859,7 @@ export function startApp(root, { speed = 1, view = null } = {}) {
     SND.signal(sig);
     if (sig.caption) showCaption(sig.caption);
     if (sig.open === 'shop') openSheet('shop');
+    if (sig.open === 'home') openSheet('home');
     if (sig.open === 'board') {
       ui.board = sig.board;
       openSheet('board');
@@ -1566,6 +1570,9 @@ export function startApp(root, { speed = 1, view = null } = {}) {
 
   function openSheet(id) {
     if (!ui.s || ui.s.pending) return;
+    // (the fire in the furnace is not left halfway; a 符 half drawn is simply let go)
+    if (ui.brew && id !== 'alchemy') return;
+    if (id !== 'draw') ui.draw = null;
     if (id && CB.inCombat(ui.s)) {
       toast('戰鬥中，無暇他顧。', 'bad');
       return;
@@ -1614,8 +1621,8 @@ export function startApp(root, { speed = 1, view = null } = {}) {
   }
 
   function panelSheet(id) {
-    const title = { bag: '行囊', shop: '行囊', cult: '修煉', log: '見聞', sys: '問道系統', rest: '歇息', board: Q.BOARDS[ui.board]?.name || '告示' }[id];
-    const body = { bag: panelBag, shop: panelBag, cult: panelCult, log: panelLog, sys: panelSys, rest: panelRest, board: panelBoard }[id]();
+    const title = { bag: '行囊', shop: '行囊', cult: '修煉', log: '見聞', sys: '問道系統', rest: '歇息', home: '洞府', alchemy: '煉丹', draw: '畫符', board: Q.BOARDS[ui.board]?.name || '告示' }[id];
+    const body = { bag: panelBag, shop: panelBag, cult: panelCult, log: panelLog, sys: panelSys, rest: panelRest, home: panelHome, alchemy: panelAlchemy, draw: panelDraw, board: panelBoard }[id]();
     // the menu's own pages (and a shop, in the 行囊): tabs across the head, to go from one to the next
     const tab = id === 'shop' ? 'bag' : id;
     const head = DOCK.some(([d]) => d === tab)
@@ -1623,7 +1630,7 @@ export function startApp(root, { speed = 1, view = null } = {}) {
           h('div.sheet-tabs', { role: 'tablist' }, DOCK.map(([d, label]) =>
             h('button.sheet-tab' + (d === tab ? '.on' : ''), { role: 'tab', 'aria-selected': String(d === tab), onclick: () => { if (d !== tab) openSheet(d); } }, label))),
           h('button.btn.small.ghost', { onclick: closeSheet }, '關閉'))
-      : h('div.sheet-head', h('h2.sheet-title', title), h('button.btn.small.ghost', { onclick: closeSheet }, '關閉'));
+      : h('div.sheet-head', h('h2.sheet-title', title), h('button.btn.small.ghost', { onclick: closeSheet, disabled: !!ui.brew }, '關閉'));
     return h('div.sheet.panel-sheet', { role: 'dialog', 'aria-label': title }, head, h('div.sheet-body', body));
   }
 
@@ -1711,8 +1718,313 @@ export function startApp(root, { speed = 1, view = null } = {}) {
         opt('歇到入夜', '亥時', (x) => E.rest(x, 'night')),
         opt('歇到天明', '卯時', (x) => E.rest(x, 'dawn')),
         h('button.action', { onclick: () => openSheet('cult') }, h('b', '閉關'), h('span', blocker ? '此地不宜' : '修煉頁')),
+        CR.atHome(s) ? h('button.action', { onclick: () => openSheet('home') }, h('b', '洞府'), h('span', '聚靈陣')) : null,
+        CR.hasFurnace(s) ? h('button.action', { onclick: () => openSheet('alchemy') }, h('b', '煉丹'), h('span', CR.atHome(s) ? '洞府的丹爐' : '青銅丹爐')) : null,
+        CR.hasBrush(s) ? h('button.action', { onclick: () => openSheet('draw') }, h('b', '畫符'), h('span', CR.atHome(s) ? '洞府的硯台' : '狼毫符筆')) : null,
       ),
       h('p.muted.small', '歇息時氣血與靈力會回來（每個時辰約兩成氣血、三成多靈力；靈氣濃的地方靈力回得更快）。有些人只在夜裡出現，有些東西只在月光下發亮。'),
+    );
+  }
+
+  // ── 洞府, 煉丹, 畫符 (0.15) ──
+  const NUM = ['', '一', '二', '三'];
+
+  /** The cave: make it yours; then its 聚靈陣, and the furnace, the desk and the stone bed. */
+  function panelHome() {
+    const s = ui.s;
+    if (!CR.hasHome(s)) {
+      return h('div.rest',
+        h('p', '石門後是一間不大的石室：一張石床，牆上幾道劍痕，牆角一尊積了灰的丹爐，案上一方乾了的硯台。前人坐化之後，就再沒有人進來過。'),
+        h('div.actions',
+          h('button.action', { onclick: () => act((x) => CR.claimHome(x)) }, h('b', '收拾洞府'), h('span', '從此這裡就是你的')),
+          h('button.action', { onclick: () => openSheet('rest') }, h('b', '只歇一歇'), h('span', '歇息')),
+        ),
+      );
+    }
+    const lv = CR.arrayLevel(s);
+    const next = CR.arrayNext(s);
+    const have = (k) => s.player.items[k] || 0;
+    return h('div.bag',
+      h('section.card',
+        h('h3', `聚靈陣・${lv ? `${NUM[lv]}重` : '未布'}`),
+        h('p.muted.small', `洞府靈氣 ${nodeQi(s, 'hidden_cave').toFixed(1)}。靈氣越濃，閉關時修為長得越快，歇息時靈力也回得越快。`),
+        next
+          ? h('p.need', `${lv ? `加到${NUM[next.level]}重` : '布陣'}：${next.cost.ls} 靈石、${Object.entries(next.cost.items).map(([k, n]) => `${ITEMS[k].name} ${have(k)}/${n}`).join('、')}（靈氣再 +${(next.qi - (ARRAY[lv]?.qi || 0)).toFixed(1)}，費三個時辰）`)
+          : h('p.small', '聚靈陣已經布到三重。再往上，是你如今的陣道參不透的了。'),
+        next?.why && !next.why.startsWith('還缺') ? h('p.muted.small', next.why) : null,
+        next ? h('div.item-acts', h('button.btn.small', { disabled: !!next.why || !!s.secl, onclick: () => act((x) => CR.buildArray(x)) }, lv ? '加固陣法' : '布陣')) : null,
+      ),
+      h('div.actions.four',
+        h('button.action', { onclick: () => openSheet('alchemy') }, h('b', '煉丹'), h('span', '牆角的丹爐')),
+        h('button.action', { onclick: () => openSheet('draw') }, h('b', '畫符'), h('span', '案上的硯台')),
+        h('button.action', { onclick: () => openSheet('cult') }, h('b', '閉關'), h('span', '石床')),
+        h('button.action', { onclick: () => openSheet('rest') }, h('b', '歇息'), h('span', '搜尋、歇到天明')),
+      ),
+    );
+  }
+
+  /** 煉丹: the 丹方 you know; pick one, and hold the fire. */
+  function panelAlchemy() {
+    const s = ui.s;
+    if (ui.brew) return fireGame();
+    const have = (k) => s.player.items[k] || 0;
+    return h('div.bag',
+      h('p.muted', `${CR.atHome(s) ? '洞府牆角的丹爐' : '青銅丹爐'}。藥材下爐，爐火一時旺、一時弱：火候正好，就「收火」。一爐要收三次火，三次都準，便是上品。`),
+      h('section.card',
+        h('h3', '丹方'),
+        h('ul.items', CR.recipesKnown(s).map((id) => {
+          const R = RECIPES[id];
+          const why = CR.brewWhy(s, id);
+          return h('li',
+            h('div.item-head', h('b', ITEMS[id].name), h('span.price', `靈力 ${R.mp}`)),
+            h('p.need', Object.entries(R.in).map(([k, n]) => `${ITEMS[k].name} ${have(k)}/${n}`).join('、')),
+            h('p', ITEMS[id].desc),
+            R.min > 1 ? h('p.muted.small', '火候要中品以上才成丹，而且火候更難拿捏。') : null,
+            why && !why.startsWith('還缺') ? h('p.muted.small', why) : null,
+            h('div.item-acts', h('button.btn.small', { disabled: !!why, onclick: () => startFire(id) }, '開爐')),
+          );
+        })),
+      ),
+      s.flags.recipe_zhuji ? null : h('p.muted.small', '築基丹的丹方，聽說只在秘境深處和大宗門的寶庫裡才有。'),
+    );
+  }
+
+  // the fire swings from 文火 to 武火 and back, quicker each time: 「收火」 while it is in the band
+  const FIRE_PERIOD = [1.8, 1.5, 1.2];
+
+  function fireRound(id, round) {
+    const zone = RECIPES[id].zone;
+    return { t0: performance.now(), period: FIRE_PERIOD[round] * 1000, at: 0.1 + Math.random() * (0.8 - zone), zone, shown: null, seen: undefined };
+  }
+
+  function startFire(id) {
+    if (CR.brewWhy(ui.s, id)) return;
+    ui.brew = { id, hits: 0, marks: [], ...fireRound(id, 0) };
+    SND.ui.flame();
+    renderLayer();
+    requestAnimationFrame(fireFrame);
+  }
+
+  /** Where the fire is at a moment (0: 文火, 1: 武火): up and down at an even pace. */
+  function firePos(b, t) {
+    const f = (Math.max(0, t - b.t0) / b.period) % 1;
+    return 1 - Math.abs(2 * f - 1);
+  }
+
+  function fireFrame() {
+    const b = ui.brew;
+    if (!b || ui.sheet !== 'alchemy' || !ui.shell) return;
+    const mark = $('.fire-mark');
+    if (mark && !b.shown) {
+      b.seen = firePos(b, performance.now());
+      mark.style.left = `${(b.seen * 100).toFixed(2)}%`;
+    }
+    requestAnimationFrame(fireFrame);
+  }
+
+  /**
+   * 收火: was it in the band? (t: the moment of the touch.) Where the fire
+   * truly was then, or where you last saw it (a slow phone draws it a little
+   * behind): either one in the band will do.
+   */
+  function holdFire(t) {
+    const b = ui.brew;
+    if (!b || b.shown) return;
+    const inBand = (x) => x >= b.at && x <= b.at + b.zone;
+    const now = firePos(b, t);
+    const x = b.seen !== undefined && inBand(b.seen) ? b.seen : now;
+    const hit = inBand(x);
+    b.marks.push(hit);
+    if (hit) b.hits += 1;
+    b.shown = { x, hit };
+    SND.ui.fireMark(hit);
+    renderLayer();
+    setTimeout(() => {
+      if (ui.brew !== b) return;
+      if (b.marks.length >= 3) {
+        ui.brew = null;
+        act((x) => CR.brew(x, b.id, b.hits));
+        return;
+      }
+      Object.assign(b, fireRound(b.id, b.marks.length));
+      renderLayer();
+    }, 700);
+  }
+
+  function fireGame() {
+    const b = ui.brew;
+    const x = b.shown ? b.shown.x : firePos(b, performance.now());
+    const round = b.marks.length + (b.shown ? 0 : 1);
+    return h('div.fire',
+      h('p.muted', `${ITEMS[b.id].name}・第${NUM[Math.min(3, round)]}次收火`),
+      h('div.fire-bar',
+        h('div.fire-zone', { style: { left: `${b.at * 100}%`, width: `${b.zone * 100}%` } }),
+        h('div.fire-mark' + (b.shown ? (b.shown.hit ? '.hit' : '.miss') : ''), { style: { left: `${x * 100}%` } }),
+      ),
+      h('div.fire-words', h('span', '文火'), h('span', '武火')),
+      h('div.fire-marks', [0, 1, 2].map((k) => h('span' + (k < b.marks.length ? (b.marks[k] ? '.hit' : '.miss') : ''), k < b.marks.length ? (b.marks[k] ? '準' : '偏') : '・'))),
+      h('button.btn.fire-btn', {
+        disabled: !!b.shown,
+        // (the moment of the touch, not of the lifted finger)
+        onpointerdown: (e) => { e.preventDefault(); holdFire(Math.abs(e.timeStamp - performance.now()) < 500 ? e.timeStamp : performance.now()); },
+        onclick: (e) => { if (!e.detail) holdFire(performance.now()); },
+      }, '收火'),
+    );
+  }
+
+  /** 畫符: the 符 you know the look of; pick one, and trace it. */
+  function panelDraw() {
+    const s = ui.s;
+    if (ui.draw) return drawGame();
+    const have = (k) => s.player.items[k] || 0;
+    const ids = CR.drawable(s);
+    return h('div.bag',
+      h('p.muted', `${CR.atHome(s) ? '洞府案上的硯台' : '狼毫符筆'}。照著淡紅的符紋描一遍：筆一落，硃砂就開始乾，要一氣呵成。描得越準，符越好——上品的一張紙，能畫出兩道符。`),
+      ids.length
+        ? h('section.card',
+            h('h3', '認得的符'),
+            h('ul.items', ids.map((id) => {
+              const why = CR.drawWhy(s, id);
+              return h('li',
+                h('div.item-head', h('b', ITEMS[id].name), h('span.price', `靈力 ${GLYPHS[id].mp}`)),
+                h('p.need', `符紙 ${have('fu_paper')}/1、硃砂 ${have('cinnabar')}/1`),
+                h('p', ITEMS[id].desc),
+                why && !why.startsWith('還缺') ? h('p.muted.small', why) : null,
+                h('div.item-acts', h('button.btn.small', { disabled: !!why, onclick: () => startDraw(id) }, '鋪紙')),
+              );
+            })),
+          )
+        : h('p.pad', '你還沒見過哪一種符，不知道符紋長什麼樣。去落霞坊市的符籙攤買一張，照著學。'),
+    );
+  }
+
+  function startDraw(id) {
+    if (CR.drawWhy(ui.s, id)) return;
+    ui.draw = { id, strokes: [], t0: 0, pen: null };
+    renderLayer();
+  }
+
+  /** The paper and what is on it: the glyph to follow, faint, and your strokes over it. */
+  function paintPad() {
+    const d = ui.draw;
+    const c = d?.canvas;
+    if (!c || !c.isConnected) return;
+    const css = c.clientWidth || 280;
+    const px = Math.round(css * Math.min(2, window.devicePixelRatio || 1));
+    if (c.width !== px) {
+      c.width = px;
+      c.height = px;
+    }
+    const g = c.getContext('2d');
+    const W = c.width;
+    g.clearRect(0, 0, W, W);
+    g.lineCap = 'round';
+    g.lineJoin = 'round';
+    const path = (pts) => {
+      g.beginPath();
+      pts.forEach(([x, y], k) => (k ? g.lineTo(x * W, y * W) : g.moveTo(x * W, y * W)));
+      if (pts.length === 1) g.lineTo(pts[0][0] * W + 0.5, pts[0][1] * W);
+      g.stroke();
+    };
+    g.strokeStyle = 'rgba(165, 40, 27, 0.2)';
+    g.lineWidth = W * 0.06;
+    for (const st of GLYPHS[d.id].strokes) path(st);
+    g.strokeStyle = '#a5281b';
+    g.lineWidth = W * 0.028;
+    for (const st of d.strokes) path(st);
+  }
+
+  /** One more piece of a stroke, onto what is already on the paper (cheaper than painting it all again). */
+  function inkSegment(a, b) {
+    const c = ui.draw?.canvas;
+    if (!c?.isConnected) return;
+    const g = c.getContext('2d');
+    const W = c.width;
+    g.lineCap = 'round';
+    g.strokeStyle = '#a5281b';
+    g.lineWidth = W * 0.028;
+    g.beginPath();
+    g.moveTo(a[0] * W, a[1] * W);
+    g.lineTo(b[0] * W + (a === b ? 0.5 : 0), b[1] * W);
+    g.stroke();
+  }
+
+  /** The 硃砂 drying: the bar runs down; when it is gone, the 符 is what it is. */
+  function inkFrame() {
+    const d = ui.draw;
+    if (!d || !d.t0 || ui.sheet !== 'draw' || !ui.shell) return;
+    const left = 1 - (performance.now() - d.t0) / (CR.drawTime(d.id) * 1000);
+    const bar = $('.ink-left i');
+    if (bar) bar.style.width = `${Math.max(0, left) * 100}%`;
+    if (left <= 0) return finishDraw();
+    requestAnimationFrame(inkFrame);
+  }
+
+  function finishDraw() {
+    const d = ui.draw;
+    if (!d || !d.strokes.length) return;
+    const score = CR.traceScore(d.id, d.strokes);
+    ui.draw = null;
+    act((x) => CR.drawFu(x, d.id, score));
+  }
+
+  function drawGame() {
+    const d = ui.draw;
+    d.pen = null;
+    const canvas = h('canvas.fu-canvas', { 'aria-label': '符紙' });
+    d.canvas = canvas;
+    // where on the paper a finger is (0–1 each way; the page may be turned)
+    const at = (e) => {
+      const r = rectOf(canvas);
+      const p = pt(e);
+      return [Math.max(0, Math.min(1, (p.x - r.left) / r.width)), Math.max(0, Math.min(1, (p.y - r.top) / r.height))];
+    };
+    canvas.addEventListener('pointerdown', (e) => {
+      if (ui.draw !== d || d.pen !== null) return;
+      e.preventDefault();
+      try {
+        canvas.setPointerCapture(e.pointerId);
+      } catch {
+        /* (a pointer the browser does not know: the strokes still come) */
+      }
+      d.pen = e.pointerId;
+      if (!d.t0) {
+        d.t0 = performance.now();
+        requestAnimationFrame(inkFrame);
+      }
+      const p = at(e);
+      d.strokes.push([p]);
+      inkSegment(p, p);
+    });
+    canvas.addEventListener('pointermove', (e) => {
+      if (ui.draw !== d || d.pen !== e.pointerId) return;
+      const st = d.strokes[d.strokes.length - 1];
+      const p = at(e);
+      const q = st[st.length - 1];
+      if (Math.hypot(p[0] - q[0], p[1] - q[1]) < 0.008) return;
+      st.push(p);
+      SND.ui.brush();
+      inkSegment(q, p);
+    });
+    const lift = (e) => {
+      if (d.pen === e.pointerId) d.pen = null;
+    };
+    canvas.addEventListener('pointerup', lift);
+    canvas.addEventListener('pointercancel', lift);
+    requestAnimationFrame(paintPad);
+    const secs = CR.drawTime(d.id);
+    return h('div.drawpad',
+      canvas,
+      h('div.drawpad-side',
+        h('b', ITEMS[d.id].name),
+        h('p.muted.small', `照著淡紅的符紋描。筆一落，硃砂約 ${secs} 息就乾。`),
+        h('div.bar.ink-left', h('i', { style: { width: d.t0 ? `${Math.max(0, 1 - (performance.now() - d.t0) / (secs * 1000)) * 100}%` : '100%' } })),
+        h('div.btn-row',
+          h('button.btn.small.ghost', { onclick: () => startDraw(d.id) }, '重畫'),
+          h('button.btn.small', { onclick: finishDraw }, '收筆'),
+        ),
+        h('button.btn.small.ghost', { onclick: () => { ui.draw = null; renderLayer(); } }, '換一張符'),
+      ),
     );
   }
 
@@ -1875,13 +2187,39 @@ export function startApp(root, { speed = 1, view = null } = {}) {
     );
   }
 
-  /** What a piece of gear gives, in words. */
-  function statLine(id) {
+  /** What a piece of gear gives, in words (mine: as refined, if it is). */
+  function statLine(id, mine = false) {
     const it = ITEMS[id];
-    const parts = Object.entries(it?.stats || {}).map(([k, v]) => STAT_WORD[k]?.(v)).filter(Boolean);
-    if (it?.power) parts.unshift(`戰力 +${Math.round(it.power * 100)}%`);
+    const m = mine ? refineMult(ui.s, id) : 1;
+    const parts = Object.entries(it?.stats || {}).map(([k, v]) => STAT_WORD[k]?.(v * m)).filter(Boolean);
+    if (it?.power) parts.unshift(`戰力 +${Math.round(it.power * m * 100)}%`);
     if (it?.move) parts.push(`可帶「${MOVES[it.move]?.name || it.move}」上陣`);
     return parts.join('・');
+  }
+
+  /** A piece of gear by name, and how far it has been refined. */
+  function gearName(id) {
+    const lv = refineLevel(ui.s, id);
+    return `${ITEMS[id].name}${lv ? ` +${lv}` : ''}`;
+  }
+
+  /** 精煉 at the 百煉坊: what you have on, made a share stronger (up to +3). */
+  function refineList() {
+    const s = ui.s;
+    const p = s.player;
+    const list = CR.refinable(s);
+    return [
+      h('h3.sub', '精煉（身上的）'),
+      list.length
+        ? h('ul.items', list.map((r) => h('li',
+            h('div.item-head', h('b', gearName(r.id)), h('span.price', r.cost ? `${r.cost.ls} 靈石` : '')),
+            h('p.gearstats', statLine(r.id, true)),
+            r.cost ? h('p.need', `材料：${Object.entries(r.cost.items).map(([k, n]) => `${ITEMS[k].name} ${p.items[k] || 0}/${n}`).join('、')}`) : null,
+            r.why && !r.why.startsWith('還缺') ? h('p.muted.small', r.why) : null,
+            h('div.item-acts', h('button.btn.small', { disabled: !!r.why || !!s.secl, onclick: () => act((x) => CR.refine(x, r.id)) }, r.cost ? `精煉到 +${r.level + 1}` : '已到頭')),
+          )))
+        : h('p.muted.small', '身上沒有能精煉的東西。兵器、衣袍、佩飾、法器穿戴在身上，才能拿來精煉。'),
+    ];
   }
 
   // ── 行囊 ──
@@ -1918,6 +2256,7 @@ export function startApp(root, { speed = 1, view = null } = {}) {
               h('div.item-acts', h('button.btn.small', { disabled: !A.canCraft(s, id) || !!s.secl, onclick: () => act((x) => A.craft(x, id)) }, '打造')),
             );
           })) : null,
+          shop.recipes?.length ? refineList() : null,
         ),
       );
     }
@@ -1930,8 +2269,8 @@ export function startApp(root, { speed = 1, view = null } = {}) {
           const id = worn[slot];
           return h('li' + (id ? '' : '.empty'),
             h('span.slot', label),
-            h('b', id ? ITEMS[id].name : '—'),
-            id ? h('span.gearstats', statLine(id)) : null,
+            h('b', id ? gearName(id) : '—'),
+            id ? h('span.gearstats', statLine(id, true)) : null,
             id ? h('button.btn.small.ghost', { disabled: !!s.secl, onclick: () => act((x) => A.equip(x, id)) }, '卸下') : null,
           );
         })),
@@ -1957,8 +2296,8 @@ export function startApp(root, { speed = 1, view = null } = {}) {
     const busy = !!s.secl;
     const price = A.sellPrice(s, id);
     return h('li',
-      h('div.item-head', h('b', shown.name, n > 1 ? ` ×${n}` : ''), h('span.kindtag', slotOf(id) ? SLOTS[slotOf(id)] : ITEM_KIND[it.kind] || '')),
-      slotOf(id) && statLine(id) ? h('p.gearstats', statLine(id)) : null,
+      h('div.item-head', h('b', shown.name, refineLevel(s, id) ? ` +${refineLevel(s, id)}` : '', n > 1 ? ` ×${n}` : ''), h('span.kindtag', slotOf(id) ? SLOTS[slotOf(id)] : ITEM_KIND[it.kind] || '')),
+      slotOf(id) && statLine(id) ? h('p.gearstats', statLine(id, true)) : null,
       h('p', shown.desc),
       h('div.item-acts',
         it.use ? h('button.btn.small', { disabled: busy, onclick: () => act((x) => A.useItem(x, id)) }, it.kind === 'book' ? '研讀' : '使用') : null,

@@ -2,6 +2,8 @@
 // shapes). `at` is a spot you can stand on inside it, used when the story moves
 // you there and when the map points at it; `label` is where its name is written.
 
+import { ARRAY } from '../content/crafts.js';
+
 export const NODES = {
   qingshi_town: {
     name: '青石鎮', kind: 'town', qi: 0.5, danger: 1, start: true, at: [2300, 3150],
@@ -89,6 +91,8 @@ export function nodeQi(s, id) {
   if (id === 'lingxi_valley' && s.flags.valley_safe) qi = 1.7;
   if (id === 'qingyun_sect' && s.flags.sect_member) qi = 1.5;
   if (id === 'qingxu_temple' && s.flags.temple_well_open) qi = 1.0;
+  // your own 洞府, with the 聚靈陣 you have laid
+  if (id === 'hidden_cave' && s.flags.home_claimed) qi += ARRAY[s.vars?.array || 0]?.qi || 0;
   return qi;
 }
 

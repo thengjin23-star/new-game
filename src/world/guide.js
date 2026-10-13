@@ -72,6 +72,8 @@ export function nextGoal(s) {
     const w = taken[0];
     return { key: `work:${w.key}`, text: `差事：${w.title}（${w.have}/${w.need}）`, why: Q.askOf(w) };
   }
+  // the cave you found, not yet made your own
+  if (s.flags.cave_found && !s.flags.home_claimed) return { key: 'home', text: '收拾山腹洞府', why: '青石山腹那處洞府，收拾一下就是你的了：能閉關、煉丹、畫符，還能布聚靈陣，讓靈氣更濃。走到石縫前查看。' };
   // somewhere you have heard of
   const go = nearestUnseen(s);
   if (go) return { key: `go:${go}`, text: `去看看：${NODES[go].name}`, why: `聽說過${NODES[go].name}，還沒去過。打開地圖，點它，選「走過去」。` };

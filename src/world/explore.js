@@ -116,6 +116,11 @@ export function takeSignals(s) {
   return out;
 }
 
+/** Let time pass (a pill brewed, a 符 drawn): hours, as when resting, but without the rest. */
+export function passTime(s, hours) {
+  return passHours(s, liveOf(s), hours);
+}
+
 function passHours(s, L, hours) {
   const report = newReport();
   const days = spendHours(s, hours, report);
@@ -1178,6 +1183,11 @@ function usePoi(s, L, p) {
     passHours(s, L, 0.5);
     if (s.dead) return;
     startEvent(s, id);
+    return;
+  }
+  // the cave, once found: your 洞府 (or yours to make so)
+  if (p.id === 'cave_entrance' && s.flags.cave_found) {
+    L.signals.push({ open: 'home', poi: p.id });
     return;
   }
   const text = typeof p.text === 'function' ? p.text(s) : p.text;

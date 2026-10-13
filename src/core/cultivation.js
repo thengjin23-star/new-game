@@ -3,6 +3,7 @@ import { ITEMS } from '../content/items.js';
 import { nodeQi } from '../world/map.js';
 import { DAYS_PER_YEAR } from './calendar.js';
 import { skySigns } from '../world/weather.js';
+import { refineMult } from './refine.js';
 
 export const REALMS = [
   { id: 'fan', name: '凡人', stages: [''], req: [12], base: 1, lifespan: 70, auto: false },
@@ -136,7 +137,7 @@ export function addXiuwei(s, amount, report) {
 export function weaponPower(s) {
   const p = s.player;
   let bonus = 0;
-  if (p.weapon && ITEMS[p.weapon]?.power) bonus += ITEMS[p.weapon].power;
+  if (p.weapon && ITEMS[p.weapon]?.power) bonus += ITEMS[p.weapon].power * refineMult(s, p.weapon);
   for (const [id, n] of Object.entries(p.items)) {
     const it = ITEMS[id];
     if (n > 0 && it?.kind === 'treasure' && it.power) bonus += it.power;

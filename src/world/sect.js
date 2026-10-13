@@ -28,6 +28,7 @@ export const TREASURY = [
   { item: 'qinggang_sword', gx: 120, rank: 1 },
   { item: 'feisuo', gx: 200, rank: 1 },
   { item: 'book_yujian', gx: 350, rank: 2 },
+  { item: 'book_zhuji_recipe', gx: 400, rank: 2 },
   { item: 'zhuji_pill', gx: 600, rank: 2 },
 ];
 
