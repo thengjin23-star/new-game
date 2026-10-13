@@ -32,10 +32,10 @@ export const SPELLS = {
  */
 export const TALISMANS = {
   fire_talisman: {
-    fight: { name: '火符', aim: 'ground', cast: 0.08, range: 300, radius: 80, speed: 520, mult: 2.6, burn: 3, fx: 'fire' },
+    fight: { name: '火符', el: '火', aim: 'ground', cast: 0.08, range: 300, radius: 80, speed: 520, mult: 2.6, burn: 3, fx: 'fire' },
   },
   gold_talisman: {
-    fight: { name: '金光符', aim: 'self', cast: 0.05, shield: 0.4, last: 8, fx: 'shield' },
+    fight: { name: '金光符', el: '金', aim: 'self', cast: 0.05, shield: 0.4, last: 8, fx: 'shield' },
   },
   exorcise_talisman: {
     field: 'exorcise', last: 180,

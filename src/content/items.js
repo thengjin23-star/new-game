@@ -57,6 +57,10 @@ export const ITEMS = {
     name: '狼皮', kind: 'material', sell: 4,
     desc: '灰狼的皮，毛色雜亂。鎮上的皮匠肯收。',
   },
+  turtle_shell: {
+    name: '玄龜甲', kind: 'material', sell: 90,
+    desc: '玄龜背上剝下的一片甲，比鐵還硬，泡在水裡也不鏽。百煉坊能拿它打一件甲衣。',
+  },
   fire_tiger_pelt: {
     name: '赤炎虎皮', kind: 'material', sell: 60,
     desc: '赤炎妖虎的皮，摸上去還是溫熱的。坊市裡識貨的人肯出高價。',
@@ -217,6 +221,10 @@ export const ITEMS = {
     name: '蟒鱗甲', kind: 'gear', slot: 'robe', sell: 120, stats: { def: 0.15, hp: 0.06, speed: -0.03 }, craft: { ls: 120, items: { python_scale: 2 } },
     desc: '靈溪蟒的鱗一片片綴成的甲，刀劍難入，就是沉了些。',
   },
+  xuangui_armor: {
+    name: '玄甲衣', kind: 'gear', slot: 'robe', sell: 150, stats: { hp: 0.14, def: 0.12, regen: 0.2 }, craft: { ls: 160, items: { turtle_shell: 1, beast_core: 2 } },
+    desc: '玄龜甲片綴在內襯上的甲衣，又輕又硬，穿著傷口也好得快些。',
+  },
   tiger_robe: {
     name: '赤炎虎皮袍', kind: 'gear', slot: 'robe', sell: 160, stats: { hp: 0.2, def: 0.08, fire: 0.5 }, craft: { ls: 200, items: { fire_tiger_pelt: 1 } },
     desc: '赤炎妖虎的皮做的袍子，終年溫熱，火燒不透。',
@@ -343,6 +351,6 @@ export const SHOPS = {
     name: '百煉坊',
     keeper: '鐵匠老韓',
     stock: ['iron_saber', 'hantie_sword', 'cloth_robe', 'peace_buckle', 'zijin_bell'],
-    recipes: ['wolf_coat', 'fang_pendant', 'scale_armor', 'tiger_robe'],
+    recipes: ['wolf_coat', 'fang_pendant', 'scale_armor', 'xuangui_armor', 'tiger_robe'],
   },
 };

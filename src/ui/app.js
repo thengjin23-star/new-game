@@ -42,9 +42,10 @@ import { BEAST_NOTES, NOT_IN_BOOK } from '../content/codex.js';
 import { FOES } from '../content/foes.js';
 import * as CR from '../world/crafts.js';
 import { RECIPES, GLYPHS, ARRAY } from '../content/crafts.js';
+import { KE } from '../content/wuxing.js';
 import { refineLevel, refineMult } from '../core/refine.js';
 
-const VERSION = '0.15';
+const VERSION = '0.16';
 const ITEM_ORDER = ['weapon', 'gear', 'flyer', 'tool', 'pill', 'talisman', 'herb', 'material', 'book', 'treasure', 'token', 'unknown'];
 const ITEM_KIND = { pill: '丹藥', herb: '靈草', material: '材料', book: '典籍', weapon: '兵器', gear: '裝備', flyer: '飛行法器', tool: '工具', treasure: '寶物', talisman: '符籙', token: '信物', unknown: '未知' };
 const DOCK = [
@@ -1022,6 +1023,8 @@ export function startApp(root, { speed = 1, view = null } = {}) {
       CB.pillCmd(ui.s);
     });
     for (const ev of ['pointerup', 'pointercancel', 'pointerleave']) pill.addEventListener(ev, () => pill.classList.remove('down'));
+    // 相生連招: the run you are on, and what carries it on
+    pad.appendChild(h('div.cbt-chain', { 'aria-live': 'polite' }));
     return pad;
   }
 
@@ -1119,7 +1122,7 @@ export function startApp(root, { speed = 1, view = null } = {}) {
     const bossEl = $('.cbt-boss');
     bossEl.classList.toggle('on', !!boss);
     if (boss) {
-      set(bossEl.querySelector('b'), 'textContent', boss.name);
+      set(bossEl.querySelector('b'), 'textContent', boss.el ? `${boss.name}〔${boss.el}〕` : boss.name);
       set(bossEl.querySelector('span'), 'textContent', `${boss.rank}${boss.gap > 0 ? '・高你一個大境界' : ''}${boss.enraged ? '・狂暴' : ''}`);
       const bar = bossEl.querySelector('.cbt-bar.boss');
       bar.querySelector('i').style.width = `${Math.max(0, (boss.hp / boss.maxHp) * 100)}%`;
@@ -1137,13 +1140,20 @@ export function startApp(root, { speed = 1, view = null } = {}) {
     foeEl.classList.toggle('on', !!foe && on && !boss);
     if (foe) {
       const rank = CB.rankOf(foe);
-      set(foeEl.querySelector('.cbt-foe-name'), 'textContent', rank ? `${foe.name}・${rank}${foe.gap > 0 ? '（高你一個大境界）' : ''}` : foe.name);
+      const name = foe.K.el ? `${foe.name}〔${foe.K.el}〕` : foe.name;
+      set(foeEl.querySelector('.cbt-foe-name'), 'textContent', rank ? `${name}・${rank}${foe.gap > 0 ? '（高你一個大境界）' : ''}` : name);
       foeEl.querySelector('.cbt-bar.foe i').style.width = `${Math.max(0, (foe.hp / foe.maxHp) * 100)}%`;
       foeEl.classList.toggle('enraged', !!foe.enraged);
     }
     // the buttons: names, costs, cooldowns
     const kit = CB.kitOf(s);
     const S = CB.strikeOf(s);
+    const chain = CB.chainOf(s);
+    const chainEl = $('.cbt-chain');
+    if (chainEl) {
+      set(chainEl, 'textContent', chain ? `${chain.n > 1 ? `${'一二三四五六'[chain.n - 1]}連・` : ''}${chain.el}生${chain.next}` : '');
+      chainEl.classList.toggle('on', !!chain);
+    }
     for (const el of shell.querySelectorAll('.cbt-btn')) {
       const slot = SLOT_OF[[...el.classList].find((c) => c in SLOT_OF)];
       // a place for a move: whichever of your three is in it now (not while you hold it down)
@@ -1190,6 +1200,13 @@ export function startApp(root, { speed = 1, view = null } = {}) {
         total = k.cd;
         off = !!k.locked || me.mp < k.mp;
         el.classList.toggle('good', !!k.good);
+        if (el.dataset.el !== (k.el || '')) el.dataset.el = k.el || '';
+        // the move that follows from the last (相生): lit, while there is time
+        el.classList.toggle('sheng', !!chain && !k.locked && chain.next === k.el);
+        // against whom you are fighting: a move its element overcomes, or one it overcomes
+        const fel = boss ? boss.el : foe?.K?.el;
+        el.classList.toggle('ke-over', !!fel && KE[k.el] === fel);
+        el.classList.toggle('ke-under', !!fel && KE[fel] === k.el);
       }
       set(el.querySelector('b'), 'textContent', name);
       set(el.querySelector('small'), 'textContent', cost);
@@ -2079,14 +2096,15 @@ export function startApp(root, { speed = 1, view = null } = {}) {
     return h('section.card.kit',
       h('h3', '戰鬥招式'),
       h('p.muted.small', '帶進戰鬥的三招，對應技能鍵 1、2、3。先點一格，再點下面的招式換上。'),
+      h('p.muted.small', `五行：金剋木、木剋土、土剋水、水剋火、火剋金——招式剋得住對手，傷得更重；被剋，傷得輕。木生火、火生土、土生金、金生水、水生木——四息之內接上相生的下一招，威力更強，連三招更強（亮起來的鈕就是能接的）。你的靈根是${s.player.root.els.join('、')}：同屬性的招式也順手些。`),
       h('div.kit-slots', kit.map((k, i) =>
         h('button.kit-slot' + (i === sel ? '.sel' : '') + (k.locked ? '.locked' : ''), { type: 'button', onclick: () => { ui.kitSlot = i; renderLayer(); } },
-          h('kbd', String(i + 1)), h('b', k.name), h('span', k.locked ? '未解鎖' : k.school)))),
+          h('kbd', String(i + 1)), h('b', k.name), h('span', k.locked ? '未解鎖' : `${k.school}${k.el ? `・${k.el}` : ''}`)))),
       SCHOOLS.map((school) => h('div.kit-school',
         h('h4', school),
         all.filter((m) => m.school === school).map((m) =>
           h('button.kit-move' + (ids.includes(m.id) && !m.locked ? '.on' : '') + (m.locked ? '.locked' : '') + (m.good ? '.good' : ''), { type: 'button', disabled: !!m.locked, onclick: () => put3(m.id) },
-            h('div.kit-head', h('b', m.name), h('span', m.mp ? `靈力 ${m.mp}` : '不耗靈力'), h('span', `冷卻 ${m.cd} 秒`)),
+            h('div.kit-head', h('b', m.name), m.el ? h('span.el', { 'data-el': m.el }, m.el) : null, h('span', m.mp ? `靈力 ${m.mp}` : '不耗靈力'), h('span', `冷卻 ${m.cd} 秒`)),
             h('p', m.locked || m.desc))))),
       s.player.kit ? h('button.btn.small', { type: 'button', onclick: () => { ui.kitSlot = 0; act((x) => CB.setKit(x, null)); } }, '交給系統自動配招') : null,
     );
@@ -2420,7 +2438,7 @@ export function startApp(root, { speed = 1, view = null } = {}) {
         const N = BEAST_NOTES[k];
         if (!met(k)) return h('li.unknown', h('div.person-head', h('b', '？？？'), h('span.muted.small', '還沒遇過')));
         return h('li',
-          h('div.person-head', h('b', FOES[k].name), N ? h('span.muted.small', N.where) : null, s.vars.kills?.[k] ? h('span.tier', `打倒 ${s.vars.kills[k]}`) : null),
+          h('div.person-head', h('b', FOES[k].name), FOES[k].el ? h('span.el', { 'data-el': FOES[k].el }, FOES[k].el) : null, N ? h('span.muted.small', N.where) : null, s.vars.kills?.[k] ? h('span.tier', `打倒 ${s.vars.kills[k]}`) : null),
           N ? h('p.small', N.note) : null,
         );
       })),

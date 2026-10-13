@@ -64,6 +64,13 @@ export const TECHS = {
     power: 0.35,
     desc: '山腹洞府中前輩留下的劍訣，一劍青光，三丈之內斬妖除魔。',
   },
+  jianzhen: {
+    name: '小周天劍陣',
+    kind: 'combat',
+    grade: '玄品下',
+    power: 0.2,
+    desc: '斷劍峰劍痕裡的一縷劍意：一劍化六，繞身飛轉。築基之後，才使得出來。',
+  },
   fox_fire: {
     name: '狐火術',
     kind: 'combat',

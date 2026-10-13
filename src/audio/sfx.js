@@ -284,9 +284,32 @@ export function effect(kind, pan = 0, near = 1) {
     case 'soul':
       sweep(t, o({ type: 'sine', from: 620, to: 410, dur: 0.9, vel: 0.09 * v, attack: 0.3 }));
       break;
+    case 'whirl':
+      // water turning, a gurgle under it
+      whoosh(t, o({ from: 300, to: 160, dur: 0.6, vel: 0.2 * v, q: 2 }));
+      for (let k = 0; k < 4; k++) sweep(t + k * 0.09, o({ type: 'sine', from: 260 + k * 40, to: 140, dur: 0.08, vel: 0.08 * v }));
+      break;
+    case 'vines':
+      // the ground splitting, and the vines writhing up out of it
+      burst(t, o({ type: 'lowpass', hz: 300, q: 0.8, vel: 0.35 * v, len: 0.2 }));
+      for (let k = 0; k < 5; k++) burst(t + 0.04 + k * 0.05, o({ hz: 700 + Math.random() * 900, q: 1.5, vel: 0.12 * v, len: 0.06 }));
+      break;
+    case 'jianzhen':
+      // six blades drawn, one after another
+      for (let k = 0; k < 3; k++) bell('chime', 84 + k * 3, t + k * 0.07, o({ vel: 0.3 }));
+      whoosh(t, o({ from: 900, to: 2600, dur: 0.5, vel: 0.14, peak: 0.6 }));
+      break;
     default:
       break;
   }
+}
+
+/** A run of 相生 carried on: two notes up, a fifth apart. */
+export function sheng() {
+  if (!ctx() || !every('sheng', 0.4)) return;
+  const t = t0();
+  pluck('zheng', 74, t, S({ vel: 0.35 }));
+  pluck('zheng', 81, t + 0.08, S({ vel: 0.4 }));
 }
 
 /** Something loosed: yours (a 劍氣, a 火球…) or theirs (venom, a bolt). */
@@ -303,6 +326,19 @@ export function shot(kind, foe, pan = 0, near = 1) {
     whoosh(t, o({ from: 260, to: 900, dur: 0.3, vel: 0.22 * v }));
     crackle(t, o({ dur: 0.3, count: 6, vel: 0.15 * v }));
   } else if (kind === 'foxfire') sweep(t, o({ type: 'sine', from: 900 + Math.random() * 300, to: 1500, dur: 0.25, vel: 0.07 * v }));
+  else if (kind === 'feijian') {
+    // a sword let go: it rings as it flies
+    bell('chime', 86, t, o({ vel: 0.3 * v }));
+    whoosh(t, o({ from: 1400, to: 4800, dur: 0.24, vel: 0.16 * v, q: 1.8 }));
+  } else if (kind === 'frost') {
+    sweep(t, o({ type: 'sine', from: 2400, to: 3600, dur: 0.12, vel: 0.06 * v }));
+    burst(t, o({ type: 'highpass', hz: 5200, q: 0.7, vel: 0.14 * v, len: 0.12 }));
+  } else if (kind === 'vine') whoosh(t, o({ from: 300, to: 900, dur: 0.18, vel: 0.12 * v }));
+  else if (kind === 'rock') whoosh(t, o({ from: 200, to: 600, dur: 0.22, vel: 0.2 * v, q: 0.8 }));
+  else if (kind === 'water') {
+    whoosh(t, o({ from: 700, to: 2400, dur: 0.2, vel: 0.14 * v, q: 0.7 }));
+    burst(t, o({ type: 'highpass', hz: 3000, q: 0.5, vel: 0.1 * v, len: 0.12 }));
+  }
   else if (kind === 'mirror') {
     bell('chime', 93, t, o({ vel: 0.4 * v }));
     sweep(t, o({ type: 'sine', from: 2000, to: 3000, dur: 0.18, vel: 0.07 * v }));

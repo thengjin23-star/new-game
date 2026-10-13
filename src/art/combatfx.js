@@ -32,8 +32,11 @@ const LEAF = [96, 168, 96];
 const BLOOD = [176, 28, 36];
 const VENOM = [96, 150, 60];
 const DUST = [120, 100, 80];
+const ICE = [170, 215, 245];
+const WATER = [60, 120, 175];
+const ICE_DEEP = [70, 130, 190];
 /** The light a move gathers into as you cast it. */
-const GLOW = { fire: FIRE, shield: [120, 170, 230], foeqi: FOE_QI, foxfire: FOX, mend: LEAF, iron: GOLD, sweep: GOLD, charge: GOLD, bloodqi: BLOOD, bloodring: BLOOD, blink: FOX, mirror: [246, 232, 170], bell: GOLD };
+const GLOW = { fire: FIRE, shield: [120, 170, 230], foeqi: FOE_QI, foxfire: FOX, mend: LEAF, iron: GOLD, sweep: GOLD, charge: GOLD, bloodqi: BLOOD, bloodring: BLOOD, blink: FOX, mirror: [246, 232, 170], bell: GOLD, feijian: QI, jianzhen: QI, vine: LEAF, frost: ICE };
 
 // ── figures ──
 
@@ -427,7 +430,7 @@ export function drawGroundMarks(g, s, C, kit, u = 1) {
   // ground that hurts: venom spat, fire, blood (fading in, and out as it ends)
   for (const pl of C.pools || []) {
     const a = Math.min(1, (now - pl.t0) / 0.25) * Math.max(0, Math.min(1, (pl.until - now) / 0.6));
-    const col = pl.kind === 'venom' ? VENOM : pl.kind === 'blood' ? BLOOD : FIRE;
+    const col = pl.kind === 'venom' ? VENOM : pl.kind === 'blood' ? BLOOD : pl.kind === 'water' ? WATER : FIRE;
     const fl = pl.kind === 'fire' ? 0.06 * Math.sin(now * 13 + pl.x * 0.3) : 0.03 * Math.sin(now * 4 + pl.y);
     g.fillStyle = rgba(col, (pl.kind === 'fire' ? 0.3 : 0.34) * a);
     ring(g, pl.x, pl.y, pl.r * (1 + fl));
@@ -436,6 +439,25 @@ export function drawGroundMarks(g, s, C, kit, u = 1) {
     g.lineWidth = lw(1.4);
     ring(g, pl.x, pl.y, pl.r * (0.94 + fl));
     g.stroke();
+    // a whirlpool: arms of it turning in toward the heart
+    if (pl.kind === 'water') {
+      g.strokeStyle = rgba([210, 232, 248], 0.7 * a);
+      g.lineWidth = lw(1.6);
+      for (let n = 0; n < 3; n++) {
+        const a0 = now * 3.2 + (n * Math.PI * 2) / 3;
+        g.beginPath();
+        for (let q = 0; q <= 12; q++) {
+          const t = q / 12;
+          const an = a0 + t * 2.6;
+          const r = pl.r * (0.9 - t * 0.75);
+          const x = pl.x + Math.cos(an) * r;
+          const y = pl.y + Math.sin(an) * r;
+          if (q) g.lineTo(x, y);
+          else g.moveTo(x, y);
+        }
+        g.stroke();
+      }
+    }
   }
   // whom you are after
   const me = C.me;
@@ -548,9 +570,18 @@ export function drawGroundMarks(g, s, C, kit, u = 1) {
     ring(g, w.x, w.y, 20);
     g.stroke();
   }
-  // scorch where a fireball burst; dust where a leap came down
+  // scorch where a fireball burst; dust where a leap came down; green where the vines hold
   for (const f of C.fx) {
     const p = (now - f.t0) / f.dur;
+    if (f.kind === 'vines') {
+      g.fillStyle = rgba(LEAF, 0.16 * (1 - p));
+      ring(g, f.x, f.y, f.r);
+      g.fill();
+      g.strokeStyle = rgba(LEAF, 0.55 * (1 - p));
+      g.lineWidth = lw(2);
+      ring(g, f.x, f.y, f.r);
+      g.stroke();
+    }
     if (f.kind === 'boom') {
       g.fillStyle = `rgba(60,30,20,${0.3 * (1 - p)})`;
       ring(g, f.x, f.y, f.r * Math.min(1, 0.6 + p * 0.8));
@@ -603,6 +634,16 @@ export function drawGroundMarks(g, s, C, kit, u = 1) {
         g.strokeStyle = `rgba(150,190,230,${a * (1 - q)})`;
         g.lineWidth = lw(2.4);
         ring(g, f.x, f.y, f.r * q);
+        g.stroke();
+      }
+    } else if (f.kind === 'whirl') {
+      // the water opening where you stood: rings running in
+      for (const lag of [0, 0.2, 0.4]) {
+        const q = Math.max(0, Math.min(1, (now - f.t0 - lag) / (f.dur * 0.7)));
+        if (q <= 0 || q >= 1) continue;
+        g.strokeStyle = rgba(WATER, 0.7 * (1 - q));
+        g.lineWidth = lw(2.2);
+        ring(g, f.x, f.y, f.r * (1.2 - q * 0.9));
         g.stroke();
       }
     } else if (f.kind === 'quake') {
@@ -665,6 +706,9 @@ const POP = {
   heal: ['rgba(70,130,170,1)', 13, '700'],
   ally: ['rgba(120,84,60,1)', 13, '700'],
   weak: ['rgba(120,112,104,1)', 13, '700'],
+  // a blow of the element that overcomes it (五行相剋); a run of 相生 (木生火…) over you
+  ke: ['rgba(40,112,82,1)', 18, '900'],
+  sheng: ['rgba(170,112,24,1)', 14, '900'],
 };
 
 /**
@@ -708,6 +752,28 @@ export function drawCombatOverlay(ctx, proj, px, s, C, look, t, font) {
     ctx.fill();
     ctx.stroke();
   }
+  // 劍陣: the blades going round you, and the faint circle they cut
+  if (me?.array) {
+    const A = me.array;
+    const k = unitAt(proj, w.x, w.y);
+    const fade = Math.min(1, A.left / 0.4);
+    for (let i = 0; i < A.n; i++) {
+      const an = A.ang + (i / A.n) * Math.PI * 2;
+      const bx = w.x + Math.cos(an) * A.r;
+      const by = w.y + Math.sin(an) * A.r;
+      const [sx, sy] = proj(bx, by, 15);
+      const [tx, ty] = proj(bx - Math.sin(an) * 10, by + Math.cos(an) * 10, 15);
+      // a wake behind each, the way it goes round
+      const [wx, wy] = proj(bx + Math.sin(an) * 16, by - Math.cos(an) * 16, 15);
+      ctx.strokeStyle = rgba(QI, 0.35 * fade);
+      ctx.lineWidth = 3 * k;
+      ctx.beginPath();
+      ctx.moveTo(wx, wy);
+      ctx.lineTo(sx, sy);
+      ctx.stroke();
+      sword(ctx, sx, sy, Math.atan2(ty - sy, tx - sx), k * 0.9, px, fade);
+    }
+  }
   // 金剛: gold about you; 回春: green motes rising off you
   if (me?.ward) {
     const [cx, cy] = proj(w.x, w.y, 17);
@@ -729,13 +795,13 @@ export function drawCombatOverlay(ctx, proj, px, s, C, look, t, font) {
       ctx.fill();
     }
   }
-  // coiled about you: loops of the snake's body, tightening
+  // coiled about you: loops of the snake's body, tightening (or vines, out of the ground, round your legs)
   if (me?.held) {
     const k = unitAt(proj, w.x, w.y);
     const sq = 1 - 0.08 * Math.sin(now * 9);
-    for (const up of [6, 13, 20]) {
+    for (const up of me.held.root ? [3, 8, 13] : [6, 13, 20]) {
       const [cx, cy] = proj(w.x, w.y, up);
-      ctx.strokeStyle = 'rgba(70,90,52,0.95)';
+      ctx.strokeStyle = me.held.root ? 'rgba(52,104,46,0.95)' : 'rgba(70,90,52,0.95)';
       ctx.lineWidth = 3.4 * k * Math.max(1, px * 2);
       ctx.beginPath();
       ctx.ellipse(cx, cy, 11 * k * sq, 4 * k, 0, 0, Math.PI * 2);
@@ -807,7 +873,7 @@ export function drawCombatOverlay(ctx, proj, px, s, C, look, t, font) {
       const rank = rankOf(b);
       nameTag(ctx, sx, sy - 10 * px, rank ? `${b.name}・${rank}` : b.name, b.gap > 0 ? 'rgba(170,30,24,1)' : 'rgba(110,34,26,1)', px, font);
       let bx = sx + bw / 2 + 8 * px;
-      for (const [on, ch, col] of [[b.burn, '灼', 'rgba(214,110,40,1)'], [b.enraged, '怒', 'rgba(190,40,30,1)']]) {
+      for (const [on, ch, col] of [[b.burn, '灼', 'rgba(214,110,40,1)'], [b.chill, '凍', 'rgba(70,130,190,1)'], [b.enraged, '怒', 'rgba(190,40,30,1)']]) {
         if (!on) continue;
         ctx.fillStyle = 'rgba(250,246,236,0.92)';
         ctx.beginPath();
@@ -845,7 +911,7 @@ export function drawCombatOverlay(ctx, proj, px, s, C, look, t, font) {
 }
 
 /** Numbers that are blood lost. */
-const MINUS = new Set(['dmg', 'burn', 'hurt', 'poison', 'weak', 'ally']);
+const MINUS = new Set(['dmg', 'burn', 'hurt', 'poison', 'weak', 'ally', 'ke']);
 
 /** A name over someone's head. */
 function nameTag(ctx, x, y, text, col, px, font) {
@@ -911,6 +977,30 @@ function mark(ctx, x, y, ch, col, px, font) {
   ctx.fillText(ch, x, y);
 }
 
+/** A small 劍, its point along angle a: blade, guard, hilt (k: its scale here). */
+function sword(ctx, x, y, a, k, px, alpha = 1) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate(a);
+  ctx.fillStyle = `rgba(228,238,242,${alpha})`;
+  ctx.strokeStyle = `rgba(56,66,76,${0.85 * alpha})`;
+  ctx.lineWidth = 0.7 * px;
+  ctx.beginPath();
+  ctx.moveTo(15 * k, 0);
+  ctx.lineTo(1 * k, -1.7 * k);
+  ctx.lineTo(-4 * k, -1.5 * k);
+  ctx.lineTo(-4 * k, 1.5 * k);
+  ctx.lineTo(1 * k, 1.7 * k);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+  ctx.fillStyle = `rgba(160,124,50,${alpha})`;
+  ctx.fillRect(-5.6 * k, -3.2 * k, 1.8 * k, 6.4 * k);
+  ctx.fillStyle = `rgba(58,40,30,${alpha})`;
+  ctx.fillRect(-10.5 * k, -1 * k, 5 * k, 2 * k);
+  ctx.restore();
+}
+
 function drawShot(ctx, proj, px, sh, now) {
   const [x, y] = proj(sh.x, sh.y, 15);
   const [x2, y2] = proj(sh.x + sh.ux * 10, sh.y + sh.uy * 10, 15);
@@ -934,6 +1024,100 @@ function drawShot(ctx, proj, px, sh, now) {
     ctx.fillStyle = g;
     ctx.beginPath();
     ctx.arc(x, y, r * 1.9, 0, Math.PI * 2);
+    ctx.fill();
+    return;
+  }
+  if (sh.kind === 'rock') {
+    // a stone the size of a fist, tumbling
+    ctx.save();
+    ctx.translate(x, y - 4 * k);
+    ctx.rotate(now * 9 + sh.x * 0.05);
+    ctx.fillStyle = 'rgba(120,112,100,1)';
+    ctx.strokeStyle = rgba(INK, 0.85);
+    ctx.lineWidth = 0.9 * px;
+    ctx.beginPath();
+    ctx.moveTo(-5 * k, -2 * k);
+    ctx.lineTo(-1 * k, -5 * k);
+    ctx.lineTo(5 * k, -3 * k);
+    ctx.lineTo(5 * k, 3 * k);
+    ctx.lineTo(0, 5 * k);
+    ctx.lineTo(-5 * k, 3 * k);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+    ctx.restore();
+    return;
+  }
+  if (sh.kind === 'water') {
+    // a jet of lake water: a bright head, spray trailing
+    for (let n = 5; n >= 1; n--) {
+      const [tx, ty] = proj(sh.x - sh.ux * n * 7 + Math.sin(now * 13 + n) * 2, sh.y - sh.uy * n * 7, 14 + Math.cos(now * 9 + n) * 1.5);
+      ctx.fillStyle = rgba(WATER, 0.42 - n * 0.07);
+      ctx.beginPath();
+      ctx.arc(tx, ty, (5.5 - n * 0.7) * k, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    const r = 6 * k;
+    const gr = ctx.createRadialGradient(x, y, 0, x, y, r * 1.6);
+    gr.addColorStop(0, 'rgba(236,248,255,1)');
+    gr.addColorStop(0.5, rgba(WATER, 0.85));
+    gr.addColorStop(1, rgba(WATER, 0));
+    ctx.fillStyle = gr;
+    ctx.beginPath();
+    ctx.arc(x, y, r * 1.6, 0, Math.PI * 2);
+    ctx.fill();
+    return;
+  }
+  if (sh.kind === 'feijian') {
+    // the sword itself, point first (hilt first, coming home), a thin bright wake
+    const [bx, by] = proj(sh.x - sh.ux * 34, sh.y - sh.uy * 34, 15);
+    const tail = ctx.createLinearGradient(bx, by, x, y);
+    tail.addColorStop(0, rgba(QI, 0));
+    tail.addColorStop(1, rgba(QI, 0.55));
+    ctx.strokeStyle = tail;
+    ctx.lineWidth = 3 * k;
+    ctx.beginPath();
+    ctx.moveTo(bx, by);
+    ctx.lineTo(x, y);
+    ctx.stroke();
+    sword(ctx, x, y, sh.home ? a + Math.PI : a, k, px);
+    return;
+  }
+  if (sh.kind === 'frost') {
+    // a shard of ice, a trail of cold mist
+    for (let n = 4; n >= 1; n--) {
+      const [tx, ty] = proj(sh.x - sh.ux * n * 8, sh.y - sh.uy * n * 8, 15 + Math.sin(now * 11 + n) * 1.2);
+      ctx.fillStyle = rgba(ICE, 0.3 - n * 0.06);
+      ctx.beginPath();
+      ctx.arc(tx, ty, (5.5 - n) * k, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(a);
+    ctx.fillStyle = 'rgba(228,245,255,0.97)';
+    ctx.strokeStyle = rgba(ICE_DEEP, 0.9);
+    ctx.lineWidth = 0.9 * px;
+    ctx.beginPath();
+    ctx.moveTo(12 * k, 0);
+    ctx.lineTo(-3 * k, -3.6 * k);
+    ctx.lineTo(-8 * k, 0);
+    ctx.lineTo(-3 * k, 3.6 * k);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+    ctx.restore();
+    return;
+  }
+  if (sh.kind === 'vine') {
+    // a seed of green light, flung to where the vines will come up
+    ctx.fillStyle = rgba(LEAF, 0.35);
+    ctx.beginPath();
+    ctx.arc(x, y, 6 * k, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = 'rgba(214,246,196,0.95)';
+    ctx.beginPath();
+    ctx.arc(x, y, 2.6 * k, 0, Math.PI * 2);
     ctx.fill();
     return;
   }
@@ -1062,9 +1246,11 @@ function drawFx(ctx, proj, px, f, now) {
       const sweep = Math.min(1, p * 2.2);
       const a0 = a - f.arc / 2;
       const edge = f.foe ? `rgba(168,50,42,${0.8 * (1 - p)})` : `rgba(36,33,30,${0.6 * (1 - p)})`;
+      // (the heavy third of a run: a broader, brighter stroke)
+      const wide = f.heavy ? 1.8 : 1;
       for (const [wd, col] of [[7, `rgba(250,246,236,${0.35 * (1 - p)})`], [2.6, `rgba(255,255,250,${0.95 * (1 - p)})`], [0.8, edge]]) {
         ctx.strokeStyle = col;
-        ctx.lineWidth = wd * px;
+        ctx.lineWidth = wd * px * wide;
         ctx.beginPath();
         ctx.arc(cx, cy, r, a0, a0 + f.arc * sweep);
         ctx.stroke();
@@ -1270,6 +1456,33 @@ function drawFx(ctx, proj, px, f, now) {
       ctx.beginPath();
       ctx.ellipse(x, y, (15 + p * 12) * k, (22 + p * 14) * k, 0, 0, Math.PI * 2);
       ctx.stroke();
+      break;
+    }
+    case 'vines': {
+      // green vines thrust up out of the ground all about the spot, writhing, then sinking back
+      const grow = Math.min(1, p * 5);
+      const fade = p > 0.8 ? (1 - p) / 0.2 : 1;
+      for (let n = 0; n < 9; n++) {
+        const an = n * 2.399 + f.x * 0.01;
+        const rr = f.r * (0.25 + ((n * 37) % 10) / 14);
+        const gx = f.x + Math.cos(an) * rr;
+        const gy = f.y + Math.sin(an) * rr * 0.7;
+        const h = (18 + (n % 4) * 7) * grow;
+        const sway = Math.sin(now * 5 + n) * 4;
+        const [x0, y0] = proj(gx, gy, 0);
+        const [x1, y1] = proj(gx + sway * 0.5, gy, h * 0.55);
+        const [x2, y2] = proj(gx + sway, gy, h);
+        ctx.strokeStyle = `rgba(52,104,46,${0.95 * fade})`;
+        ctx.lineWidth = 2.6 * px * Math.max(1, k);
+        ctx.beginPath();
+        ctx.moveTo(x0, y0);
+        ctx.quadraticCurveTo(x1 + 4 * k * Math.cos(n), y1, x2, y2);
+        ctx.stroke();
+        ctx.fillStyle = `rgba(110,172,84,${0.9 * fade})`;
+        ctx.beginPath();
+        ctx.ellipse(x2, y2, 2.6 * k, 1.5 * k, n, 0, Math.PI * 2);
+        ctx.fill();
+      }
       break;
     }
     case 'dash': {

@@ -57,6 +57,7 @@
  "./src/content/items.js",
  "./src/content/moves.js",
  "./src/content/techniques.js",
+ "./src/content/wuxing.js",
  "./src/core/actions.js",
  "./src/core/body.js",
  "./src/core/calendar.js",

@@ -62,6 +62,8 @@ export function migrate(s) {
   s.player.gear ||= {};
   s.player.arts ||= [];
   s.player.techs ||= [];
+  // (the 劍痕 read before 0.16 left its 劍陣 in you all the same)
+  if (s.flags.sword_scar_read && !s.player.arts.includes('jianzhen')) s.player.arts.push('jianzhen');
   // where the factions stand with you; the work you have taken from the boards
   s.rep ||= {};
   s.quests ||= [];

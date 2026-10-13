@@ -20,6 +20,8 @@ export const FEATS = [
   { id: 'hundred', name: '百戰', desc: '打倒一百個對手。', test: (s) => kills(s) >= 100 },
   { id: 'boss', name: '斬首', desc: '打倒一個首領。', test: (s) => BOSSES.some((k) => s.vars.kills?.[k] > 0) },
   { id: 'tiger', name: '降虎', desc: '打倒古戰場北緣的赤炎妖虎。', test: (s) => s.vars.kills?.fire_tiger > 0 },
+  { id: 'turtle', name: '伏龜', desc: '打倒鏡湖的玄龜。', test: (s) => s.vars.kills?.xuan_turtle > 0 },
+  { id: 'sheng', name: '五行相生', desc: '一口氣接上三招相生的招式。', test: (s) => (s.vars.chainBest || 0) >= 3 },
   { id: 'places', name: '足跡', desc: '去過十個地方。', test: (s) => visited(s) >= 10 },
   { id: 'all_places', name: '踏遍東荒', desc: '東荒的每個地方都去過。', test: (s) => ALL_PLACES.every((id) => s.nodes[id]?.visited) },
   { id: 'walk', name: '雲遊', desc: '走滿一百里路。', test: (s) => (s.world?.walked || 0) >= 100000 },

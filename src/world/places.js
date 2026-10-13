@@ -268,6 +268,10 @@ export const BEASTS = [
   { id: 'fire_tiger_a', kind: 'fire_tiger', title: '赤炎妖虎', x: 1800, y: 380, r: 160, respawn: 30, power: 80 },
   // the road east: someone waiting at the bend
   { id: 'robber_road', kind: 'cultivator', name: '劫修', n: 1, x: 3060, y: 2420, r: 140, event: 'travel_robber', respawn: 120, power: 30 },
+  // 0.16: 山魈 on the stony ground west of 古戰場; a 木魅 deep in 黑風林 (by night only); 玄龜 on the east shore of 鏡湖
+  { id: 'shanxiao_a', kind: 'shanxiao', n: 2, title: '山魈', x: 1400, y: 750, r: 150, respawn: 40, power: 34 },
+  { id: 'mumei_a', kind: 'mumei', n: 1, x: 1850, y: 1250, r: 110, respawn: 20, power: 34, cond: (s) => s.tod >= 19.5 || s.tod < 5 },
+  { id: 'xuan_turtle_a', kind: 'xuan_turtle', title: '玄龜', x: 3610, y: 3700, r: 130, respawn: 45, power: 85 },
   // 古戰場: the restless dead
   { id: 'ghost_a', kind: 'ghost', n: 1, x: 2300, y: 820, r: 150, event: 'ruins_soul', respawn: 30, power: 30 },
   { id: 'ghost_b', kind: 'ghost', n: 1, x: 2950, y: 620, r: 150, event: 'ruins_soul', respawn: 30, power: 30 },

@@ -15,6 +15,11 @@
 // them reeling; push: how far it throws them; shield, heal, ward: a share of
 // your blood held off (for last seconds), given back (over last seconds), or a
 // share of every blow held off (for last seconds); cure: venom gone.
+// el: its element of the 五行 (content/wuxing.js) — 相剋 on a foe, 相生 from
+// the move before it; back: it flies out and comes back to your hand (striking
+// again on the way); chill: [seconds, pace] — those it strikes move (and
+// gather themselves) at that pace for a while; swords, radius, last: blades
+// that circle you so long, striking whatever they touch.
 
 /** Your plain blow, by what you hold. every: seconds between blows. */
 export const STRIKES = {
@@ -46,46 +51,66 @@ export const MOVES = {
   },
   guard: {
     name: '護體', school: '通用', aim: 'self', mp: 10, cd: 12, cast: 0, shield: 0.3, last: 5, fx: 'shield',
-    arts: ['xuanshui'], better: { name: '玄水盾', shield: 0.45 },
+    arts: ['xuanshui'], better: { name: '玄水盾', shield: 0.45, el: '水' },
     desc: '靈力護住周身，擋下一部分傷害，維持五秒。',
   },
   swordqi: {
-    name: '劍氣', school: '劍修', aim: 'line', mp: 6, cd: 3, cast: 0.12, range: 300, width: 20, speed: 560, mult: 1.6, pierce: true, fx: 'swordqi',
+    name: '劍氣', school: '劍修', el: '金', aim: 'line', mp: 6, cd: 3, cast: 0.12, range: 300, width: 20, speed: 560, mult: 1.6, pierce: true, fx: 'swordqi',
     arts: ['qingyuan_sword', 'qingyun'], better: { mult: 2, range: 360 },
     desc: '一道劍氣直直斬出，穿過途中所有敵人。',
   },
   swordstep: {
-    name: '劍影', school: '劍修', aim: 'dash', mp: 8, cd: 7, cast: 0.05, range: 150, width: 36, mult: 1.5, fx: 'swordstep',
+    name: '劍影', school: '劍修', el: '金', aim: 'dash', mp: 8, cd: 7, cast: 0.05, range: 150, width: 36, mult: 1.5, fx: 'swordstep',
     learn: ['qingyuan_sword'], weapon: ['qinggang_sword', 'hantie_sword'],
     desc: '人隨劍走，一閃而過，沿途的敵人各挨一劍。閃身之時，刀槍不入。',
   },
+  feijian: {
+    name: '飛劍', school: '劍修', el: '金', aim: 'line', mp: 10, cd: 4, cast: 0.15, range: 330, width: 22, speed: 720, mult: 1.3, pierce: true, back: true, fx: 'feijian', realm: 2,
+    weapon: ['qinggang_sword', 'hantie_sword'],
+    desc: '築基之後，劍能離手：飛劍直直射出，穿過途中所有敵人，再飛回你手上——回來的路上，再斬一次。',
+  },
+  jianzhen: {
+    name: '劍陣', school: '劍修', el: '金', aim: 'self', mp: 18, cd: 16, cast: 0.3, swords: 6, radius: 70, last: 6, mult: 0.45, fx: 'jianzhen', realm: 2,
+    learn: ['jianzhen'],
+    desc: '六道劍影繞身飛轉六息：碰上的敵人，每過半息挨一劍。圍上來的越多，挨的越多。',
+  },
   fireball: {
-    name: '火球', school: '法修', aim: 'ground', mp: 8, cd: 5, cast: 0.28, range: 290, radius: 64, speed: 430, mult: 1.4, burn: 3, fx: 'fire',
+    name: '火球', school: '法修', el: '火', aim: 'ground', mp: 8, cd: 5, cast: 0.28, range: 290, radius: 64, speed: 430, mult: 1.4, burn: 3, fx: 'fire',
     arts: ['lieyan'], better: { mult: 1.8, radius: 76 },
     desc: '火球飛向落點，炸開一片，燒著的敵人還會再灼傷一陣。',
   },
   foxfire: {
-    name: '狐火', school: '法修', aim: 'seek', mp: 9, cd: 6, cast: 0.2, range: 320, count: 3, speed: 280, mult: 0.8, burn: 1.5, fx: 'foxfire',
+    name: '狐火', school: '法修', el: '火', aim: 'seek', mp: 9, cd: 6, cast: 0.2, range: 320, count: 3, speed: 280, mult: 0.8, burn: 1.5, fx: 'foxfire',
     learn: ['fox_fire'],
     desc: '三朵幽藍的狐火，自己找上身邊的敵人。專灼魂魄，對殘魂之類尤其管用。',
   },
   mend: {
-    name: '回春術', school: '法修', aim: 'self', mp: 12, cd: 14, cast: 0.3, heal: 0.3, last: 3, cure: true, fx: 'mend',
+    name: '回春術', school: '法修', el: '木', aim: 'self', mp: 12, cd: 14, cast: 0.3, heal: 0.3, last: 3, cure: true, fx: 'mend',
     learn: ['qingmu', 'songhe'],
     desc: '青木生機，止血生肌：三息之內回復三成氣血，也化去身上的毒。',
   },
+  vine: {
+    name: '藤縛', school: '法修', el: '木', aim: 'ground', mp: 9, cd: 7, cast: 0.25, range: 280, radius: 60, speed: 900, mult: 0.6, stun: 1.8, fx: 'vine',
+    learn: ['qingmu'],
+    desc: '青藤從落點的地底鑽出，纏住那一片的敵人，一時半刻動彈不得（首領掙得快些）。',
+  },
+  frost: {
+    name: '玄冰刺', school: '法修', el: '水', aim: 'line', mp: 8, cd: 4.5, cast: 0.18, range: 300, width: 18, speed: 600, mult: 1.2, chill: [3, 0.55], fx: 'frost',
+    learn: ['xuanshui'],
+    desc: '一道寒冰直刺而出：中了的敵人凍得手腳發僵，三息之內，走、撲、出招都慢上將近一半。',
+  },
   sweep: {
-    name: '掃腿', school: '體修', aim: 'around', mp: 0, cd: 5, cast: 0.16, radius: 58, mult: 0.6, stun: 0.9, fx: 'sweep', realm: 0,
+    name: '掃腿', school: '體修', el: '土', aim: 'around', mp: 0, cd: 5, cast: 0.16, radius: 58, mult: 0.6, stun: 0.9, fx: 'sweep', realm: 0,
     learn: ['wild_boxing'], gengu: 6,
     desc: '鄉下打架的絆子，一腿掃一圈，把身邊的都絆個踉蹌。不耗靈力。',
   },
   charge: {
-    name: '衝撞', school: '體修', aim: 'dash', mp: 0, cd: 6, cast: 0.08, range: 170, width: 30, mult: 1.3, stun: 1.2, push: 60, first: true, fx: 'charge', realm: 0,
+    name: '衝撞', school: '體修', el: '土', aim: 'dash', mp: 0, cd: 6, cast: 0.08, range: 170, width: 30, mult: 1.3, stun: 1.2, push: 60, first: true, fx: 'charge', realm: 0,
     gengu: 7,
     desc: '一肩撞過去：撞上的第一個被撞飛出去，半天爬不起來。不耗靈力。',
   },
   iron: {
-    name: '金剛', school: '體修', aim: 'self', mp: 0, cd: 16, cast: 0.2, ward: 0.5, last: 4, fx: 'iron', realm: 0,
+    name: '金剛', school: '體修', el: '金', aim: 'self', mp: 0, cd: 16, cast: 0.2, ward: 0.5, last: 4, fx: 'iron', realm: 0,
     gengu: 8,
     desc: '一口氣沉下去，渾身筋骨繃得像鐵，四息之內受的傷減半。不耗靈力。',
   },
@@ -95,14 +120,14 @@ export const MOVES = {
     desc: '照妖鏡一照，一道鏡光直直射出：照到的都踉蹌；鬼物陰魂被照中，傷得最重。',
   },
   bell: {
-    name: '金鐘', school: '法器', aim: 'around', mp: 14, cd: 14, cast: 0.1, radius: 92, mult: 0.5, stun: 0.8, push: 50, shield: 0.25, last: 4, fx: 'bell',
+    name: '金鐘', school: '法器', el: '金', aim: 'around', mp: 14, cd: 14, cast: 0.1, radius: 92, mult: 0.5, stun: 0.8, push: 50, shield: 0.25, last: 4, fx: 'bell',
     relic: 'zijin_bell',
     desc: '紫金鈴一搖：身邊的都被震開、踉蹌，一層金光護住你四息。',
   },
 };
 
 /** Which three a cultivator takes into a fight unless told otherwise: the first of these they can use. */
-export const KIT_ORDER = ['swordqi', 'fireball', 'guard', 'foxfire', 'swordstep', 'charge', 'sweep', 'mend', 'iron', 'qi'];
+export const KIT_ORDER = ['feijian', 'swordqi', 'fireball', 'frost', 'guard', 'foxfire', 'vine', 'swordstep', 'jianzhen', 'charge', 'sweep', 'mend', 'iron', 'qi'];
 
 /** What 戰鬥試煉 lends you (and what a 凡人 sees waiting, before 引氣入體). */
 export const TRIAL_KIT = ['swordqi', 'fireball', 'guard'];
@@ -145,8 +170,9 @@ export const PILL_CD = 8;
  * pool: ground that hurts a while after — { secs, r, dps (share of a blow each second), kind:
  *   'venom' | 'fire' | 'blood', poison }; on a fan it lies along its reach.
  * trail: a rush that leaves the ground burning behind it ({ secs, width, dps }).
- * hold: a rush that, catching you, holds you fast — [seconds, share of a blow each half-second]
- *   (step aside to break free).
+ * hold: a rush (or roots out of the ground: a zone) that, catching you, holds you fast — [seconds,
+ *   share of a blow each half-second] (step aside to break free).
+ * pool kind 'water': a whirlpool — it drags at your feet (you go slower while you stand in it).
  * fire: it is fire (what you wear against fire keeps some of it off).
  */
 export const BEAST_MOVES = {
@@ -203,4 +229,23 @@ export const BEAST_MOVES = {
   firepounce: { shape: 'leap', min: 100, max: 250, windup: 0.75, speed: 660, width: 40, overshoot: 40, recover: 0.9, cd: 6.5, mult: 1.6, fire: true, trail: { secs: 3.5, width: 30, dps: 0.3 } },
   roar: { shape: 'ring', radius: 130, windup: 0.8, recover: 0.7, cd: 10, mult: 0.6, push: 110, fx: 'roar' },
   breath: { shape: 'fan', reach: 150, arc: 0.85, windup: 0.95, recover: 1, cd: 8, mult: 1.8, lunge: 0, fire: true, fx: 'breath', pool: { secs: 3, r: 30, dps: 0.3, kind: 'fire' } },
+
+  // ── 0.16 ──
+  // 山魈: a swipe of the long arms; the ground stamped where you stand; a rock thrown from afar
+  apeswipe: { shape: 'fan', reach: 52, arc: 1.7, windup: 0.42, recover: 0.5, cd: 1.4, mult: 1.1, lunge: 10, fx: 'claw' },
+  stomp: { shape: 'zone', min: 0, max: 110, radius: 54, windup: 0.85, recover: 0.7, cd: 5.5, mult: 1.5, fx: 'quake' },
+  rockthrow: { shape: 'shot', min: 90, max: 280, range: 320, windup: 0.62, speed: 360, width: 22, recover: 0.5, cd: 3, mult: 1.15, fx: 'rock' },
+  // 木魅: a lash of vines; roots up out of the ground where you stand, holding you fast (step aside to
+  // break free); spores that hang in the air and sicken
+  vinewhip: { shape: 'fan', reach: 66, arc: 1.2, windup: 0.5, recover: 0.6, cd: 1.8, mult: 1, lunge: 0, fx: 'grasp' },
+  rootgrab: { shape: 'zone', min: 0, max: 240, radius: 40, windup: 1, recover: 0.6, cd: 6, mult: 0.7, fx: 'vines', hold: [1.6, 0.3] },
+  sporecloud: { shape: 'zone', min: 40, max: 220, radius: 50, windup: 0.9, recover: 0.6, cd: 7, mult: 0.5, fx: 'venom', pool: { secs: 4, r: 50, dps: 0.25, kind: 'venom', poison: [3, 0.12] } },
+  // 玄龜: a snap of the beak; water spat in jets (three, later five, fanned out); a whirlpool where you
+  // stand that drags at your feet; a wave all round it
+  shellbite: { shape: 'fan', reach: 58, arc: 1.3, windup: 0.6, recover: 0.7, cd: 2.2, mult: 1.5, lunge: 8, fx: 'bite' },
+  jet: { shape: 'shot', min: 60, max: 300, range: 330, windup: 0.7, speed: 420, width: 20, recover: 0.5, cd: 3.2, mult: 1.05, count: 3, spread: 0.26, fx: 'water' },
+  jetfan: { shape: 'shot', min: 50, max: 300, range: 330, windup: 0.8, speed: 420, width: 20, recover: 0.55, cd: 5, mult: 1, count: 5, spread: 0.24, fx: 'water' },
+  whirl: { shape: 'zone', min: 0, max: 280, radius: 48, windup: 1, recover: 0.6, cd: 5.5, mult: 0.9, fx: 'whirl', pool: { secs: 4.5, r: 48, dps: 0.25, kind: 'water' } },
+  whirlrain: { shape: 'zone', min: 0, max: 300, radius: 44, windup: 1.05, recover: 0.7, cd: 8.5, mult: 0.9, count: 3, spread: 90, fx: 'whirl', pool: { secs: 4.5, r: 44, dps: 0.25, kind: 'water' } },
+  tide: { shape: 'ring', radius: 120, windup: 0.95, recover: 0.8, cd: 9, mult: 1.2, push: 90, fx: 'ring' },
 };

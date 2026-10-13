@@ -186,6 +186,198 @@ function bear(ctx, t, moving) {
   ctx.fillRect(20.5, -20, 1.3, 1.3);
 }
 
+/** 山魈: an imp of the mountain — a hunched ape, long arms to the ground, a red face ridged with blue, a stone in hand. */
+function shanxiao(ctx, t, moving) {
+  const ph = moving ? Math.sin(t * 10) * 2 : 0;
+  const bob = moving ? Math.abs(Math.sin(t * 10)) * 1.2 : Math.sin(t * 2) * 0.4;
+  ctx.lineCap = 'round';
+  // short bowed legs
+  ctx.strokeStyle = 'rgba(62,54,46,1)';
+  ctx.lineWidth = 3.4;
+  ctx.beginPath();
+  ctx.moveTo(-4, -12);
+  ctx.lineTo(-6 - ph * 0.6, -1);
+  ctx.moveTo(4, -12);
+  ctx.lineTo(6 + ph * 0.6, -1);
+  ctx.stroke();
+  // the body, hunched forward; shaggy shoulders
+  ctx.fillStyle = 'rgba(98,86,72,1)';
+  ctx.beginPath();
+  ctx.ellipse(1, -18 - bob, 9, 11, 0.35, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = rgba(INK, 0.8);
+  ctx.lineWidth = 0.9;
+  ctx.stroke();
+  ctx.fillStyle = 'rgba(80,70,58,1)';
+  ctx.beginPath();
+  ctx.ellipse(4, -25 - bob, 8, 5, 0.3, 0, Math.PI * 2);
+  ctx.fill();
+  // the long arms, knuckles near the ground — the near one holding a stone
+  ctx.strokeStyle = 'rgba(70,60,50,1)';
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.moveTo(-2, -24 - bob);
+  ctx.quadraticCurveTo(-8, -14, -6 + ph, -3);
+  ctx.moveTo(8, -24 - bob);
+  ctx.quadraticCurveTo(14, -14, 12 - ph, -4);
+  ctx.stroke();
+  ctx.fillStyle = 'rgba(128,120,108,1)';
+  ctx.beginPath();
+  ctx.arc(13 - ph, -4, 3, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = rgba(INK, 0.7);
+  ctx.lineWidth = 0.6;
+  ctx.stroke();
+  // the head thrust forward: a red face, blue ridges beside the nose, a yellow eye
+  ctx.fillStyle = 'rgba(80,70,58,1)';
+  ctx.beginPath();
+  ctx.arc(10, -29 - bob, 5.5, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = rgba(INK, 0.8);
+  ctx.lineWidth = 0.7;
+  ctx.stroke();
+  ctx.fillStyle = 'rgba(190,52,40,1)';
+  ctx.beginPath();
+  ctx.ellipse(13, -28 - bob, 3.4, 4, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = 'rgba(70,110,170,1)';
+  ctx.fillRect(14.6, -30 - bob, 1.2, 4);
+  ctx.fillStyle = 'rgba(250,220,90,1)';
+  ctx.fillRect(12, -31 - bob, 1.4, 1.2);
+}
+
+/** 木魅: a dead tree that is not dead — a twisted trunk, branches for arms, roots for feet, two green lights for eyes. */
+function mumei(ctx, t, moving) {
+  const sway = Math.sin(t * 1.3) * 2;
+  ctx.lineCap = 'round';
+  // roots spread on the ground (crawling, when it moves)
+  ctx.strokeStyle = 'rgba(52,40,30,1)';
+  ctx.lineWidth = 2.2;
+  ctx.beginPath();
+  for (const [dx, dy] of [[-10, 1], [-5, 2], [6, 2], [11, 0]]) {
+    ctx.moveTo(dx * 0.3, -6);
+    ctx.quadraticCurveTo(dx * 0.7, -2, dx + (moving ? Math.sin(t * 8 + dx) * 1.5 : 0), dy);
+  }
+  ctx.stroke();
+  // the trunk, twisted
+  ctx.fillStyle = 'rgba(70,56,42,1)';
+  ctx.beginPath();
+  ctx.moveTo(-5, -4);
+  ctx.bezierCurveTo(-8, -16, -2 + sway * 0.3, -24, -5 + sway * 0.5, -36);
+  ctx.lineTo(4 + sway * 0.5, -36);
+  ctx.bezierCurveTo(6 + sway * 0.3, -24, 9, -16, 5, -4);
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = rgba(INK, 0.85);
+  ctx.lineWidth = 0.9;
+  ctx.stroke();
+  ctx.strokeStyle = 'rgba(40,30,22,0.8)';
+  ctx.lineWidth = 0.7;
+  ctx.beginPath();
+  ctx.moveTo(-1, -8);
+  ctx.quadraticCurveTo(-3, -18, 0, -28);
+  ctx.moveTo(3, -10);
+  ctx.quadraticCurveTo(4, -18, 2, -24);
+  ctx.stroke();
+  // branches for arms, reaching out
+  ctx.strokeStyle = 'rgba(60,46,34,1)';
+  ctx.lineWidth = 2.4;
+  ctx.beginPath();
+  ctx.moveTo(-3 + sway * 0.4, -28);
+  ctx.quadraticCurveTo(-12, -34 + sway, -16, -26 + sway);
+  ctx.moveTo(-14, -30 + sway);
+  ctx.lineTo(-19, -34 + sway);
+  ctx.moveTo(3 + sway * 0.4, -30);
+  ctx.quadraticCurveTo(12, -38 - sway, 18, -30 - sway);
+  ctx.moveTo(15, -35 - sway);
+  ctx.lineTo(20, -40 - sway);
+  ctx.stroke();
+  ctx.fillStyle = 'rgba(96,120,60,0.9)';
+  for (const [lx, ly] of [[-19, -35], [20, -41], [-6, -38], [6, -39]]) {
+    ctx.beginPath();
+    ctx.ellipse(lx + sway * 0.5, ly + sway * 0.3, 2.2, 1.2, 0.6, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  // a hollow for a mouth, two green lights for eyes
+  ctx.fillStyle = 'rgba(24,18,12,1)';
+  ctx.beginPath();
+  ctx.ellipse(1 + sway * 0.4, -26, 3.2, 2, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = `rgba(150,240,120,${0.75 + 0.25 * Math.sin(t * 3)})`;
+  ctx.fillRect(-2 + sway * 0.4, -31, 1.8, 1.6);
+  ctx.fillRect(2.6 + sway * 0.4, -31, 1.8, 1.6);
+}
+
+/** 玄龜: the old black tortoise of the lake — a shell like a millstone, a long neck, the lake running off its back. */
+function xuanTurtle(ctx, t, moving) {
+  const ph = moving ? Math.sin(t * 5) * 1.6 : 0;
+  const neck = Math.sin(t * 1.4) * 1.5;
+  ctx.lineCap = 'round';
+  // stumps of legs
+  ctx.fillStyle = 'rgba(46,54,50,1)';
+  for (const [x, sg] of [[-16, 1], [-6, -1], [8, 1], [17, -1]]) {
+    ctx.beginPath();
+    ctx.ellipse(x + ph * sg, -3, 4, 3.2, 0, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  // the shell: a dark dome, its plates
+  ctx.fillStyle = 'rgba(34,42,40,1)';
+  ctx.beginPath();
+  ctx.ellipse(0, -11, 24, 13, 0, Math.PI, 0);
+  ctx.lineTo(24, -7);
+  ctx.quadraticCurveTo(0, -1, -24, -7);
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = rgba(INK, 0.9);
+  ctx.lineWidth = 1;
+  ctx.stroke();
+  ctx.strokeStyle = 'rgba(90,110,104,0.8)';
+  ctx.lineWidth = 0.8;
+  ctx.beginPath();
+  for (const x of [-12, 0, 12]) {
+    ctx.moveTo(x - 5, -10);
+    ctx.lineTo(x - 2, -18);
+    ctx.lineTo(x + 2, -18);
+    ctx.lineTo(x + 5, -10);
+  }
+  ctx.moveTo(-20, -10);
+  ctx.lineTo(20, -10);
+  ctx.stroke();
+  ctx.strokeStyle = 'rgba(70,84,78,1)';
+  ctx.lineWidth = 1.6;
+  ctx.beginPath();
+  ctx.moveTo(-24, -7);
+  ctx.quadraticCurveTo(0, -1, 24, -7);
+  ctx.stroke();
+  // the neck and the head, out in front
+  ctx.strokeStyle = 'rgba(52,62,56,1)';
+  ctx.lineWidth = 5;
+  ctx.beginPath();
+  ctx.moveTo(20, -9);
+  ctx.quadraticCurveTo(28, -14 + neck, 31, -19 + neck);
+  ctx.stroke();
+  ctx.fillStyle = 'rgba(56,66,60,1)';
+  ctx.beginPath();
+  ctx.ellipse(33, -20 + neck, 5, 3.6, -0.2, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = rgba(INK, 0.85);
+  ctx.lineWidth = 0.8;
+  ctx.stroke();
+  ctx.fillStyle = 'rgba(220,200,90,1)';
+  ctx.fillRect(34, -22 + neck, 1.5, 1.3);
+  // the lake still running off its back
+  ctx.strokeStyle = 'rgba(150,200,230,0.6)';
+  ctx.lineWidth = 0.8;
+  for (let n = 0; n < 4; n++) {
+    const q = (t * 0.8 + n / 4) % 1;
+    const x = -18 + n * 11;
+    ctx.beginPath();
+    ctx.moveTo(x, -9 + q * 4);
+    ctx.lineTo(x, -7 + q * 4);
+    ctx.stroke();
+  }
+}
+
 /** 赤炎妖虎: a great red tiger, black-striped, flame running along its back and at the tip of its tail. */
 function fireTiger(ctx, t, moving) {
   const ph = moving ? Math.sin(t * 10) * 2 : 0;
@@ -362,7 +554,7 @@ function skeleton(ctx, t, moving) {
 /** The big ones: a demon wolf, the wolf king, the python, the iron-backed bear, the skeleton general. */
 export function drawBigBeast(ctx, kind, { t = 0, face = 1, moving = false } = {}) {
   ctx.save();
-  groundShadow(ctx, 0, 0, { demon_wolf: 15, wolf_king: 22, python: 24, bear: 22, skeleton: 12, fire_tiger: 25 }[kind] || 14, 3);
+  groundShadow(ctx, 0, 0, { demon_wolf: 15, wolf_king: 22, python: 24, bear: 22, skeleton: 12, fire_tiger: 25, shanxiao: 12, mumei: 12, xuan_turtle: 27 }[kind] || 14, 3);
   ctx.scale(face, 1);
   switch (kind) {
     case 'demon_wolf':
@@ -386,13 +578,23 @@ export function drawBigBeast(ctx, kind, { t = 0, face = 1, moving = false } = {}
       ctx.scale(1.15, 1.15);
       fireTiger(ctx, t, moving);
       break;
+    case 'shanxiao':
+      shanxiao(ctx, t, moving);
+      break;
+    case 'mumei':
+      mumei(ctx, t, moving);
+      break;
+    case 'xuan_turtle':
+      ctx.scale(1.1, 1.1);
+      xuanTurtle(ctx, t, moving);
+      break;
     default:
       break;
   }
   ctx.restore();
 }
 
-export const BIG_BEASTS = new Set(['demon_wolf', 'wolf_king', 'python', 'bear', 'skeleton', 'fire_tiger']);
+export const BIG_BEASTS = new Set(['demon_wolf', 'wolf_king', 'python', 'bear', 'skeleton', 'fire_tiger', 'shanxiao', 'mumei', 'xuan_turtle']);
 
 /** Props that flicker or sway (repainted as they go); the rest are still. */
 export const LIVE_PROPS = new Set(['campfire', 'ginseng', 'wisp']);

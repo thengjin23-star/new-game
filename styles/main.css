@@ -3118,6 +3118,110 @@ canvas.fu-canvas {
   bottom: calc(var(--pb) + var(--ring));
 }
 
+/* ── 五行 (0.16): each element its colour; a move's element on its button ── */
+[data-el='金'] {
+  --el: #a5832a;
+}
+
+[data-el='木'] {
+  --el: #3d7a3c;
+}
+
+[data-el='水'] {
+  --el: #2f5f8f;
+}
+
+[data-el='火'] {
+  --el: #b4452c;
+}
+
+[data-el='土'] {
+  --el: #8a6538;
+}
+
+span.el {
+  display: inline-block;
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-size: 12px;
+  line-height: 1.3;
+  color: #fff;
+  background: var(--el, var(--muted));
+}
+
+.cbt-btn[data-el]:not([data-el=''])::after {
+  content: attr(data-el);
+  position: absolute;
+  top: -3px;
+  left: -3px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  font-size: 11px;
+  line-height: 18px;
+  text-align: center;
+  color: #fff;
+  background: var(--el);
+  box-shadow: 0 0 0 1.5px rgba(239, 233, 219, 0.95);
+  pointer-events: none;
+}
+
+/* the move that carries a run of 相生 on: lit while there is time */
+.cbt-btn.sheng {
+  border-color: var(--el);
+  animation: sheng 0.7s ease-in-out infinite alternate;
+}
+
+@keyframes sheng {
+  from {
+    box-shadow: 0 0 0 3px var(--el), 0 0 16px 3px var(--el);
+  }
+  to {
+    box-shadow: 0 0 0 2px var(--el), 0 0 4px 0 var(--el);
+  }
+}
+
+/* against the foe you face: a move that overcomes it (剋), or one it overcomes */
+.cbt-btn.ke-over::before {
+  content: '剋';
+  position: absolute;
+  bottom: -5px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 0 4px;
+  border-radius: 6px;
+  font-size: 10px;
+  line-height: 14px;
+  color: #fff;
+  background: var(--jade);
+  pointer-events: none;
+}
+
+.cbt-btn.ke-under b {
+  opacity: 0.5;
+}
+
+.cbt-chain {
+  position: absolute;
+  right: var(--pr);
+  bottom: calc(var(--pb) + var(--ring) + var(--skill) * 0.62 + 8px);
+  transform: translateX(50%);
+  white-space: nowrap;
+  padding: 2px 9px;
+  border-radius: 10px;
+  font-size: 13px;
+  letter-spacing: 0.08em;
+  color: #f7efe1;
+  background: rgba(35, 32, 27, 0.72);
+  opacity: 0;
+  transition: opacity 0.25s;
+  pointer-events: none;
+}
+
+.cbt-chain.on {
+  opacity: 1;
+}
+
 /* a 符 at hand: out past the ring, up */
 .cbt-btn.tal {
   --size: 46px;
