@@ -309,6 +309,10 @@ export const ITEMS = {
     name: '林塵的玉佩', kind: 'token', sell: 0,
     desc: '青玉上刻著一個「塵」字。他說：「憑此物，可向我討一個人情。」',
   },
+  su_slip: {
+    name: '蘇清瑤的玉簡', kind: 'token', sell: 0, keep: true,
+    desc: '一枚溫潤的白玉簡，貼在額上，能看見她記下的事：中州幾個大宗門的山門與規矩，還有「天元三千零二十二年，血月」幾個字，刻得特別深。',
+  },
   mystery: {
     name: '未知之物', kind: 'unknown', price: 12, sell: 2,
     desc: '一件說不出用途的舊物。鑑定之後才知道是什麼。',

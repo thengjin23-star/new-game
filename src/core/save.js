@@ -1,5 +1,5 @@
 import { SAVE_VERSION } from './state.js';
-import { levelFor } from '../world/system.js';
+import { levelFor, awaken } from '../world/system.js';
 import { NODES } from '../world/map.js';
 import { NAMED } from '../world/npcs.js';
 import { DAYS_PER_YEAR } from './calendar.js';
@@ -70,6 +70,7 @@ export function migrate(s) {
   s.sys.known ||= {};
   s.sys.frags ||= [];
   s.sys.lv = Math.max(s.sys.lv || 1, levelFor(s.sys.exp || 0));
+  if (s.sys.bound && s.sys.lv >= 5) awaken(s);
   if (s.sys.lv >= 4) s.sys.subsMax = Math.max(s.sys.subsMax || 1, 2);
   for (const id of Object.keys(NODES)) {
     s.nodes[id] ||= { known: !!NODES[id].start, visited: false, explore: 0 };

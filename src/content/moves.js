@@ -245,7 +245,7 @@ export const BEAST_MOVES = {
   shellbite: { shape: 'fan', reach: 58, arc: 1.3, windup: 0.6, recover: 0.7, cd: 2.2, mult: 1.5, lunge: 8, fx: 'bite' },
   jet: { shape: 'shot', min: 60, max: 300, range: 330, windup: 0.7, speed: 420, width: 20, recover: 0.5, cd: 3.2, mult: 1.05, count: 3, spread: 0.26, fx: 'water' },
   jetfan: { shape: 'shot', min: 50, max: 300, range: 330, windup: 0.8, speed: 420, width: 20, recover: 0.55, cd: 5, mult: 1, count: 5, spread: 0.24, fx: 'water' },
-  whirl: { shape: 'zone', min: 0, max: 280, radius: 48, windup: 1, recover: 0.6, cd: 5.5, mult: 0.9, fx: 'whirl', pool: { secs: 4.5, r: 48, dps: 0.25, kind: 'water' } },
+  whirlpool: { shape: 'zone', min: 0, max: 280, radius: 48, windup: 1, recover: 0.6, cd: 5.5, mult: 0.9, fx: 'whirl', pool: { secs: 4.5, r: 48, dps: 0.25, kind: 'water' } },
   whirlrain: { shape: 'zone', min: 0, max: 300, radius: 44, windup: 1.05, recover: 0.7, cd: 8.5, mult: 0.9, count: 3, spread: 90, fx: 'whirl', pool: { secs: 4.5, r: 44, dps: 0.25, kind: 'water' } },
   tide: { shape: 'ring', radius: 120, windup: 0.95, recover: 0.8, cd: 9, mult: 1.2, push: 90, fx: 'ring' },
 };

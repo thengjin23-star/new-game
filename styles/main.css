@@ -1489,6 +1489,62 @@ textarea.code {
   text-align: left;
 }
 
+/* 第一章 完 (0.17): the death screen's paper, with a seal and the fates of those you knew */
+.ending .death-inner {
+  max-width: 620px;
+}
+
+.ending-seal {
+  justify-self: center;
+  width: 54px;
+  height: 54px;
+  display: grid;
+  place-items: center;
+  margin: -4px 0 4px;
+  border-radius: 8px;
+  font-size: 30px;
+  color: #f7efe1;
+  background: var(--red);
+  box-shadow: inset 0 0 0 3px rgba(247, 239, 225, 0.35);
+}
+
+ul.fates {
+  list-style: none;
+  margin: 4px 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+  text-align: left;
+}
+
+ul.fates li {
+  display: grid;
+  grid-template-columns: 5em 1fr;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--paper-2);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+ul.fates b {
+  color: var(--ink-2);
+}
+
+.ending-next {
+  font-size: 17px;
+  color: var(--red);
+  letter-spacing: 0.08em;
+}
+
+/* 命簿殘影 (系統五級): the next stroke, faint, under a name */
+p.fate {
+  margin-top: 4px;
+  font-size: 13px;
+  color: var(--violet);
+}
+
 @keyframes rise {
   from {
     transform: translateY(24px);

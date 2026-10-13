@@ -231,7 +231,7 @@ export const FOES = {
     name: '玄龜', el: '水', hp: 1.75, atk: 1.15, boss: true, loot: [[1, 'beast_core', 2], [1, 'turtle_shell', 1]],
     rt: {
       tier: 1, speed: 96, walk: 16, sight: 170, lose: 420, loseT: 1.6, leash: 460, body: 24, bulk: 0.8, tall: 30,
-      notice: 0.8, moves: ['shellbite', 'jet', 'whirl'],
+      notice: 0.8, moves: ['shellbite', 'jet', 'whirlpool'],
       phases: [
         { at: 0.6, moves: ['shellbite', 'jetfan', 'whirlrain', 'tide'], line: '玄龜縮頸一吼，背後的湖水跟著翻了起來！' },
         { at: 0.28, enrage: true, line: '玄龜的背甲上泛起一層黑光——牠發狂了！' },

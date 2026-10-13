@@ -72,6 +72,8 @@ export function nextGoal(s) {
     const w = taken[0];
     return { key: `work:${w.key}`, text: `差事：${w.title}（${w.have}/${w.need}）`, why: Q.askOf(w) };
   }
+  // 築基: the chapter's end is across the river
+  if (p.realm >= 2 && !s.flags.chapter1_done) return { key: 'ferry', text: '白鶴渡：渡江', why: '築基了，白鶴渡的老船夫肯載你過江了——那是第一章的終點。走之前，想見的人先見一見；渡過江，還可以回到東荒繼續走。' };
   // the cave you found, not yet made your own
   if (s.flags.cave_found && !s.flags.home_claimed) return { key: 'home', text: '收拾山腹洞府', why: '青石山腹那處洞府，收拾一下就是你的了：能閉關、煉丹、畫符，還能布聚靈陣，讓靈氣更濃。走到石縫前查看。' };
   // somewhere you have heard of

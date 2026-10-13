@@ -16,6 +16,7 @@ export const WINDOWS = {
   recruit: [dayAt(2, 9), dayAt(2, 10)],
   pact: [dayAt(3, 2, 20), dayAt(3, 3, 15)],
   songheEnd: [dayAt(4, 1), dayAt(4, 5, 15)],
+  suLeave: [dayAt(4, 6), dayAt(5, 6)],
 };
 
 const BEATS = [
@@ -149,6 +150,8 @@ const BEATS = [
       lin.title = '遠赴中州';
       if (lin.favor >= 30) {
         schedule(s, 'lin_farewell', 0, 5, { expire: 2 * DAYS_PER_YEAR });
+      } else if (lin.met && lin.favor <= -30) {
+        schedule(s, 'lin_grudge', 0, 5, { expire: DAYS_PER_YEAR });
       } else {
         rumor(s, '林塵離開東荒，去了中州。走之前，他在林家祠堂跪了一夜。', 'arc', 'lin_chen');
       }
@@ -165,6 +168,33 @@ const BEATS = [
       s.flags.songhe_dead = true;
       if (sh.favor >= 25) s.flags.songhe_legacy = true;
       rumor(s, '清虛觀的松鶴道人坐化了。山下的樵夫說，那天觀裡的老松樹，一夜之間落光了針葉。', 'arc', 'song_he');
+    },
+  },
+  {
+    // 蘇清瑤 leaves for 中州, ahead of what she knows is coming: a friend's farewell, a rival's, or only a rumor
+    at: WINDOWS.suLeave[0],
+    run(s) {
+      const su = s.npcs.su_qingyao;
+      if (!su.alive) return;
+      const days = WINDOWS.suLeave[1] - WINDOWS.suLeave[0];
+      if (su.met && (s.flags.su_rival || s.flags.su_enemy)) schedule(s, 'su_rival_end', 0, 3, { node: 'luoxia_market', expire: days });
+      else if (su.met && su.favor >= 25) schedule(s, 'su_farewell', 0, 3, { node: 'luoxia_market', expire: days });
+      else {
+        Object.assign(su, { loc: null, title: '遠赴中州' });
+        s.flags.su_left = true;
+        rumor(s, '那個總在茶樓上看古經的白衣女修，離開了落霞坊市。有人說她去了中州。', 'arc', 'su_qingyao');
+      }
+    },
+  },
+  {
+    // (her farewell never came about: she went all the same)
+    at: WINDOWS.suLeave[1],
+    run(s) {
+      const su = s.npcs.su_qingyao;
+      if (!su.alive || s.flags.su_left) return;
+      Object.assign(su, { loc: null, title: '遠赴中州' });
+      s.flags.su_left = true;
+      rumor(s, '蘇清瑤在茶樓上等了一個人很久，沒等到，就走了。茶樓的夥計說，她走之前留下了兩杯茶錢。', 'arc', 'su_qingyao');
     },
   },
   {

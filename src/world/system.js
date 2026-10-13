@@ -1,5 +1,6 @@
 import { NODES } from './map.js';
 import { DAYS_PER_YEAR } from '../core/calendar.js';
+import { schedule, isScheduled } from '../core/schedule.js';
 
 // 問道輔助系統. It grows through 見聞 (exploration), never through fighting.
 
@@ -16,6 +17,8 @@ export const SYS_FEATURES = [
   { lv: 3, name: '氣運視界', desc: '看見誰被天道眷顧，哪些選擇會牽動因果。' },
   { lv: 4, name: '謠言辨識', desc: '分辨傳聞的真假。' },
   { lv: 4, name: '雙重替死', desc: '替死可以儲存兩次。' },
+  { lv: 5, name: '命簿殘影', desc: '在「見聞 → 人物」看得見命簿上，一個人接下來的一筆。' },
+  { lv: 5, name: '天機感應', desc: '推演時，先告訴你還沒找到的天機殘頁在哪裡。' },
 ];
 
 export function levelFor(exp) {
@@ -41,7 +44,15 @@ export function sysGain(s, n, report) {
     if (s.sys.lv >= 4) s.sys.subsMax = 2;
     report?.toasts.push(`叮——問道系統升至 ${s.sys.lv} 級。解鎖：${unlocked.join('、') || '（無）'}`);
     report?.logs.push(`問道系統升至 ${s.sys.lv} 級`);
+    // 五級: it remembers who it was (in a moment, when nothing else is going on)
+    if (s.sys.lv === 5) awaken(s);
   }
+}
+
+/** The system at 五級, not yet having remembered: set its remembering to come (once). */
+export function awaken(s) {
+  if (s.flags.sys_awakened || isScheduled(s, 'sys_awaken')) return;
+  schedule(s, 'sys_awaken', 0, 1, { expire: 3600 });
 }
 
 /** Called when the player would die. Returns true if 替死 saved them. */
@@ -64,8 +75,29 @@ export function rechargeTick(s, report) {
   }
 }
 
+const hasFrag = (s, id) => (s.sys.frags || []).includes(id);
+
 /** 推演 hints, checked in order; the first that applies is given. */
 export const DEDUCE = [
+  // 天機感應 (五級): where a page of the system's memory still lies
+  {
+    id: 'frag_well',
+    cond: (s) => s.sys.lv >= 5 && !hasFrag(s, 'frag_well'),
+    text: '清虛觀後的古井底下，有一頁殘頁在發燙。夜裡月光照進井裡時，看得見。',
+    effects: [],
+  },
+  {
+    id: 'frag_ruins',
+    cond: (s) => s.sys.lv >= 5 && !hasFrag(s, 'frag_ruins'),
+    text: '古戰場上，一塊倒塌的石碑底下，壓著一頁殘頁。',
+    effects: [['discover', 'ancient_ruins']],
+  },
+  {
+    id: 'frag_river',
+    cond: (s) => s.sys.lv >= 5 && !hasFrag(s, 'frag_river'),
+    text: '大江中的江心洲上，那個釣魚的老翁，替你收著一樣東西。',
+    effects: [],
+  },
   {
     id: 'valley',
     cond: (s) => !s.nodes.lingxi_valley.known,

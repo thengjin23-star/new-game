@@ -4,6 +4,7 @@
 // that drag at your feet.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import * as E from '../src/world/explore.js';
 import * as C from '../src/world/combat.js';
 import { BEASTS } from '../src/world/places.js';
@@ -249,4 +250,17 @@ test('木魅 roots you where you stand (a step aside breaks free); 玄龜 drags 
   Ct.pools.push({ x: tw.x, y: tw.y, r: 48, kind: 'water', t0: Ct.t, until: Ct.t + 4, mult: 0.1, poison: null, by: C.beastsInWorld(t, 99999).find((b) => b.def.id === 'wolves_a'), tick: 0 });
   play(t, 0.3);
   assert.ok(C.hero(t).slow > 0, 'dragged at');
+});
+
+test('no two moves share a name (the later would quietly take the earlier one\'s place): 骷髏將軍 still sweeps his halberd round', () => {
+  const src = readFileSync(new URL('../src/content/moves.js', import.meta.url), 'utf8');
+  for (const table of ['MOVES', 'BEAST_MOVES']) {
+    const body = src.slice(src.indexOf(`export const ${table} = {`)).split('\n};')[0];
+    const keys = [...body.matchAll(/^  (\w+): /gm)].map((m) => m[1]);
+    assert.ok(keys.length > 10, table);
+    assert.deepEqual(keys.filter((k, i) => keys.indexOf(k) !== i), [], table);
+  }
+  assert.equal(BEAST_MOVES.whirl.shape, 'ring', '骷髏將軍: the halberd all the way round');
+  assert.equal(BEAST_MOVES.whirlpool.shape, 'zone', '玄龜: a whirlpool where you stand');
+  assert.ok(FOES.skeleton.rt.moves.includes('whirl') && FOES.xuan_turtle.rt.moves.includes('whirlpool'));
 });

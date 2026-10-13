@@ -43,9 +43,10 @@ import { FOES } from '../content/foes.js';
 import * as CR from '../world/crafts.js';
 import { RECIPES, GLYPHS, ARRAY } from '../content/crafts.js';
 import { KE } from '../content/wuxing.js';
+import * as END from '../world/ending.js';
 import { refineLevel, refineMult } from '../core/refine.js';
 
-const VERSION = '0.16';
+const VERSION = '0.17';
 const ITEM_ORDER = ['weapon', 'gear', 'flyer', 'tool', 'pill', 'talisman', 'herb', 'material', 'book', 'treasure', 'token', 'unknown'];
 const ITEM_KIND = { pill: '丹藥', herb: '靈草', material: '材料', book: '典籍', weapon: '兵器', gear: '裝備', flyer: '飛行法器', tool: '工具', treasure: '寶物', talisman: '符籙', token: '信物', unknown: '未知' };
 const DOCK = [
@@ -446,7 +447,7 @@ export function startApp(root, { speed = 1, view = null } = {}) {
 
   /** The 3D world where the device can draw it (and the player has not asked for the flat map). */
   function makeView(canvas) {
-    const opts = { onFrame, idle: () => !!(ui.s && (ui.s.pending || ui.sheet || ui.s.dead)) };
+    const opts = { onFrame, idle: () => !!(ui.s && (ui.s.pending || ui.sheet || ui.s.dead || ui.s.flags.chapter1_ending)) };
     if (viewMode() === '3d') {
       try {
         let chosen = null;
@@ -526,7 +527,7 @@ export function startApp(root, { speed = 1, view = null } = {}) {
   function onFrame(dt) {
     const s = ui.s;
     if (!s || !ui.shell) return;
-    const paused = !!(s.pending || s.dead || s.secl || ui.sheet);
+    const paused = !!(s.pending || s.dead || s.secl || ui.sheet || s.flags.chapter1_ending);
     if (!paused) {
       const input = currentInput();
       const before = [s.world.x, s.world.y];
@@ -567,6 +568,7 @@ export function startApp(root, { speed = 1, view = null } = {}) {
 
   function layerKeyOf(s) {
     if (s.dead && !s.pending) return 'dead';
+    if (s.flags.chapter1_ending && !s.pending) return 'ending';
     if (s.pending) {
       const p = s.pending;
       return `ev:${p.id || p.title}:${p.step}:${p.result ? 1 : 0}:${p.notice ? 1 : 0}`;
@@ -1619,6 +1621,7 @@ export function startApp(root, { speed = 1, view = null } = {}) {
     el.classList.remove('dim');
     if (s.pending) el.appendChild(eventSheet());
     else if (s.dead) el.appendChild(deathScreen());
+    else if (s.flags.chapter1_ending) el.appendChild(endingScreen());
     else if (ui.sheet) {
       el.appendChild(ui.sheet === 'map' ? mapSheet() : panelSheet(ui.sheet));
       el.classList.add('dim');
@@ -2408,6 +2411,7 @@ export function startApp(root, { speed = 1, view = null } = {}) {
             s.sys.lv >= 3 && n.luck ? h('span.tag.karma', '氣運之子') : null),
           h('p.muted.small', n.alive ? `${npcRealm(n)}・${npcAge(s, n)} 歲・${favorWord(n.favor)}${n.loc && NODES[n.loc] ? `・在${NODES[n.loc].name}` : ''}` : `已故・${favorWord(n.favor)}`),
           h('p', n.named ? NAMED[n.id].bio : `性情${n.trait}。相識於${NODES[n.metAt]?.name || '路上'}。`),
+          END.fateLine(s, n.id) ? h('p.fate', END.fateLine(s, n.id)) : null,
         ),
       )));
   }
@@ -2463,6 +2467,8 @@ export function startApp(root, { speed = 1, view = null } = {}) {
     const got = s.vars.feats || {};
     return h('div',
       h('p.muted.pad', `${s.player.name}，${ORIGINS[s.player.origin].name}，第 ${s.meta.life} 世。走了 ${Math.round((s.world?.walked || 0) / 1000)} 里路。`),
+      // (the chapter's end, once you have come to it: to read again)
+      s.flags.chapter1_done ? h('div.pad', h('button.btn.small', { onclick: () => act((x) => { x.flags.chapter1_ending = true; }) }, '再看一次第一章的結局')) : null,
       h('h3.pad', `成就　${FEATS.filter((f) => got[f.id] !== undefined).length} / ${FEATS.length}`),
       h('ul.feats', FEATS.map((f) => h('li' + (got[f.id] !== undefined ? '.got' : ''),
         h('b', f.name),
@@ -2698,6 +2704,28 @@ export function startApp(root, { speed = 1, view = null } = {}) {
         h('ul.loglist.long', s.log.slice(0, 12).map((l) => h('li', h('time', fmtDate(l.day, { withDay: false })), l.text))),
         h('p.muted.small', '叮——宿主生命體徵消失。正在搜尋新的綁定對象……'),
         h('button.btn.primary.wide', { onclick: reincarnate }, '輪迴轉世'),
+      ),
+    );
+  }
+
+  /** 第一章 完: what became of you, and of those you knew; then back to 東荒 (the river can wait). */
+  function endingScreen() {
+    const s = ui.s;
+    const me = END.chapterSelf(s);
+    const sys = END.chapterSystem(s);
+    return h('div.death.ending',
+      h('div.death-inner',
+        h('p.muted.small', '第一章'),
+        h('h2', '東荒'),
+        h('p.ending-seal', '完'),
+        h('p.epitaph', me.line),
+        h('p.muted', me.more),
+        h('ul.fates', END.chapterFates(s).map(([who, line]) => h('li', h('b', who), h('span', line)))),
+        h('p.small', sys.line),
+        h('p.small.muted', sys.truth),
+        h('p.ending-next', '天元三千零二十二年，月亮會變紅。'),
+        h('p.muted.small', '第二章「中州」，待續。你可以回到東荒，繼續修煉、探索，看看那些人的故事會怎麼走下去。'),
+        h('button.btn.primary.wide', { onclick: () => act((x) => { delete x.flags.chapter1_ending; }) }, '回到東荒'),
       ),
     );
   }

@@ -42,6 +42,8 @@ export const FEATS = [
   { id: 'friends', name: '廣結善緣', desc: '結識十個人。', test: (s) => Object.values(s.npcs || {}).filter((n) => n.met).length >= 10 },
   { id: 'luck', name: '看破', desc: '看得出誰是氣運之子（問道系統三級）。', test: (s) => s.sys.lv >= 3 },
   { id: 'fragment', name: '天機', desc: '找到第一頁天機殘頁。', test: (s) => (s.sys.frags || []).length > 0 },
+  { id: 'xuanwei', name: '玄微', desc: '問道系統想起了自己的名字。', test: (s) => !!s.flags.sys_awakened },
+  { id: 'chapter1', name: '東荒行盡', desc: '渡過大江，第一章「東荒」完。', test: (s) => !!s.flags.chapter1_done },
   { id: 'reborn', name: '再世', desc: '輪迴轉世，又活了一次。', test: (s) => (s.meta?.life || 1) >= 2 },
 ];
 
