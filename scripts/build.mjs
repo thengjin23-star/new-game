@@ -32,6 +32,8 @@ const result = await build({
   target: ['es2020'],
   write: false,
   legalComments: 'none',
+  // the story is written in Chinese: kept as it is (3 bytes a character), not escaped as \uXXXX (6)
+  charset: 'utf8',
 });
 const js = result.outputFiles[0].text.replaceAll('</script', '<\\/script');
 const css = readFileSync(join(root, 'styles/main.css'), 'utf8');
@@ -53,4 +55,4 @@ ${css}
 mkdirSync(join(root, 'dist'), { recursive: true });
 writeFileSync(join(root, 'dist/yijie-sanxiu.html'), page);
 console.log(`precache.json: ${files.length} files`);
-console.log(`dist/yijie-sanxiu.html: ${(page.length / 1024).toFixed(0)} KB`);
+console.log(`dist/yijie-sanxiu.html: ${(Buffer.byteLength(page) / 1024).toFixed(0)} KB`);
