@@ -115,6 +115,7 @@ export function attach(context, { live = true } = {}) {
     input.connect(vol).connect(duck).connect(master);
     const wet = g(send);
     duck.connect(wet).connect(verb);
+    bus[`${name}Wet`] = wet;
     bus[name] = input;
     bus[`${name}Vol`] = vol;
     bus[`${name}Duck`] = duck;
@@ -129,7 +130,26 @@ export function attach(context, { live = true } = {}) {
   bus.ambMuffle = muffle;
   A.bus = bus;
   A.noise = whiteNoise(c, 2);
+  if (A.light) setLight(true);
   return bus;
+}
+
+/**
+ * Lighter sound for a phone that struggles (the picture's 省電): no reverb
+ * (the costliest thing here). The sends are cut, so the hall does no work.
+ */
+export function setLight(on) {
+  A.light = !!on;
+  if (!A.bus) return;
+  for (const name of ['music', 'amb', 'sfx']) {
+    const wet = A.bus[`${name}Wet`];
+    try {
+      wet.disconnect();
+    } catch {
+      /* not connected */
+    }
+    if (!on) wet.connect(A.bus.verb);
+  }
 }
 
 /** Lower (or bring back) a bus for a while: the music under a story, under a fight. */

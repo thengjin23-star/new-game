@@ -374,6 +374,8 @@ export function takeOff(s, by = flyMeans(s).by) {
   L.resume = null;
   w.fly = { by, z: heightAt(w.x, w.y), state: 'up' };
   if (F.last) w.fly.left = F.last;
+  s.vars.flownBy ||= {};
+  s.vars.flownBy[by] = true;
   L.feed.push({ kind: 'sys', text: UP_TEXT[by] });
   if (weatherNow(s).thunder) L.feed.push({ kind: 'bad', text: '雷雨天飛上天，怕是會招雷。' });
   return true;

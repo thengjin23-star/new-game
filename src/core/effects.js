@@ -52,10 +52,17 @@ export function learnTech(s, id, report) {
   if (!p.tech || techValue(s, id) > techValue(s, p.tech)) p.tech = id;
 }
 
+/** Remember a thing once had (for the 圖鑑). */
+export function markSeen(s, id) {
+  s.vars.seen ||= {};
+  s.vars.seen[id] = true;
+}
+
 export function addItem(s, id, n, report) {
   const p = s.player;
   const it = ITEMS[id];
   if (!it) return;
+  if (n > 0) markSeen(s, id);
   const before = p.items[id] || 0;
   const after = Math.max(0, before + n);
   if (after) p.items[id] = after;

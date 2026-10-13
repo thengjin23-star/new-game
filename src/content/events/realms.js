@@ -125,7 +125,13 @@ function realmEvent(id) {
             text: '拚了。',
             check: { kind: 'power', diff: diff(true) },
             fight: { foes: R.foes.boss },
-            ok: { text: L.won, effects: (s) => [...hoard(s), ['sysexp', 20], ['log', `闖過${R.name}，打倒了守在最深處的東西`], endRun] },
+            ok: {
+              text: L.won,
+              effects: (s) => [...hoard(s), ['sysexp', 20], ['log', `闖過${R.name}，打倒了守在最深處的東西`], (x) => {
+                x.vars.realmCleared ||= {};
+                x.vars.realmCleared[id] = (x.vars.realmCleared[id] || 0) + 1;
+              }, endRun],
+            },
             fail: { text: '你被打出了秘境，摔在門外，半天爬不起來。', effects: [['hurt', 2], endRun] },
           },
           { text: '不自量力，退出去。', out: { text: '你退了出去。最深處的那雙眼睛，一直看著你走。', effects: [endRun] } },

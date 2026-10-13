@@ -40,7 +40,7 @@ export default [
         fight: { foes: [['demon_wolf', 2], ['wolf', 3]], allies: [['escort', 2, { name: '獵戶' }]] },
         ok: {
           text: '天亮的時候，狼群退回了山裡。鎮口的石橋下橫七豎八躺著十幾具狼屍，獵戶們坐在地上喘氣，看你的眼神不一樣了。\n\n賣豆花的老李頭給每個人都盛了一碗，你那碗加了兩勺糖。',
-          effects: [['ls', 30], ['mind', 6], ['sysexp', 10], ['rumor', '獸潮夜襲青石鎮，有個年輕修士守在鎮口，一夜沒退。', 'world'], ['log', '在獸潮之夜守住了青石鎮'], tideDone],
+          effects: [['ls', 30], ['mind', 6], ['sysexp', 10], ['rumor', '獸潮夜襲青石鎮，有個年輕修士守在鎮口，一夜沒退。', 'world'], ['log', '在獸潮之夜守住了青石鎮'], ['flag', 'tide_held'], tideDone],
         },
         fail: {
           text: '狼太多了。你被撲倒在石橋上，等你醒過來，狼已經退了，鎮上少了好幾頭牛，兩個獵戶受了重傷。\n\n沒有人怪你。可是你自己知道。',
@@ -71,13 +71,13 @@ export default [
         text: '動手。',
         check: { kind: 'power', diff: (s) => Math.max(14, Math.round(power(s) * 0.9)) },
         fight: { foes: [['cultivator', 2, { name: '散修' }]] },
-        ok: { text: '他們跑了。你跳進坑裡，把那團光撈了起來。', effects: [['pick', OMEN_LOOT], ['sysexp', 5], omenGone] },
+        ok: { text: '他們跑了。你跳進坑裡，把那團光撈了起來。', effects: [['pick', OMEN_LOOT], ['sysexp', 5], ['flag', 'omen_won'], omenGone] },
         fail: { text: '你被他們聯手打翻在地。等你爬起來，坑裡的東西早就不見了。', effects: [['hurt', 1], omenGone] },
       },
       {
         text: '趁他們對峙，搶先跳下去。',
         check: { kind: 'jiyuan', diff: 6 },
-        ok: { text: '你一把抓起那團光，滾出坑外，頭也不回地跑了。身後罵聲一片。', effects: [['pick', OMEN_LOOT], omenGone] },
+        ok: { text: '你一把抓起那團光，滾出坑外，頭也不回地跑了。身後罵聲一片。', effects: [['pick', OMEN_LOOT], ['flag', 'omen_won'], omenGone] },
         fail: { text: '你剛跳下去，兩把劍就同時架在了你脖子上。你只好空著手爬了出來。', effects: [['mind', -2], omenGone] },
       },
       { text: '讓給他們。', out: { text: '你轉身走開。身後傳來兵刃相交的聲音。', effects: [['mind', 1], omenGone] } },

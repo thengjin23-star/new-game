@@ -864,6 +864,11 @@ function engage(s, C, b, io, line = null) {
     x.aggro = true;
     x.lostT = 0;
     C.foes.add(x.uid);
+    // (met, for the 圖鑑)
+    if (!x.phantom && !x.summon && x.side !== 'ally') {
+      s.vars.met ||= {};
+      s.vars.met[x.kind || x.def.kind] = true;
+    }
     if (x !== b && !HUNTING.has(x.state)) {
       x.state = 'chase';
       x.st = -x.rng() * 0.3;

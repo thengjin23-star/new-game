@@ -190,6 +190,8 @@ const EPIPHANY = [
 function finishSeclusion(s) {
   const x = s.secl;
   s.secl = null;
+  // (all the days you have sat, for 成就)
+  s.vars.seclDays = (s.vars.seclDays || 0) + (x.done || 0);
   const p = s.player;
   const lines = [];
   lines.push(`閉關 ${fmtDuration(x.done)}。${x.interrupt ? '（被迫中止）' : ''}`);
@@ -331,6 +333,8 @@ export function buy(s, id) {
   if (!shop || !shop.stock.includes(id) || !price || s.player.ls < price) return;
   s.player.ls -= price;
   s.player.items[id] = (s.player.items[id] || 0) + 1;
+  s.vars.seen ||= {};
+  s.vars.seen[id] = true;
 }
 
 /** What it takes to have it made: the 靈石 and the things you bring. */

@@ -63,6 +63,8 @@ export function weatherAt(s, region = s.player?.loc, hour = hourOf(s)) {
   if (s.vars?.sky && WEATHER[s.vars.sky]) return s.vars.sky;
   const seed = (s.seed | 0) ^ 0x5bd1e995;
   const day = Math.floor(hour / 24);
+  // the first three days of a life are fair (a first look at the world should be a clear one)
+  if (day < 3) return 'clear';
   const season = seasonOf(day);
   const L = LEAN[season];
   // up on a high peak you stand above it all

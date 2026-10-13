@@ -35,8 +35,13 @@ import { connectCloud } from '../platform/cloud.js';
 import { pt, rectOf, watchOrient, turnedScrolling } from '../platform/orient.js';
 import * as SND from '../audio/director.js';
 import { settings as soundSettings, setSettings as setSound } from '../audio/engine.js';
+import * as GUIDE from '../world/guide.js';
+import { FEATS, checkFeats } from '../world/feats.js';
+import { GUIDE as HOWTO } from '../content/guide.js';
+import { BEAST_NOTES, NOT_IN_BOOK } from '../content/codex.js';
+import { FOES } from '../content/foes.js';
 
-const VERSION = '0.13';
+const VERSION = '0.14';
 const ITEM_ORDER = ['weapon', 'gear', 'flyer', 'pill', 'talisman', 'herb', 'material', 'book', 'treasure', 'token', 'unknown'];
 const ITEM_KIND = { pill: '丹藥', herb: '靈草', material: '材料', book: '典籍', weapon: '兵器', gear: '裝備', flyer: '飛行法器', treasure: '寶物', talisman: '符籙', token: '信物', unknown: '未知' };
 const DOCK = [
@@ -165,6 +170,8 @@ export function startApp(root, { speed = 1, view = null } = {}) {
   /** Take a save as the one being played. */
   function adopt(s) {
     E.ensureWorld(s);
+    s.vars.seen ||= {};
+    for (const id of Object.keys(s.player.items || {})) s.vars.seen[id] = true;
     ui.s = s;
     ui.layerKey = null;
     ui.hudKeys = {};
@@ -176,8 +183,15 @@ export function startApp(root, { speed = 1, view = null } = {}) {
     if (!ui.s) return;
     fn(ui.s);
     if (!ui.s.pending && !ui.s.dead && E.canResume(ui.s)) E.resume(ui.s);
+    feats();
     persist();
     render();
+  }
+
+  /** 成就: say any newly earned. */
+  function feats() {
+    if (!ui.s || !ui.shell) return;
+    for (const f of checkFeats(ui.s)) toast(`成就：${f.name}——${f.desc}`, 'good');
   }
 
   // ── boot ──
@@ -190,6 +204,7 @@ export function startApp(root, { speed = 1, view = null } = {}) {
     });
     turnedScrolling(root);
     SND.init(root);
+    SND.light(quality() === 'low');
     const s = loadGame();
     if (s) {
       adopt(s);
@@ -384,12 +399,14 @@ export function startApp(root, { speed = 1, view = null } = {}) {
             h('button.place-tag', { onclick: showPlaceInfo }),
             h('div.hud-flags'),
           ),
+          h('button.hud-goal', { type: 'button', onclick: showGoal, hidden: true }, h('b', '目標'), h('span')),
         ),
         h('button.minimap-btn', { 'aria-label': '打開地圖', onclick: () => openSheet('map') }, h('canvas.minimap', { width: 192, height: 192 })),
         h('div.toasts', { 'aria-live': 'polite' }),
         h('div.banner'),
       ),
       h('div.joy', { 'aria-hidden': 'true' }, h('i')),
+      h('div.coach', { role: 'note', onclick: () => hideCoach() }),
       h('div.walk-hint', h('span', '左下拖動：行走'), h('span', '點地面：走過去'), h('span', '點人或東西：互動')),
       h('div.caption'),
       h('div.actbar',
@@ -438,7 +455,10 @@ export function startApp(root, { speed = 1, view = null } = {}) {
           ...opts,
           quality: chosen || 'high',
           // a slow device drops to the lighter picture by itself (unless you chose)
-          onSlow: chosen ? null : () => toast('畫面較吃力，已改用省電畫質。可在「系統」裡調整。'),
+          onSlow: chosen ? null : () => {
+            SND.light(true);
+            toast('畫面較吃力，已改用省電畫質。可在「系統」裡調整。');
+          },
         });
       } catch (e) {
         console.warn('3D world unavailable, using the flat map', e);
@@ -473,6 +493,7 @@ export function startApp(root, { speed = 1, view = null } = {}) {
   }
 
   function setQuality(q) {
+    SND.light(q === 'low');
     try {
       localStorage.setItem('yijie-quality', q);
     } catch {
@@ -526,6 +547,11 @@ export function startApp(root, { speed = 1, view = null } = {}) {
     if (ui.hudT > 0.2) {
       ui.hudT = 0;
       renderHud();
+    }
+    ui.featT = (ui.featT || 0) + dt;
+    if (ui.featT > 2) {
+      ui.featT = 0;
+      feats();
     }
     ui.saveT += dt;
     if (ui.saveT > 6 && ui.moved) {
@@ -1274,6 +1300,8 @@ export function startApp(root, { speed = 1, view = null } = {}) {
       if (t) put(el, h('b', t.verb), h('span', t.name));
     }
     $('.actbar').hidden = !!s.secl;
+    goalHud();
+    coachHud(t);
     // the stick's ring rests under the left thumb while you are free to walk
     $('.joy').classList.toggle('idle', !s.pending && !s.secl && !s.dead && !ui.sheet);
     ui.shell.classList.toggle('secl', !!s.secl);
@@ -1286,6 +1314,71 @@ export function startApp(root, { speed = 1, view = null } = {}) {
       showBanner(b);
     }
     drawMinimap(force);
+  }
+
+  /** 目標: what you could do next (a hint), refreshed now and then. */
+  function goalHud() {
+    const now = performance.now();
+    if (now - (ui.goalAt || 0) < 900) return;
+    ui.goalAt = now;
+    const s = ui.s;
+    const g = s.pending || s.dead ? null : GUIDE.nextGoal(s);
+    ui.goal = g;
+    const el = $('.hud-goal');
+    el.hidden = !g;
+    if (g) {
+      const span = el.querySelector('span');
+      if (span.textContent !== g.text) span.textContent = g.text;
+    }
+  }
+
+  function showGoal() {
+    const g = ui.goal;
+    if (!g) return;
+    showCaption({ title: g.text, text: g.why });
+  }
+
+  /** The first-time pointers: one at a time, each once on this device. */
+  function tipsSeen() {
+    if (!ui.tips) {
+      try {
+        ui.tips = JSON.parse(localStorage.getItem('yijie-tips') || '{}') || {};
+      } catch {
+        ui.tips = {};
+      }
+    }
+    return ui.tips;
+  }
+
+  function coachHud(target) {
+    const s = ui.s;
+    const el = $('.coach');
+    if (!el) return;
+    const view = { act: !!target, cbtReady: !!ui.cbtReady, arts: !$('.art-btn').hidden, fly: !$('.fly-btn').hidden, sheet: ui.sheet };
+    const now = performance.now();
+    if (ui.coach) {
+      // it goes when its time is up, or what it points at is gone
+      const c = GUIDE.COACH.find((x) => x.id === ui.coach.id);
+      if (now > ui.coach.until || s.pending || ui.sheet || (c && !c.when(s, view))) hideCoach();
+      return;
+    }
+    const c = GUIDE.coachFor(s, view, tipsSeen());
+    if (!c) return;
+    ui.coach = { id: c.id, until: now + 7000 };
+    ui.tips[c.id] = true;
+    try {
+      localStorage.setItem('yijie-tips', JSON.stringify(ui.tips));
+    } catch {
+      /* private mode */
+    }
+    el.textContent = c.text;
+    el.dataset.at = c.at;
+    el.classList.add('on');
+  }
+
+  function hideCoach() {
+    ui.coach = null;
+    $('.coach')?.classList.remove('on');
   }
 
   function showBanner(b) {
@@ -1886,10 +1979,11 @@ export function startApp(root, { speed = 1, view = null } = {}) {
       ['factions', '勢力'],
       ['events', '大事'],
       ['places', '地點'],
+      ['codex', '圖鑑'],
       ['life', '生平'],
       ['frags', '殘頁'],
     ];
-    const body = { rumors: logRumors, people: logPeople, factions: logFactions, events: logEvents, places: logPlaces, life: logLife, frags: logFrags }[ui.logTab]();
+    const body = { rumors: logRumors, people: logPeople, factions: logFactions, events: logEvents, places: logPlaces, codex: logCodex, life: logLife, frags: logFrags }[ui.logTab]();
     return h('div.logpage',
       h('div.subtabs', subs.map(([id, label]) => h('button.subtab' + (ui.logTab === id ? '.on' : ''), { onclick: () => { ui.logTab = id; renderLayer(); } }, label))),
       body,
@@ -1971,10 +2065,54 @@ export function startApp(root, { speed = 1, view = null } = {}) {
       )));
   }
 
+  /** 圖鑑: the beasts and people who fought you, and the things you have had. */
+  function logCodex() {
+    const s = ui.s;
+    const kinds = Object.keys(FOES).filter((k) => !NOT_IN_BOOK.has(k));
+    const met = (k) => !!(s.vars.met?.[k] || s.vars.kills?.[k]);
+    const known = kinds.filter(met);
+    const seen = s.vars.seen || {};
+    const groups = ITEM_ORDER.map((kind) => [kind, Object.keys(ITEMS).filter((id) => ITEMS[id].kind === kind && !ITEMS[id].disguise)]).filter(([, ids]) => ids.length);
+    const total = groups.reduce((a, [, ids]) => a + ids.length, 0);
+    const had = groups.reduce((a, [, ids]) => a + ids.filter((id) => seen[id]).length, 0);
+    return h('div.codex',
+      h('h3.pad', `妖獸與對手　${known.length} / ${kinds.length}`),
+      h('ul.factions', kinds.map((k) => {
+        const N = BEAST_NOTES[k];
+        if (!met(k)) return h('li.unknown', h('div.person-head', h('b', '？？？'), h('span.muted.small', '還沒遇過')));
+        return h('li',
+          h('div.person-head', h('b', FOES[k].name), N ? h('span.muted.small', N.where) : null, s.vars.kills?.[k] ? h('span.tier', `打倒 ${s.vars.kills[k]}`) : null),
+          N ? h('p.small', N.note) : null,
+        );
+      })),
+      h('h3.pad', `物品　${had} / ${total}`),
+      groups.map(([kind, ids]) => {
+        const mine = ids.filter((id) => seen[id]);
+        return h('div.codex-group',
+          h('h4', `${ITEM_KIND[kind] || kind}　${mine.length} / ${ids.length}`),
+          mine.length
+            ? h('ul.factions', mine.map((id) => {
+                const it = displayItem(s, id);
+                return h('li', h('div.person-head', h('b', it.name)), h('p.muted.small', it.desc));
+              }))
+            : h('p.muted.small.pad', '一樣也還沒有。'),
+        );
+      }),
+    );
+  }
+
   function logLife() {
     const s = ui.s;
+    const got = s.vars.feats || {};
     return h('div',
       h('p.muted.pad', `${s.player.name}，${ORIGINS[s.player.origin].name}，第 ${s.meta.life} 世。走了 ${Math.round((s.world?.walked || 0) / 1000)} 里路。`),
+      h('h3.pad', `成就　${FEATS.filter((f) => got[f.id] !== undefined).length} / ${FEATS.length}`),
+      h('ul.feats', FEATS.map((f) => h('li' + (got[f.id] !== undefined ? '.got' : ''),
+        h('b', f.name),
+        h('span', f.desc),
+        got[f.id] !== undefined ? h('time', fmtDate(got[f.id], { withDay: false })) : null,
+      ))),
+      h('h3.pad', '生平'),
       h('ul.loglist.long', s.log.map((l) => h('li', h('time', fmtDate(l.day, { withDay: false })), l.text))),
     );
   }
@@ -2033,6 +2171,10 @@ export function startApp(root, { speed = 1, view = null } = {}) {
               h('button.btn.small' + (quality() === 'low' ? '.on' : ''), { onclick: () => setQuality('low') }, '畫質・省電'),
             )
           : null,
+      ),
+      h('section.card.howto',
+        h('h3', '玩法說明'),
+        HOWTO.map((g) => h('details', h('summary', g.title), h('p.small', g.text))),
       ),
       h('section.card',
         h('h3', '戰鬥試煉'),

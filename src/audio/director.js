@@ -10,7 +10,7 @@ import { terrainAt } from '../world/terrain.js';
 import { T } from '../world/geo.js';
 import { weatherNow, skySigns } from '../world/weather.js';
 import { seasonOf } from '../core/calendar.js';
-import { ctx, unlockOn, onReady, duck, muffle } from './engine.js';
+import { ctx, unlockOn, onReady, duck, muffle, setLight } from './engine.js';
 import { setCue, setFight, wake } from './music.js';
 import { setBeds, happen } from './ambience.js';
 import * as FX from './sfx.js';
@@ -314,4 +314,9 @@ export function tried(ok) {
   if (!ok) FX.breakthrough(false);
 }
 
-export const ui = { open: FX.open, close: FX.close, choose: FX.choose, pill: FX.pill, talisman: FX.talisman };
+export const ui = { open: FX.open, close: FX.close, choose: FX.choose, pill: FX.pill, talisman: FX.talisman, good: FX.good };
+
+/** A slow phone: lighter sound (no reverb). */
+export function light(on) {
+  setLight(on);
+}
