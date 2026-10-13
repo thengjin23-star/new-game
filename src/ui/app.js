@@ -33,8 +33,10 @@ import { npcAge, npcRealm, NAMED } from '../world/npcs.js';
 import { saveGame, loadGame, clearGame, exportCode, importCode, migrate, saveMeta, loadMeta, parseSave } from '../core/save.js';
 import { connectCloud } from '../platform/cloud.js';
 import { pt, rectOf, watchOrient, turnedScrolling } from '../platform/orient.js';
+import * as SND from '../audio/director.js';
+import { settings as soundSettings, setSettings as setSound } from '../audio/engine.js';
 
-const VERSION = '0.12';
+const VERSION = '0.13';
 const ITEM_ORDER = ['weapon', 'gear', 'flyer', 'pill', 'talisman', 'herb', 'material', 'book', 'treasure', 'token', 'unknown'];
 const ITEM_KIND = { pill: '丹藥', herb: '靈草', material: '材料', book: '典籍', weapon: '兵器', gear: '裝備', flyer: '飛行法器', treasure: '寶物', talisman: '符籙', token: '信物', unknown: '未知' };
 const DOCK = [
@@ -187,6 +189,7 @@ export function startApp(root, { speed = 1, view = null } = {}) {
       if (ui.sheet === 'map') renderLayer();
     });
     turnedScrolling(root);
+    SND.init(root);
     const s = loadGame();
     if (s) {
       adopt(s);
@@ -241,6 +244,7 @@ export function startApp(root, { speed = 1, view = null } = {}) {
 
   // ── title ──
   function renderTitle() {
+    SND.screen('title');
     stopWorld();
     clear(root);
     const canvas = h('canvas.title-bg', { 'aria-hidden': 'true' });
@@ -296,6 +300,7 @@ export function startApp(root, { speed = 1, view = null } = {}) {
   }
 
   function renderCreate() {
+    SND.screen('create');
     ui.titleScene?.stop();
     const c = ui.create;
     const fate = rollFate(c.seed);
@@ -356,6 +361,7 @@ export function startApp(root, { speed = 1, view = null } = {}) {
 
   // ── the world screen ──
   function renderGame() {
+    SND.screen('world');
     ui.titleScene?.stop();
     ui.titleScene = null;
     if (!ui.shell || !root.contains(ui.shell)) buildShell();
@@ -506,6 +512,7 @@ export function startApp(root, { speed = 1, view = null } = {}) {
       }
     }
     combatHud();
+    SND.frame(s, dt, { sheet: ui.sheet, cbtReady: ui.cbtReady });
     for (const f of E.takeFeed(s)) toast(f.text, f.kind);
     for (const sig of E.takeSignals(s)) onSignal(sig);
     // something happened out there: an event, a death
@@ -820,6 +827,7 @@ export function startApp(root, { speed = 1, view = null } = {}) {
   }
 
   function onSignal(sig) {
+    SND.signal(sig);
     if (sig.caption) showCaption(sig.caption);
     if (sig.open === 'shop') openSheet('shop');
     if (sig.open === 'board') {
@@ -1293,6 +1301,7 @@ export function startApp(root, { speed = 1, view = null } = {}) {
   function toast(text, kind = 'sys') {
     const box = $('.toasts');
     if (!box || !text) return;
+    SND.toast(kind);
     const el = h('div.toast.' + kind, text);
     box.appendChild(el);
     // (three at a time: a short screen has no room for more)
@@ -1468,6 +1477,7 @@ export function startApp(root, { speed = 1, view = null } = {}) {
       toast('戰鬥中，無暇他顧。', 'bad');
       return;
     }
+    if (id !== ui.sheet) (id ? SND.ui.open : SND.ui.close)();
     ui.sheet = id;
     ui.joy = null;
     ui.keys.clear();
@@ -1485,7 +1495,9 @@ export function startApp(root, { speed = 1, view = null } = {}) {
     const s = ui.s;
     const el = $('.layer');
     if (!el) return;
-    ui.layerKey = layerKeyOf(s);
+    const key = layerKeyOf(s);
+    if (key !== ui.layerKey && s.pending?.result && !s.pending.notice) SND.result(s.pending.result);
+    ui.layerKey = key;
     clear(el);
     el.classList.remove('dim');
     if (s.pending) el.appendChild(eventSheet());
@@ -1720,7 +1732,12 @@ export function startApp(root, { speed = 1, view = null } = {}) {
             h('button.btn.small' + (ui.pills === n ? '.on' : ''), { onclick: () => { ui.pills = n; renderLayer(); } }, n === 0 ? '不用' : `${n} 顆`)))
         : null,
       info.kind === 'major' && p.realm >= 1 ? h('p.muted.small', '失敗會損失修為、受傷、心境下降；用掉的丹藥不會回來。') : null,
-      h('button.btn.primary', { onclick: () => { closeSheet(); act((x) => A.attemptBreakthrough(x, ui.pills)); } }, p.realm === 0 ? '引氣入體' : '衝擊瓶頸'),
+      h('button.btn.primary', { onclick: () => {
+        closeSheet();
+        const was = `${p.realm}:${p.stage}`;
+        act((x) => A.attemptBreakthrough(x, ui.pills));
+        SND.tried(`${ui.s.player.realm}:${ui.s.player.stage}` !== was);
+      } }, p.realm === 0 ? '引氣入體' : '衝擊瓶頸'),
       h('p.muted.small', '也可以繼續閉關：修為已滿，閉關只會讓時間流逝。'),
     );
   }
@@ -2000,6 +2017,7 @@ export function startApp(root, { speed = 1, view = null } = {}) {
             h('button.btn', { disabled: !A.deduceReady(s), onclick: () => { closeSheet(); act(A.deduce); } }, A.deduceReady(s) ? '推演' : '天機尚未恢復'),
           )
         : null,
+      soundCard(),
       h('section.card',
         h('h3', '畫面'),
         h('p.muted.small', canDraw3D() ? '立體：有山有水、有房有雲海的世界。平面：手繪地圖的畫法，最省電。' : '這台裝置無法顯示立體畫面，目前使用平面地圖。'),
@@ -2046,6 +2064,28 @@ export function startApp(root, { speed = 1, view = null } = {}) {
           : null,
       ),
       h('p.version.pad', `一介散修 試玩版 ${VERSION}`),
+    );
+  }
+
+  /** 聲音: how loud the music, the place's sounds and the effects are; quiet; the phone's buzz. */
+  function soundCard() {
+    const set = soundSettings();
+    const LEVELS = [['關', 0], ['小', 0.35], ['中', 0.65], ['大', 1]];
+    const row = (key, label) => h('div.sound-row',
+      h('span', label),
+      h('div.seg', LEVELS.map(([word, v]) =>
+        h('button.btn.small' + (Math.abs((set[key] ?? 0) - v) < 0.01 ? '.on' : ''), { type: 'button', onclick: () => { setSound({ [key]: v, mute: false }); renderLayer(); } }, word))));
+    return h('section.card.sound',
+      h('h3', '聲音'),
+      h('p.muted.small', '音樂、環境聲與音效都是遊戲當場用程式奏出來的：古琴、簫、笛、箏、琵琶、鼓與鐘磬。第一次點畫面之後才會出聲。'),
+      row('music', '音樂'),
+      row('amb', '環境'),
+      row('sfx', '音效'),
+      h('div.btn-row',
+        h('button.btn.small' + (set.mute ? '.on' : ''), { type: 'button', onclick: () => { setSound({ mute: !set.mute }); renderLayer(); } }, set.mute ? '已靜音' : '靜音'),
+        h('button.btn.small' + (set.buzz ? '.on' : ''), { type: 'button', onclick: () => { setSound({ buzz: !set.buzz }); renderLayer(); } }, set.buzz ? '震動：開' : '震動：關'),
+      ),
+      h('p.muted.small', 'iPhone 的靜音鍵開著時聽不到聲音；手機震動只有部分 Android 支援。'),
     );
   }
 
@@ -2120,7 +2160,7 @@ export function startApp(root, { speed = 1, view = null } = {}) {
         pend.notice ? h('button.btn.primary.wide', { onclick: () => act(continueEvent) }, '繼續') : null,
         !pend.notice && !pend.result
           ? h('div.choices', pend.choices.map((c) =>
-              h('button.choice', { disabled: !!c.disabled, onclick: () => act((x) => choose(x, c.i)) },
+              h('button.choice', { disabled: !!c.disabled, onclick: () => { SND.ui.choose(); act((x) => choose(x, c.i)); } },
                 h('span.ctext', c.text),
                 c.disabled ? h('span.why', c.disabled) : null,
                 c.fight ? h('span.hint.fight', '戰') : null,
