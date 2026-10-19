@@ -1,4 +1,5 @@
 import { h, paragraphs, clear, put } from './dom.js';
+import { skillsPage } from './skillsPage.js';
 import { createScene } from '../art/ink.js';
 import { createWorldView, paintWorldThumb } from '../art/worldview.js';
 import { createWorld3D, canDraw3D } from '../art/world3d.js';
@@ -15,6 +16,7 @@ import * as SECT from '../world/sect.js';
 import { happenings, whenWord } from '../world/happenings.js';
 import * as CB from '../world/combat.js';
 import * as AR from '../world/arts.js';
+import * as SK from '../world/skills.js';
 import { ROOTS, INJURY, BUFFS, realmLabel, stageReq, age, lifespan, rateParts, breakthroughInfo, power, atBottleneck, techOf } from '../core/cultivation.js';
 import { SLOTS, STAT_WORD, gearOf, slotOf } from '../core/body.js';
 import { fmtDate, fmtDuration, seasonOf, SEASON_NAME } from '../core/calendar.js';
@@ -26,7 +28,7 @@ import { POIS } from '../world/places.js';
 import { fogOf, isRevealed, exploredPct } from '../world/fog.js';
 import { ITEMS, displayItem } from '../content/items.js';
 import { TECHS } from '../content/techniques.js';
-import { SCHOOLS, PILL_CD, MOVES } from '../content/moves.js';
+import { PILL_CD, MOVES } from '../content/moves.js';
 import { FRAGMENTS, FRAGMENT_TOTAL } from '../content/fragments.js';
 import { SYS_LEVELS, SYS_FEATURES } from '../world/system.js';
 import { npcAge, npcRealm, NAMED } from '../world/npcs.js';
@@ -46,7 +48,7 @@ import { KE } from '../content/wuxing.js';
 import * as END from '../world/ending.js';
 import { refineLevel, refineMult } from '../core/refine.js';
 
-const VERSION = '0.18';
+const VERSION = '0.19';
 const ITEM_ORDER = ['weapon', 'gear', 'flyer', 'tool', 'pill', 'talisman', 'herb', 'material', 'book', 'treasure', 'token', 'unknown'];
 const ITEM_KIND = { pill: '丹藥', herb: '靈草', material: '材料', book: '典籍', weapon: '兵器', gear: '裝備', flyer: '飛行法器', tool: '工具', treasure: '寶物', talisman: '符籙', token: '信物', unknown: '未知' };
 const DOCK = [
@@ -902,9 +904,10 @@ export function startApp(root, { speed = 1, view = null } = {}) {
 
   // ── a fight as you move ──
 
-  /** Keys 1, 2, 3: the three moves you carry, in their places. */
-  const SKILL_KEYS = { 1: 0, 2: 1, 3: 2 };
-  const SLOT_OF = { s1: 0, s2: 1, s3: 2 };
+  /** Keys 1–4: the moves of the set in hand, in their places (Tab: the next set). */
+  const SKILL_KEYS = { 1: 0, 2: 1, 3: 2, 4: 3 };
+  const SLOT_OF = { s1: 0, s2: 1, s3: 2, s4: 3 };
+  const SET_WORD = '壹貳參';
   /** What those out there are doing that is nothing to fight: down, hidden, on their knees, on their way. */
   const CALM = new Set(['dead', 'flee', 'vanish', 'gone', 'hide', 'yield', 'leave', 'down']);
 
@@ -951,7 +954,7 @@ export function startApp(root, { speed = 1, view = null } = {}) {
     return [(gx - w.x) / n, (gy - w.y) / n];
   }
 
-  /** J strikes, 1 2 3 cast (aimed with the mouse: hold to see where, let go to loose), space or shift steps aside, Q takes a pill. */
+  /** J strikes, 1–4 cast (aimed with the mouse: hold to see where, let go to loose), Tab brings the next set to hand, space or shift steps aside, Q takes a pill. */
   function fightKeys(e, key, down) {
     const s = ui.s;
     if (!s || s.pending || s.secl || s.dead || ui.sheet || e.target?.closest?.('input, textarea')) return false;
@@ -961,7 +964,12 @@ export function startApp(root, { speed = 1, view = null } = {}) {
       else CB.attackRelease(s);
       return true;
     }
-    const id = key in SKILL_KEYS ? CB.kitOf(s)[SKILL_KEYS[key]]?.id : null;
+    if (key === 'tab' && (CB.inCombat(s) || ui.cbtReady)) {
+      e.preventDefault();
+      if (down && !e.repeat) nextSet();
+      return true;
+    }
+    const id = key in SKILL_KEYS ? CB.hotbarOf(s)[SKILL_KEYS[key]]?.id : null;
     if (id) {
       e.preventDefault();
       if (down) ui.keyAim = ui.keyAim || id;
@@ -1008,7 +1016,18 @@ export function startApp(root, { speed = 1, view = null } = {}) {
     );
   }
 
-  /** The buttons on the right: strike, the three moves, step aside, a pill. */
+  /** Bring the next set (修煉 → 技能) to hand: saved, and said. */
+  function nextSet() {
+    const s = ui.s;
+    if (!CB.useSetCmd(s)) return;
+    ui.keyAim = null;
+    CB.setPreview(s, null);
+    const names = CB.hotbarOf(s).filter((m) => m && !m.locked).map((m) => m.name);
+    toast(`換上第${SET_WORD[SK.hotbarState(s).cur]}組：${names.join('、') || '（空）'}`);
+    persist();
+  }
+
+  /** The buttons on the right: strike, the four moves of the set in hand (and the set to change to), step aside, a pill. */
   function combatPadEl() {
     const pad = h('div.cbt-pad');
     const make = (id, cls, key) => {
@@ -1030,7 +1049,15 @@ export function startApp(root, { speed = 1, view = null } = {}) {
     });
     strike.addEventListener('pointerup', release);
     strike.addEventListener('pointercancel', release);
-    for (const [cls, key] of [['s1', '1'], ['s2', '2'], ['s3', '3']]) aimButton(make('', cls, key));
+    for (const [cls, key] of [['s1', '1'], ['s2', '2'], ['s3', '3'], ['s4', '4']]) aimButton(make('', cls, key));
+    const sw = make('setsw', 'setsw', 'Tab');
+    sw.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      if (!ui.s) return;
+      sw.classList.add('down');
+      nextSet();
+    });
+    for (const ev of ['pointerup', 'pointercancel', 'pointerleave']) sw.addEventListener(ev, () => sw.classList.remove('down'));
     const dash = make('dash', 'dash', '␣');
     dash.addEventListener('pointerdown', (e) => {
       e.preventDefault();
@@ -1089,7 +1116,7 @@ export function startApp(root, { speed = 1, view = null } = {}) {
       const k = CB.kitOf(ui.s).find((x) => x.id === id);
       if (!k) return;
       const [ux, uy] = dragToWorld(dx, dy);
-      const reach = k.aim === 'ground' ? k.range * Math.min(1, d / 90) : k.range || 60;
+      const reach = k.aim === 'ground' || k.aim === 'bolt' ? k.range * Math.min(1, d / 90) : k.range || 60;
       const w = ui.s.world;
       st.pt = [w.x + ux * reach, w.y + uy * reach];
       CB.setPreview(ui.s, st.off ? null : { id, pt: st.pt });
@@ -1178,19 +1205,26 @@ export function startApp(root, { speed = 1, view = null } = {}) {
       foeEl.classList.toggle('enraged', !!foe.enraged);
     }
     // the buttons: names, costs, cooldowns
-    const kit = CB.kitOf(s);
+    const bar = CB.hotbarOf(s);
+    const kit = bar.filter(Boolean);
+    const otherSet = CB.nextSetOf(s);
     const S = CB.strikeOf(s);
     const chain = CB.chainOf(s);
     const chainEl = $('.cbt-chain');
     if (chainEl) {
       set(chainEl, 'textContent', chain ? `${chain.n > 1 ? `${'一二三四五六'[chain.n - 1]}連・` : ''}${chain.el}生${chain.next}` : '');
-      chainEl.classList.toggle('on', !!chain);
+      // (only in a fight: out of one, the menu is up where it shows)
+      chainEl.classList.toggle('on', !!chain && on);
     }
     for (const el of shell.querySelectorAll('.cbt-btn')) {
       const slot = SLOT_OF[[...el.classList].find((c) => c in SLOT_OF)];
-      // a place for a move: whichever of your three is in it now (not while you hold it down)
-      if (slot !== undefined && !el.classList.contains('down') && el.dataset.id !== kit[slot]?.id) el.dataset.id = kit[slot]?.id || '';
+      // a place for a move: whichever of the set in hand is in it now (not while you hold it down); an empty place, no button
+      if (slot !== undefined && !el.classList.contains('down') && el.dataset.id !== (bar[slot]?.id || '')) el.dataset.id = bar[slot]?.id || '';
       const id = el.dataset.id;
+      if (slot !== undefined) {
+        el.hidden = !id;
+        if (!id) continue;
+      }
       let name;
       let cost = '';
       let left = 0;
@@ -1204,6 +1238,12 @@ export function startApp(root, { speed = 1, view = null } = {}) {
         name = '閃避';
         left = me.cds.dash || 0;
         total = CB.dashCd(s);
+      } else if (id === 'setsw') {
+        // another set to change to (one with a move you can use in it; none, or the 試煉: no button)
+        el.hidden = otherSet === null;
+        if (otherSet === null) continue;
+        name = SET_WORD[SK.hotbarState(s).cur];
+        cost = '換組';
       } else if (id === 'tal') {
         // the 符 at hand (none: no button)
         const tid = CB.talismanOf(s);
@@ -1407,7 +1447,7 @@ export function startApp(root, { speed = 1, view = null } = {}) {
     const s = ui.s;
     const el = $('.coach');
     if (!el) return;
-    const view = { act: !!target, cbtReady: !!ui.cbtReady, arts: !$('.art-btn').hidden, fly: !$('.fly-btn').hidden, sheet: ui.sheet };
+    const view = { act: !!target, cbtReady: !!ui.cbtReady, sets: $('.cbt-btn.setsw')?.hidden === false, arts: !$('.art-btn').hidden, fly: !$('.fly-btn').hidden, sheet: ui.sheet };
     const now = performance.now();
     if (ui.coach) {
       // it goes when its time is up, or what it points at is gone
@@ -1646,6 +1686,8 @@ export function startApp(root, { speed = 1, view = null } = {}) {
       return;
     }
     if (id !== ui.sheet) (id ? SND.ui.open : SND.ui.close)();
+    // (修為 full: 修煉 opens where the way through is)
+    if (id === 'cult' && id !== ui.sheet && atBottleneck(ui.s)) ui.cultTab = 'realm';
     ui.sheet = id;
     ui.joy = null;
     ui.keys.clear();
@@ -1669,6 +1711,8 @@ export function startApp(root, { speed = 1, view = null } = {}) {
     // scrolled to; a page (or a tab, or a step of the story) of its own starts from the top
     const page = `${key}|${ui.logTab}|${ui.cultTab || ''}`;
     const keep = page === ui.layerPage ? scrollsOf(el) : null;
+    // (the same page drawn again: it does not slide in again — only a page newly opened does)
+    const again = key === ui.layerKey;
     ui.layerPage = page;
     ui.layerKey = key;
     clear(el);
@@ -1680,6 +1724,7 @@ export function startApp(root, { speed = 1, view = null } = {}) {
       el.appendChild(ui.sheet === 'map' ? mapSheet() : panelSheet(ui.sheet));
       el.classList.add('dim');
     }
+    if (again) for (const c of el.children) c.classList.add('still');
     el.classList.toggle('open', el.childElementCount > 0);
     el.classList.toggle('mapview', !s.pending && !s.dead && ui.sheet === 'map');
     if (keep) keepScrolls(el, keep);
@@ -2103,8 +2148,23 @@ export function startApp(root, { speed = 1, view = null } = {}) {
     );
   }
 
-  // ── 修煉 ──
+  // ── 修煉: 修為 (realm, lifespan, seclusion, yourself), 功法, 技能 (修煉 → 技能: skillsPage.js) ──
+  const CULT_TABS = [['realm', '修為'], ['techs', '功法'], ['skills', '技能']];
+
   function panelCult() {
+    const tab = CULT_TABS.some(([id]) => id === ui.cultTab) ? ui.cultTab : 'realm';
+    const body = tab === 'skills'
+      ? skillsPage({ s: ui.s, act, redraw: renderLayer, toast, st: (ui.skillsUi ||= {}) })
+      : tab === 'techs' ? h('div.cult', techCard()) : cultRealm();
+    return h('div.cultpage',
+      h('div.subtabs', { role: 'tablist' }, CULT_TABS.map(([id, label]) =>
+        h('button.subtab' + (tab === id ? '.on' : ''), { role: 'tab', 'aria-selected': String(tab === id), onclick: () => { ui.cultTab = id; renderLayer(); } },
+          label, id === 'realm' && atBottleneck(ui.s) ? h('span.dot', { 'aria-label': '可突破' }) : null))),
+      body,
+    );
+  }
+
+  function cultRealm() {
     const s = ui.s;
     const p = s.player;
     const rp = rateParts(s);
@@ -2128,44 +2188,8 @@ export function startApp(root, { speed = 1, view = null } = {}) {
     if (s.secl) put(wrap, seclusionCard());
     else if (atBottleneck(s)) put(wrap, breakthroughCard());
     else put(wrap, seclusionOptions());
-    put(wrap, statusCard(), techCard(), kitCard());
+    put(wrap, statusCard());
     return wrap;
-  }
-
-  /**
-   * 戰鬥招式: the three you take into a fight (keys 1, 2, 3), and every move
-   * there is, by school. Tap a place, then a move to put in it.
-   */
-  function kitCard() {
-    const s = ui.s;
-    const kit = CB.kitOf(s);
-    const all = CB.movesOf(s);
-    const sel = Math.min(2, ui.kitSlot || 0);
-    const ids = kit.map((k) => k.id);
-    const put3 = (id) => {
-      const next = ids.slice();
-      const at = next.indexOf(id);
-      // already carried elsewhere: the two change places
-      if (at >= 0) [next[at], next[sel]] = [next[sel], next[at]];
-      else next[sel] = id;
-      ui.kitSlot = (sel + 1) % 3;
-      act((x) => CB.setKit(x, next));
-    };
-    return h('section.card.kit',
-      h('h3', '戰鬥招式'),
-      h('p.muted.small', '帶進戰鬥的三招，對應技能鍵 1、2、3。先點一格，再點下面的招式換上。'),
-      h('p.muted.small', `五行：金剋木、木剋土、土剋水、水剋火、火剋金——招式剋得住對手，傷得更重；被剋，傷得輕。木生火、火生土、土生金、金生水、水生木——四息之內接上相生的下一招，威力更強，連三招更強（亮起來的鈕就是能接的）。你的靈根是${s.player.root.els.join('、')}：同屬性的招式也順手些。`),
-      h('div.kit-slots', kit.map((k, i) =>
-        h('button.kit-slot' + (i === sel ? '.sel' : '') + (k.locked ? '.locked' : ''), { type: 'button', onclick: () => { ui.kitSlot = i; renderLayer(); } },
-          h('kbd', String(i + 1)), h('b', k.name), h('span', k.locked ? '未解鎖' : `${k.school}${k.el ? `・${k.el}` : ''}`)))),
-      SCHOOLS.map((school) => h('div.kit-school',
-        h('h4', school),
-        all.filter((m) => m.school === school).map((m) =>
-          h('button.kit-move' + (ids.includes(m.id) && !m.locked ? '.on' : '') + (m.locked ? '.locked' : '') + (m.good ? '.good' : ''), { type: 'button', disabled: !!m.locked, onclick: () => put3(m.id) },
-            h('div.kit-head', h('b', m.name), m.el ? h('span.el', { 'data-el': m.el }, m.el) : null, h('span', m.mp ? `靈力 ${m.mp}` : '不耗靈力'), h('span', `冷卻 ${m.cd} 秒`)),
-            h('p', m.locked || m.desc))))),
-      s.player.kit ? h('button.btn.small', { type: 'button', onclick: () => { ui.kitSlot = 0; act((x) => CB.setKit(x, null)); } }, '交給系統自動配招') : null,
-    );
   }
 
   function seclusionCard() {
@@ -2602,7 +2626,7 @@ export function startApp(root, { speed = 1, view = null } = {}) {
       h('section.card',
         h('h3', '操作'),
         h('p.muted.small', '橫著玩：手機直拿時，畫面會自己轉成橫的，把手機橫過來就好。左下的圓盤是搖桿，按住拖動行走（畫面其他地方按住拖動也行）。點一下地面：自己走過去。點人或東西：走過去並互動。兩指捏合：縮放。右下的大鈕做眼前能做的事（拜訪、查看、採摘……），圍著它的是「坐」「術」「飛」。右上是行囊、修煉、見聞、系統，點小地圖打開大地圖。鍵盤：WASD 或方向鍵行走，E 互動，M 地圖，F 術，R 飛。'),
-        h('p.muted.small', '戰鬥（像 MOBA）：左手搖桿移動；右下大鈕普攻（按住連續攻擊，點妖獸也會上前攻擊），圍著它的三顆是你帶的三招（在「修煉」頁的戰鬥招式換）——點一下自動瞄準，按住拖曳可以自己瞄準，放開施放，拖回按鈕上取消；左下方綠色的「閃避」短距離位移，途中不會被打中。再外圈的兩顆小鈕：上面燒隨身的戰鬥符，下面吃身上最好的療傷藥（中了毒就先吃解毒丹），每八息一顆。逃跑就是真的跑：跑得夠遠、躲進密林或進城，妖獸就會放棄。鍵盤：J 普攻、1 2 3 三招（朝滑鼠方向，按住看範圍、放開施放）、空白鍵或 Shift 閃避、F 燒符、Q 吃藥。'),
+        h('p.muted.small', '戰鬥（像 MOBA）：左手搖桿移動；右下大鈕普攻（按住連續攻擊，點妖獸也會上前攻擊），圍著它的是目前這組的招式（一組四招，在「修煉 → 技能」配）——點一下自動瞄準，按住拖曳可以自己瞄準，放開施放，拖回按鈕上取消；外圈最上面寫著「壹」「貳」的小鈕換另一組；左下方綠色的「閃避」短距離位移，途中不會被打中。再外圈的兩顆小鈕：上面燒隨身的戰鬥符，下面吃身上最好的療傷藥（中了毒就先吃解毒丹），每八息一顆。逃跑就是真的跑：跑得夠遠、躲進密林或進城，妖獸就會放棄。鍵盤：J 普攻、1 2 3 4 四招（朝滑鼠方向，按住看範圍、放開施放）、Tab 換組、空白鍵或 Shift 閃避、F 燒符、Q 吃藥。'),
       ),
       h('section.card',
         h('h3', '存檔'),

@@ -9,6 +9,7 @@ import { ITEMS } from '../content/items.js';
 import { fightPower } from './cultivation.js';
 import { refineMult } from './refine.js';
 import { nodeQi } from '../world/map.js';
+import { passiveStats } from '../world/skills.js';
 
 /** The places you wear things, and what each is called. */
 export const SLOTS = { weapon: '兵器', robe: '衣袍', charm: '佩飾', relic: '法器' };
@@ -69,6 +70,13 @@ function ownMp(p) {
 export function vitals(s) {
   const p = s.player;
   const G = gearStats(s);
+  // what the 心法 you hold add (world/skills.js): not gear, but counted with it here
+  const S = passiveStats(s);
+  if (S.def || S.regen || S.crit) {
+    G.def = Math.min(0.6, G.def + S.def);
+    G.regen += S.regen;
+    G.crit += S.crit;
+  }
   const P = Math.max(3, fightPower(s));
   const baseHp = Math.round(20 + 2.6 * P);
   const maxHp = Math.round(baseHp * (1 + G.hp));

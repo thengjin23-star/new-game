@@ -77,9 +77,9 @@ function clearWay(s, len) {
   throw new Error('no open ground');
 }
 
-test('a 煉氣 cultivator who has learned nothing carries 劍氣, 火球, 護體, as before; a 凡人 sees them waiting', () => {
+test('a 煉氣 cultivator who has learned nothing carries 劍氣, 火球, 護體 as before, and 靈力外放 in the fourth place; a 凡人 sees the three waiting', () => {
   const s = cultivator(51);
-  assert.deepEqual(ids(s), ['swordqi', 'fireball', 'guard']);
+  assert.deepEqual(ids(s), ['swordqi', 'fireball', 'guard', 'qi']);
   assert.ok(C.kitOf(s).every((k) => !k.locked));
   assert.ok(open(s).includes('qi'), '靈力外放 is anyone’s');
   const m = cultivator(52, { realm: 0, stage: 0 });
@@ -108,19 +108,20 @@ test('what you learn, what you hold and the body you have open the rest', () => 
   for (const id of ['sweep', 'charge', 'iron']) assert.ok(open(zhuji).includes(id), `${id}: at 築基 the body is remade`);
 });
 
-test('choose your three: they are what you carry (and what the keys call), and a save keeps them', () => {
+test('fill the first set: it is what you carry (and what the keys call), and a save keeps it', () => {
   const s = cultivator(59, { arts: ['fox_fire'] }, { gengu: 7 });
   C.setKit(s, ['charge', 'qi', 'foxfire']);
   assert.deepEqual(ids(s), ['charge', 'qi', 'foxfire']);
-  // one you cannot use is passed over, the place filled the usual way
+  // one you cannot use keeps its place, out of reach and saying why — and is not cast
   C.setKit(s, ['mend', 'qi']);
-  assert.deepEqual(ids(s).slice(0, 1), ['qi']);
-  assert.equal(ids(s).length, 3);
+  assert.equal(C.kitOf(s)[0].id, 'mend');
+  assert.match(C.kitOf(s)[0].locked, /青木訣/);
+  assert.equal(C.castCmd(s, 'mend'), false);
   C.setKit(s, ['charge', 'qi', 'foxfire']);
   const t = parseSave(serialize(s));
   assert.deepEqual(ids(t), ['charge', 'qi', 'foxfire'], 'kept');
   C.setKit(t, null);
-  assert.deepEqual(ids(t), ['swordqi', 'fireball', 'guard'], 'and given back to the system to choose');
+  assert.deepEqual(ids(t), ['swordqi', 'fireball', 'guard', 'foxfire'], 'and given back to the system to choose');
   assert.equal(t.player.kit, undefined);
 });
 

@@ -34,7 +34,8 @@ export const SCHOOLS = ['通用', '劍修', '法修', '體修', '法器'];
 
 /**
  * What you can call on in a fight, by school: 通用 anyone's, 劍修 the sword,
- * 法修 spells, 體修 the body. You carry three into a fight (修煉 → 戰鬥招式).
+ * 法修 spells, 體修 the body. You carry a set of four into a fight, and
+ * can change to another set in it (修煉 → 技能; world/skills.js).
  *
  * Who can use one — realm: the least realm it asks (a move of the body asks
  * none, and costs no 靈力: a 凡人 can learn to throw a man); then, if it names
@@ -47,16 +48,19 @@ export const SCHOOLS = ['通用', '劍修', '法修', '體修', '法器'];
 export const MOVES = {
   qi: {
     name: '靈力外放', school: '通用', aim: 'line', mp: 4, cd: 1.6, cast: 0.1, range: 260, width: 14, speed: 620, mult: 1.1, fx: 'qi',
+    mastery: [[4, { pierce: true }]],
     desc: '把靈力打出去。煉氣士人人都會，又快又省。',
   },
   guard: {
     name: '護體', school: '通用', aim: 'self', mp: 10, cd: 12, cast: 0, shield: 0.3, last: 5, fx: 'shield',
     arts: ['xuanshui'], better: { name: '玄水盾', shield: 0.45, el: '水' },
+    mastery: [[4, { last: 7 }]],
     desc: '靈力護住周身，擋下一部分傷害，維持五秒。',
   },
   swordqi: {
     name: '劍氣', school: '劍修', el: '金', aim: 'line', mp: 6, cd: 3, cast: 0.12, range: 300, width: 20, speed: 560, mult: 1.6, pierce: true, fx: 'swordqi',
     arts: ['qingyuan_sword', 'qingyun'], better: { mult: 2, range: 360 },
+    mastery: [[4, { width: 30 }]],
     desc: '一道劍氣直直斬出，穿過途中所有敵人。',
   },
   swordstep: {
@@ -77,6 +81,7 @@ export const MOVES = {
   fireball: {
     name: '火球', school: '法修', el: '火', aim: 'ground', mp: 8, cd: 5, cast: 0.28, range: 290, radius: 64, speed: 430, mult: 1.4, burn: 3, fx: 'fire',
     arts: ['lieyan'], better: { mult: 1.8, radius: 76 },
+    mastery: [[4, { burn: 5 }], [5, { radius: 80 }]],
     desc: '火球飛向落點，炸開一片，燒著的敵人還會再灼傷一陣。',
   },
   foxfire: {
@@ -87,6 +92,7 @@ export const MOVES = {
   mend: {
     name: '回春術', school: '法修', el: '木', aim: 'self', mp: 12, cd: 14, cast: 0.3, heal: 0.3, last: 3, cure: true, fx: 'mend',
     learn: ['qingmu', 'songhe'],
+    mastery: [[4, { last: 2 }]],
     desc: '青木生機，止血生肌：三息之內回復三成氣血，也化去身上的毒。',
   },
   vine: {
@@ -97,7 +103,14 @@ export const MOVES = {
   frost: {
     name: '玄冰刺', school: '法修', el: '水', aim: 'line', mp: 8, cd: 4.5, cast: 0.18, range: 300, width: 18, speed: 600, mult: 1.2, chill: [3, 0.55], fx: 'frost',
     learn: ['xuanshui'],
+    mastery: [[4, { chill: [4.5, 0.5] }]],
     desc: '一道寒冰直刺而出：中了的敵人凍得手腳發僵，三息之內，走、撲、出招都慢上將近一半。',
+  },
+  thunder: {
+    name: '掌心雷', school: '法修', el: '木', aim: 'bolt', mp: 10, cd: 6, cast: 0.4, range: 280, radius: 48, mult: 1.7, stun: 0.6, fx: 'thunder',
+    learn: ['leifa'],
+    mastery: [[4, { radius: 60 }], [5, { stun: 1 }]],
+    desc: '掌心引來一道天雷，劈在指定的地方：一圈之內的敵人一起受傷，麻上片刻。雷屬木，接在水系招式之後是相生。',
   },
   sweep: {
     name: '掃腿', school: '體修', el: '土', aim: 'around', mp: 0, cd: 5, cast: 0.16, radius: 58, mult: 0.6, stun: 0.9, fx: 'sweep', realm: 0,
@@ -107,6 +120,7 @@ export const MOVES = {
   charge: {
     name: '衝撞', school: '體修', el: '土', aim: 'dash', mp: 0, cd: 6, cast: 0.08, range: 170, width: 30, mult: 1.3, stun: 1.2, push: 60, first: true, fx: 'charge', realm: 0,
     gengu: 7,
+    mastery: [[4, { stun: 1.8 }]],
     desc: '一肩撞過去：撞上的第一個被撞飛出去，半天爬不起來。不耗靈力。',
   },
   iron: {
@@ -126,8 +140,8 @@ export const MOVES = {
   },
 };
 
-/** Which three a cultivator takes into a fight unless told otherwise: the first of these they can use. */
-export const KIT_ORDER = ['feijian', 'swordqi', 'fireball', 'frost', 'guard', 'foxfire', 'vine', 'swordstep', 'jianzhen', 'charge', 'sweep', 'mend', 'iron', 'qi'];
+/** The order a set left to choose itself fills its places in (world/skills.js): the first of these you can use. */
+export const KIT_ORDER = ['feijian', 'swordqi', 'fireball', 'frost', 'thunder', 'guard', 'foxfire', 'vine', 'swordstep', 'jianzhen', 'charge', 'sweep', 'mend', 'iron', 'qi'];
 
 /** What 戰鬥試煉 lends you (and what a 凡人 sees waiting, before 引氣入體). */
 export const TRIAL_KIT = ['swordqi', 'fireball', 'guard'];

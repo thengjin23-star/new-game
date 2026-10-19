@@ -294,6 +294,13 @@ export function effect(kind, pan = 0, near = 1) {
       burst(t, o({ type: 'lowpass', hz: 300, q: 0.8, vel: 0.35 * v, len: 0.2 }));
       for (let k = 0; k < 5; k++) burst(t + 0.04 + k * 0.05, o({ hz: 700 + Math.random() * 900, q: 1.5, vel: 0.12 * v, len: 0.06 }));
       break;
+    case 'thunder':
+      // 掌心雷: a crack overhead, then the roll of it
+      burst(t, o({ hz: 2800, q: 0.7, vel: 0.5 * v, len: 0.05 }));
+      crackle(t, o({ dur: 0.2, count: 9, vel: 0.32 * v }));
+      burst(t + 0.05, o({ type: 'lowpass', hz: 240, q: 0.6, vel: 0.65 * v, len: 0.8 }));
+      sweep(t + 0.05, o({ from: 85, to: 30, dur: 0.7, vel: 0.45 * v }));
+      break;
     case 'jianzhen':
       // six blades drawn, one after another
       for (let k = 0; k < 3; k++) bell('chime', 84 + k * 3, t + k * 0.07, o({ vel: 0.3 }));

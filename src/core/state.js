@@ -1,5 +1,6 @@
 import { NODES } from '../world/map.js';
 import { initNpcs } from '../world/npcs.js';
+import { hotbarState } from '../world/skills.js';
 
 export const SAVE_VERSION = 1;
 
@@ -139,5 +140,7 @@ export function newGame({ name, gender, origin, fate, seed, meta }) {
     meta: { life: (meta?.life || 0) + 1, past: [...(meta?.past || [])] },
   };
   initNpcs(s);
+  // the sets you will carry into a fight (修煉 → 技能): left to choose themselves, for now
+  hotbarState(s);
   return s;
 }

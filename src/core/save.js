@@ -1,5 +1,6 @@
 import { SAVE_VERSION } from './state.js';
 import { levelFor, awaken } from '../world/system.js';
+import { hotbarState } from '../world/skills.js';
 import { NODES } from '../world/map.js';
 import { NAMED } from '../world/npcs.js';
 import { DAYS_PER_YEAR } from './calendar.js';
@@ -62,6 +63,8 @@ export function migrate(s) {
   s.player.gear ||= {};
   s.player.arts ||= [];
   s.player.techs ||= [];
+  // the sets you carry into a fight (0.19): the three chosen before, the first of them
+  hotbarState(s);
   // (the 劍痕 read before 0.16 left its 劍陣 in you all the same)
   if (s.flags.sword_scar_read && !s.player.arts.includes('jianzhen')) s.player.arts.push('jianzhen');
   // where the factions stand with you; the work you have taken from the boards

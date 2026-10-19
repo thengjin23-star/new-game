@@ -22,6 +22,7 @@ import { inquire, visit } from '../core/actions.js';
 import { spendHours, newReport } from '../core/time.js';
 import { applyEffects, logLife } from '../core/effects.js';
 import { rested, gearStats, pools, spendMp } from '../core/body.js';
+import { passiveStats } from './skills.js';
 import { rand, chance, pickWeighted } from '../core/rng.js';
 import { fmtDuration } from '../core/calendar.js';
 
@@ -140,7 +141,7 @@ export function walkMult(s) {
   const art = bodyArt(s);
   // (rain, snow and mud slow you a little)
   const sky = weatherNow(s).walk;
-  return m * [1, 0.9, 0.75, 0.6][p.injury || 0] * (1 + gearStats(s).speed) * swift * (1 + (art?.walk || 0)) * sky;
+  return m * [1, 0.9, 0.75, 0.6][p.injury || 0] * (1 + gearStats(s).speed + passiveStats(s).speed) * swift * (1 + (art?.walk || 0)) * sky;
 }
 
 /** How fast the ground here lets you go: rough ground (woods, slopes, tall grass) holds a 輕功 back less. */

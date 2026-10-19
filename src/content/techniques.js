@@ -78,6 +78,13 @@ export const TECHS = {
     power: 0.25,
     desc: '胡三娘傳授的小法術，幽藍的狐火可灼魂魄。',
   },
+  leifa: {
+    name: '掌心雷法',
+    kind: 'combat',
+    grade: '黃品上',
+    power: 0.15,
+    desc: '雷擊木上殘留的一縷雷意，引入掌中：一抬手，天上就落下一道雷。',
+  },
   lianxi: {
     name: '斂息訣',
     kind: 'spell',

@@ -35,8 +35,11 @@ const DUST = [120, 100, 80];
 const ICE = [170, 215, 245];
 const WATER = [60, 120, 175];
 const ICE_DEEP = [70, 130, 190];
+/** 掌心雷: the white-blue of a bolt, and the blue round it. */
+const BOLT = [214, 228, 255];
+const BOLT_DEEP = [86, 118, 210];
 /** The light a move gathers into as you cast it. */
-const GLOW = { fire: FIRE, shield: [120, 170, 230], foeqi: FOE_QI, foxfire: FOX, mend: LEAF, iron: GOLD, sweep: GOLD, charge: GOLD, bloodqi: BLOOD, bloodring: BLOOD, blink: FOX, mirror: [246, 232, 170], bell: GOLD, feijian: QI, jianzhen: QI, vine: LEAF, frost: ICE };
+const GLOW = { fire: FIRE, shield: [120, 170, 230], foeqi: FOE_QI, foxfire: FOX, mend: LEAF, iron: GOLD, sweep: GOLD, charge: GOLD, bloodqi: BLOOD, bloodring: BLOOD, blink: FOX, mirror: [246, 232, 170], bell: GOLD, feijian: QI, jianzhen: QI, vine: LEAF, frost: ICE, thunder: BOLT_DEEP };
 
 // ── figures ──
 
@@ -511,6 +514,30 @@ export function drawGroundMarks(g, s, C, kit, u = 1) {
       g.moveTo(w.x, w.y);
       g.lineTo(cx, cy);
       g.stroke();
+    } else if (k.aim === 'bolt') {
+      // 掌心雷: where the sky will strike (it does not travel: no line to it)
+      const r = Math.min(d, k.range);
+      const cx = w.x + ux * r;
+      const cy = w.y + uy * r;
+      g.strokeStyle = rgba(BOLT_DEEP, 0.45);
+      g.lineWidth = lw(1.2);
+      g.setLineDash([lw(6), lw(6)]);
+      ring(g, w.x, w.y, k.range);
+      g.stroke();
+      g.setLineDash([]);
+      g.fillStyle = rgba(ready ? BOLT : col, 0.32);
+      ring(g, cx, cy, k.radius);
+      g.fill();
+      g.strokeStyle = rgba(ready ? BOLT_DEEP : col, 0.95);
+      g.lineWidth = lw(1.8);
+      g.stroke();
+      // (a cross where it lands)
+      g.beginPath();
+      g.moveTo(cx - 7, cy);
+      g.lineTo(cx + 7, cy);
+      g.moveTo(cx, cy - 7);
+      g.lineTo(cx, cy + 7);
+      g.stroke();
     } else if (k.aim === 'dash') {
       // where it will carry you
       g.fillStyle = rgba(col, 0.28);
@@ -580,6 +607,16 @@ export function drawGroundMarks(g, s, C, kit, u = 1) {
       g.strokeStyle = rgba(LEAF, 0.55 * (1 - p));
       g.lineWidth = lw(2);
       ring(g, f.x, f.y, f.r);
+      g.stroke();
+    }
+    if (f.kind === 'thunder') {
+      // 掌心雷: the ground lit white where it struck, then a scorch going grey
+      g.fillStyle = rgba(p < 0.25 ? BOLT : [50, 50, 60], (p < 0.25 ? 0.55 : 0.28) * (1 - p));
+      ring(g, f.x, f.y, f.r * Math.min(1, 0.7 + p));
+      g.fill();
+      g.strokeStyle = rgba(BOLT_DEEP, 0.85 * (1 - p));
+      g.lineWidth = lw(2.4);
+      ring(g, f.x, f.y, f.r * (0.4 + p * 0.7));
       g.stroke();
     }
     if (f.kind === 'boom') {
@@ -1367,6 +1404,59 @@ function drawFx(ctx, proj, px, f, now) {
         ctx.moveTo(x + Math.cos(a) * r1 * 0.4, y + Math.sin(a) * r1 * 0.4);
         ctx.lineTo(x + Math.cos(a) * r1, y + Math.sin(a) * r1);
         ctx.stroke();
+      }
+      break;
+    }
+    case 'thunder': {
+      // 掌心雷: a bolt out of the sky, forked and flickering, and sparks where it struck
+      const [gx, gy] = proj(f.x, f.y, 0);
+      const [tx, ty] = proj(f.x, f.y, 300);
+      const on = p < 0.4 && (p < 0.12 || Math.floor(p * 40) % 3 !== 1);
+      if (on) {
+        // (the same jag for the whole of one strike: its own seed)
+        const seed = (f.t0 * 997) % 1;
+        const steps = 9;
+        const pts = [[tx, ty]];
+        for (let n = 1; n < steps; n++) {
+          const q = n / steps;
+          const off = (((seed * 9301 + n * 49297) % 233280) / 233280 - 0.5) * 34 * px * Math.max(1, k);
+          pts.push([tx + (gx - tx) * q + off, ty + (gy - ty) * q]);
+        }
+        pts.push([gx, gy]);
+        for (const [wd, col] of [[9, `rgba(110,140,230,${0.35 * (1 - p)})`], [3.2, `rgba(225,235,255,${0.95 - p})`], [1.2, 'rgba(255,255,255,0.95)']]) {
+          ctx.strokeStyle = col;
+          ctx.lineWidth = wd * px * Math.max(1, k);
+          ctx.lineJoin = 'round';
+          ctx.beginPath();
+          ctx.moveTo(pts[0][0], pts[0][1]);
+          for (const [x, y] of pts.slice(1)) ctx.lineTo(x, y);
+          ctx.stroke();
+        }
+        // a fork off the middle
+        const m = pts[4];
+        ctx.strokeStyle = `rgba(200,215,255,${0.7 * (1 - p)})`;
+        ctx.lineWidth = 1.6 * px * Math.max(1, k);
+        ctx.beginPath();
+        ctx.moveTo(m[0], m[1]);
+        ctx.lineTo(m[0] + 22 * px * k * (seed > 0.5 ? 1 : -1), m[1] + 30 * px * k);
+        ctx.stroke();
+      }
+      // the flash on the ground, and sparks thrown up
+      const r = f.r * k * (0.3 + p * 0.5);
+      const glow = ctx.createRadialGradient(gx, gy, 0, gx, gy, r);
+      glow.addColorStop(0, `rgba(240,245,255,${0.9 * (1 - p)})`);
+      glow.addColorStop(1, 'rgba(120,150,240,0)');
+      ctx.fillStyle = glow;
+      ctx.beginPath();
+      ctx.arc(gx, gy, r, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = `rgba(210,225,255,${0.9 * (1 - p)})`;
+      for (let n = 0; n < 8; n++) {
+        const a = n * 0.785 + 0.3;
+        const [ex, ey] = proj(f.x + Math.cos(a) * f.r * 0.7 * p, f.y + Math.sin(a) * f.r * 0.5 * p, 6 + p * 26 * (0.6 + (n % 3) * 0.3));
+        ctx.beginPath();
+        ctx.arc(ex, ey, 1.6 * px * Math.max(1, k), 0, Math.PI * 2);
+        ctx.fill();
       }
       break;
     }

@@ -917,100 +917,381 @@ p {
   margin-left: 8px;
 }
 
-/* 戰鬥招式: the three you carry, and the rest by school */
-.kit-slots {
+/* ── 修煉 (0.19): three tabs — 修為, 功法, 技能 ── */
+.cultpage {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
-  margin: 8px 0 12px;
+  gap: 12px;
+  grid-template-columns: minmax(0, 1fr);
 }
 
-.kit-slot {
+/* (a red dot on 修為 when the way through is open) */
+.subtab .dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  margin-left: 4px;
+  border-radius: 50%;
+  background: var(--red);
+  vertical-align: super;
+}
+
+.subtab.locked {
+  opacity: 0.55;
+  cursor: default;
+}
+
+/* ── 修煉 → 技能: the sets you carry, the 心法 you hold, the library of all there is ── */
+.skills {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.sk-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 10px;
+}
+
+.sk-head h3 {
+  margin: 0;
+}
+
+/* a move's seal: its first word on its element's colour, how it goes off in the corner */
+.sk-icon {
+  --size: 40px;
+  flex: none;
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  width: var(--size);
+  height: var(--size);
+  border-radius: 8px;
+  background: var(--el, #6f665a);
+  color: #f7efe1;
+  box-shadow: inset 0 0 0 2px rgba(247, 239, 225, 0.3);
+}
+
+.sk-icon b {
+  font-size: 19px;
+  line-height: 1;
+}
+
+.sk-icon i {
+  position: absolute;
+  right: 3px;
+  bottom: 1px;
+  font-style: normal;
+  font-size: 11px;
+  line-height: 1.2;
+  opacity: 0.9;
+}
+
+.sk-icon.passive {
+  border-radius: 50%;
+  background: var(--el, var(--violet));
+}
+
+.sk-icon.locked {
+  filter: grayscale(0.85);
+  opacity: 0.55;
+}
+
+.sk-icon.none {
+  background: transparent;
+  color: var(--muted);
+  border: 1px dashed rgba(35, 32, 27, 0.3);
+  box-shadow: none;
+  font-size: 20px;
+}
+
+/* the sets: four places in a row */
+.sk-slots {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.sk-slot {
+  position: relative;
+  min-width: 0;
+}
+
+.sk-slot-main {
   font: inherit;
   color: var(--ink);
-  background: var(--paper-2);
+  width: 100%;
+  min-height: 104px;
+  padding: 10px 6px 8px;
+  background: var(--paper);
   border: 1px solid var(--line);
-  border-radius: 10px;
-  padding: 8px 6px;
+  border-radius: var(--radius-m);
   display: grid;
   justify-items: center;
-  gap: 2px;
+  align-content: start;
+  gap: 4px;
+  text-align: center;
   cursor: pointer;
 }
 
-.kit-slot.sel {
+.sk-slot.sel .sk-slot-main {
   border-color: var(--red);
   box-shadow: 0 0 0 2px rgba(168, 50, 42, 0.25);
 }
 
-.kit-slot.locked b {
+.sk-slot.empty .sk-slot-main {
+  border-style: dashed;
   color: var(--muted);
 }
 
-.kit-slot kbd {
+.sk-sets.placing .sk-slot-main {
+  border: 1.5px dashed var(--red);
+}
+
+.sk-sets.placing .sk-slot-main small {
+  color: var(--red);
+}
+
+.sk-slot.locked .sk-slot-name {
+  color: var(--muted);
+}
+
+.sk-slot-main kbd {
+  position: absolute;
+  left: 7px;
+  top: 5px;
   font: 600 11px/1 var(--font);
   color: var(--muted);
 }
 
-.kit-slot span {
-  font-size: 12px;
+.sk-slot-name {
+  max-width: 100%;
+  font-weight: 700;
+  font-size: 14px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sk-slot-main small {
+  font-size: 11px;
+  line-height: 1.35;
   color: var(--muted);
 }
 
-.kit-school h4 {
-  margin: 12px 0 6px;
-  font-size: 14px;
-  color: var(--ochre);
-}
-
-.kit-move {
-  font: inherit;
-  color: var(--ink);
-  text-align: left;
-  width: 100%;
-  background: transparent;
+/* ✕: empty a place, or put a 心法 down */
+.sk-slot-x {
+  position: absolute;
+  right: 3px;
+  top: 3px;
+  width: 28px;
+  height: 28px;
+  padding: 0;
   border: 0;
-  border-top: 1px solid var(--line);
-  padding: 8px 4px;
-  display: grid;
-  gap: 2px;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 14px;
+  line-height: 28px;
   cursor: pointer;
 }
 
-.kit-move.on {
-  background: rgba(59, 106, 91, 0.1);
+.sk-slot-x:active {
+  background: var(--paper-3);
 }
 
-.kit-move.on b::after {
-  content: '・攜帶中';
-  font-size: 12px;
-  color: var(--jade);
+.sk-set-acts {
+  margin-top: 0;
 }
 
-.kit-move.good b {
-  color: var(--jade);
+/* the 心法 held */
+.sk-held {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 170px), 1fr));
+  gap: 8px;
 }
 
-.kit-move.locked {
-  cursor: default;
-  opacity: 0.55;
-}
-
-.kit-head {
+.sk-held-one {
+  position: relative;
   display: flex;
-  align-items: baseline;
-  gap: 10px;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  min-height: 54px;
+  padding: 6px 38px 6px 8px;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-m);
 }
 
-.kit-head span {
-  font-size: 12px;
+.sk-held-one b {
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sk-held-one .sk-slot-x {
+  top: 50%;
+  right: 5px;
+  transform: translateY(-50%);
+}
+
+.sk-held-one.empty {
+  padding-right: 10px;
+  border-style: dashed;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+/* 五行, folded away */
+.sk-note {
+  display: block;
+}
+
+.sk-note summary {
+  cursor: pointer;
+  font-weight: 700;
+  color: var(--ink-2);
+  min-height: 24px;
+}
+
+.sk-note p {
+  margin: 6px 0 0;
+}
+
+/* the library: a search, the narrowing, and every move and 心法 */
+.sk-search {
+  font: inherit;
+  width: 100%;
+  min-height: 44px;
+  padding: 8px 12px;
+  color: var(--ink);
+  background: var(--paper);
+  border: 1px solid rgba(35, 32, 27, 0.3);
+  border-radius: var(--radius-s);
+}
+
+.sk-filter {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.sk-filter > span {
+  flex: none;
+  min-width: 2.6em;
+}
+
+.chip-btn {
+  position: relative;
+  flex: none;
+  font: inherit;
+  font-size: 13px;
+  min-height: 36px;
+  padding: 2px 12px;
+  color: var(--ink-2);
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.chip-btn.on {
+  color: var(--paper);
+  background: var(--ink);
+  border-color: var(--ink);
+}
+
+.sk-hint {
+  margin: 0;
+  padding: 6px 10px;
+  border-radius: var(--radius-s);
+  background: rgba(168, 50, 42, 0.08);
+  color: var(--red);
+  font-size: 13px;
+}
+
+.sk-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr));
+  gap: 8px;
+}
+
+.sk-card {
+  font: inherit;
+  color: var(--ink);
+  text-align: left;
+  min-width: 0;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-m);
+  cursor: pointer;
+}
+
+.sk-card.carried {
+  border-color: rgba(59, 106, 91, 0.55);
+}
+
+.sk-card.sel {
+  border-color: var(--red);
+  box-shadow: 0 0 0 2px rgba(168, 50, 42, 0.25);
+}
+
+.sk-card.locked {
+  cursor: default;
+  background: transparent;
+}
+
+.sk-card.locked .sk-card-head b {
   color: var(--muted);
 }
 
-.kit-move p {
+.sk-card-body {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.sk-card-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 0;
+}
+
+.sk-card p {
   margin: 0;
-  font-size: 13px;
+}
+
+.sk-line {
   color: var(--ink-2);
+}
+
+.tag.mastery {
+  color: var(--ochre);
+}
+
+/* (a finger: the small ✕ and the chips, 44 to the touch) */
+@media (pointer: coarse) {
+  .sk-slot-x::after {
+    content: '';
+    position: absolute;
+    inset: -8px;
+  }
+  .chip-btn::after {
+    content: '';
+    position: absolute;
+    inset: -4px -3px;
+  }
 }
 
 /* ── 行囊 ── */
@@ -2491,6 +2772,11 @@ nav.dock {
   animation: drawer 0.24s ease-out;
 }
 
+/* (a page drawn again after a tap on it: no sliding in again) */
+.layer > .still {
+  animation: none;
+}
+
 @keyframes drawer {
   from {
     transform: translateX(40px);
@@ -3242,6 +3528,27 @@ canvas.fu-canvas {
   bottom: calc(var(--pb) + var(--ring));
 }
 
+/* (0.19) a fourth move, out past the ring above the 符; and, at the top, the set to change to */
+.cbt-btn.s4 {
+  right: calc(var(--pr) + var(--ring) * 0.9);
+  bottom: calc(var(--pb) + var(--ring) * 1.58);
+}
+
+.cbt-btn.setsw {
+  --size: var(--tap);
+  right: calc(var(--pr) + var(--ring) * 0.3);
+  bottom: calc(var(--pb) + var(--ring) * 1.72);
+  border-color: rgba(106, 76, 134, 0.85);
+}
+
+.cbt-btn.setsw b {
+  font-size: 15px;
+}
+
+.cbt-btn.setsw small {
+  color: var(--violet);
+}
+
 /* ── 五行 (0.16): each element its colour; a move's element on its button ── */
 [data-el='金'] {
   --el: #a5832a;
@@ -3327,8 +3634,8 @@ span.el {
 
 .cbt-chain {
   position: absolute;
-  right: var(--pr);
-  bottom: calc(var(--pb) + var(--ring) + var(--skill) * 0.62 + 8px);
+  right: calc(var(--pr) + var(--ring) * 0.9);
+  bottom: calc(var(--pb) + var(--ring) * 1.58 + var(--skill) / 2 + 8px);
   transform: translateX(50%);
   white-space: nowrap;
   padding: 2px 9px;
@@ -3453,10 +3760,11 @@ span.el {
 
 /* the first-time pointers: a dark bubble by the button it is about */
 .coach {
+  --coach-max: 230px;
   position: absolute;
   z-index: var(--z-coach);
   display: none;
-  max-width: 230px;
+  max-width: var(--coach-max);
   padding: 8px 12px;
   border-radius: 10px;
   background: rgba(35, 32, 27, 0.9);
@@ -3485,12 +3793,24 @@ span.el {
 /* a pointer at the round buttons sits above the whole ring of them (covering none),
    its arrow down at the one it means */
 .coach[data-at='act'],
-.coach[data-at='strike'],
 .coach[data-at='sit'],
 .coach[data-at='arts'],
 .coach[data-at='fly'] {
   right: calc(var(--pr) - 30px);
   bottom: calc(var(--pb) + var(--ring) + var(--skill) / 2 + 12px);
+}
+
+/* (a fight's buttons reach higher — the fourth move, the set — so its pointer stands to their left,
+   no wider than the room between them and the stick) */
+.coach[data-at='strike'] {
+  right: calc(var(--pr) + var(--ring) * 1.82 + 23px + 14px);
+  bottom: calc(var(--pb) + var(--ring) * 0.2);
+  max-width: min(var(--coach-max), calc(100% - var(--jx) - var(--jr) - var(--pr) - var(--ring) * 1.82 - 37px - 10px));
+}
+
+.coach[data-at='strike']::after {
+  right: -5px;
+  bottom: 18px;
 }
 
 .coach[data-at='sit'] {
@@ -3502,7 +3822,6 @@ span.el {
 }
 
 .coach[data-at='act']::after,
-.coach[data-at='strike']::after,
 .coach[data-at='sit']::after,
 .coach[data-at='arts']::after,
 .coach[data-at='fly']::after {
@@ -3521,13 +3840,12 @@ span.el {
 /* (on a short screen, a smaller pointer, clear of the word at the top) */
 @container app (max-height: 340px) {
   .coach {
-    max-width: 150px;
+    --coach-max: 150px;
     padding: 5px 9px;
     font-size: 12px;
     line-height: 1.4;
   }
   .coach[data-at='act'],
-  .coach[data-at='strike'],
   .coach[data-at='sit'],
   .coach[data-at='arts'],
   .coach[data-at='fly'] {

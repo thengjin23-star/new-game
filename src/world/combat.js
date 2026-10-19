@@ -19,7 +19,8 @@ import { NODES, nodeQi } from './map.js';
 import { npcRealm } from './npcs.js';
 import { FOES } from '../content/foes.js';
 import { EVENTS } from '../content/index.js';
-import { MOVES, STRIKES, DASH, PILLS, PILL_CD, BEAST_MOVES, KIT_ORDER, TRIAL_KIT } from '../content/moves.js';
+import { MOVES, STRIKES, DASH, PILLS, PILL_CD, BEAST_MOVES } from '../content/moves.js';
+import * as SK from './skills.js';
 import { TALISMANS } from '../content/arts.js';
 import { SHENG, KE_MULT, CHAIN, ROOT_MULT, keOf, shengWord, keWord } from '../content/wuxing.js';
 import { TECHS } from '../content/techniques.js';
@@ -153,73 +154,62 @@ export function weaponLook(s) {
   return (w && !STRIKES[w] && ITEMS[w]?.strike) || w;
 }
 
-const REALM_WORD = ['', '需引氣入體', '需築基', '需結丹'];
+// What is yours, the sets you carry, 心法 and practice: world/skills.js.
+export const movesOf = SK.movesOf;
 
-/** Why you cannot use a move yet, or null if you can. */
-function lockOf(s, m) {
-  const p = s.player;
-  const realm = m.realm ?? 1;
-  if (p.realm < realm) return REALM_WORD[realm] || '境界不足';
-  // what a 法器 does, you can do while you wear it
-  if (m.relic) return gearOf(s).relic === m.relic ? null : `需戴${ITEMS[m.relic]?.name || m.relic}`;
-  const knows = (ids) => ids.some((a) => (p.arts || []).includes(a) || (p.techs || []).includes(a) || p.tech === a);
-  // a move of the body comes to you at 築基, whatever else it asks
-  if (m.school === '體修' && p.realm >= 2) return null;
-  if (!m.learn && !m.weapon && !m.gengu) return null;
-  if (m.learn && knows(m.learn)) return null;
-  if (m.weapon && m.weapon.includes(p.weapon)) return null;
-  if (m.gengu && (p.attrs.gengu ?? 0) >= m.gengu) return null;
-  const ways = [];
-  if (m.learn) ways.push(`習得${m.learn.map((a) => TECHS[a]?.name || a).join('或')}`);
-  if (m.weapon) ways.push(`手持${m.weapon.map((w) => ITEMS[w]?.name || w).join('或')}`);
-  if (m.gengu) ways.push(`根骨達${m.gengu}`);
-  return `需${ways.join('，或')}`;
+/**
+ * What you can cast now: the set in hand (修煉 → 技能), its places in order,
+ * the empty ones left out (a move out of reach stays, to say why). 戰鬥試煉
+ * lends you its own three.
+ */
+export function kitOf(s) {
+  return SK.hotbarOf(s, undefined, !!combatOf(s).trial).filter(Boolean);
 }
 
-/** A move as you would use it: stronger if you have learned the art behind it; why it is out of reach, if it is. */
-function moveOf(s, id, lend = false) {
-  const p = s.player;
-  const m = MOVES[id];
-  const knows = (ids) => ids.some((a) => (p.arts || []).includes(a) || (p.techs || []).includes(a) || p.tech === a);
-  const good = knows(m.arts || []);
-  return { ...m, ...(good ? m.better : null), id, good, locked: lend ? null : lockOf(s, m) };
+/** The set in hand place by place (null: an empty place), for the buttons. */
+export function hotbarOf(s) {
+  return SK.hotbarOf(s, undefined, !!combatOf(s).trial);
 }
 
-/** Every move there is, as it stands for you (for choosing your three). */
-export function movesOf(s) {
-  return Object.keys(MOVES).map((id) => moveOf(s, id));
+/** Choose the first set's moves (null: let it choose itself) — as before there were sets. */
+export function setKit(s, ids) {
+  if (!ids || !ids.length) return SK.autoSet(s, 0);
+  for (let i = 0; i < SK.SLOTS; i++) SK.assignSlot(s, 0, i, ids[i] && MOVES[ids[i]] ? ids[i] : null);
+  return true;
+}
+
+/** The set Tab (or the 組 button) would bring to hand: the next with a move you can use in it (null: there is none, or this is the 試煉). */
+export function nextSetOf(s) {
+  if (combatOf(s).trial) return null;
+  const cur = SK.hotbarState(s).cur;
+  const open = SK.setsOpen(s);
+  for (let k = 1; k < open; k++) {
+    const set = (cur + k) % open;
+    if (SK.hotbarOf(s, set).some((m) => m && !m.locked)) return set;
+  }
+  return null;
 }
 
 /**
- * The three you take into a fight: those you chose (修煉 → 戰鬥招式) that you
- * can use, the rest filled the usual way; short of three, what is still out of
- * reach shows in the empty places. 戰鬥試煉 lends you its own three.
+ * Bring another set to hand in a fight (to: a set, or the next worth having):
+ * not halfway through a cast, nor in the 試煉 (it lends its own). Cooldowns
+ * go with the moves, not the set: changing sets does not cool anything sooner.
  */
-export function kitOf(s) {
+export function useSetCmd(s, to = null) {
   const C = combatOf(s);
-  if (C.trial) return TRIAL_KIT.map((id) => moveOf(s, id, true));
-  const out = [];
-  const take = (id) => {
-    if (out.length >= 3 || out.some((k) => k.id === id) || !MOVES[id]) return;
-    const k = moveOf(s, id);
-    if (!k.locked) out.push(k);
-  };
-  for (const id of s.player.kit || []) take(id);
-  for (const id of KIT_ORDER) take(id);
-  for (const id of TRIAL_KIT) if (out.length < 3 && !out.some((k) => k.id === id)) out.push(moveOf(s, id));
-  return out;
-}
-
-/** Choose the three you take into a fight (null: let them be chosen for you). */
-export function setKit(s, ids) {
-  s.player.kit = ids ? ids.filter((id) => MOVES[id]).slice(0, 3) : null;
-  if (!s.player.kit?.length) delete s.player.kit;
+  const me = hero(s, C);
+  if (C.trial || (me.act?.kind === 'cast' && !me.act.done)) return false;
+  const next = to === null ? nextSetOf(s) : to;
+  if (next === null || next === SK.hotbarState(s).cur) return false;
+  return SK.useSet(s, next);
 }
 
 /** How soon you can step aside again: quicker as your cultivation deepens. */
 export function dashCd(s) {
   const p = s.player;
-  return p.realm === 0 ? 2.6 : p.realm === 1 ? DASH.cd - p.stage * 0.03 : p.realm === 2 ? 1.7 : 1.4;
+  const base = p.realm === 0 ? 2.6 : p.realm === 1 ? DASH.cd - p.stage * 0.03 : p.realm === 2 ? 1.7 : 1.4;
+  // (踏雲身 and its like)
+  return base * (1 + SK.passiveStats(s).dashCd);
 }
 
 // ── the beasts ──
@@ -1989,6 +1979,9 @@ function heroTick(s, C, dt, io) {
   // (not while it is holding you up in the air)
   if (!w.fly) me.mp = Math.min(me.maxMp, me.mp + me.maxMp * (C.on ? 0.03 : 0.012 * qi * (1 + G.mpRegen)) * dt);
   if (!C.on && C.t - me.hurtT > 3 && me.hp < me.cap) me.hp = Math.min(me.cap, me.hp + me.cap * 0.006 * (1 + G.regen) * dt);
+  // (長春護體: blood back even while you fight)
+  const regenFight = C.on ? SK.passiveStats(s).regenFight : 0;
+  if (regenFight && me.hp > 0 && me.hp < me.cap) me.hp = Math.min(me.cap, me.hp + me.cap * regenFight * dt);
   let moved = 0;
   if (me.dash) {
     const D = me.dash;
@@ -2110,6 +2103,11 @@ function release(s, C, a, io) {
     return;
   }
   const k = a.k;
+  // practice: a cast in earnest (not in the system's 試煉) teaches you the move a little better
+  if (!C.trial) {
+    const up = SK.practise(s, k.id);
+    if (up) io.feed('good', `${k.name}熟練度提升：${up}`);
+  }
   // 五行: your 靈根, and the move before this one
   const boost = wuxingBoost(s, C, k, io);
   const el = k.el || null;
@@ -2158,6 +2156,18 @@ function release(s, C, a, io) {
       me.shield = Math.round(me.maxHp * k.shield * boost);
       me.shieldT = k.last;
     }
+  } else if (k.aim === 'bolt') {
+    // 天雷: struck where you aimed, all at once — whoever is within its reach is hurt, and reels
+    const [px, py] = a.pt;
+    C.fx.push({ kind: 'thunder', x: px, y: py, r: k.radius, t0: C.t, dur: 0.6 });
+    for (const b of beastsOf(s, C)) {
+      if (!alive(b) || !foe(b) || !present(s, b)) continue;
+      const d = Math.hypot(b.x - px, b.y - py) || 1;
+      if (d > k.radius + b.R.body) continue;
+      hurtBeast(s, C, b, me.atk * k.mult * boost, io, { kind: 'spirit', el });
+      if (s.pending || s.dead) return;
+      if (alive(b)) stagger(b, k.stun || 0, [(b.x - px) / d, (b.y - py) / d, k.push ?? 8]);
+    }
   } else if (k.aim === 'seek') {
     // flames fanning out, each finding its own way
     const a0 = Math.atan2(a.uy, a.ux);
@@ -2192,7 +2202,7 @@ function wuxingBoost(s, C, k, io) {
   const root = s.player.root;
   let m = root?.els?.includes(el) ? ROOT_MULT[root.type] || 1 : 1;
   if (flows) {
-    m *= CHAIN.mult[Math.min(CHAIN.mult.length - 1, n)];
+    m *= CHAIN.mult[Math.min(CHAIN.mult.length - 1, n)] + SK.passiveStats(s).chain;
     pop(C, s.world.x, s.world.y, n >= 3 ? `${shengWord(prev.el, el)}・${n}連` : shengWord(prev.el, el), 'sheng', 60);
     s.vars.chainBest = Math.max(s.vars.chainBest || 0, n);
     if (!C.told.sheng) {

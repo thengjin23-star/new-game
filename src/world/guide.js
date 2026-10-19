@@ -88,9 +88,11 @@ export function nextGoal(s) {
 export const COACH = [
   { id: 'act', at: 'act', text: '點這顆大鈕（或直接點那個人、那樣東西）', when: (s, v) => v.act },
   { id: 'fight', at: 'strike', text: '有東西靠近了！大鈕普攻，圍著的是招式，綠色閃避', when: (s, v) => v.cbtReady },
+  { id: 'sets', at: 'strike', text: '右上寫著「壹」的小鈕：換另一組招式（鍵盤 Tab）。招式在「修煉 → 技能」配', when: (s, v) => v.cbtReady && v.sets },
   { id: 'sit', at: 'sit', text: '「坐」：歇息、四處搜尋、閉關', when: (s, v) => s.flags.opening_done && (s.world?.walked || 0) > 300 && !v.cbtReady },
-  { id: 'menu', at: 'dock', text: '修為滿了：打開「修煉」突破', when: (s) => atBottleneck(s) },
-  { id: 'map', at: 'map', text: '點小地圖看大地圖，點一個地方就能走過去', when: (s) => Object.values(s.nodes).filter((n) => n.visited).length >= 2 },
+  // (under the minimap: not while a fight's buttons are up — they reach that high)
+  { id: 'menu', at: 'dock', text: '修為滿了：打開「修煉」突破', when: (s, v) => atBottleneck(s) && !v.cbtReady },
+  { id: 'map', at: 'map', text: '點小地圖看大地圖，點一個地方就能走過去', when: (s, v) => Object.values(s.nodes).filter((n) => n.visited).length >= 2 && !v.cbtReady },
   { id: 'arts', at: 'arts', text: '「術」：會的法術和能燒的符', when: (s, v) => v.arts },
   { id: 'fly', at: 'fly', text: '「飛」：起飛；飛著的時候點地面就飛過去', when: (s, v) => v.fly },
 ];

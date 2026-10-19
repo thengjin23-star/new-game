@@ -1,13 +1,15 @@
 // 長玩 (0.18): random play over a few lives — walking every way, travelling to
 // places you know, poking at whatever is near, seclusion, practice fights with
-// casts, dashes and blows thrown about, the 推演, and saving and loading again —
-// and not one exception, whatever comes up.
+// casts, dashes and blows thrown about, the 推演, the 技能 page (0.19: moves put
+// in places and taken out, sets chosen, 心法 held and put down), and saving
+// and loading again — and not one exception, whatever comes up.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import * as E from '../src/world/explore.js';
 import * as CB from '../src/world/combat.js';
 import * as SV from '../src/core/save.js';
 import * as A from '../src/core/actions.js';
+import * as SK from '../src/world/skills.js';
 import { NODES } from '../src/world/map.js';
 import { fresh, resolvePending, waitUntil } from './helpers.js';
 
@@ -26,7 +28,7 @@ function soak(seed, steps, cultivated) {
     s.player.techs = ['qingmu', 'xuanshui', 'fox_fire', 'jianzhen'];
     s.player.arts = [...new Set([...(s.player.arts || []), 'jianzhen'])];
   }
-  const tally = { casts: 0, fights: 0, saves: 0, travels: 0 };
+  const tally = { casts: 0, fights: 0, saves: 0, travels: 0, skills: 0 };
   let what = '';
   let k = 0;
   try {
@@ -69,9 +71,20 @@ function soak(seed, steps, cultivated) {
           else if (q < 0.09) CB.strikeAt(s, null);
           else if (q < 0.095) CB.talismanCmd(s);
           else if (q < 0.1) CB.pillCmd(s);
+          else if (q < 0.105) CB.useSetCmd(s);
           E.step(s, 1 / 30, rnd() < 0.3 ? { x: rnd() - 0.5, y: rnd() - 0.5 } : null);
         }
-      } else if (roll < 0.93) {
+      } else if (roll < 0.91) {
+        what = 'the 技能 page';
+        const lib = SK.libraryOf(s);
+        const sets = SK.setsOpen(s);
+        const q = rnd();
+        if (q < 0.45) SK.assignSlot(s, Math.floor(rnd() * sets), Math.floor(rnd() * SK.SLOTS), rnd() < 0.2 ? null : lib.moves[Math.floor(rnd() * lib.moves.length)].id);
+        else if (q < 0.6) SK.autoSet(s, Math.floor(rnd() * sets));
+        else if (q < 0.8) SK.useSet(s, Math.floor(rnd() * sets));
+        else SK.holdPassive(s, lib.passives[Math.floor(rnd() * lib.passives.length)].id, rnd() < 0.7);
+        tally.skills++;
+      } else if (roll < 0.94) {
         what = 'the 推演';
         if (A.deduceReady(s)) A.deduce(s);
       } else {

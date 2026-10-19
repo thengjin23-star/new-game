@@ -1,5 +1,6 @@
 import { dayAt } from '../../core/calendar.js';
 import { has, flag, alive, season, variant } from '../helpers.js';
+import { weatherNow } from '../../world/weather.js';
 
 const H = ['qingshi_hill'];
 
@@ -223,6 +224,47 @@ export default [
         show: (s) => !flag(s, 'cave_found'),
         out: { text: '裂縫很窄，只容一人側身通過。裡面黑漆漆的，有風。', effects: [['flag', 'cave_hint']], goto: 'hill_cave' },
       },
+    ],
+  },
+
+  {
+    // 掌心雷 (0.19): a cultivator who has seen the tree comes back and takes the thunder into the palm
+    id: 'hill_thunder',
+    trigger: 'explore',
+    poi: 'lightning_tree',
+    nodes: H,
+    priority: 4,
+    cooldown: 20,
+    // (after the tree has been seen once, the old way: its wood, the way into the hill)
+    cond: (s) => !!s.seen?.hill_lightning_tree && s.player.realm >= 1 && !(s.player.arts || []).includes('leifa'),
+    title: '雷意',
+    text: (s) =>
+      weatherNow(s).id === 'storm'
+        ? '雷雨。天上滾過一聲悶雷，雷擊木焦黑的樹幹上，電光一下子亮了起來，像是在回應。\n\n你的靈力跟著一跳。叮——檢測到「雷意」殘留，宿主可以試著引入體內。'
+        : '雷擊木上的電光細細地遊走。引氣入體之後再看，你才看懂：那不是電，是一縷留在木頭裡的雷意。\n\n叮——宿主可試著引雷意入掌。建議等雷雨天，把握大些。',
+    choices: [
+      {
+        text: '在樹下盤坐，趁著雷聲，引一縷雷意入掌。',
+        show: (s) => weatherNow(s).id === 'storm',
+        out: {
+          text: '一道雷劈在雷擊木上。你沒有躲，那道光順著樹幹落進你的掌心，從手臂一路燒到丹田，又燒回來。\n\n等你睜開眼，雨停了。你一抬手，掌心「滋」地一聲，跳出一點電光。\n\n習得：掌心雷法（技能：掌心雷）。',
+          effects: [['tech', 'leifa'], ['sysexp', 12], ['log', '在雷擊木下悟得掌心雷']],
+        },
+      },
+      {
+        text: '伸手按住那道電光，硬引。',
+        show: (s) => weatherNow(s).id !== 'storm',
+        check: { kind: 'wuxing', diff: 6 },
+        ok: {
+          text: '電光順著你的手指鑽進來，又麻又燙。你咬牙守住心神，一點一點把它壓進掌心。\n\n習得：掌心雷法（技能：掌心雷）。',
+          effects: [['tech', 'leifa'], ['sysexp', 8], ['log', '在雷擊木下悟得掌心雷']],
+        },
+        fail: {
+          text: '電光一竄，你整個人被彈開，頭髮都豎了起來。雷意散了。\n\n叮——建議宿主等雷雨天再來。',
+          effects: [['mind', -2]],
+        },
+      },
+      { text: '不急，下回再說。', out: { text: '你看著那點電光在焦木上遊走，記住了這個地方。' } },
     ],
   },
 
