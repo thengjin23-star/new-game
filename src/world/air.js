@@ -4,7 +4,7 @@
 
 import { TECHS } from '../content/techniques.js';
 import { ITEMS } from '../content/items.js';
-import { T, TERRAIN, WORLD_W, WORLD_H, BORDER, SECT } from './geo.js';
+import { T, TERRAIN, WORLD_W, WORLD_H, BORDER, SECT, CELL } from './geo.js';
 import { world, collides, canStand, terrainAt, insidePoly, idxOf, colOf, rowOf, cellX, cellY } from './terrain.js';
 import { heightAt } from './height.js';
 
@@ -172,7 +172,7 @@ export function landingNear(s, x, y, reach = 900) {
   const g = world();
   const ci = colOf(x);
   const cj = rowOf(y);
-  const rings = Math.ceil(reach / 40);
+  const rings = Math.ceil(reach / CELL);
   for (let ring = 1; ring <= rings; ring++) {
     let best = null;
     let bd = Infinity;

@@ -7,7 +7,7 @@
 //
 // Nothing here is saved: where everyone is follows from the hour.
 
-import { CELL, WORLD_W, WORLD_H } from './geo.js';
+import { CELL, COLS, ROWS, WORLD_W, WORLD_H } from './geo.js';
 import { world, regionAt, regionIdAt, collides, isReachable, findPath, hash2, REGION_IDS, idxOf, cellX, cellY, PLAYER_R } from './terrain.js';
 import { STRUCTURES, NPC_SPOTS, NPC_SHOW, WANDERERS } from './places.js';
 import { NODES, PEOPLE_PLACES } from './map.js';
@@ -370,8 +370,8 @@ function folkOf(L) {
     const ridx = REGION_IDS.indexOf(region);
     const at = NODES[region].at;
     const cand = [];
-    for (let j = 0; j < 115; j++) {
-      for (let i = 0; i < 130; i++) {
+    for (let j = 0; j < ROWS; j++) {
+      for (let i = 0; i < COLS; i++) {
         const k = idxOf(i, j);
         if (g.reg[k] !== ridx || !g.reach[k] || g.solidCell[k]) continue;
         const x = cellX(i);

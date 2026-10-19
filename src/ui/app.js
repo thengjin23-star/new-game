@@ -19,7 +19,7 @@ import { ROOTS, INJURY, BUFFS, realmLabel, stageReq, age, lifespan, rateParts, b
 import { SLOTS, STAT_WORD, gearOf, slotOf } from '../core/body.js';
 import { fmtDate, fmtDuration, seasonOf, SEASON_NAME } from '../core/calendar.js';
 import { NODES, canSecludeAt, nodeQi } from '../world/map.js';
-import { WORLD_W, WORLD_H, COLS, ROWS } from '../world/geo.js';
+import { WORLD_W, WORLD_H, COLS, ROWS, CELL } from '../world/geo.js';
 import { findPath, regionIdAt, world } from '../world/terrain.js';
 import { heights } from '../world/height.js';
 import { POIS } from '../world/places.js';
@@ -46,7 +46,7 @@ import { KE } from '../content/wuxing.js';
 import * as END from '../world/ending.js';
 import { refineLevel, refineMult } from '../core/refine.js';
 
-const VERSION = '0.17';
+const VERSION = '0.18';
 const ITEM_ORDER = ['weapon', 'gear', 'flyer', 'tool', 'pill', 'talisman', 'herb', 'material', 'book', 'treasure', 'token', 'unknown'];
 const ITEM_KIND = { pill: '丹藥', herb: '靈草', material: '材料', book: '典籍', weapon: '兵器', gear: '裝備', flyer: '飛行法器', tool: '工具', treasure: '寶物', talisman: '符籙', token: '信物', unknown: '未知' };
 const DOCK = [
@@ -83,6 +83,35 @@ function seal(text, cls = '') {
 function bar(value, max, cls = '') {
   const pct = Math.max(0, Math.min(100, (value / max) * 100));
   return h('div.bar' + (cls ? '.' + cls : ''), h('i', { style: { width: pct + '%' } }));
+}
+
+/** Where each box inside root has been scrolled to, by its place in the tree. */
+function scrollsOf(root) {
+  const out = [];
+  const walk = (el, path) => {
+    [...el.children].forEach((c, i) => {
+      const at = `${path}/${i}`;
+      if (c.scrollTop > 0 || c.scrollLeft > 0) out.push([at, c.scrollTop, c.scrollLeft]);
+      if (c.childElementCount) walk(c, at);
+    });
+  };
+  walk(root, '');
+  return out;
+}
+
+/** Scroll the boxes in the same places of a tree drawn again back to where they were. */
+function keepScrolls(root, list) {
+  for (const [at, top, left] of list) {
+    let el = root;
+    for (const i of at.split('/').slice(1)) {
+      el = el?.children[Number(i)];
+      if (!el) break;
+    }
+    if (el) {
+      el.scrollTop = top;
+      el.scrollLeft = left;
+    }
+  }
 }
 
 function chipList(chips) {
@@ -786,6 +815,7 @@ export function startApp(root, { speed = 1, view = null } = {}) {
   function toggleArts() {
     const s = ui.s;
     ui.artsOpen = !ui.artsOpen && !!s && !s.pending && !s.secl && !CB.inCombat(s) && AR.artsOf(s).length > 0;
+    if (ui.artsOpen) hideCaption();
     renderArts();
   }
 
@@ -1276,7 +1306,7 @@ export function startApp(root, { speed = 1, view = null } = {}) {
           h('span.hud-realm', realmLabel(p)),
           h('span.hud-ls', { title: '靈石' }, h('i.gem'), String(p.ls)),
         ),
-        h('div.hud-line.sub', h('span', fmtDate(s.day)), h('span', timeWord(s))),
+        h('div.hud-line.sub', h('span.hud-date', h('span.era', '天元'), fmtDate(s.day).replace(/^天元/, '')), h('span.hud-time', timeWord(s))),
         h('div.hud-xw', bar(p.xw, req, neck ? 'full' : ''), h('span', neck ? '修為圓滿・可突破' : `修為 ${Math.floor(p.xw)} / ${req}`)),
         // your blood and 靈力, always (they are what a fight takes, and rest gives back)
         h('div.hud-vitals', h('div.vbar.hp', h('i'), h('span')), h('div.vbar.mp', h('i'), h('span'))),
@@ -1428,6 +1458,11 @@ export function startApp(root, { speed = 1, view = null } = {}) {
 
   function showCaption(c) {
     const s = ui.s;
+    // (the 術 list sits in the same place: one at a time)
+    if (ui.artsOpen) {
+      ui.artsOpen = false;
+      renderArts();
+    }
     ui.caption = { ...c, at: [s.world.x, s.world.y] };
     const el = $('.caption');
     clear(el);
@@ -1500,12 +1535,12 @@ export function startApp(root, { speed = 1, view = null } = {}) {
     // clouds
     const f = fogOf(s);
     g.fillStyle = 'rgba(241,238,230,0.96)';
-    const c0 = Math.max(0, Math.floor(x0 / 40));
-    const r0 = Math.max(0, Math.floor(y0 / 40));
-    for (let j = r0; j < Math.min(ROWS, r0 + SPAN / 40 + 2); j++) {
-      for (let i = c0; i < Math.min(COLS, c0 + SPAN / 40 + 2); i++) {
+    const c0 = Math.max(0, Math.floor(x0 / CELL));
+    const r0 = Math.max(0, Math.floor(y0 / CELL));
+    for (let j = r0; j < Math.min(ROWS, r0 + SPAN / CELL + 2); j++) {
+      for (let i = c0; i < Math.min(COLS, c0 + SPAN / CELL + 2); i++) {
         if (f.bits[j * COLS + i]) continue;
-        g.fillRect((i * 40 - x0) * k - 0.5, (j * 40 - y0) * k - 0.5, 40 * k + 1, 40 * k + 1);
+        g.fillRect((i * CELL - x0) * k - 0.5, (j * CELL - y0) * k - 0.5, CELL * k + 1, CELL * k + 1);
       }
     }
     // known places nearby
@@ -1545,16 +1580,30 @@ export function startApp(root, { speed = 1, view = null } = {}) {
     if (!el) return;
     if (!s.secl) {
       el.classList.remove('on');
+      delete el.dataset.key;
       return;
     }
     const x = s.secl;
     el.classList.add('on');
-    clear(el);
-    put(el, 
-      h('div.secl-head', h('b', `於${NODES[x.node].name}閉關`), h('button.btn.small', { onclick: () => act((y) => A.endSeclusionEarly(y, Date.now())) }, '提前出關')),
-      bar(x.done, x.days, 'calm'),
-      h('p.small.muted', seclText()),
-    );
+    // built once for each seclusion, then only its numbers move (rebuilt every second,
+    // a press on 提前出關 could land on a button just thrown away)
+    const key = `${x.node}|${x.start}|${x.days}`;
+    if (el.dataset.key !== key) {
+      el.dataset.key = key;
+      clear(el);
+      put(el,
+        h('div.secl-head', h('b', `於${NODES[x.node].name}閉關`), h('button.btn.small', { onclick: () => act((y) => A.endSeclusionEarly(y, Date.now())) }, '提前出關')),
+        bar(x.done, x.days, 'calm'),
+        h('p.small.muted', seclText()),
+      );
+      // (what else is shown at the bottom makes way for it)
+      ui.shell?.style.setProperty('--secl-h', `${el.offsetHeight}px`);
+    } else {
+      const fill = el.querySelector('.bar i');
+      if (fill) fill.style.width = `${Math.max(0, Math.min(100, (x.done / x.days) * 100))}%`;
+      const words = el.querySelector('p.small');
+      if (words) words.textContent = seclText();
+    }
     renderHud();
   }
 
@@ -1616,6 +1665,11 @@ export function startApp(root, { speed = 1, view = null } = {}) {
     if (!el) return;
     const key = layerKeyOf(s);
     if (key !== ui.layerKey && s.pending?.result && !s.pending.notice) SND.result(s.pending.result);
+    // drawn again on the same page (a tap that changed something on it): it stays where you had
+    // scrolled to; a page (or a tab, or a step of the story) of its own starts from the top
+    const page = `${key}|${ui.logTab}|${ui.cultTab || ''}`;
+    const keep = page === ui.layerPage ? scrollsOf(el) : null;
+    ui.layerPage = page;
     ui.layerKey = key;
     clear(el);
     el.classList.remove('dim');
@@ -1628,6 +1682,7 @@ export function startApp(root, { speed = 1, view = null } = {}) {
     }
     el.classList.toggle('open', el.childElementCount > 0);
     el.classList.toggle('mapview', !s.pending && !s.dead && ui.sheet === 'map');
+    if (keep) keepScrolls(el, keep);
     if (s.pending || s.dead) {
       // rumors on screen count as read
     } else if (ui.sheet === 'log' && ui.logTab === 'rumors') {

@@ -87,7 +87,7 @@ export function nextGoal(s) {
 /** Each pointer: where it points, what it says, and when it applies. view: what is on the screen. */
 export const COACH = [
   { id: 'act', at: 'act', text: '點這顆大鈕（或直接點那個人、那樣東西）', when: (s, v) => v.act },
-  { id: 'fight', at: 'strike', text: '有東西靠近了！大鈕普攻，圍著的三顆是招式，綠色是閃避', when: (s, v) => v.cbtReady },
+  { id: 'fight', at: 'strike', text: '有東西靠近了！大鈕普攻，圍著的是招式，綠色閃避', when: (s, v) => v.cbtReady },
   { id: 'sit', at: 'sit', text: '「坐」：歇息、四處搜尋、閉關', when: (s, v) => s.flags.opening_done && (s.world?.walked || 0) > 300 && !v.cbtReady },
   { id: 'menu', at: 'dock', text: '修為滿了：打開「修煉」突破', when: (s) => atBottleneck(s) },
   { id: 'map', at: 'map', text: '點小地圖看大地圖，點一個地方就能走過去', when: (s) => Object.values(s.nodes).filter((n) => n.visited).length >= 2 },

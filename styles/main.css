@@ -5,12 +5,35 @@
   --paper-3: #ddd3bf;
   --ink: #23201b;
   --ink-2: #4a453d;
-  --muted: #776f62;
+  --muted: #675f53; /* (4.6:1 on the darker paper: long help text stays readable) */
   --line: rgba(35, 32, 27, 0.15);
   --red: #a8322a;
   --jade: #3b6a5b;
   --ochre: #946222;
   --violet: #6a4c86;
+  /* type, from the least allowed up (docs/UI規範.md) */
+  --fs-xs: 11px; /* the least: words on bars, badges, key marks */
+  --fs-sm: 13px; /* second lines, chips, notes */
+  --fs-md: 14px; /* small buttons, lists in pages */
+  --fs-body: 16px; /* pages */
+  --fs-story: 17px; /* the story */
+  --fs-title: 24px; /* page titles */
+  /* room between things, and the least a finger needs */
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 24px;
+  --radius-s: 6px;
+  --radius-m: 10px;
+  --tap: 44px;
+  /* layers, bottom to top (docs/UI規範.md): every fixed thing on the screen takes one of these */
+  --z-hud: 5; /* the card, the place, the goal, the minimap, word at the top, the walking hint */
+  --z-hands: 6; /* under the thumbs: the stick, the round buttons, the seclusion bar, the fight card */
+  --z-pop: 7; /* what opens by the thumbs: the place card, the 術 list, the fighting buttons */
+  --z-menu: 8; /* the menu */
+  --z-coach: 9; /* first-time pointers */
+  --z-layer: 20; /* pages, the story, death and the ending (everything under them waits) */
   --font: 'LXGW WenKai TC', 'Kaiti TC', 'STKaiti', 'BiauKai', 'DFKai-SB', 'Noto Serif TC', serif;
   /* the phone's notch and bars, on the page's own top, bottom, left and right */
   --st: env(safe-area-inset-top, 0px);
@@ -367,11 +390,18 @@ p {
     width: min(460px, 56cqw);
     padding: calc(var(--sat) + 18px) 28px calc(var(--sab) + 18px) calc(var(--sl) + 36px);
     background: linear-gradient(to right, var(--paper) 52%, rgba(239, 233, 220, 0.9) 72%, rgba(239, 233, 220, 0));
-    align-content: center;
-    justify-items: start;
+    /* centred while there is room, from the top once there is not (see .ev-side) */
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
     text-align: left;
     gap: clamp(8px, 2.6cqh, 16px);
     overflow-y: auto;
+  }
+  .title-inner::before,
+  .title-inner::after {
+    content: '';
+    flex: 1 0 0;
   }
   .title-actions {
     margin-top: 0;
@@ -411,6 +441,9 @@ p {
 /* ── create ── */
 .create {
   max-width: 560px;
+  height: 100%;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
   margin: 0 auto;
   padding: calc(var(--sat) + 24px) 20px calc(var(--sab) + 32px);
   display: grid;
@@ -1243,7 +1276,7 @@ textarea.code {
   display: flex;
   position: fixed;
   inset: 0;
-  z-index: 20;
+  z-index: var(--z-layer);
   align-items: center;
   justify-content: center;
   padding: calc(var(--st) + 6px) calc(var(--sr) + 8px) calc(var(--sb) + 6px) calc(var(--sl) + 8px);
@@ -1295,11 +1328,18 @@ textarea.code {
   padding: 16px 16px 18px;
   border-left: 1px solid var(--line);
   background: rgba(221, 211, 191, 0.32);
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  align-content: center;
+  /* centred while there is room; from the top, scrolling, once there is not
+     (centring a box that overflows would put its first choices out of reach) */
+  display: flex;
+  flex-direction: column;
   gap: 8px;
   -webkit-overflow-scrolling: touch;
+}
+
+.ev-side::before,
+.ev-side::after {
+  content: '';
+  flex: 1 0 0;
 }
 
 .ev-side:empty {
@@ -1314,7 +1354,7 @@ textarea.code {
   margin-top: 0;
 }
 
-@container app (max-width: 620px) {
+@container app (max-width: 620px) and (max-aspect-ratio: 5/4) {
   .event-sheet {
     flex-direction: column;
     overflow-y: auto;
@@ -1557,15 +1597,19 @@ p.fate {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .sheet {
-    animation: none;
+  .sheet,
+  .toast,
+  .banner,
+  .coach {
+    animation: none !important;
   }
-  .bar i {
-    transition: none;
+  .bar i,
+  .toast {
+    transition: none !important;
   }
 }
 
-@media (max-width: 360px) {
+@container app (max-width: 360px) {
   .actions {
     grid-template-columns: repeat(2, 1fr);
   }
@@ -1630,7 +1674,7 @@ canvas.world-overlay {
   position: absolute;
   inset: 0;
   pointer-events: none;
-  z-index: 5;
+  z-index: var(--z-hud);
 }
 
 .hud button {
@@ -1664,6 +1708,9 @@ canvas.world-overlay {
 }
 
 .hud-line.sub {
+  flex-wrap: wrap;
+  column-gap: 8px;
+  row-gap: 0;
   justify-content: space-between;
   font-size: 12.5px;
   color: var(--muted);
@@ -1672,6 +1719,21 @@ canvas.world-overlay {
 
 .hud-name {
   font-size: 17px;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hud-date,
+.hud-time {
+  white-space: nowrap;
+}
+
+@container app (max-width: 600px) {
+  .hud-date .era {
+    display: none;
+  }
 }
 
 .hud-realm {
@@ -1712,9 +1774,9 @@ canvas.world-overlay {
 
 .vbar {
   position: relative;
-  height: 13px;
-  border-radius: 7px;
-  background: rgba(35, 32, 27, 0.13);
+  height: 15px;
+  border-radius: 8px;
+  background: rgba(35, 32, 27, 0.34);
   overflow: hidden;
 }
 
@@ -1753,10 +1815,10 @@ canvas.world-overlay {
   position: absolute;
   inset: 0;
   padding-left: 7px;
-  font-size: 10px;
-  line-height: 13px;
+  font-size: 11px;
+  line-height: 15px;
   color: #f7efe1;
-  text-shadow: 0 0 2px rgba(20, 16, 12, 0.75);
+  text-shadow: 0 0 2px rgba(20, 16, 12, 0.95), 0 0 4px rgba(20, 16, 12, 0.6);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
@@ -1856,9 +1918,11 @@ canvas.world-overlay {
   text-align: center;
 }
 
-/* in a fight, under whom you are fighting, and only the latest two (the fight is in the middle) */
+/* in a fight, under whom you are fighting (as wide as its bar), and only the latest two */
 .game.combat .toasts {
-  top: calc(var(--st) + 50px);
+  left: calc(var(--sl) + 8px + var(--card) + 16px);
+  right: calc(var(--sr) + 8px + var(--mm) + 16px);
+  top: calc(var(--st) + 60px);
 }
 
 .game.combat .toast:nth-last-child(n + 3) {
@@ -1876,14 +1940,11 @@ canvas.world-overlay {
   }
 }
 
-/* a narrow page: word comes down the left, under the card */
+/* a narrow page: the same place, smaller word (under the card there is no room: the place, the goal, the stick) */
 @container app (max-width: 600px) {
-  .toasts {
-    left: calc(var(--sl) + 8px);
-    right: auto;
-    width: var(--card);
-    top: calc(var(--st) + 150px);
-    justify-items: start;
+  .toast {
+    padding: 3px 9px;
+    font-size: 12px;
   }
 }
 
@@ -1990,7 +2051,7 @@ canvas.world-overlay {
   background: rgba(239, 233, 219, 0.25);
   display: none;
   pointer-events: none;
-  z-index: 6;
+  z-index: var(--z-hands);
 }
 
 .joy.on {
@@ -2037,7 +2098,7 @@ canvas.world-overlay {
   border-radius: 10px;
   box-shadow: 0 4px 16px rgba(30, 24, 16, 0.2);
   display: none;
-  z-index: 7;
+  z-index: var(--z-pop);
   animation: toastIn 0.2s ease-out;
 }
 
@@ -2088,7 +2149,7 @@ canvas.world-overlay {
   bottom: 0;
   width: 0;
   height: 0;
-  z-index: 6;
+  z-index: var(--z-hands);
 }
 
 .actbar[hidden] {
@@ -2250,7 +2311,7 @@ canvas.world-overlay {
   box-shadow: 0 6px 20px rgba(30, 24, 16, 0.25);
   display: none;
   gap: 6px;
-  z-index: 7;
+  z-index: var(--z-pop);
 }
 
 .arts-pop.on {
@@ -2355,7 +2416,7 @@ canvas.world-overlay {
   border-radius: 10px;
   display: none;
   gap: 8px;
-  z-index: 6;
+  z-index: var(--z-hands);
 }
 
 .secl-bar.on {
@@ -2378,7 +2439,7 @@ nav.dock {
   grid-template-columns: repeat(2, 44px);
   grid-auto-rows: calc((var(--mm) - 4px) / 2);
   gap: 4px;
-  z-index: 8;
+  z-index: var(--z-menu);
 }
 
 .dock-btn {
@@ -2492,7 +2553,7 @@ nav.dock {
   justify-content: flex-start;
 }
 
-@container app (max-width: 620px) {
+@container app (max-width: 620px) and (max-aspect-ratio: 5/4) {
   .map-body {
     grid-template-columns: minmax(0, 1fr);
     grid-template-rows: minmax(0, 1fr) auto;
@@ -2576,8 +2637,15 @@ canvas.bigmap {
 
 .map-zoom {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
   justify-content: center;
+}
+
+.map-zoom .btn {
+  white-space: nowrap;
+  padding-left: 10px;
+  padding-right: 10px;
 }
 
 .map-places h3 {
@@ -2739,7 +2807,7 @@ canvas.fu-canvas {
   font-size: 13.5px;
   line-height: 1.6;
   pointer-events: none;
-  z-index: 5;
+  z-index: var(--z-hud);
   white-space: nowrap;
 }
 
@@ -2770,7 +2838,7 @@ canvas.fu-canvas {
   position: absolute;
   inset: 0;
   pointer-events: none;
-  z-index: 6;
+  z-index: var(--z-hands);
   display: none;
 }
 
@@ -2840,7 +2908,7 @@ canvas.fu-canvas {
   position: relative;
   height: 16px;
   border-radius: 8px;
-  background: rgba(35, 32, 27, 0.16);
+  background: rgba(35, 32, 27, 0.36);
   overflow: hidden;
 }
 
@@ -2878,7 +2946,7 @@ canvas.fu-canvas {
 }
 
 .cbt-bar.mp {
-  height: 12px;
+  height: 14px;
 }
 
 .cbt-bar.mp i {
@@ -2892,14 +2960,14 @@ canvas.fu-canvas {
   font-size: 11px;
   line-height: 16px;
   color: #f7efe1;
-  text-shadow: 0 0 2px rgba(20, 16, 12, 0.7);
+  text-shadow: 0 0 2px rgba(20, 16, 12, 0.95), 0 0 4px rgba(20, 16, 12, 0.6);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
 
 .cbt-bar.mp span {
-  font-size: 10px;
-  line-height: 12px;
+  font-size: 11px;
+  line-height: 14px;
 }
 
 /* whom you are fighting: across the top, in the middle */
@@ -3016,7 +3084,7 @@ canvas.fu-canvas {
   bottom: 0;
   width: 0;
   height: 0;
-  z-index: 7;
+  z-index: var(--z-pop);
   display: none;
 }
 
@@ -3073,7 +3141,7 @@ canvas.fu-canvas {
 }
 
 .cbt-btn small {
-  font-size: 10px;
+  font-size: 11px;
   line-height: 1.1;
   color: #4f73a8;
 }
@@ -3126,7 +3194,7 @@ canvas.fu-canvas {
   border-radius: 4px;
   background: rgba(35, 32, 27, 0.8);
   color: #f7efe1;
-  font: 600 10px/16px sans-serif;
+  font: 600 11px/16px sans-serif;
   display: none;
 }
 
@@ -3246,7 +3314,7 @@ span.el {
   transform: translateX(-50%);
   padding: 0 4px;
   border-radius: 6px;
-  font-size: 10px;
+  font-size: 11px;
   line-height: 14px;
   color: #fff;
   background: var(--jade);
@@ -3386,7 +3454,7 @@ span.el {
 /* the first-time pointers: a dark bubble by the button it is about */
 .coach {
   position: absolute;
-  z-index: 9;
+  z-index: var(--z-coach);
   display: none;
   max-width: 230px;
   padding: 8px 12px;
@@ -3396,7 +3464,8 @@ span.el {
   font-size: 13.5px;
   line-height: 1.55;
   box-shadow: 0 4px 14px rgba(20, 16, 10, 0.3);
-  cursor: pointer;
+  /* (taps go through it to what lies under; it goes by itself) */
+  pointer-events: none;
   animation: toastIn 0.3s ease-out;
 }
 
@@ -3413,25 +3482,23 @@ span.el {
   transform: rotate(45deg);
 }
 
+/* a pointer at the round buttons sits above the whole ring of them (covering none),
+   its arrow down at the one it means */
 .coach[data-at='act'],
-.coach[data-at='strike'] {
-  right: calc(var(--pr) - 30px);
-  bottom: calc(var(--pb) + var(--main) / 2 + 14px);
-}
-
-.coach[data-at='sit'] {
-  right: calc(var(--pr) + var(--ring) - 50px);
-  bottom: calc(var(--pb) + var(--skill) / 2 + 14px);
-}
-
-.coach[data-at='arts'] {
-  right: calc(var(--pr) + var(--ring) * 0.71 - 50px);
-  bottom: calc(var(--pb) + var(--ring) * 0.71 + var(--skill) / 2 + 12px);
-}
-
+.coach[data-at='strike'],
+.coach[data-at='sit'],
+.coach[data-at='arts'],
 .coach[data-at='fly'] {
   right: calc(var(--pr) - 30px);
   bottom: calc(var(--pb) + var(--ring) + var(--skill) / 2 + 12px);
+}
+
+.coach[data-at='sit'] {
+  min-width: calc(var(--ring) + 80px);
+}
+
+.coach[data-at='arts'] {
+  min-width: calc(var(--ring) * 0.71 + 80px);
 }
 
 .coach[data-at='act']::after,
@@ -3441,6 +3508,31 @@ span.el {
 .coach[data-at='fly']::after {
   right: 44px;
   bottom: -5px;
+}
+
+.coach[data-at='sit']::after {
+  right: calc(44px + var(--ring));
+}
+
+.coach[data-at='arts']::after {
+  right: calc(44px + var(--ring) * 0.71);
+}
+
+/* (on a short screen, a smaller pointer, clear of the word at the top) */
+@container app (max-height: 340px) {
+  .coach {
+    max-width: 150px;
+    padding: 5px 9px;
+    font-size: 12px;
+    line-height: 1.4;
+  }
+  .coach[data-at='act'],
+  .coach[data-at='strike'],
+  .coach[data-at='sit'],
+  .coach[data-at='arts'],
+  .coach[data-at='fly'] {
+    bottom: calc(var(--pb) + var(--ring) + var(--skill) / 2 + 7px);
+  }
 }
 
 .coach[data-at='dock'] {
@@ -3520,4 +3612,71 @@ span.el {
 
 .howto details p {
   margin-top: 4px;
+}
+
+/* the card at the bottom: not while a beast closes in (the fighting buttons take that
+   corner), and above the seclusion bar while that is up */
+.game.cbt-ready .caption {
+  display: none;
+}
+
+.game.secl .caption {
+  /* (in seclusion the round buttons are put away: the card takes the room right of your own,
+     above the bar, under the minimap, and scrolls if it must) */
+  left: calc(var(--sl) + 8px + var(--card) + 10px);
+  right: calc(var(--sr) + 12px);
+  bottom: calc(var(--sb) + 18px + var(--secl-h, 96px));
+  max-height: calc(100% - var(--sb) - 18px - var(--secl-h, 96px) - var(--st) - 6px - var(--mm) - 8px);
+  overflow-y: auto;
+}
+
+/* H. the small things you tap at the top left: a finger needs more than they show */
+@media (pointer: coarse) {
+  .hud-goal,
+  .place-tag {
+    position: relative;
+  }
+  .hud-goal::after,
+  .place-tag::after {
+    content: '';
+    position: absolute;
+    inset: -7px -4px;
+  }
+}
+
+/* a short page: the place and its flags keep to one line (the stick is just below them);
+   (after the rules it changes, which it must outrank) */
+@container app (max-height: 420px) {
+  .hud-row {
+    flex-wrap: nowrap;
+    min-width: 0;
+  }
+  .place-tag {
+    flex: none;
+  }
+  .hud-flags {
+    flex-wrap: nowrap;
+    min-width: 0;
+    overflow: hidden;
+    -webkit-mask-image: linear-gradient(to right, #000 82%, transparent);
+    mask-image: linear-gradient(to right, #000 82%, transparent);
+  }
+  .hud-flags > * {
+    flex: none;
+  }
+}
+
+/* a fight on a short page: word under your own card on the left (the date and the place are
+   put away while you fight, so the corner is free), the latest one only */
+@container app (max-height: 420px) {
+  .game.combat .toasts {
+    left: calc(var(--sl) + 8px);
+    right: auto;
+    width: var(--card);
+    top: calc(var(--st) + 104px);
+    justify-items: start;
+  }
+  .game.combat .toast:nth-last-child(n + 2) {
+    display: none;
+  }
 }

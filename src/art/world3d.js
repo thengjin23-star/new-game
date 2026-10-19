@@ -6,7 +6,7 @@
 // as the fallback where WebGL is not to be had.
 
 import * as THREE from './gl/three.js';
-import { WORLD_W, WORLD_H } from '../world/geo.js';
+import { WORLD_W, WORLD_H, CELL, COLS } from '../world/geo.js';
 import { world, hash2 } from '../world/terrain.js';
 import { POIS, STRUCTURES } from '../world/places.js';
 import { VALLEY, LAKES } from '../world/geo.js';
@@ -439,7 +439,7 @@ export function createWorld3D(canvas, { onFrame, idle, quality = 'high', onSlow 
     L.begin();
     M.begin();
     const bits = fogOf(s).bits;
-    const near = (x, y, r = 1300) => Math.abs(x - focus.x) < r && y > focus.y - 1700 && y < focus.y + 800 && !!bits[Math.floor(y / 40) * 130 + Math.floor(x / 40)];
+    const near = (x, y, r = 1300) => Math.abs(x - focus.x) < r && y > focus.y - 1700 && y < focus.y + 800 && !!bits[Math.floor(y / CELL) * COLS + Math.floor(x / CELL)];
     if (dark > 0.04) {
       for (const st of STRUCTURES) {
         const lit = LIT[st.sprite];
@@ -792,9 +792,9 @@ export function createWorld3D(canvas, { onFrame, idle, quality = 'high', onSlow 
       if (!s.nodes[id]?.known || s.nodes[id]?.visited) continue;
       const [lx, ly] = n.label || n.at || [];
       if (lx === undefined) continue;
-      const i = Math.floor(lx / 40);
-      const j = Math.floor(ly / 40);
-      if (f.bits[j * 130 + i]) continue;
+      const i = Math.floor(lx / CELL);
+      const j = Math.floor(ly / CELL);
+      if (f.bits[j * COLS + i]) continue;
       const [sx, sy] = worldToScreen(lx, ly, 70);
       if (sx < -100 || sx > W + 100 || sy < -40 || sy > H + 40) continue;
       octx.fillStyle = 'rgba(80,72,62,0.6)';

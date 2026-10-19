@@ -4,7 +4,7 @@
 // walk on and, once you are well past, it is gone. Nothing here is saved:
 // a scene lives only while you are near it.
 
-import { CELL, T, WORLD_W, WORLD_H } from './geo.js';
+import { CELL, COLS, ROWS, T, WORLD_W, WORLD_H } from './geo.js';
 import { world, regionAt, collides, isReachable, idxOf, colOf, rowOf } from './terrain.js';
 import { POIS, BEASTS } from './places.js';
 import { SCENE_OF_EVENT } from './scenes.js';
@@ -29,7 +29,7 @@ function near(x, y, set, r) {
   const g = world();
   for (let j = rowOf(y) - n; j <= rowOf(y) + n; j++) {
     for (let i = colOf(x) - n; i <= colOf(x) + n; i++) {
-      if (i < 0 || j < 0 || i >= 130 || j >= 115) continue;
+      if (i < 0 || j < 0 || i >= COLS || j >= ROWS) continue;
       if (set.has(g.terr[idxOf(i, j)]) && Math.hypot((i + 0.5) * CELL - x, (j + 0.5) * CELL - y) <= r + CELL * 0.5) return true;
     }
   }
@@ -164,7 +164,7 @@ function waterSide(x, y) {
   let best = null;
   for (let j = rowOf(y) - 3; j <= rowOf(y) + 3; j++) {
     for (let i = colOf(x) - 3; i <= colOf(x) + 3; i++) {
-      if (i < 0 || j < 0 || i >= 130 || j >= 115 || g.terr[idxOf(i, j)] !== T.WATER) continue;
+      if (i < 0 || j < 0 || i >= COLS || j >= ROWS || g.terr[idxOf(i, j)] !== T.WATER) continue;
       const dx = (i + 0.5) * CELL - x;
       const d = Math.hypot(dx, (j + 0.5) * CELL - y);
       if (!best || d < best[1]) best = [dx, d];

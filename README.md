@@ -34,7 +34,7 @@
 
 即時戰鬥：左手搖桿移動；右下大鈕普攻（按住連續攻擊，點妖獸也會上前攻擊）；圍著它的三顆是你帶的三招——點一下自動瞄準，按住拖曳自己瞄準、放開施放、拖回按鈕取消；左下方綠色的「閃避」短距離位移，途中不會被打中；再外圈的兩顆小鈕燒一張隨身的符、吃身上最好的療傷藥（中毒先吃解毒丹）。電腦：J 普攻、1 2 3 三招（朝滑鼠方向，按住看範圍、放開施放）、空白鍵或 Shift 閃避、Q 吃藥、F 燒符。
 
-怎麼玩見 [docs/玩法.md](docs/玩法.md)；設計細節、後續方向與音樂規劃見 [docs/GDD.md](docs/GDD.md)；即時戰鬥的架構分析與計畫見 [docs/ACTION_COMBAT.md](docs/ACTION_COMBAT.md)。
+怎麼玩見 [docs/玩法.md](docs/玩法.md)；設計細節、後續方向與音樂規劃見 [docs/GDD.md](docs/GDD.md)；全面升級的檢查結果與分階段計畫見 [docs/升級計畫.md](docs/升級計畫.md)，介面規範見 [docs/UI規範.md](docs/UI規範.md)；即時戰鬥的架構分析與計畫見 [docs/ACTION_COMBAT.md](docs/ACTION_COMBAT.md)。
 
 ## 試玩
 

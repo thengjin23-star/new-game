@@ -3,7 +3,8 @@ import { newGame, rollFate } from '../src/core/state.js';
 import { startEvent, choose, continueEvent, endRealFight } from '../src/core/events.js';
 import { advance, newReport } from '../src/core/time.js';
 import { ensureWorld, placeAt } from '../src/world/explore.js';
-import { nearestOpen } from '../src/world/terrain.js';
+import { nearestOpen, collides, regionIdAt } from '../src/world/terrain.js';
+import { beastsInWorld } from '../src/world/combat.js';
 import { POI_BY_ID } from '../src/world/places.js';
 import { NODES } from '../src/world/map.js';
 
@@ -69,4 +70,39 @@ export function finish(s) {
     else if (s.pending.result || s.pending.notice) continueEvent(s);
     else choose(s, s.pending.choices.find((c) => !c.disabled).i);
   }
+}
+
+/** Open ground in the wilds south-west of 青石鎮. */
+export const MEADOW = [1426, 3782];
+
+/**
+ * Stand on open ground with members of a group of beasts (def: a BEASTS
+ * entry) set about you at (dx, dy) each, still for now but meaning to fight.
+ */
+export function among(s, def, spots, tod = 15) {
+  let at = null;
+  for (let r = 0; r < 500 && !at; r += 30) {
+    for (let a = 0; a < 6.28 && !at; a += 0.5) {
+      const x = MEADOW[0] + Math.cos(a) * r;
+      const y = MEADOW[1] + Math.sin(a) * r;
+      const home = regionIdAt(x, y);
+      let ok = !collides(s, x, y, 16);
+      for (let q = 0; q < 6.28 && ok; q += 0.4) {
+        for (let d = 10; d <= 240 && ok; d += 10) {
+          const px = x + Math.cos(q) * d;
+          const py = y + Math.sin(q) * d;
+          if (collides(s, px, py, 12) || regionIdAt(px, py) !== home) ok = false;
+        }
+      }
+      if (ok) at = [x, y];
+    }
+  }
+  assert.ok(at, 'open ground');
+  placeAt(s, at[0], at[1]);
+  resolvePending(s);
+  s.tod = tod;
+  const w = s.world;
+  const list = beastsInWorld(s, 99999).filter((b) => b.def.id === def.id);
+  spots.forEach(([dx, dy], i) => Object.assign(list[i], { x: w.x + dx, y: w.y + dy, state: 'recover', st: 0, rec: 99, aggro: true }));
+  return list.slice(0, spots.length);
 }
