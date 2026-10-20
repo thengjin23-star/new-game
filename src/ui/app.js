@@ -1478,11 +1478,14 @@ export function startApp(root, { speed = 1, view = null } = {}) {
     el.textContent = c.text;
     el.dataset.at = c.at;
     el.classList.add('on');
+    // (on a short screen, the word at the top makes room for it: see .game.coached)
+    ui.shell.classList.add('coached');
   }
 
   function hideCoach() {
     ui.coach = null;
     $('.coach')?.classList.remove('on');
+    ui.shell?.classList.remove('coached');
   }
 
   function showBanner(b) {

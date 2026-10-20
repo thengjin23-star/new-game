@@ -2228,6 +2228,10 @@ canvas.world-overlay {
   .toast:nth-last-child(n + 3) {
     display: none;
   }
+  /* (while a pointer is up, the newest alone: two long ones, wrapped in a narrow column, reach down to it) */
+  .game.coached .toast:nth-last-child(n + 2) {
+    display: none;
+  }
 }
 
 /* a narrow page: the same place, smaller word (under the card there is no room: the place, the goal, the stick) */
