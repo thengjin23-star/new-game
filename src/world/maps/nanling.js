@@ -162,7 +162,18 @@ const sound = {
   wangu_valley: 'gu', jade_pool: 'falls', water_cave: 'cave', nanling_wilds: 'nanwilds',
 };
 
-export const NANLING_LAND = { ground, trees, settled, roll, sound };
+/** The air of each region in the 3D world (art/world3d.js MOODS): the haze it tints, how dim, what drifts. */
+const moods = {
+  miasma_forest: { tint: [0.62, 0.7, 0.42], amount: 0.48, dim: 0.84, motes: 'darkleaf' },
+  poison_marsh: { tint: [0.6, 0.66, 0.5], amount: 0.4, dim: 0.9, motes: null },
+  wangu_valley: { tint: [0.62, 0.55, 0.62], amount: 0.42, dim: 0.85, motes: 'ash' },
+  jade_pool: { tint: [0.78, 0.9, 0.88], amount: 0.32, dim: 1, motes: 'mote' },
+  water_cave: { tint: [0.62, 0.7, 0.72], amount: 0.3, dim: 0.9, motes: null },
+  qingzhu_village: { tint: [0.86, 0.92, 0.84], amount: 0.15, dim: 1, motes: null },
+  nanling_wilds: { tint: [0.78, 0.86, 0.78], amount: 0.2, dim: 0.97, motes: null },
+};
+
+export const NANLING_LAND = { ground, trees, settled, roll, sound, moods };
 
 // ── places ──
 
@@ -208,12 +219,12 @@ export const NANLING_NODES = {
 /** Buildings, places to walk up to, and what roams (places.js STRUCTURES / POIS / BEASTS, for this map). */
 const STRUCTURES = [
   // 青竹寨: the elder's house at the top of the street, houses up and down the slope
-  { x: 3080, y: 1020, w: 160, h: 86, sprite: 'mansion', name: '寨老家' },
+  { x: 3080, y: 1020, w: 160, h: 86, sprite: 'mansion', name: '寨老' },
   { x: 2890, y: 1070, w: 70, h: 44, sprite: 'house' },
   { x: 3250, y: 1050, w: 70, h: 44, sprite: 'house' },
   { x: 3400, y: 1060, w: 64, h: 42, sprite: 'house' },
   { x: 2900, y: 1230, w: 70, h: 44, sprite: 'house' },
-  { x: 3190, y: 1222, w: 90, h: 50, sprite: 'shop', name: '藥鋪' },
+  { x: 3190, y: 1222, w: 90, h: 50, sprite: 'shop', name: '百藥鋪' },
   { x: 3330, y: 1215, w: 70, h: 44, sprite: 'house' },
   { x: 3040, y: 1300, w: 54, h: 38, sprite: 'hut' },
   { x: 2780, y: 1150, w: 44, h: 36, sprite: 'shrine_small', name: '山神' },

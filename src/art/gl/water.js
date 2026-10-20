@@ -4,7 +4,7 @@
 // where the stream runs steep.
 
 import * as THREE from './three.js';
-import { WORLD_W, WORLD_H } from '../../world/geo.js';
+import { WORLD_W, WORLD_H, EDGE_RIVER } from '../../world/geo.js';
 import { heights, LEVEL } from '../../world/height.js';
 import { GLSL_COMMON, GLSL_LIGHT } from './env.js';
 
@@ -149,14 +149,16 @@ export function createWater(env) {
   const running = material(env, true);
   const mats = [still, flowing, running];
 
-  // the great river, and the mist-hung water beyond it, to the world's edge and past it
-  const river = H.streams.find((r) => r.id === 'great');
-  let minX = WORLD_W;
-  for (const [x] of river.pts) minX = Math.min(minX, x);
-  group.add(new THREE.Mesh(sheet(minX - river.width / 2 - 260, -600, WORLD_W + 2400, WORLD_H + 1200, LEVEL.river), flowing));
+  // the great river, and the mist-hung water beyond it, to the world's edge and past it (a map whose edge is a river)
+  const river = H.streams.find((r) => r.id === EDGE_RIVER);
+  if (river) {
+    let minX = WORLD_W;
+    for (const [x] of river.pts) minX = Math.min(minX, x);
+    group.add(new THREE.Mesh(sheet(minX - river.width / 2 - 260, -600, WORLD_W + 2400, WORLD_H + 1200, LEVEL.river), flowing));
+  }
   for (const L of H.lakes) group.add(new THREE.Mesh(pond(L.cx, L.cy, L.rx * 1.3, L.ry * 1.3, L.level), still));
   for (const r of H.streams) {
-    if (r.id === 'great') continue;
+    if (r.id === EDGE_RIVER) continue;
     group.add(new THREE.Mesh(ribbon(r.pts, r.width / 2 + 22), running));
   }
   for (const m of group.children) {

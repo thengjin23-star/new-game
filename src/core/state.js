@@ -2,7 +2,7 @@ import { NODES } from '../world/map.js';
 import { initNpcs } from '../world/npcs.js';
 import { hotbarState } from '../world/skills.js';
 
-export const SAVE_VERSION = 1;
+export const SAVE_VERSION = 2;
 
 export const ORIGINS = {
   farmer: {

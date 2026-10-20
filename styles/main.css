@@ -34,6 +34,7 @@
   --z-menu: 8; /* the menu */
   --z-coach: 9; /* first-time pointers */
   --z-layer: 20; /* pages, the story, death and the ending (everything under them waits) */
+  --z-veil: 40; /* crossing into another map: over everything, while its land is painted */
   --font: 'LXGW WenKai TC', 'Kaiti TC', 'STKaiti', 'BiauKai', 'DFKai-SB', 'Noto Serif TC', serif;
   /* the phone's notch and bars, on the page's own top, bottom, left and right */
   --st: env(safe-area-inset-top, 0px);
@@ -4010,4 +4011,46 @@ span.el {
   .game.combat .toast:nth-last-child(n + 2) {
     display: none;
   }
+}
+
+/* crossing into another map (ui/app.js changeMap): the screen goes to paper with the land's name on it,
+   the new land is painted underneath, and the veil lifts */
+.veil {
+  position: absolute;
+  inset: 0;
+  z-index: var(--z-veil);
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 14px;
+  background: radial-gradient(ellipse at 50% 46%, rgba(244, 240, 231, 0.97) 28%, rgba(226, 218, 202, 0.99) 100%);
+  opacity: 0;
+  transition: opacity 0.35s ease;
+}
+
+.veil.on {
+  opacity: 1;
+}
+
+.veil.out {
+  opacity: 0;
+  transition-duration: 0.9s;
+  pointer-events: none;
+}
+
+.veil-name {
+  /* (the spacing after the last character, balanced on the left) */
+  padding-left: 0.5em;
+  font-size: clamp(48px, 18cqh, 104px);
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.5em;
+  color: var(--ink);
+}
+
+.veil-sub {
+  padding-left: 0.4em;
+  font-size: 15px;
+  letter-spacing: 0.4em;
+  color: var(--muted);
 }

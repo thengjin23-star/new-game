@@ -143,6 +143,12 @@ export function createEnv() {
       u.uMarkRect.value.set(x0, z0, MARK_SPAN, 1);
       marksOn = true;
     },
+    /** Let go of the textures (the world is being taken down: another map, or the flat picture). */
+    dispose() {
+      fogTex.dispose();
+      heightTex.dispose();
+      markTex.dispose();
+    },
     /** Set the light for an hour of the day (dark: 0 day … 1 night). */
     setLight(tod, dark, season) {
       const dusk = tod >= 16 && tod < 19.5 ? Math.sin(((tod - 16) / 3.5) * Math.PI) : tod >= 4.5 && tod < 7 ? Math.sin(((tod - 4.5) / 2.5) * Math.PI) * 0.6 : 0;

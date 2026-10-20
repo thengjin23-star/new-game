@@ -189,7 +189,7 @@ export const BUILD = {
     BUILD.house(kit, dc, st, rnd);
     const w = st.w - 4;
     const d = st.h - 4;
-    const name = st.x > 3000 ? (st.y > 2600 ? '丹坊' : '百草堂') : '回春堂';
+    const name = st.name || (st.x > 3000 ? (st.y > 2600 ? '丹坊' : '百草堂') : '回春堂');
     kit.decal(dc.plaque(name, Math.min(30, w * 0.42), 7), 0, 19.5, d / 2 + 0.35, Math.min(30, w * 0.42), 7);
     kit.beam([w / 2 + 6, 0, d / 2 + 2], [w / 2 + 6, 44, d / 2 + 2], 1.6, COL.wood);
     kit.beam([w / 2 + 6, 42, d / 2 + 2], [w / 2 - 2, 42, d / 2 + 2], 1.2, COL.wood);
@@ -229,7 +229,7 @@ export const BUILD = {
     walls(kit, 4, gw, gd, 24, COL.plaster, 12, gz);
     posts(kit, [-gw / 2 + 2, -9, 9, gw / 2 - 2], gz + gd / 2 + 1.5, 4, 24);
     kit.decal(dc.door(15, 19, [150, 48, 36]), 0, 4, gz + gd / 2 + 0.3, 15, 19);
-    kit.decal(dc.plaque(st.x < 2300 ? '林府' : '沈府', 16, 6), 0, 23.6, gz + gd / 2 + 0.4, 16, 6);
+    kit.decal(dc.plaque(st.name || (st.x < 2300 ? '林府' : '沈府'), 16, 6), 0, 23.6, gz + gd / 2 + 0.4, 16, 6);
     for (const s of [-1, 1]) kit.decal(dc.lantern(), s * 12, 16, gz + gd / 2 + 2.2, 4, 6, 1);
     roofAt(kit, 0, gz, { w: gw, d: gd, y: 28, rise: 13, over: 6, col: COL.tile, lift: 5, ornament: COL.gold });
   },
@@ -246,7 +246,7 @@ export const BUILD = {
     const ud = d * 0.7;
     walls(kit, 29, uw, ud, 18, COL.plaster, 12);
     for (const x of spread(3, uw * 0.3)) kit.decal(dc.window(9, 8), x, 34, ud / 2 + 0.25, 9, 8, 1);
-    const name = st.x > 3000 ? (st.x < 3800 ? '酒肆' : '茶樓') : '茶館';
+    const name = st.name || (st.x > 3000 ? (st.x < 3800 ? '酒肆' : '茶樓') : '茶館');
     kit.decal(dc.plaque(name, 18, 6), 0, 26, d / 2 + 4.5, 18, 6);
     for (const s of [-1, 1]) kit.decal(dc.lantern(), s * (w / 2 - 3), 15, d / 2 + 6, 4, 6, 1);
     roofAt(kit, 0, 0, { w: uw, d: ud, y: 47, rise: ud * 0.5 + 6, over: 7, col: COL.tile, lift: 6, ornament: COL.gold });
@@ -485,6 +485,8 @@ function roofAt(kit, x, z, o) {
 // ── the market's walls and gates ──
 
 function marketWalls(kit, dc) {
+  // (a map with no walled market)
+  if (!MARKET_WALL) return;
   const g = world();
   const [x0, y0, x1, y1] = MARKET_WALL;
   const sides = [

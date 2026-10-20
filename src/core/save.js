@@ -57,6 +57,9 @@ export function migrate(s) {
     s.world.taken ||= {};
     s.world.herbs ||= {};
     s.world.mobs ||= {};
+    // more than one map (0.21, save v2): a save from before is on 東荒, and has been nowhere else
+    s.world.map ||= 'donghuang';
+    s.world.away ||= {};
   }
   s.player.buffs ||= {};
   // what you wear besides a weapon (blood and 靈力 fill themselves the first time they are asked for)

@@ -21,7 +21,8 @@ import * as SK from '../world/skills.js';
 import { ROOTS, INJURY, BUFFS, realmLabel, stageReq, age, lifespan, rateParts, breakthroughInfo, power, atBottleneck, techOf } from '../core/cultivation.js';
 import { SLOTS, STAT_WORD, gearOf, slotOf } from '../core/body.js';
 import { fmtDate, fmtDuration, seasonOf, SEASON_NAME } from '../core/calendar.js';
-import { NODES, canSecludeAt, nodeQi } from '../world/map.js';
+import { NODES, canSecludeAt, nodeQi, mapOf } from '../world/map.js';
+import { MAPS, CROSSINGS, mapId } from '../world/atlas.js';
 import { WORLD_W, WORLD_H, COLS, ROWS, CELL } from '../world/geo.js';
 import { findPath, regionIdAt, world } from '../world/terrain.js';
 import { heights } from '../world/height.js';
@@ -159,6 +160,9 @@ export function startApp(root, { speed = 1, view = null } = {}) {
     target: null,
     thumb: null,
     thumbSeason: null,
+    thumbKey: null,
+    viewMap: null,
+    veil: null,
     map: null,
     shell: null,
   };
@@ -212,6 +216,11 @@ export function startApp(root, { speed = 1, view = null } = {}) {
     ui.s = s;
     ui.layerKey = null;
     ui.hudKeys = {};
+    // (a save on another map than the one painted: the world is painted afresh when next drawn)
+    if (ui.viewMap && ui.viewMap !== s.world.map) {
+      stopWorld();
+      forgetMapArt();
+    }
     ui.view?.setState(s);
   }
 
@@ -474,6 +483,60 @@ export function startApp(root, { speed = 1, view = null } = {}) {
       canvases: () => (shaking?.every((c) => c.isConnected) ? shaking : (shaking = [...shell.querySelectorAll('canvas.world-canvas, canvas.world-overlay')])),
       edge: shell.querySelector('.hurt-edge'),
     });
+    ui.viewMap = mapId();
+  }
+
+  // ── another map ──
+
+  /** What was painted of the last map (its thumbnail, the map page's place) is no use on this one. */
+  function forgetMapArt() {
+    ui.thumb = null;
+    ui.thumbKey = null;
+    ui.map = null;
+    ui.mapOpenedAt = null;
+    ui.hudKeys = {};
+  }
+
+  /**
+   * You crossed into another map: the world stops where it is, a veil comes
+   * down with the land's name on it, the new land is painted under it, and
+   * the veil lifts.
+   */
+  function changeMap(map) {
+    ui.view?.stop();
+    showVeil(map);
+    // (two frames: the veil is seen before the work of painting begins)
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      const keep = ui.sheet;
+      stopWorld();
+      forgetMapArt();
+      ui.sheet = keep;
+      render();
+      if (ui.veil) root.appendChild(ui.veil);
+      setTimeout(hideVeil, 450);
+    }));
+  }
+
+  function showVeil(map) {
+    const M = MAPS[map];
+    const el = ui.veil || (ui.veil = h('div.veil', { role: 'status' }));
+    clear(el);
+    put(el, h('div.veil-name', M.name), h('div.veil-sub', M.title.split('・')[1] || ''));
+    el.classList.remove('out');
+    root.appendChild(el);
+    void el.offsetWidth;
+    el.classList.add('on');
+  }
+
+  function hideVeil() {
+    const el = ui.veil;
+    if (!el) return;
+    el.classList.add('out');
+    setTimeout(() => {
+      if (!el.classList.contains('out')) return;
+      el.classList.remove('on', 'out');
+      el.remove();
+    }, 900);
   }
 
   /** While the title shows, quietly work out the lie of the land, so the world opens quickly. */
@@ -911,6 +974,7 @@ export function startApp(root, { speed = 1, view = null } = {}) {
       openSheet('board');
     }
     if (sig.combat) combatSignal(sig);
+    if (sig.map) changeMap(sig.map);
   }
 
   // ── a fight as you move ──
@@ -1373,7 +1437,7 @@ export function startApp(root, { speed = 1, view = null } = {}) {
       ui.hudKeys.place = placeKey;
       const el = $('.place-tag');
       clear(el);
-      put(el, h('span.place-seal', NODES[loc]?.name || ''), loc !== 'great_river' ? h('span.place-pct', `探索 ${pct}%`) : null);
+      put(el, h('span.place-seal', NODES[loc]?.name || ''), NODES[loc]?.kind !== 'river' ? h('span.place-pct', `探索 ${pct}%`) : null);
     }
     // the season, the weather, and any sign in the sky
     const wx = weatherNow(s);
@@ -1559,9 +1623,11 @@ export function startApp(root, { speed = 1, view = null } = {}) {
   // ── the minimap ──
   function worldThumb() {
     const season = seasonOf(ui.s.day);
-    if (!ui.thumb || ui.thumbSeason !== season) {
+    const key = `${mapId()}|${season}`;
+    if (!ui.thumb || ui.thumbKey !== key) {
       ui.thumb = paintWorldThumb(season, 0.1);
       ui.thumbSeason = season;
+      ui.thumbKey = key;
     }
     return ui.thumb;
   }
@@ -1571,7 +1637,7 @@ export function startApp(root, { speed = 1, view = null } = {}) {
     const cv = $('.minimap');
     if (!cv) return;
     const w = s.world;
-    const key = `${Math.round(w.x / 50)}|${Math.round(w.y / 50)}|${ui.thumbSeason}`;
+    const key = `${Math.round(w.x / 50)}|${Math.round(w.y / 50)}|${ui.thumbKey}`;
     if (!force && (ui.hudKeys.mini === key || performance.now() - (ui.miniAt || 0) < 600)) return;
     ui.hudKeys.mini = key;
     ui.miniAt = performance.now();
@@ -2512,11 +2578,15 @@ export function startApp(root, { speed = 1, view = null } = {}) {
   function logPlaces() {
     const s = ui.s;
     const ids = Object.keys(NODES).filter((id) => s.nodes[id]?.known && NODES[id].at);
-    return h('ul.places', ids.map((id) =>
+    const list = (of) => h('ul.places', of.map((id) =>
       h('li',
         h('div.row-between', h('b', NODES[id].name), h('span.muted.small', s.nodes[id].visited ? `探索 ${exploredPct(s, id)}%` : '未曾去過')),
         h('p', NODES[id].desc),
       )));
+    // (once you know places on more than one map: each map's under its name, the one you are on first)
+    const maps = [...new Set([s.world.map, ...ids.map(mapOf)])].filter((m) => ids.some((id) => mapOf(id) === m));
+    if (maps.length < 2) return list(ids);
+    return h('div.places-maps', maps.map((m) => [h('h3', MAPS[m].title), list(ids.filter((id) => mapOf(id) === m))]));
   }
 
   /** 圖鑑: the beasts and people who fought you, and the things you have had. */
@@ -2893,9 +2963,9 @@ export function startApp(root, { speed = 1, view = null } = {}) {
       g.textAlign = 'center';
       g.textBaseline = 'middle';
       for (const [id, n] of Object.entries(NODES)) {
-        if (!s.nodes[id]?.known) continue;
+        if (!s.nodes[id]?.known || mapOf(id) !== w.map) continue;
         const [lx, ly] = n.label || n.at || [];
-        if (lx === undefined || id === 'hidden_cave') continue;
+        if (lx === undefined || n.kind === 'cave') continue;
         g.font = `700 ${Math.round(26 / m.scale / 2)}px 'LXGW WenKai TC', serif`;
         const label = n.name + (s.nodes[id].visited ? '' : '？');
         g.lineWidth = 6 / m.scale / 2;
@@ -3020,11 +3090,13 @@ export function startApp(root, { speed = 1, view = null } = {}) {
     };
     requestAnimationFrame(fit);
 
-    const known = Object.keys(NODES).filter((id) => s.nodes[id]?.known && NODES[id].at && id !== s.player.loc && (id !== 'hidden_cave' || s.flags.cave_found));
+    const known = Object.keys(NODES).filter((id) => s.nodes[id]?.known && NODES[id].at && id !== s.player.loc && mapOf(id) === w.map && (id !== 'hidden_cave' || s.flags.cave_found) && (id !== 'water_cave' || s.flags.falls_cave_found));
+    // the ways over into the other maps you know of (from here)
+    const ways = Object.entries(CROSSINGS).filter(([from, way]) => mapOf(from) === w.map && (s.nodes[from]?.known || s.world.away?.[way.to]));
     put(info, h('p.muted.small', '拖動地圖查看，點一個地方，選「走過去」。路上遇到什麼，就是什麼。'));
     // the map wide on the left; on the right, where you picked and the places you know
     return h('div.sheet.map-sheet', { role: 'dialog', 'aria-label': '地圖' },
-      h('div.sheet-head', h('h2.sheet-title', '東荒・青石一帶'), h('button.btn.small.ghost', { onclick: closeSheet }, '關閉')),
+      h('div.sheet-head', h('h2.sheet-title', MAPS[w.map].title), h('button.btn.small.ghost', { onclick: closeSheet }, '關閉')),
       h('div.map-body',
         box,
         h('div.map-side',
@@ -3038,6 +3110,11 @@ export function startApp(root, { speed = 1, view = null } = {}) {
             ? h('div.map-places',
                 h('h3', '知道的地方'),
                 h('div.place-chips', known.map((id) => h('button.btn.small', { onclick: () => { m.cx = NODES[id].at[0]; m.cy = NODES[id].at[1]; select(...NODES[id].at); } }, NODES[id].name))))
+            : null,
+          ways.length
+            ? h('div.map-places.map-ways',
+                h('h3', '往別處去'),
+                ways.map(([from, way]) => h('p.small', `往${MAPS[way.to].name}：從${NODES[from].name}翻過去，約 ${way.hours / 2} 個時辰。`)))
             : null,
         ),
       ),

@@ -11,7 +11,8 @@ import { world, hash2 } from '../world/terrain.js';
 import { POIS, STRUCTURES } from '../world/places.js';
 import { VALLEY, LAKES } from '../world/geo.js';
 import { NODES } from '../world/map.js';
-import { heightAt } from '../world/height.js';
+import { heightAt, waterAt } from '../world/height.js';
+import { landTable } from '../world/maps/index.js';
 import { fogOf } from '../world/fog.js';
 import * as E from '../world/explore.js';
 import { createEnv } from './gl/env.js';
@@ -503,8 +504,8 @@ export function createWorld3D(canvas, { onFrame, idle, quality = 'high', onSlow 
         if (ac.prop === 'wisp') L.add(ac.x, g + 16, ac.y, 30 + Math.sin(t * 3 + ac.n) * 4, 0.5, 1, 0.75, (0.45 + 0.4 * dark) * a);
       }
     }
-    // the spirit mist that lies in 靈溪谷, morning mist on the lake
-    if (Math.hypot(focus.x - VALLEY.cx, focus.y - VALLEY.cy) < 1500) {
+    // the spirit mist that lies in 靈溪谷 (or another map's walled valley), morning mist on the lake
+    if (VALLEY && Math.hypot(focus.x - VALLEY.cx, focus.y - VALLEY.cy) < 1500) {
       for (let k = 0; k < 14; k++) {
         const a = hash2(k, 3, 41) * Math.PI * 2;
         const r = Math.sqrt(hash2(k, 4, 41)) * 0.8;
@@ -514,13 +515,16 @@ export function createWorld3D(canvas, { onFrame, idle, quality = 'high', onSlow 
       }
     }
     const morning = s.tod >= 4.5 && s.tod < 9.5 ? Math.sin(((s.tod - 4.5) / 5) * Math.PI) : 0;
-    if (morning > 0.02) {
-      const [cx, cy, rx, ry] = LAKES[0];
+    // (on the biggest lake of the map: 鏡湖, in 東荒)
+    const lake = LAKES.reduce((a, L) => (!a || L[2] * L[3] > a[2] * a[3] ? L : a), null);
+    if (morning > 0.02 && lake) {
+      const [cx, cy, rx, ry] = lake;
       if (near(cx, cy, 1600)) {
+        const level = (waterAt(cx, cy) ?? heightAt(cx, cy)) + 11;
         for (let k = 0; k < 12; k++) {
           const x = cx + (hash2(k, 5, 42) - 0.5) * rx * 1.8 + Math.sin(t * 0.05 + k) * 40;
           const y = cy + (hash2(k, 6, 42) - 0.5) * ry * 1.6;
-          M.add(x, 14, y, 150, 0.95, 0.95, 0.93, 0.3 * morning);
+          M.add(x, level, y, 150, 0.95, 0.95, 0.93, 0.3 * morning);
         }
       }
     }
@@ -537,6 +541,8 @@ export function createWorld3D(canvas, { onFrame, idle, quality = 'high', onSlow 
     mirror_lake: { tint: [0.82, 0.88, 0.93], amount: 0.3, dim: 1, motes: null },
     fox_shrine: { tint: [0.86, 0.82, 0.9], amount: 0.26, dim: 0.96, motes: null },
     hidden_cave: { tint: [0.6, 0.62, 0.66], amount: 0.3, dim: 0.9, motes: null },
+    // the other maps' regions
+    ...landTable('moods'),
   };
 
   function regionMood(dt) {
@@ -858,6 +864,8 @@ export function createWorld3D(canvas, { onFrame, idle, quality = 'high', onSlow 
     }
     t += dt;
     onFrame?.(dt);
+    // (the UI stopped the world as this frame was stepped: another map is coming; nothing more to draw here)
+    if (!running) return;
     if (s && (!idle?.() || now - lastDraw > 180)) {
       draw(Math.min(0.2, (now - (lastDraw || now)) / 1000));
       lastDraw = now;
@@ -924,7 +932,11 @@ export function createWorld3D(canvas, { onFrame, idle, quality = 'high', onSlow 
       glows.lights.dispose();
       glows.mists.dispose();
       glows.shadows.dispose();
+      env.dispose();
       renderer.dispose();
+      // (the canvas goes with this world: let its drawing context go now, not whenever the browser gets round to it —
+      // crossing into another map more than a few times would otherwise run out of them)
+      renderer.forceContextLoss();
       overlay.remove();
     },
   };

@@ -17,6 +17,7 @@ import * as CB from '../world/combat.js';
 import { paintBeast, paintHero, drawGroundMarks, drawCombatOverlay } from './combatfx.js';
 import { seasonOf } from '../core/calendar.js';
 import { stream } from '../core/rng.js';
+import { onMapChange } from '../world/atlas.js';
 
 const CH = 640; // chunk size in world units
 const CHX = Math.ceil(WORLD_W / CH);
@@ -75,9 +76,10 @@ function stamp(c) {
   return s;
 }
 
-// ── indexes of things to draw (built once) ──
+// ── indexes of things to draw (built once for each map you are on) ──
 
 let IDX = null;
+onMapChange(() => (IDX = null));
 
 function indexes() {
   if (IDX) return IDX;
@@ -681,6 +683,8 @@ export function createWorldView(canvas, { onFrame, idle } = {}) {
     last = now;
     t += dt;
     onFrame?.(dt);
+    // (the UI stopped the world as this frame was stepped: another map is coming; nothing more to draw here)
+    if (!running) return;
     // while a sheet covers the world, a few frames a second are enough
     if (s && (!idle?.() || now - lastDraw > 180)) {
       draw(Math.min(0.2, (now - (lastDraw || now)) / 1000));

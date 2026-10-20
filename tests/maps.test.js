@@ -11,7 +11,8 @@ import { POIS } from '../src/world/places.js';
 import { NODES, mapOf } from '../src/world/map.js';
 import { mapId, useMap, CROSSINGS } from '../src/world/atlas.js';
 import { isRevealed, exploredPct } from '../src/world/fog.js';
-import { serialize, parseSave } from '../src/core/save.js';
+import { serialize, parseSave, migrate } from '../src/core/save.js';
+import { SAVE_VERSION } from '../src/core/state.js';
 import { fresh, resolvePending, goToPoi, pickText } from './helpers.js';
 
 /** Walk up to a way over and take it (as a 煉氣 cultivator), then let the next frame carry you across. */
@@ -124,8 +125,14 @@ test('a save made on 南嶺 opens there; an old save (from before there were map
   const old = JSON.parse(serialize(u));
   delete old.world.map;
   delete old.world.away;
+  old.v = 1;
   useMap('nanling');
   const v = parseSave(JSON.stringify(old));
+  assert.equal(v.v, SAVE_VERSION);
+  assert.equal(v.world.map, 'donghuang', 'it was on 東荒');
+  assert.deepEqual(v.world.away, {});
+  // (a save is filled in the same, however often)
+  assert.deepEqual(JSON.parse(JSON.stringify(migrate(JSON.parse(JSON.stringify(v))))), JSON.parse(JSON.stringify(v)));
   E.ensureWorld(v);
   assert.equal(v.world.map, 'donghuang');
   assert.equal(mapId(), 'donghuang');

@@ -5,6 +5,7 @@
 
 import { stream, hashStr } from '../core/rng.js';
 import { INK, RED, PAPER, rgba } from './ink.js';
+import { mapId } from '../world/atlas.js';
 
 const RES = 2; // canvas pixels per world unit
 const FONT = "'LXGW WenKai TC', 'Kaiti TC', 'STKaiti', 'BiauKai', serif";
@@ -870,13 +871,13 @@ const BUILD = {
     door(ctx, b.fx, b.base - 4, 16, b.wallH * 0.78, [140, 48, 36]);
     for (const s of [-1, 1]) dab(ctx, b.fx + s * 4, b.base - 4 - b.wallH * 0.4, 0.9, GOLD, 1, 1);
     roofShape(ctx, gx0, gx1, b.base - 4 - b.wallH, 22, TILE, { snow: b.snow, ornament: GOLD });
-    plaque(ctx, b.fx, b.base - 4 - b.wallH + 6, b.st.x < 2300 ? '林府' : '沈府', 16);
+    plaque(ctx, b.fx, b.base - 4 - b.wallH + 6, b.st.name || (b.st.x < 2300 ? '林府' : '沈府'), 16);
     lantern(ctx, gx0 + 4, b.base - 4 - b.wallH + 10);
     lantern(ctx, gx1 - 4, b.base - 4 - b.wallH + 10);
   },
   shop(ctx, rnd, b) {
     BUILD.house(ctx, rnd, b);
-    const name = b.st.x > 3000 ? (b.st.y > 2600 ? '丹坊' : '百草堂') : '回春堂';
+    const name = b.st.name || (b.st.x > 3000 ? (b.st.y > 2600 ? '丹坊' : '百草堂') : '回春堂');
     plaque(ctx, b.fx, b.base - b.wallH + 4, name, Math.min(28, b.w * 0.42));
     flag(ctx, b.x1 + 3, b.base, 40, b.st.y > 2600 && b.st.x > 3000 ? '丹' : '藥');
   },
@@ -895,7 +896,7 @@ const BUILD = {
     wall(ctx, ux0, ux1, up - 8 - b.wallH * 0.8, up - 8);
     for (let x = ux0 + 5; x < ux1 - 8; x += 12) lattice(ctx, x, up - 8 - b.wallH * 0.65, 8, 7);
     roofShape(ctx, ux0, ux1, up - 8 - b.wallH * 0.8, b.d * 0.6, TILE, { snow: b.snow, ornament: GOLD });
-    plaque(ctx, b.fx, up - 4, b.st.x > 3000 ? (b.st.x < 3800 ? '酒肆' : '茶樓') : '茶館', 18);
+    plaque(ctx, b.fx, up - 4, b.st.name || (b.st.x > 3000 ? (b.st.x < 3800 ? '酒肆' : '茶樓') : '茶館'), 18);
     lantern(ctx, b.x0 + 2, up + 6);
     lantern(ctx, b.x1 - 2, up + 6);
   },
@@ -1253,9 +1254,9 @@ const BUILD = {
   },
 };
 
-/** A building or painted object from places.js STRUCTURES (by its index). */
+/** A building or painted object from places.js STRUCTURES (by its index, on the map you are on). */
 export function structureSprite(st, index, season) {
-  return buildingSprite(`st:${index}:${season}`, st, season);
+  return buildingSprite(`st:${mapId()}:${index}:${season}`, st, season);
 }
 
 /** A stretch of the market's wall, one cell long: 'h' runs across, 'v' runs away from you. */
