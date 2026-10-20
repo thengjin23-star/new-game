@@ -6,16 +6,17 @@
 import { world, regionAt, collides, speedAt, findPath, nearestOpen, canStand } from './terrain.js';
 import { heightAt } from './height.js';
 import { POIS, POI_BY_ID, GATHER, GATHER_RESPAWN } from './places.js';
-import { NODES } from './map.js';
+import { NODES, mapOf } from './map.js';
+import { MAPS, CROSSINGS, mapId, useMap } from './atlas.js';
 import { NAMED } from './npcs.js';
-import { reveal, fogOf } from './fog.js';
+import { reveal, fogOf, syncFog, forgetFog } from './fog.js';
 import { stageScene, updateScenes, sceneTargets, sceneByUid, meetScene, scenesOf } from './director.js';
 import { peopleNow, folkNow, folkChat, updatePeople } from './people.js';
 import { updateWild, wildNow, spawnCritter } from './wildlife.js';
 import { sysGain } from './system.js';
 import { ITEMS, displayItem } from '../content/items.js';
 import { pickEvent, startEvent, takeDue, notice } from '../core/events.js';
-import { updateCombat, beastTargets, strikeAt, FIGHT_HOURS, combatOf, inCombat } from './combat.js';
+import { updateCombat, beastTargets, strikeAt, FIGHT_HOURS, combatOf, inCombat, leaveMap } from './combat.js';
 import { bodyArt, leapLanding, leapTo, leapShape, leapRules, FLIGHT, flyMeans, flyBlocked, landingNear, flyCost } from './air.js';
 import { weatherNow } from './weather.js';
 import { inquire, visit } from '../core/actions.js';
@@ -50,10 +51,12 @@ export function darkness(tod) {
 
 // ── the save's world part ──
 
-/** Make sure a save has its place in the world (new games and old saves alike). */
+/** Make sure a save has its place in the world (new games and old saves alike), on the map it is on. */
 export function ensureWorld(s) {
   if (s.tod === undefined || s.tod === null) s.tod = 8;
   if (s.world) {
+    s.world.map ||= 'donghuang';
+    useMap(s.world.map);
     const L = liveOf(s);
     if (!L.settled) {
       // a save made mid-leap (over the water), or on ground that is no longer there: come down somewhere
@@ -68,10 +71,12 @@ export function ensureWorld(s) {
   }
   const loc = NODES[s.player.loc]?.at ? s.player.loc : 'qingxu_temple';
   const [x, y] = NODES[loc].at;
-  s.world = { x, y, face: 1, fog: '', found: {}, taken: {}, herbs: {}, mobs: {}, walked: 0, enc: 0, region: loc };
+  const map = mapOf(loc);
+  s.world = { map, x, y, face: 1, fog: '', found: {}, taken: {}, herbs: {}, mobs: {}, walked: 0, enc: 0, region: loc, away: {} };
   s.player.loc = loc;
+  useMap(map);
   // a save from before the world was open: you have seen the places you have been
-  for (const [id, n] of Object.entries(s.nodes)) if (n.visited && NODES[id]?.at) reveal(s, NODES[id].at[0], NODES[id].at[1], 420);
+  for (const [id, n] of Object.entries(s.nodes)) if (n.visited && NODES[id]?.at && mapOf(id) === map) reveal(s, NODES[id].at[0], NODES[id].at[1], 420);
   reveal(s, x, y, revealRadius(s));
   return s.world;
 }
@@ -171,6 +176,14 @@ export function step(s, dt, input) {
   dt = Math.min(dt, 0.1);
   L.t += dt;
   if (busy(s)) {
+    L.moving = false;
+    return;
+  }
+  // a way over into another map, taken (an event's choice): over you go
+  if (w.cross) {
+    const id = w.cross;
+    w.cross = null;
+    crossTo(s, id);
     L.moving = false;
     return;
   }
@@ -828,12 +841,13 @@ export function senseAround(s, r) {
   return out;
 }
 
-/** A 歸元符: back to the nearest town you have been to (an hour on the way). Returns where, or null. */
+/** A 歸元符: back to the nearest town you have been to, on this map (an hour on the way). Returns where, or null. */
 export function returnTo(s, towns) {
   const w = ensureWorld(s);
   const L = liveOf(s);
   let best = null;
   let bd = Infinity;
+  towns = [...towns.filter((id) => mapOf(id) === w.map), MAPS[w.map].home];
   for (const id of towns) {
     if (!s.nodes[id]?.visited || !NODES[id]?.at) continue;
     const [x, y] = NODES[id].at;
@@ -1104,6 +1118,48 @@ function whereNow(s, L, t) {
 
 export function stop(s) {
   stopWalking(liveOf(s));
+}
+
+// ── another map ──
+
+/**
+ * Over into another map, by a way (CROSSINGS) — from the region you set off
+ * from. What you leave keeps (where you stood, what you saw, which herbs
+ * you took) for when you come back; nobody and nothing from there comes
+ * along. Hours pass on the way. The UI is told ({ map }) so it can paint the
+ * new land. Returns whether you went.
+ */
+export function crossTo(s, from) {
+  const way = CROSSINGS[from];
+  const w = ensureWorld(s);
+  const L = liveOf(s);
+  if (!way || mapOf(from) !== w.map || busy(s) || inCombat(s)) return false;
+  syncFog(s);
+  w.away ||= {};
+  w.away[w.map] = { x: Math.round(w.x), y: Math.round(w.y), face: w.face, region: w.region, fog: w.fog, herbs: w.herbs };
+  const back = w.away[way.to] || null;
+  delete w.away[way.to];
+  forgetFog(s);
+  w.map = way.to;
+  w.fog = back?.fog || '';
+  w.herbs = back?.herbs || {};
+  w.fly = null;
+  w.region = null;
+  w.enc = 0;
+  useMap(way.to);
+  leaveMap(s);
+  // the live things of the last map: gone
+  stopWalking(L);
+  Object.assign(L, {
+    resume: null, goal: null, leap: null, landing: null, lastReveal: null, inAuto: new Set(), banner: null, heading: null, arriveLater: null,
+    walkers: null, folk: null, critters: null, scenes: null, peopleClock: undefined, settled: true, leapPush: 0, chase: 0,
+  });
+  L.signals.push({ map: way.to });
+  passHours(s, L, way.hours);
+  if (s.dead) return true;
+  const spot = nearestOpen(s, way.at[0], way.at[1], 6) || way.at;
+  placeAt(s, spot[0], spot[1]);
+  return true;
 }
 
 /** Put the player somewhere as if they had just walked there (tools, tests). */

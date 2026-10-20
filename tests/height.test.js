@@ -3,30 +3,35 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { world } from '../src/world/terrain.js';
+import { MAPS, useMap } from '../src/world/atlas.js';
 import { STRUCTURES } from '../src/world/places.js';
 import { T, CELL, COLS, ROWS } from '../src/world/geo.js';
 import { heights, heightAt, waterAt, LEVEL } from '../src/world/height.js';
 
-test('the ground you can walk on is never a cliff', () => {
-  const g = world();
-  let walkable = 0;
-  let gentle = 0;
-  let worst = 0;
-  for (let j = 1; j < ROWS - 1; j++) {
-    for (let i = 1; i < COLS - 1; i++) {
-      if (!g.reach[j * COLS + i]) continue;
-      const x = (i + 0.5) * CELL;
-      const y = (j + 0.5) * CELL;
-      let s = 0;
-      for (const [dx, dy] of [[20, 0], [0, 20], [14, 14], [14, -14]]) s = Math.max(s, Math.abs(heightAt(x + dx, y + dy) - heightAt(x - dx, y - dy)) / 40);
-      walkable++;
-      if (s <= 0.45) gentle++;
-      worst = Math.max(worst, s);
+test('the ground you can walk on is never a cliff (on every map)', () => {
+  for (const map of Object.keys(MAPS)) {
+    useMap(map);
+    const g = world();
+    let walkable = 0;
+    let gentle = 0;
+    let worst = 0;
+    for (let j = 1; j < ROWS - 1; j++) {
+      for (let i = 1; i < COLS - 1; i++) {
+        if (!g.reach[j * COLS + i]) continue;
+        const x = (i + 0.5) * CELL;
+        const y = (j + 0.5) * CELL;
+        let s = 0;
+        for (const [dx, dy] of [[20, 0], [0, 20], [14, 14], [14, -14]]) s = Math.max(s, Math.abs(heightAt(x + dx, y + dy) - heightAt(x - dx, y - dy)) / 40);
+        walkable++;
+        if (s <= 0.45) gentle++;
+        worst = Math.max(worst, s);
+      }
     }
+    assert.ok(gentle / walkable > 0.99, `${map}: ${gentle} of ${walkable} walkable cells are gentle`);
+    // the steepest are the banks of falls (beside 斷魂崖, where the stream drops to the foot of the cliff; 南嶺's falls into 碧潭)
+    assert.ok(worst < 1.6, `${map}: steepest walkable slope ${worst.toFixed(2)}`);
   }
-  assert.ok(gentle / walkable > 0.99, `${gentle} of ${walkable} walkable cells are gentle`);
-  // the steepest are the banks of the falls beside 斷魂崖, where the stream drops to the foot of the cliff
-  assert.ok(worst < 1.6, `steepest walkable slope ${worst.toFixed(2)}`);
+  useMap('donghuang');
 });
 
 test('mountains stand above the land around them, and the sect sits high', () => {

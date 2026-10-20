@@ -1,4 +1,8 @@
-// The shape of 東荒・青石一帶: one continuous painted world.
+// The shape of the land you are on. Every map is one continuous painted world
+// of the same size (WORLD_W × WORLD_H); what is drawn on it — regions,
+// mountains, rivers, roads — belongs to the map. These are 東荒・青石一帶's;
+// crossing into another map (world/atlas.js useMap) puts that map's in their
+// place (the bindings below are live: whoever imported them sees the change).
 // Units are world units; one grid cell is CELL units square.
 
 export const WORLD_W = 5200;
@@ -55,7 +59,7 @@ export const TERRAIN = {
  * `requires` hides a region until a story flag is set (it reads as the
  * region around it until then).
  */
-export const REGION_SHAPES = [
+export let REGION_SHAPES = [
   { id: 'hidden_cave', circle: [1176, 2590, 70], requires: 'cave_found' },
   // up where no road goes (see AIRY)
   { id: 'crane_peak', ellipse: [1620, 2212, 96, 60] },
@@ -67,6 +71,8 @@ export const REGION_SHAPES = [
   { id: 'fox_shrine', poly: [[2860, 2820], [3340, 2820], [3360, 3210], [2880, 3230]] },
   { id: 'mirror_lake', poly: [[2880, 3420], [3660, 3420], [3680, 4060], [2880, 4080]] },
   { id: 'crane_ferry', poly: [[4200, 3600], [4700, 3560], [4760, 4320], [4220, 4340]] },
+  // the pass over the southern hills, to 南嶺
+  { id: 'south_pass', poly: [[2440, 4180], [2800, 4180], [2820, 4600], [2420, 4600]] },
   { id: 'farmland', poly: [[1650, 3420], [2880, 3400], [2880, 3990], [1700, 4000]] },
   { id: 'lingxi_valley', ellipse: [600, 1820, 420, 460] },
   { id: 'qingyun_sect', poly: [[3780, 560], [4720, 600], [4740, 1760], [3820, 1790]] },
@@ -78,7 +84,7 @@ export const REGION_SHAPES = [
 ];
 
 /** Impassable mountain masses inside the playable world: [cx, cy, rx, ry]. */
-export const PEAKS = [
+export let PEAKS = [
   // 青石山
   [1000, 2300, 170, 120],
   [1180, 2470, 110, 90],
@@ -113,40 +119,44 @@ export const PEAKS = [
  * sandbar, on 踏雲步's long leaps over the water. Each matches its shape in
  * REGION_SHAPES. level: how high a summit's ground stands.
  */
-export const AIRY = [
+export let AIRY = [
   { id: 'crane_peak', kind: 'summit', at: [1620, 2212], r: [96, 60], level: 248 },
   { id: 'sword_peak', kind: 'summit', at: [3620, 425], r: [92, 70], level: 384 },
   { id: 'river_isle', kind: 'isle', at: [4862, 2150], r: [62, 165] },
 ];
 
 /** The cliff of 斷魂崖, as a thick line. */
-export const CLIFF_LINES = [[[1230, 2625], [1480, 2660], 34]];
+export let CLIFF_LINES = [[[1230, 2625], [1480, 2660], 34]];
 
 /** 靈溪谷 is ringed by cliffs, open only where its stream leaves (the gorge). */
-export const VALLEY = { cx: 600, cy: 1820, rx: 420, ry: 460, ring: 0.14, gorge: [1000, 2010], gorgeHalf: 0.24 };
+export let VALLEY = { cx: 600, cy: 1820, rx: 420, ry: 460, ring: 0.14, gorge: [1000, 2010], gorgeHalf: 0.24 };
 
 /** 青雲宗: a mountain massif with a plateau on top and stairs up the south face. */
-export const SECT = {
+export let SECT = {
   massif: [[3800, 600], [4700, 640], [4720, 1720], [3840, 1760]],
   plateau: [4300, 1080, 330, 240],
   gateY: 1420,
   gateX: [4200, 4320],
 };
 
-/** The great river and the stream 靈溪. width in world units. */
-export const RIVERS = [
+/**
+ * The great river and the stream 靈溪. width in world units. from: the lake
+ * (index) a stream runs out of; to: the level it runs down to (the low water,
+ * height.js LEVEL.lake, if not given).
+ */
+export let RIVERS = [
   { id: 'great', width: 380, pts: [[4920, -40], [4830, 900], [4880, 1900], [4800, 2900], [4760, 3700], [4860, 4640]] },
-  { id: 'lingxi', width: 52, pts: [[560, 1770], [780, 1890], [950, 2010], [1050, 2110], [1150, 2230], [1260, 2380], [1420, 2560], [1600, 2720], [1740, 2900], [1790, 3120], [1850, 3400], [2300, 3600], [2700, 3650], [2960, 3690]] },
+  { id: 'lingxi', width: 52, from: 1, pts: [[560, 1770], [780, 1890], [950, 2010], [1050, 2110], [1150, 2230], [1260, 2380], [1420, 2560], [1600, 2720], [1740, 2900], [1790, 3120], [1850, 3400], [2300, 3600], [2700, 3650], [2960, 3690]] },
 ];
 
-/** Lakes: [cx, cy, rx, ry]. */
-export const LAKES = [
-  [3270, 3740, 320, 230],
+/** Lakes: [cx, cy, rx, ry, level?] (a level of its own; else just under the ground it lies in). */
+export let LAKES = [
+  [3270, 3740, 320, 230, 3],
   [560, 1760, 95, 62],
 ];
 
 /** Roads (官道) and trails (小徑). Water crossings become bridges. */
-export const ROADS = [
+export let ROADS = [
   { kind: 'road', width: 56, pts: [[1060, 3240], [1400, 3220], [1650, 3180], [1840, 3150], [2740, 3140], [2980, 3120], [3250, 3020], [3450, 2800], [3600, 2580]] },
   { kind: 'road', width: 56, pts: [[3600, 2560], [4320, 2560]] },
   { kind: 'road', width: 56, pts: [[3960, 2240], [3960, 2880]] },
@@ -158,6 +168,8 @@ export const ROADS = [
   { kind: 'trail', width: 26, pts: [[2740, 3140], [2900, 3080], [3040, 3030]] },
   { kind: 'trail', width: 26, pts: [[2980, 3120], [3150, 3300], [3260, 3470]] },
   { kind: 'trail', width: 26, pts: [[2250, 3420], [2250, 3920]] },
+  // on south, up over the hills to the pass (and 南嶺 beyond)
+  { kind: 'trail', width: 30, pts: [[2250, 3920], [2390, 4060], [2550, 4230], [2600, 4400], [2614, 4570]] },
   { kind: 'trail', width: 26, pts: [[1760, 3800], [2860, 3790]] },
   { kind: 'trail', width: 24, pts: [[1400, 3220], [1450, 2980], [1700, 2780]] },
   { kind: 'trail', width: 24, pts: [[1060, 3240], [1060, 3120]] },
@@ -170,7 +182,67 @@ export const ROADS = [
 ];
 
 /** 落霞坊市的城牆: the ring of cells just inside this rectangle. Roads make the gates. */
-export const MARKET_WALL = [3600, 2240, 4320, 2880];
+export let MARKET_WALL = [3600, 2240, 4320, 2880];
 
-/** The world's edge: mountains to the north, west and south, the river to the east. */
-export const BORDER = { north: 170, west: 150, south: 4370, eastRiver: 'great' };
+/**
+ * The world's edge: mountains to the north, west and south (and east, if
+ * `east`), the river to the east. gaps: passes through the mountains to the
+ * next map ({ side, at: where along that side, half: half its width, depth:
+ * how far the mountains stand back there }).
+ */
+export let BORDER = { north: 170, west: 150, south: 4370, eastRiver: 'great', gaps: [{ side: 'south', at: 2610, half: 170, depth: 360 }] };
+
+/** The river whose far bank is the edge of the world (beyond it only mist and water), and its region. */
+export let EDGE_RIVER = 'great';
+export let RIVER_REGION = 'great_river';
+
+/** The region a cell belongs to when no shape claims it. */
+export let HOME_REGION = 'wilds';
+
+/** Where the ground anyone can walk to is flooded out from (a spot certainly on it). */
+export let REACH_FROM = [1060, 3205];
+
+/** The lie of the wild land (height.js): [x, y, height, reach]. */
+export let UPLAND = [
+  // the north-west uplands and the old battlefield
+  [700, 600, 205, 450], [1500, 550, 195, 400], [2600, 650, 170, 450], [3500, 700, 160, 350], [4150, 350, 140, 300], [4550, 350, 30, 220],
+  // 黑風林
+  [1250, 1500, 150, 350], [2300, 1550, 125, 380], [3200, 1600, 95, 350],
+  // 靈溪谷 and the high side of 青石山
+  [600, 1820, 150, 260], [1000, 2150, 135, 220], [1350, 2350, 118, 220], [1800, 2300, 100, 250],
+  // the low side of 青石山, under 斷魂崖
+  [1300, 2820, 50, 180], [850, 2850, 58, 220], [2000, 2700, 40, 180],
+  // the open wilds, falling east to the river
+  [2600, 2250, 55, 300], [3200, 2350, 40, 300], [3700, 1950, 48, 300], [4300, 1950, 40, 260], [4650, 1200, 60, 260],
+  [4500, 2900, 18, 300], [3800, 3300, 20, 280], [4700, 420, 5, 260],
+  // west and south
+  [350, 3500, 75, 350], [1300, 3700, 30, 300], [2400, 4150, 15, 300], [3500, 4200, 12, 300], [4500, 4300, 8, 300],
+];
+
+// ── which map's shape this is ──
+
+/** 東荒・青石一帶, as above (what a map file gives for its own land). */
+export const DONGHUANG_GEO = {
+  REGION_SHAPES, PEAKS, AIRY, CLIFF_LINES, VALLEY, SECT, RIVERS, LAKES, ROADS, MARKET_WALL, BORDER,
+  EDGE_RIVER, RIVER_REGION, HOME_REGION, REACH_FROM, UPLAND,
+};
+
+/** Put another map's land in place (world/atlas.js). A map leaves out what it does not have (no sect, no walled market…). */
+export function setGeo(g) {
+  REGION_SHAPES = g.REGION_SHAPES;
+  PEAKS = g.PEAKS || [];
+  AIRY = g.AIRY || [];
+  CLIFF_LINES = g.CLIFF_LINES || [];
+  VALLEY = g.VALLEY || null;
+  SECT = g.SECT || null;
+  RIVERS = g.RIVERS || [];
+  LAKES = g.LAKES || [];
+  ROADS = g.ROADS || [];
+  MARKET_WALL = g.MARKET_WALL || null;
+  BORDER = g.BORDER;
+  EDGE_RIVER = g.EDGE_RIVER || null;
+  RIVER_REGION = g.RIVER_REGION || null;
+  HOME_REGION = g.HOME_REGION;
+  REACH_FROM = g.REACH_FROM;
+  UPLAND = g.UPLAND || [];
+}

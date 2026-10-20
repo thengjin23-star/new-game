@@ -4,6 +4,7 @@ import { EVENT_LIST, EVENTS } from '../src/content/index.js';
 import { ITEMS } from '../src/content/items.js';
 import { TECHS } from '../src/content/techniques.js';
 import { NODES } from '../src/world/map.js';
+import { CROSSINGS } from '../src/world/atlas.js';
 import { NAMED } from '../src/world/npcs.js';
 import { POI_BY_ID, BEASTS } from '../src/world/places.js';
 import { FOES } from '../src/content/foes.js';
@@ -70,6 +71,7 @@ test('every reference in content points at something real', () => {
         if (op === 'item' || op === 'sellall') assert.ok(ITEMS[a], `${where} unknown item ${a}`);
         if (op === 'tech') assert.ok(TECHS[a], `${where} unknown tech ${a}`);
         if (op === 'discover' || op === 'move') assert.ok(NODES[a], `${where} unknown node ${a}`);
+        if (op === 'cross') assert.ok(CROSSINGS[a], `${where} unknown way over ${a}`);
         if (['favor', 'meet', 'npc'].includes(op) && a !== 'npc') assert.ok(NAMED[a], `${where} unknown npc ${a}`);
         if (op === 'sched' || op === 'goto' || op === 'queue') assert.ok(EVENTS[a], `${where} unknown event ${a}`);
         if (op === 'sched') assert.equal(EVENTS[a].trigger, 'scheduled', `${where} ${a} should be trigger 'scheduled'`);

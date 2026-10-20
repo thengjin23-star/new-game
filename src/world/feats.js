@@ -3,13 +3,13 @@
 // kept with the day it was earned (s.vars.feats), and said when it comes.
 
 import { FOES } from '../content/foes.js';
-import { NODES } from './map.js';
+import { NODES, mapOf } from './map.js';
 import { rankOf } from './sect.js';
 
 const BOSSES = Object.entries(FOES).filter(([, f]) => f.boss).map(([k]) => k);
 const kills = (s) => Object.values(s.vars.kills || {}).reduce((a, b) => a + b, 0);
 const visited = (s) => Object.entries(s.nodes || {}).filter(([id, n]) => n.visited && NODES[id]).length;
-const ALL_PLACES = Object.keys(NODES).filter((id) => NODES[id].at && id !== 'hidden_cave' && NODES[id].kind !== 'river');
+const ALL_PLACES = Object.keys(NODES).filter((id) => NODES[id].at && id !== 'hidden_cave' && NODES[id].kind !== 'river' && mapOf(id) === 'donghuang');
 
 /** The marks: name, what it took, and the test. */
 export const FEATS = [

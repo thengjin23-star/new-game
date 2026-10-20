@@ -10,7 +10,8 @@
 import { CELL, COLS, ROWS, WORLD_W, WORLD_H } from './geo.js';
 import { world, regionAt, regionIdAt, collides, isReachable, findPath, hash2, REGION_IDS, idxOf, cellX, cellY, PLAYER_R } from './terrain.js';
 import { STRUCTURES, NPC_SPOTS, NPC_SHOW, WANDERERS } from './places.js';
-import { NODES, PEOPLE_PLACES } from './map.js';
+import { NODES, PEOPLE_PLACES, mapOf } from './map.js';
+import { mapId, onMapChange } from './atlas.js';
 
 /** Beyond this distance from you, nobody walks: they are already there. */
 const SEE = 700;
@@ -191,7 +192,7 @@ function updateWalkers(s, L, dt) {
   const jumped = L.peopleClock !== undefined && (now - L.peopleClock > 1.5 || now < L.peopleClock);
   L.peopleClock = now;
   for (const npc of Object.values(s.npcs)) {
-    if (!npc.alive || !npc.named || !npc.loc) continue;
+    if (!npc.alive || !npc.named || !npc.loc || mapOf(npc.loc) !== mapId()) continue;
     const k = walkerOf(s, L, npc);
     if (!k) continue;
     const e = entryAt(routineOf(npc.id, npc.loc), s.tod);
@@ -255,7 +256,8 @@ function strangerSpot(s, npc) {
 export function peopleNow(s, L) {
   const out = [];
   for (const npc of Object.values(s.npcs)) {
-    if (!npc.alive || !npc.loc) continue;
+    // (somewhere on another map: not here)
+    if (!npc.alive || !npc.loc || mapOf(npc.loc) !== mapId()) continue;
     if (npc.named) {
       if (NPC_SHOW[npc.id] && !NPC_SHOW[npc.id](s)) continue;
       const k = walkerOf(s, L, npc);
@@ -337,6 +339,8 @@ function watchCall(s, n) {
 
 const HOUSES = new Set(['house', 'farmhouse', 'mansion', 'shop', 'teahouse', 'hut', 'hall', 'bighall']);
 let doorCache = null;
+// (another map: other houses)
+onMapChange(() => (doorCache = null));
 /** The doors of a region's houses (in front of each, where you would knock). */
 export function doorsOf(region) {
   if (!doorCache) {
@@ -366,7 +370,9 @@ function folkOf(L) {
   if (L.folk) return L.folk;
   const g = world();
   L.folk = [];
+  const here = mapId();
   for (const [region, n] of Object.entries(WANDERERS)) {
+    if (mapOf(region) !== here) continue;
     const ridx = REGION_IDS.indexOf(region);
     const at = NODES[region].at;
     const cand = [];
@@ -395,6 +401,7 @@ function folkOf(L) {
     }
   }
   for (const x of EXTRAS) {
+    if (mapOf(x.region) !== here) continue;
     const [px, py] = x.at || x.patrol[0];
     L.folk.push({ ...x, extra: true, x: px, y: py, face: x.face || 1, leg: 1, wait: 0, line: 0, inside: false, tx: px, ty: py });
   }

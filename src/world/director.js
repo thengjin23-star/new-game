@@ -7,6 +7,7 @@
 import { CELL, COLS, ROWS, T, WORLD_W, WORLD_H } from './geo.js';
 import { world, regionAt, collides, isReachable, idxOf, colOf, rowOf } from './terrain.js';
 import { POIS, BEASTS } from './places.js';
+import { onMapChange } from './atlas.js';
 import { SCENE_OF_EVENT } from './scenes.js';
 import { EVENTS } from '../content/index.js';
 import { eligible, startEvent } from '../core/events.js';
@@ -59,6 +60,7 @@ export function groundOk(kind, x, y) {
 
 // trees, bushes, rocks and reeds a scene should not be set on top of
 let decorGrid = null;
+onMapChange(() => (decorGrid = null));
 function decorNear(x, y, r) {
   if (!decorGrid) {
     decorGrid = new Map();

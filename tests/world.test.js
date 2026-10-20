@@ -4,8 +4,9 @@ import assert from 'node:assert/strict';
 import { world, collides, isReachable, isAiry, canStand, regionIdAt, findPath, nearestOpen, REGION_IDS, terrainAt } from '../src/world/terrain.js';
 import { POIS, NPC_SPOTS, BEASTS, STRUCTURES } from '../src/world/places.js';
 import * as CB from '../src/world/combat.js';
-import { NODES } from '../src/world/map.js';
-import { T } from '../src/world/geo.js';
+import { NODES, mapOf } from '../src/world/map.js';
+import { T, REGION_SHAPES, RIVER_REGION } from '../src/world/geo.js';
+import { MAPS, useMap } from '../src/world/atlas.js';
 import { exploredPct, isRevealed } from '../src/world/fog.js';
 import { serialize, parseSave } from '../src/core/save.js';
 import * as E from '../src/world/explore.js';
@@ -31,17 +32,24 @@ function walk(s, x, y, then = null, maxSteps = 4000) {
   return n;
 }
 
-test('every region has ground you can walk to from the temple', () => {
-  const g = world();
-  for (const id of REGION_IDS) {
-    if (id === 'great_river' || id === 'hidden_cave' || NODES[id].air) continue;
-    assert.ok(g.regionCells[id] > 40, `${id} has reachable ground (${g.regionCells[id]})`);
+test('every region of every map has ground you can walk to (from the temple, in 東荒)', () => {
+  for (const map of Object.keys(MAPS)) {
+    useMap(map);
+    const g = world();
+    // (a region found, not walked into, is the ground around it until then)
+    const hidden = new Set(REGION_SHAPES.filter((r) => r.requires).map((r) => r.id));
+    for (const id of REGION_IDS) {
+      if (id === RIVER_REGION || hidden.has(id) || NODES[id].air) continue;
+      assert.ok(g.regionCells[id] > 40, `${map}/${id} has reachable ground (${g.regionCells[id]})`);
+    }
+    for (const [id, n] of Object.entries(NODES)) {
+      if (!n.at || mapOf(id) !== map) continue;
+      assert.ok(REGION_IDS.includes(id), `${id} is a region of ${map}`);
+      assert.ok(n.air ? airStandable(...n.at) : standable(...n.at), `${map}/${id}: its spot ${n.at} is open`);
+      if (!hidden.has(id)) assert.equal(regionIdAt(...n.at), id, `${map}/${id}: its spot lies inside it`);
+    }
   }
-  for (const [id, n] of Object.entries(NODES)) {
-    if (!n.at) continue;
-    assert.ok(n.air ? airStandable(...n.at) : standable(...n.at), `${id}: its spot ${n.at} is open`);
-    if (id !== 'hidden_cave') assert.equal(regionIdAt(...n.at), id, `${id}: its spot lies inside it`);
-  }
+  useMap('donghuang');
 });
 
 test('up where no road goes: the summits and the sandbar stand apart, with room to stand', () => {

@@ -147,13 +147,13 @@ export function flyCost(s, by) {
 
 /** The air over the sect is the sect's: its 護山大陣 lets only its own through. */
 function sectAir(x, y) {
-  return insidePoly(SECT.massif, x, y) && y < SECT.gateY + 10;
+  return !!SECT && insidePoly(SECT.massif, x, y) && y < SECT.gateY + 10;
 }
 
 /** Why you cannot fly over (x, y) this way (null: you can). */
 export function flyBlocked(s, x, y, by) {
   const F = FLIGHT[by];
-  if (x < BORDER.west + 40 || y < BORDER.north + 50 || y > BORDER.south - 40 || x > WORLD_W - 20) return '再往外，是望不到頭的群山。';
+  if (x < BORDER.west + 40 || y < BORDER.north + 50 || y > BORDER.south - 40 || x > (BORDER.east ? BORDER.east - 40 : WORLD_W - 20)) return '再往外，是望不到頭的群山。';
   if (terrainAt(x, y) === T.VOID) return '江那邊雲霧太濃，辨不清方向。那是中州，還不是你現在去的地方。';
   if (!s.flags?.sect_member && sectAir(x, y)) return '一層看不見的光幕擋住了你：青雲宗的護山大陣。';
   if (heightAt(x, y) + F.clear > F.ceil) return '山太高了，飛不上去。';

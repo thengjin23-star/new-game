@@ -1,8 +1,11 @@
-// 東荒・青石一帶. Every region of the continuous world (see geo.js for their
-// shapes). `at` is a spot you can stand on inside it, used when the story moves
-// you there and when the map points at it; `label` is where its name is written.
+// Every region of every map, as a place (see geo.js and maps/*.js for their
+// shapes): 東荒・青石一帶's here, the other maps' from their own files, each
+// marked with its map. `at` is a spot you can stand on inside it (on its own
+// map), used when the story moves you there and when the map points at it;
+// `label` is where its name is written.
 
 import { ARRAY } from '../content/crafts.js';
+import { LANDS } from './maps/index.js';
 
 export const NODES = {
   qingshi_town: {
@@ -65,6 +68,10 @@ export const NODES = {
     name: '大江', kind: 'river', qi: 0.6, danger: 3, start: true, at: null, label: [4800, 2700],
     desc: '東荒的盡頭。江的那一邊，是中州。',
   },
+  south_pass: {
+    name: '南嶺山隘', kind: 'pass', qi: 0.6, danger: 1, at: [2580, 4300], label: [2620, 4200],
+    desc: '鎮南丘陵間的一道山隘。翻過去，就是南嶺——瘴氣、蠱、說另一種話的人。鎮上的人一輩子也不往那邊去。',
+  },
   // up where no road goes (air: you get there by flying, or leaping)
   crane_peak: {
     name: '孤鶴峰', kind: 'peak', air: true, qi: 1.2, danger: 0, at: [1620, 2212],
@@ -80,8 +87,21 @@ export const NODES = {
   },
 };
 
+// the other maps' places
+for (const m of LANDS) for (const [id, n] of Object.entries(m.nodes)) NODES[id] = { ...n, map: m.id };
+
+/** Which map a place (a region) is on. */
+export function mapOf(id) {
+  return NODES[id]?.map || 'donghuang';
+}
+
+/** The places of one map. */
+export function nodesOn(map) {
+  return Object.keys(NODES).filter((id) => mapOf(id) === map);
+}
+
 /** Places a wandering stranger might be found (not rivers, not secret caves, not up where only the flying go). */
-export const PEOPLE_PLACES = Object.keys(NODES).filter((id) => NODES[id].at && id !== 'hidden_cave' && !NODES[id].air);
+export const PEOPLE_PLACES = Object.keys(NODES).filter((id) => NODES[id].at && NODES[id].kind !== 'cave' && !NODES[id].air);
 
 /** Effective 靈氣 at a node, including changes the story makes. */
 export function nodeQi(s, id) {

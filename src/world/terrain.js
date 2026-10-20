@@ -1,41 +1,22 @@
 // The ground of the world: a grid of terrain and regions built from geo.js,
 // and what stands on it (trees, mountains, herb spots). Pure, deterministic
-// data, built once on first use; the save never stores any of it.
+// data, built on first use — once for each map (world/atlas.js), and kept;
+// the save never stores any of it.
 
 import {
   WORLD_W, WORLD_H, CELL, COLS, ROWS, T, TERRAIN, REGION_SHAPES, PEAKS, CLIFF_LINES,
-  VALLEY, SECT, RIVERS, LAKES, ROADS, BORDER, MARKET_WALL, AIRY,
+  VALLEY, SECT, RIVERS, LAKES, ROADS, BORDER, MARKET_WALL, AIRY, EDGE_RIVER, RIVER_REGION, HOME_REGION, REACH_FROM,
 } from './geo.js';
 import { STRUCTURES, POIS, GATHER, NPC_SPOTS } from './places.js';
+import { hash2, vnoise, fbm } from './noise.js';
+import { mapId, onMapChange } from './atlas.js';
+import { landTable } from './maps/index.js';
 
 export const PLAYER_R = 12;
 
 // ── noise ──
 
-export function hash2(i, j, salt = 0) {
-  let h = (Math.imul(i | 0, 374761393) + Math.imul(j | 0, 668265263) + Math.imul(salt | 0, 1442695041)) | 0;
-  h = Math.imul(h ^ (h >>> 13), 1274126177);
-  h ^= h >>> 16;
-  return (h >>> 0) / 4294967296;
-}
-
-export function vnoise(x, y, salt = 0) {
-  const i = Math.floor(x);
-  const j = Math.floor(y);
-  const fx = x - i;
-  const fy = y - j;
-  const u = fx * fx * (3 - 2 * fx);
-  const v = fy * fy * (3 - 2 * fy);
-  const a = hash2(i, j, salt);
-  const b = hash2(i + 1, j, salt);
-  const c = hash2(i, j + 1, salt);
-  const d = hash2(i + 1, j + 1, salt);
-  return a + (b - a) * u + (c - a) * v + (a - b - c + d) * u * v;
-}
-
-export function fbm(x, y, salt = 0) {
-  return 0.55 * vnoise(x, y, salt) + 0.3 * vnoise(x * 2.1, y * 2.1, salt + 7) + 0.15 * vnoise(x * 4.3, y * 4.3, salt + 13);
-}
+export { hash2, vnoise, fbm };
 
 // ── geometry ──
 
@@ -93,8 +74,34 @@ function inShape(r, x, y) {
 
 // ── the grid ──
 
-export const REGION_IDS = REGION_SHAPES.map((r) => r.id);
-const RIDX = Object.fromEntries(REGION_IDS.map((id, k) => [id, k]));
+/**
+ * Where the mountains at the world's edge begin, seen from (x, y): the north
+ * line (the y below which it is mountain), west, south, east (Infinity: no
+ * mountains, a river). A pass through them (BORDER.gaps) pushes the line out
+ * past the edge of the world, so a road can go on to the next map.
+ */
+export function edgeAt(x, y) {
+  const notch = (side, v) => {
+    let d = 0;
+    for (const gp of BORDER.gaps || []) if (gp.side === side) d = Math.max(d, gp.depth * (1 - smooth(gp.half * 0.45, gp.half, Math.abs(v - gp.at))));
+    return d;
+  };
+  return [
+    BORDER.north + 80 * vnoise(x / 300, 1.5, 21) - notch('north', x),
+    BORDER.west + 80 * vnoise(y / 300, 2.5, 22) - notch('west', y),
+    BORDER.south - 80 * vnoise(x / 300, 3.5, 23) + notch('south', x),
+    BORDER.east ? BORDER.east - 80 * vnoise(y / 300, 4.5, 24) + notch('east', y) : Infinity,
+  ];
+}
+
+function smooth(a, b, x) {
+  const t = Math.max(0, Math.min(1, (x - a) / (b - a)));
+  return t * t * (3 - 2 * t);
+}
+
+/** The regions of the map you are on (the grid keeps each cell's as an index into this). */
+export let REGION_IDS = REGION_SHAPES.map((r) => r.id);
+let RIDX = Object.fromEntries(REGION_IDS.map((id, k) => [id, k]));
 const NATURAL = new Set([T.GRASS, T.TALLGRASS, T.HILL, T.FOREST, T.DEEP, T.FARM, T.WASTE, T.SAND]);
 
 export const idxOf = (i, j) => j * COLS + i;
@@ -110,6 +117,7 @@ const BASE = {
   fox_shrine: (x, y) => (fbm(x / 160, y / 160, 3) > 0.6 ? T.GRASS : T.TALLGRASS),
   mirror_lake: (x, y) => (fbm(x / 200, y / 200, 4) > 0.6 ? T.TALLGRASS : T.GRASS),
   crane_ferry: (x, y) => (fbm(x / 180, y / 180, 5) > 0.52 ? T.GRASS : T.SAND),
+  south_pass: (x, y) => (fbm(x / 140, y / 140, 15) > 0.55 ? T.HILL : T.GRASS),
   farmland: () => T.FARM,
   lingxi_valley: (x, y) => (fbm(x / 140, y / 140, 6) > 0.58 ? T.FOREST : T.GRASS),
   qingyun_sect: (x, y) => (fbm(x / 200, y / 200, 7) > 0.55 ? T.FOREST : T.GRASS),
@@ -127,20 +135,30 @@ const BASE = {
     if (n < 0.34) return T.HILL;
     return T.GRASS;
   },
+  // the other maps' regions
+  ...landTable('ground'),
 };
 
-let G = null;
+/** Each map's built world, by map id. */
+const BUILT = {};
 
-/** The built world (lazily). */
+/** The built world of the map you are on (lazily). */
 export function world() {
-  if (!G) G = build();
-  return G;
+  const id = mapId();
+  return BUILT[id] || (BUILT[id] = build());
 }
+
+// another map: its regions are the ones counted
+onMapChange(() => {
+  REGION_IDS = REGION_SHAPES.map((r) => r.id);
+  RIDX = Object.fromEntries(REGION_IDS.map((id, k) => [id, k]));
+  HIDDEN_REGIONS = REGION_SHAPES.filter((r) => r.requires);
+});
 
 function build() {
   const N = COLS * ROWS;
   const terr = new Uint8Array(N).fill(T.GRASS);
-  const reg = new Uint8Array(N).fill(RIDX.wilds);
+  const reg = new Uint8Array(N).fill(RIDX[HOME_REGION]);
   const greatRiver = new Uint8Array(N);
   const statics = REGION_SHAPES.filter((r) => !r.requires && !r.default && !r.fromTerrain);
 
@@ -149,7 +167,7 @@ function build() {
     for (let i = 0; i < COLS; i++) {
       const x = cellX(i);
       const y = cellY(j);
-      let id = 'wilds';
+      let id = HOME_REGION;
       for (const r of statics) {
         if (inShape(r, x, y)) {
           id = r.id;
@@ -158,7 +176,7 @@ function build() {
       }
       const k = idxOf(i, j);
       reg[k] = RIDX[id];
-      terr[k] = (BASE[id] || BASE.wilds)(x, y);
+      terr[k] = (BASE[id] || BASE[HOME_REGION] || BASE.wilds)(x, y);
     }
   }
 
@@ -166,12 +184,10 @@ function build() {
     for (let j = 0; j < ROWS; j++) for (let i = 0; i < COLS; i++) fn(idxOf(i, j), cellX(i), cellY(j), i, j);
   };
 
-  // the world's edge: mountains north, west and south
+  // the world's edge: mountains north, west and south (and east, where there is no river)
   each((k, x, y) => {
-    const north = BORDER.north + 80 * vnoise(x / 300, 1.5, 21);
-    const west = BORDER.west + 80 * vnoise(y / 300, 2.5, 22);
-    const south = BORDER.south - 80 * vnoise(x / 300, 3.5, 23);
-    if (y < north || x < west || y > south) terr[k] = T.PEAK;
+    const [north, west, south, east] = edgeAt(x, y);
+    if (y < north || x < west || y > south || x > east) terr[k] = T.PEAK;
   });
 
   // mountains
@@ -184,22 +200,26 @@ function build() {
   }
 
   // 青雲宗: the massif, its plateau
-  each((k, x, y) => {
-    if (insidePoly(SECT.massif, x, y)) terr[k] = T.PEAK;
-    const e = ellipseE(...SECT.plateau, x, y);
-    if (e < 1) terr[k] = e < 0.5 ? T.PAVED : fbm(x / 120, y / 120, 41) > 0.6 ? T.FOREST : T.GRASS;
-  });
+  if (SECT) {
+    each((k, x, y) => {
+      if (insidePoly(SECT.massif, x, y)) terr[k] = T.PEAK;
+      const e = ellipseE(...SECT.plateau, x, y);
+      if (e < 1) terr[k] = e < 0.5 ? T.PAVED : fbm(x / 120, y / 120, 41) > 0.6 ? T.FOREST : T.GRASS;
+    });
+  }
 
-  // 靈溪谷's ring of cliffs, open at the gorge
-  const gorgeAng = Math.atan2(VALLEY.gorge[1] - VALLEY.cy, VALLEY.gorge[0] - VALLEY.cx);
-  each((k, x, y) => {
-    const e = ellipseE(VALLEY.cx, VALLEY.cy, VALLEY.rx, VALLEY.ry, x, y);
-    if (e < 1 || e > 1 + VALLEY.ring) return;
-    const a = Math.atan2(y - VALLEY.cy, x - VALLEY.cx);
-    let d = Math.abs(a - gorgeAng);
-    if (d > Math.PI) d = 2 * Math.PI - d;
-    if (d > VALLEY.gorgeHalf) terr[k] = T.CLIFF;
-  });
+  // 靈溪谷's ring of cliffs, open at the gorge (on another map, its own walled valley)
+  if (VALLEY) {
+    const gorgeAng = Math.atan2(VALLEY.gorge[1] - VALLEY.cy, VALLEY.gorge[0] - VALLEY.cx);
+    each((k, x, y) => {
+      const e = ellipseE(VALLEY.cx, VALLEY.cy, VALLEY.rx, VALLEY.ry, x, y);
+      if (e < 1 || e > 1 + VALLEY.ring) return;
+      const a = Math.atan2(y - VALLEY.cy, x - VALLEY.cx);
+      let d = Math.abs(a - gorgeAng);
+      if (d > Math.PI) d = 2 * Math.PI - d;
+      if (d > VALLEY.gorgeHalf) terr[k] = T.CLIFF;
+    });
+  }
 
   // 斷魂崖
   for (const [[ax, ay], [bx, by], thick] of CLIFF_LINES) {
@@ -223,11 +243,12 @@ function build() {
   const rivers = RIVERS.map((r) => ({ ...r, path: smoothPath(r.pts, 8) }));
   for (const r of rivers) {
     const hw = r.width / 2;
-    const reach = r.id === 'great' ? hw + 55 : hw;
+    const edge = r.id === EDGE_RIVER;
+    const reach = edge ? hw + 55 : hw;
     stamp(r.path, reach, (k, d) => {
       if (d < hw) {
         terr[k] = T.WATER;
-        if (r.id === 'great') greatRiver[k] = 1;
+        if (edge) greatRiver[k] = 1;
       } else if (NATURAL.has(terr[k])) terr[k] = T.SAND;
     });
   }
@@ -254,11 +275,13 @@ function build() {
   }
 
   // 落霞坊市's walls
-  const [wx0, wy0, wx1, wy1] = MARKET_WALL;
-  each((k, x, y) => {
-    if (x < wx0 || x > wx1 || y < wy0 || y > wy1) return;
-    if (x - wx0 < CELL || wx1 - x < CELL || y - wy0 < CELL || wy1 - y < CELL) terr[k] = T.WALL;
-  });
+  if (MARKET_WALL) {
+    const [wx0, wy0, wx1, wy1] = MARKET_WALL;
+    each((k, x, y) => {
+      if (x < wx0 || x > wx1 || y < wy0 || y > wy1) return;
+      if (x - wx0 < CELL || wx1 - x < CELL || y - wy0 < CELL || wy1 - y < CELL) terr[k] = T.WALL;
+    });
+  }
 
   // roads and trails carve through everything; over water they are bridges
   const roads = ROADS.map((r) => ({ ...r, path: smoothPath(r.pts, 6) }));
@@ -283,12 +306,14 @@ function build() {
   }
 
   // 青雲宗's gate
-  each((k, x, y) => {
-    if (Math.abs(y - SECT.gateY) < 22 && x >= SECT.gateX[0] && x <= SECT.gateX[1] && terr[k] === T.ROAD) terr[k] = T.GATE;
-  });
+  if (SECT) {
+    each((k, x, y) => {
+      if (Math.abs(y - SECT.gateY) < 22 && x >= SECT.gateX[0] && x <= SECT.gateX[1] && terr[k] === T.ROAD) terr[k] = T.GATE;
+    });
+  }
 
   // the great river is a region of its own
-  for (let k = 0; k < N; k++) if (greatRiver[k]) reg[k] = RIDX.great_river;
+  if (RIVER_REGION) for (let k = 0; k < N; k++) if (greatRiver[k]) reg[k] = RIDX[RIVER_REGION];
 
   // buildings are solid rectangles
   const solids = STRUCTURES.filter((st) => st.sprite && st.block !== false).map((st) => ({
@@ -338,11 +363,11 @@ function build() {
   }
 }
 
-/** Cells the player can ever stand on, flooding out from the temple (gate open). */
+/** Cells the player can ever stand on, flooding out from somewhere surely on it (the temple, in 東荒; gate open). */
 function reachable(g) {
   const N = COLS * ROWS;
   const seen = new Uint8Array(N);
-  const start = idxOf(colOf(1060), rowOf(3205));
+  const start = idxOf(colOf(REACH_FROM[0]), rowOf(REACH_FROM[1]));
   const queue = [start];
   seen[start] = 1;
   while (queue.length) {
@@ -412,7 +437,7 @@ export function regionIdAt(x, y) {
   return REGION_IDS[g.reg[idxOf(colOf(x), rowOf(y))]];
 }
 
-const HIDDEN_REGIONS = REGION_SHAPES.filter((r) => r.requires);
+let HIDDEN_REGIONS = REGION_SHAPES.filter((r) => r.requires);
 
 /** The region the player counts as being in (hidden ones appear once their flag is set). */
 export function regionAt(s, x, y) {
@@ -756,6 +781,9 @@ const TREE_MIX = {
   crane_peak: [['pine', 85], ['leaf', 15]],
   sword_peak: [['pine', 45], ['dead', 55]],
   river_isle: [['willow', 100]],
+  south_pass: [['pine', 70], ['leaf', 30]],
+  // the other maps' regions
+  ...landTable('trees'),
 };
 
 function pickMix(mix, r) {
@@ -772,12 +800,13 @@ function pickMix(mix, r) {
 function makeDecor(g) {
   const out = [];
   const clear = clearings();
+  const summits = new Set(AIRY.filter((A) => A.kind === 'summit').map((A) => A.id));
   for (let j = 0; j < ROWS; j++) {
     for (let i = 0; i < COLS; i++) {
       const k = idxOf(i, j);
       const t = g.terr[k];
       const region = REGION_IDS[g.reg[k]];
-      const mix = TREE_MIX[region] || TREE_MIX.wilds;
+      const mix = TREE_MIX[region] || TREE_MIX[HOME_REGION] || TREE_MIX.wilds;
       const r0 = hash2(i, j, 101);
       const place = (kind, n, salt, scale = 1) => {
         for (let m = 0; m < n; m++) {
@@ -789,7 +818,7 @@ function makeDecor(g) {
       };
       const nearWater = hasNeighbor(g, i, j, (nt) => nt === T.WATER);
       // up on a summit: wind-bent pines and bare rock
-      if ((region === 'crane_peak' || region === 'sword_peak') && (t === T.GRASS || t === T.HILL)) {
+      if (summits.has(region) && (t === T.GRASS || t === T.HILL)) {
         if (r0 < 0.3) place(pickMix(mix, hash2(i, j, 220)), 1, 221, 0.9);
         else if (r0 < 0.6) place('rock', r0 < 0.42 ? 2 : 1, 222);
         else if (r0 < 0.8) place('tuft', 1, 223);

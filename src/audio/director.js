@@ -10,6 +10,7 @@ import { terrainAt } from '../world/terrain.js';
 import { T } from '../world/geo.js';
 import { weatherNow, skySigns } from '../world/weather.js';
 import { seasonOf } from '../core/calendar.js';
+import { landTable } from '../world/maps/index.js';
 import { ctx, unlockOn, onReady, duck, muffle, setLight } from './engine.js';
 import { setCue, setFight, wake } from './music.js';
 import { setBeds, happen } from './ambience.js';
@@ -35,6 +36,9 @@ export const PLACE = {
   hidden_cave: 'cave',
   crane_peak: 'peak',
   sword_peak: 'peak',
+  south_pass: 'hill',
+  // the other maps' regions
+  ...landTable('sound'),
 };
 
 /** The sounds of each kind of place (beds 0–1), and what happens there now and then (odds a second). */
@@ -53,6 +57,13 @@ const SOUNDS = {
   river: { beds: { wind: 0.5, river: 0.9 }, day: { birds: 0.03 }, night: {} },
   cave: { beds: { drone: 0.25 }, day: { drip: 0.35 }, night: { drip: 0.35 } },
   peak: { beds: { wind: 1.2 }, day: {}, night: {} },
+  // 南嶺
+  village: { beds: { wind: 0.3, leaves: 0.45, crowd: 0.3 }, day: { birds: 0.08 }, night: { frogs: 0.03, owl: 0.006 } },
+  jungle: { beds: { leaves: 0.9, wind: 0.2, drone: 0.12 }, day: { birds: 0.05 }, night: { owl: 0.012, howl: 0.004 } },
+  marsh: { beds: { wind: 0.25, stream: 0.15 }, day: { frogs: 0.05, birds: 0.03 }, night: { frogs: 0.09 } },
+  gu: { beds: { wind: 0.4, drone: 0.35, leaves: 0.3 }, day: {}, night: { owl: 0.008 } },
+  falls: { beds: { river: 1.1, wind: 0.3 }, day: { birds: 0.05 }, night: {} },
+  nanwilds: { beds: { wind: 0.5, leaves: 0.35 }, day: { birds: 0.08 }, night: { owl: 0.01, howl: 0.004 } },
 };
 
 /**

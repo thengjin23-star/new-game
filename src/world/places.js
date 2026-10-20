@@ -1,8 +1,13 @@
 // What stands in the world: buildings, places you can walk up to (POI),
 // where people are, what roams, and small things hidden off the road.
+// STRUCTURES, POIS and BEASTS are the map you are on (東荒's here; another
+// map's, from its own file, once you cross: see world/atlas.js) — the
+// bindings are live. The tables kept by region (NPC_SPOTS, GATHER, …) hold
+// every map's entries, as region ids are never shared between maps.
 
 import { T } from './geo.js';
 import { omenAt } from './happenings.js';
+import { LANDS } from './maps/index.js';
 
 const night = (s) => s.tod >= 19.5 || s.tod < 5;
 
@@ -10,7 +15,7 @@ const night = (s) => s.tod >= 19.5 || s.tod < 5;
  * Buildings and painted areas. x/y is the centre of the footprint (w×h);
  * the sprite stands on the footprint's bottom edge. block: footprint is solid.
  */
-export const STRUCTURES = [
+export let STRUCTURES = [
   // 青石鎮
   { x: 2010, y: 2985, w: 170, h: 90, sprite: 'mansion' },
   { x: 2510, y: 2985, w: 160, h: 90, sprite: 'mansion' },
@@ -89,6 +94,8 @@ export const STRUCTURES = [
   // 野地裡的路邊建築
   { x: 3430, y: 2945, w: 60, h: 36, sprite: 'teashed' },
   { x: 2840, y: 2268, w: 44, h: 36, sprite: 'shrine_small' },
+  // the boundary stone at the top of the pass to 南嶺
+  { x: 2672, y: 4436, w: 30, h: 22, sprite: 'stele', block: false },
 ];
 
 const poiSeen = (id) => (s) => !s.seen[id];
@@ -99,7 +106,7 @@ const poiSeen = (id) => (s) => !s.seen[id];
  * no event applies. hidden: found only when you come within r. auto: radius
  * inside which a bound event marked `auto` starts by itself.
  */
-export const POIS = [
+export let POIS = [
   // 青石鎮
   {
     id: 'lin_gate', region: 'qingshi_town', x: 2010, y: 3066, name: '林家大門', verb: '查看', auto: 150,
@@ -222,10 +229,16 @@ export const POIS = [
   { id: 'crane_carving', region: 'crane_peak', x: 1700, y: 2198, name: '石壁刻痕', verb: '查看', sprite: 'stele', text: '石壁上刻著一串腳印，一步比一步淺，最後一步，淺得像是踩在雲上。' },
   { id: 'isle_fisher', region: 'river_isle', x: 4872, y: 2062, name: '釣魚的老翁', verb: '上前', sprite: 'fisher', text: '老翁的斗笠壓得很低，看不見臉。魚竿一動也不動。' },
   { id: 'isle_wreck', region: 'river_isle', x: 4860, y: 2266, name: '擱淺的破船', verb: '查看', sprite: 'wreck', treasure: { text: '一條不知擱淺了多少年的小船，船底朝天，半埋在沙裡。你把它翻過來，船艙的夾板底下藏著一個油布包：幾塊靈石，兩張還沒受潮的符。\n\n不知道它的主人，當年是要過江，還是剛從對岸回來。', effects: [['ls', 40], ['item', 'wind_talisman', 2]] } },
+  // the pass to 南嶺
+  {
+    id: 'south_pass_gate', region: 'south_pass', x: 2614, y: 4520, name: '山隘', verb: '翻過山隘',
+    text: '山隘那頭，是南嶺。',
+  },
   { id: 'sword_cleft', region: 'sword_peak', x: 3656, y: 400, name: '劍痕', verb: '參悟', sprite: 'sword_scar', text: '一道把峰頂整個劈開的裂口，深不見底。風從裡面吹出來，冷得像刀。' },
 ];
 
-export const POI_BY_ID = Object.fromEntries(POIS.map((p) => [p.id, p]));
+/** Every map's places by id (an event names its place whichever map you are on). */
+export const POI_BY_ID = Object.fromEntries([...POIS, ...LANDS.flatMap((m) => m.places.POIS)].map((p) => [p.id, p]));
 
 /** Where named people stand, by the region they are in. */
 export const NPC_SPOTS = {
@@ -256,7 +269,7 @@ export const NPC_SHOW = {
  * story ends the way the fight did); for beasts, how it goes if you fall.
  * title: the group, as the fight is announced.
  */
-export const BEASTS = [
+export let BEASTS = [
   // 青石山: two packs of wolves; a snake in the long grass (in summer and autumn)
   { id: 'wolves_a', kind: 'wolf', n: 3, title: '狼群', x: 1450, y: 2395, r: 150, event: 'hill_wolves', respawn: 45, power: 20 },
   { id: 'wolves_b', kind: 'wolf', n: 2, title: '狼群', x: 790, y: 2470, r: 120, event: 'hill_wolves', respawn: 60, power: 20 },
@@ -293,3 +306,15 @@ export const GATHER = {
 /** Townsfolk and passers-by who walk around a region (they only talk). */
 export const WANDERERS = { qingshi_town: 8, luoxia_market: 11, farmland: 3, qingyun_sect: 4 };
 export const GATHER_RESPAWN = 25;
+
+// ── which map's things these are ──
+
+/** 東荒's (what a map file gives for its own). */
+export const DONGHUANG_PLACES = { STRUCTURES, POIS, BEASTS };
+
+/** Put another map's buildings, places and beasts in place (world/atlas.js). */
+export function setPlaces(p) {
+  STRUCTURES = p.STRUCTURES;
+  POIS = p.POIS;
+  BEASTS = p.BEASTS;
+}

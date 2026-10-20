@@ -4,19 +4,20 @@
 
 import { atBottleneck } from '../core/cultivation.js';
 import { pools } from '../core/body.js';
-import { NODES } from './map.js';
+import { NODES, mapOf } from './map.js';
 import { happenings, tideTonight } from './happenings.js';
 import { realmOpen, realmDone, SECRET_REALMS } from './realms.js';
 import * as Q from './quests.js';
 import * as SECT from './sect.js';
 
-/** The place you know of but have not been to, nearest to where you are. */
+/** The place you know of but have not been to, nearest to where you are (on the map you are on). */
 function nearestUnseen(s) {
   const here = NODES[s.player.loc]?.at || [s.world?.x || 0, s.world?.y || 0];
+  const map = s.world?.map || 'donghuang';
   let best = null;
   let bd = Infinity;
   for (const [id, n] of Object.entries(NODES)) {
-    if (!n.at || !s.nodes[id]?.known || s.nodes[id]?.visited || n.kind === 'peak' || n.kind === 'isle' || id === 'hidden_cave') continue;
+    if (!n.at || !s.nodes[id]?.known || s.nodes[id]?.visited || n.kind === 'peak' || n.kind === 'isle' || n.kind === 'cave' || mapOf(id) !== map) continue;
     const d = Math.hypot(n.at[0] - here[0], n.at[1] - here[1]);
     if (d < bd) {
       bd = d;

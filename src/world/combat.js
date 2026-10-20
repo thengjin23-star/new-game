@@ -105,6 +105,13 @@ export function inCombat(s) {
   return combatOf(s).on;
 }
 
+/** You crossed into another map: its beasts are another lot, and nothing from the last one is in the air. */
+export function leaveMap(s) {
+  const C = combatOf(s);
+  Object.assign(C, { on: false, beasts: null, shots: [], fx: [], pops: [], pools: [], hits: [], preview: null, foes: new Set(), trial: null, outcome: null });
+  if (C.me) Object.assign(C.me, { act: null, dash: null, kb: null, target: null, auto: false, hold: false, press: 0, steer: null, trail: [] });
+}
+
 // ── you ──
 
 /**

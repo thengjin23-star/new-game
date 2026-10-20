@@ -1,8 +1,12 @@
 // 雲霧: which cells of the world the player has seen. The save keeps a
-// base64 bitset; the live copy is a byte per cell plus per-region counts.
+// base64 bitset for the map you are on (s.world.fog; another map's waits in
+// s.world.away until you cross back); the live copy is a byte per cell plus
+// per-region counts.
 
 import { COLS, ROWS, CELL } from './geo.js';
 import { world, REGION_IDS, idxOf, colOf, rowOf, cellX, cellY } from './terrain.js';
+import { mapOf } from './map.js';
+import { mapId } from './atlas.js';
 
 const N = COLS * ROWS;
 const live = new WeakMap();
@@ -55,6 +59,11 @@ export function syncFog(s) {
   if (f) s.world.fog = encode(f.bits);
 }
 
+/** The save's fog is another map's now (you crossed): let the live copy go (written back first). */
+export function forgetFog(s) {
+  if (s.world) live.delete(s.world);
+}
+
 export function isRevealed(s, x, y) {
   return !!fogOf(s).bits[idxOf(colOf(x), rowOf(y))];
 }
@@ -65,6 +74,8 @@ export function cellRevealed(s, k) {
 
 /** Share of a region's ground (walked to, or flown to) that has been seen, 0–100 (95% seen counts as all). */
 export function exploredPct(s, id) {
+  // (a place on another map: as much as you had seen of it when you left)
+  if (mapOf(id) !== mapId()) return s.nodes[id]?.explore || 0;
   const total = world().regionCells[id];
   if (!total) return 0;
   return Math.min(100, Math.floor((100 * (fogOf(s).counts[id] || 0)) / (total * 0.95)));

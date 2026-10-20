@@ -1,6 +1,6 @@
 import { ITEMS, displayItem } from '../content/items.js';
 import { TECHS } from '../content/techniques.js';
-import { NODES } from '../world/map.js';
+import { NODES, mapOf } from '../world/map.js';
 import { genNpc } from '../world/npcs.js';
 import { rumor } from '../world/rumors.js';
 import { sysGain, trySubstitute } from '../world/system.js';
@@ -98,16 +98,17 @@ export function discover(s, id, report) {
   const n = s.nodes[id];
   if (!n || n.known) return;
   n.known = true;
-  // the map shows a glimpse of where it is
-  if (s.world && NODES[id].at) reveal(s, NODES[id].at[0], NODES[id].at[1], 240);
+  // the map shows a glimpse of where it is (if it is on the map you are on)
+  if (s.world && NODES[id].at && mapOf(id) === (s.world.map || 'donghuang')) reveal(s, NODES[id].at[0], NODES[id].at[1], 240);
   chip(report, `發現：${NODES[id].name}`, 'good');
   logLife(s, `得知了${NODES[id].name}`);
   sysGain(s, 10, report);
 }
 
-/** Put the player somewhere in the world (the story carried them there). */
+/** Put the player somewhere in the world (the story carried them there; somewhere on the map you are on — another map is reached by a way over, 'cross'). */
 export function moveTo(s, id) {
   const p = s.player;
+  if (s.world && mapOf(id) !== (s.world.map || 'donghuang')) return;
   p.loc = id;
   s.nodes[id].known = true;
   s.nodes[id].visited = true;
@@ -352,6 +353,10 @@ export function applyEffects(s, effects, ctx, report) {
         break;
       case 'move':
         moveTo(s, a);
+        break;
+      case 'cross':
+        // a way over into another map (world/atlas.js CROSSINGS): taken once the story is done
+        if (s.world) s.world.cross = a;
         break;
       case 'buff':
         p.buffs[a] = Math.max(p.buffs[a] || 0, b);

@@ -5,9 +5,11 @@
 // keep an even grade and towns sit level. Built once from the same data as
 // the grid, so what you see and where you can walk always agree.
 
-import { WORLD_W, WORLD_H, CELL, COLS, ROWS, T, CLIFF_LINES, SECT, VALLEY, LAKES, PEAKS, BORDER, AIRY } from './geo.js';
+import { WORLD_W, WORLD_H, CELL, COLS, ROWS, T, CLIFF_LINES, SECT, VALLEY, LAKES, PEAKS, BORDER, AIRY, UPLAND, EDGE_RIVER, HOME_REGION } from './geo.js';
 import { STRUCTURES } from './places.js';
-import { world, REGION_IDS, idxOf, cellX, cellY, colOf, rowOf, vnoise, fbm, segDist, insidePoly } from './terrain.js';
+import { world, REGION_IDS, idxOf, cellX, cellY, colOf, rowOf, vnoise, fbm, segDist, insidePoly, edgeAt } from './terrain.js';
+import { mapId } from './atlas.js';
+import { landTable } from './maps/index.js';
 
 export const HS = 20; // spacing of height samples
 export const HW = WORLD_W / HS + 1;
@@ -23,27 +25,12 @@ const SETTLED = {
   fox_shrine: [24, 6],
   qingxu_temple: [44, 6],
   great_river: [-24, 0],
+  // the other maps' regions
+  ...landTable('settled'),
 };
 
 /** How much wild ground rolls, by region. */
-const ROLL = { wilds: 18, black_forest: 20, qingshi_hill: 22, ancient_ruins: 14, lingxi_valley: 4, qingyun_sect: 10, hidden_cave: 8 };
-
-/** The lie of the wild land: [x, y, height, reach]. */
-const UPLAND = [
-  // the north-west uplands and the old battlefield
-  [700, 600, 205, 450], [1500, 550, 195, 400], [2600, 650, 170, 450], [3500, 700, 160, 350], [4150, 350, 140, 300], [4550, 350, 30, 220],
-  // 黑風林
-  [1250, 1500, 150, 350], [2300, 1550, 125, 380], [3200, 1600, 95, 350],
-  // 靈溪谷 and the high side of 青石山
-  [600, 1820, 150, 260], [1000, 2150, 135, 220], [1350, 2350, 118, 220], [1800, 2300, 100, 250],
-  // the low side of 青石山, under 斷魂崖
-  [1300, 2820, 50, 180], [850, 2850, 58, 220], [2000, 2700, 40, 180],
-  // the open wilds, falling east to the river
-  [2600, 2250, 55, 300], [3200, 2350, 40, 300], [3700, 1950, 48, 300], [4300, 1950, 40, 260], [4650, 1200, 60, 260],
-  [4500, 2900, 18, 300], [3800, 3300, 20, 280], [4700, 420, 5, 260],
-  // west and south
-  [350, 3500, 75, 350], [1300, 3700, 30, 300], [2400, 4150, 15, 300], [3500, 4200, 12, 300], [4500, 4300, 8, 300],
-];
+const ROLL = { south_pass: 20, wilds: 18, black_forest: 20, qingshi_hill: 22, ancient_ruins: 14, lingxi_valley: 4, qingyun_sect: 10, hidden_cave: 8, ...landTable('roll') };
 
 /** Fixed levels: the great river's surface, the sect's plateau, the lake. */
 export const LEVEL = { river: -12, sect: 236, lake: 3 };
@@ -52,12 +39,13 @@ export const LEVEL = { river: -12, sect: 236, lake: 3 };
 const CLIFF_UP = 58;
 const CLIFF_DOWN = 32;
 
-let HG = null;
+/** Each map's heights, by map id. */
+const BUILT = {};
 
-/** The height grid and the water (built on first use). */
+/** The height grid and the water of the map you are on (built on first use). */
 export function heights() {
-  if (!HG) HG = buildHeights();
-  return HG;
+  const id = mapId();
+  return BUILT[id] || (BUILT[id] = buildHeights());
 }
 
 export function heightAt(x, y) {
@@ -189,7 +177,7 @@ function buildHeights() {
       const id = REGION_IDS[g.reg[k]];
       const set = SETTLED[id];
       base[k] = set ? set[0] : upland(cellX(i), cellY(j));
-      roll[k] = set ? set[1] : ROLL[id] ?? ROLL.wilds;
+      roll[k] = set ? set[1] : ROLL[id] ?? ROLL[HOME_REGION] ?? ROLL.wilds;
     }
   }
   const baseB = blur(base, 2, 3);
@@ -199,13 +187,11 @@ function buildHeights() {
   //    of the world, the peaks, the sect's massif, 靈溪谷's ring), so they rise
   //    as smooth peaks rather than blocks of cells. Wherever a foot can stand
   //    the rock is held down, so the ground there stays level.
-  const gorgeAng = Math.atan2(VALLEY.gorge[1] - VALLEY.cy, VALLEY.gorge[0] - VALLEY.cx);
+  const gorgeAng = VALLEY ? Math.atan2(VALLEY.gorge[1] - VALLEY.cy, VALLEY.gorge[0] - VALLEY.cx) : 0;
   const rockAt = (x, y) => {
     let m = 0;
-    const dn = BORDER.north + 80 * vnoise(x / 300, 1.5, 21) - y;
-    const dw = BORDER.west + 80 * vnoise(y / 300, 2.5, 22) - x;
-    const ds = y - (BORDER.south - 80 * vnoise(x / 300, 3.5, 23));
-    const d = Math.max(dn, dw, ds);
+    const [north, west, south, east] = edgeAt(x, y);
+    const d = Math.max(north - y, west - x, y - south, x - east);
     if (d > 0) m = 430 * (1 - Math.exp(-d / 200)) * (d / (d + 40)) * (0.65 + 0.6 * ridged(x, y));
     for (const [cx, cy, rx, ry] of PEAKS) {
       if (Math.abs(x - cx) > rx * 1.2 || Math.abs(y - cy) > ry * 1.2) continue;
@@ -216,11 +202,11 @@ function buildHeights() {
       const H = (60 + (0.9 * (rx + ry)) / 2) * (0.75 + 0.5 * fbm(x / 140, y / 140, 81));
       m = smax(m, H * (0.5 * t + 0.5 * t ** 2.4) + 0.25 * H * t * (ridged(x * 1.7, y * 1.7) - 0.5), 30);
     }
-    if (insidePoly(SECT.massif, x, y)) {
+    if (SECT && insidePoly(SECT.massif, x, y)) {
       const dm = Math.max(0, polyDepth(SECT.massif, x, y) - 30 * fbm(x / 120, y / 120, 83));
       m = smax(m, 330 * (1 - Math.exp(-dm / 190)) * (dm / (dm + 50)) * (0.8 + 0.4 * ridged(x, y)), 30);
     }
-    const e = Math.hypot((x - VALLEY.cx) / VALLEY.rx, (y - VALLEY.cy) / VALLEY.ry);
+    const e = VALLEY ? Math.hypot((x - VALLEY.cx) / VALLEY.rx, (y - VALLEY.cy) / VALLEY.ry) : 0;
     if (e > 0.98 && e < 1.5) {
       let a = Math.abs(Math.atan2(y - VALLEY.cy, x - VALLEY.cx) - gorgeAng);
       if (a > Math.PI) a = 2 * Math.PI - a;
@@ -313,17 +299,20 @@ function buildHeights() {
   // 4. water. Lakes keep a level; the stream runs from the valley's pool to
   //    the lake and never uphill; the great river cuts a broad bed.
   const water = new Float32Array(N).fill(-1e6);
-  const lakes = LAKES.map(([cx, cy, rx, ry], n) => ({ cx, cy, rx, ry, level: n === 0 ? LEVEL.lake : bilerp(h, cx, cy) - 1 }));
+  const lakes = LAKES.map(([cx, cy, rx, ry, level]) => ({ cx, cy, rx, ry, level: level ?? bilerp(h, cx, cy) - 1 }));
 
   const streams = [];
   for (const r of g.rivers) {
     const hw = r.width / 2;
-    const great = r.id === 'great';
+    const great = r.id === EDGE_RIVER;
     const steps = sampleAlong(r.path, 20);
     let surf;
     if (great) surf = steps.map(() => LEVEL.river);
     else {
-      const top = lakes[1] ? lakes[1].level : bilerp(h, steps[0][0], steps[0][1]);
+      const from = r.from ?? 1;
+      const top = lakes[from] ? lakes[from].level : bilerp(h, steps[0][0], steps[0][1]);
+      // (down to the lake it runs into, or the low water)
+      const floor = r.toLake != null ? lakes[r.toLake].level : r.to ?? LEVEL.lake;
       // the water finds the lowest of its bed and both banks, and never climbs
       surf = [];
       let run = top;
@@ -336,11 +325,11 @@ function buildHeights() {
         let low = bilerp(h, x, y);
         for (const d of [hw + 24, hw + 64]) low = Math.min(low, bilerp(h, x + ux * d, y + uy * d), bilerp(h, x - ux * d, y - uy * d));
         run = Math.min(run, low - 2);
-        surf.push(Math.max(run, LEVEL.lake));
+        surf.push(Math.max(run, floor));
       });
       surf = movingAverage(surf, 2);
       surf[0] = top;
-      surf[surf.length - 1] = LEVEL.lake;
+      surf[surf.length - 1] = floor;
     }
     const arc = steps.map((_, n) => n * 20);
     arc[arc.length - 1] = pathLength(r.path);
@@ -400,6 +389,8 @@ function buildHeights() {
 
   // 5. 青雲宗: the plateau sits level on top of its massif; peaks stand behind it,
   //    and the front of the massif never rises above it (or it would hide it)
+  if (SECT) sectPlateau();
+  function sectPlateau() {
   const [px, py, prx, pry] = SECT.plateau;
   const massif = SECT.massif;
   eachIn(px - prx * 3, py - pry * 3, px + prx * 3, py + pry * 3, (k, x, y) => {
@@ -421,6 +412,7 @@ function buildHeights() {
     if (h[k] > cap) h[k] = cap;
     if (e < 1.35) h[k] = Math.max(h[k], LEVEL.sect + 2 + (e - 1) * 40 * north);
   });
+  }
 
   // 6. roads keep an even grade; over water they are bridges; the sect's
   //    stair climbs straight up the mountain
@@ -437,7 +429,7 @@ function buildHeights() {
     }
     profiles.push({ road: r, steps, prof, wet });
   }
-  const stair = profiles.find((p) => p.road.pts[p.road.pts.length - 1][1] === 1330);
+  const stair = SECT && profiles.find((p) => p.road.pts[p.road.pts.length - 1][1] === 1330);
   if (stair) {
     const foot = Math.max(0, stair.steps.findIndex(([, y]) => y < 1800));
     const top = stair.steps.length - 1;
@@ -511,7 +503,7 @@ function buildHeights() {
   // 8. last of all, the stream's banks stand above its water, whatever the
   //    roads and buildings did to them
   for (const r of streams) {
-    if (r.id === 'great') continue;
+    if (r.id === EDGE_RIVER) continue;
     const hw = r.width / 2;
     for (const [x, y, z] of r.pts) {
       eachIn(x - hw - 44, y - hw - 44, x + hw + 44, y + hw + 44, (k, px, py) => {
