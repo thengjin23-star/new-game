@@ -50,7 +50,7 @@ import { KE } from '../content/wuxing.js';
 import * as END from '../world/ending.js';
 import { refineLevel, refineMult } from '../core/refine.js';
 
-const VERSION = '0.20';
+const VERSION = '0.21';
 const ITEM_ORDER = ['weapon', 'gear', 'flyer', 'tool', 'pill', 'talisman', 'herb', 'material', 'book', 'treasure', 'token', 'unknown'];
 const ITEM_KIND = { pill: '丹藥', herb: '靈草', material: '材料', book: '典籍', weapon: '兵器', gear: '裝備', flyer: '飛行法器', tool: '工具', treasure: '寶物', talisman: '符籙', token: '信物', unknown: '未知' };
 const DOCK = [
