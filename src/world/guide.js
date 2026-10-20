@@ -27,6 +27,28 @@ function nearestUnseen(s) {
   return best;
 }
 
+/** 南嶺 (0.21): where its stories stand — the well and the 蠱母, 阿山's brother, the falls, 韓三's pack. */
+function nanlingGoal(s) {
+  const f = s.flags;
+  const it = s.player.items;
+  if ((s.vars.kills?.gu_mother || 0) > 0) {
+    if (!f.gu_nest_burned) return { key: 'nl:nest', text: '萬蠱谷：燒了蠱巢', why: '蠱母死了，巢裡的卵還在。到谷底的蠱巢前，一把火燒乾淨。' };
+    if (!f.gu_cleared) return { key: 'nl:elder', text: '回青竹寨見岩伯', why: '蠱母死了，巢也燒了。回寨子告訴岩伯。' };
+    if (!f.bizhang_gu) return { key: 'nl:luo', text: '去找阿蘿', why: '岩伯說，阿蘿有東西要給你。' };
+  } else if (f.luo_told) {
+    return { key: 'nl:mother', text: '萬蠱谷：除蠱母', why: '蠱母在萬蠱谷深處。瘴氣用避瘴丹擋；蠱蟲和蠱母都屬金，怕火。牠很強——煉氣後期，帶足丹藥再去。' };
+  } else if (f.gu_task || f.well_seen) {
+    return { key: 'nl:ask', text: '問阿蘿：井裡的蟲', why: '百藥鋪的阿蘿懂蠱。去問問她，寨井裡那些死蟲是什麼。' };
+  }
+  if (f.a_shui_lost && !f.a_shui_found) return { key: 'nl:shui', text: '瘴林：找阿水', why: '阿山的弟弟阿水，困在瘴林南邊的白絲洞。進瘴林前，記得帶避瘴丹。' };
+  if (f.a_shui_found && !f.a_shui_saved) return { key: 'nl:shan', text: '回寨子見阿山', why: '阿水救回來了。去阿山家看看。' };
+  if (f.falls_hint && !f.falls_cave_found) return { key: 'nl:falls', text: '碧潭：瀑布後面', why: '有人看見瀑布後面有光。到碧潭的瀑布前看看。' };
+  if (f.falls_cave_found && !f.houtu_read) return { key: 'nl:cave', text: '水簾洞：讀石壁', why: '水簾洞的石壁上刻滿了字。' };
+  if (it.han_pack > 0) return { key: 'nl:pack', text: '嶺口：把包袱還給韓三', why: '韓三在嶺口的草棚裡。' };
+  if (f.zhai_met && !f.gu_task && !f.well_seen) return { key: 'nl:well', text: '青竹寨：寨井發苦', why: '寨子的井水苦了。到井邊看看，或找寨老岩伯問問。' };
+  return null;
+}
+
 /**
  * What you could do next: { key, text, why } (or null while the opening
  * still leads you by the hand). The first that applies, from what cannot
@@ -36,6 +58,8 @@ export function nextGoal(s) {
   const p = s.player;
   if (!s.flags.opening_done || s.dead) return null;
   if (s.secl) return null;
+  // over the hills (0.21): 東荒's doings are a long way off
+  const away = (s.world?.map || 'donghuang') !== 'donghuang';
   // a step you can take now
   if (atBottleneck(s)) {
     return p.realm === 0
@@ -52,6 +76,8 @@ export function nextGoal(s) {
   for (const h of happenings(s, 6)) {
     const now = h.from <= s.day;
     if (h.name === '靈潮' && now) return { key: 'tide', text: '靈潮：快閉關', why: '靈潮這三天修煉快五成。找個靈氣好的地方閉關。' };
+    // (the rest happen in 東荒)
+    if (away) continue;
     if (h.name.endsWith('開啟') && now) {
       const id = Object.keys(SECRET_REALMS).find((k) => `${SECRET_REALMS[k].name}開啟` === h.name);
       if (id && realmOpen(s, id) !== null && !realmDone(s, id)) return { key: `realm:${id}`, text: h.name, why: `${h.name}，入口在${h.where}。每次開啟只能闖一回，每一層都能見好就收。` };
@@ -60,6 +86,11 @@ export function nextGoal(s) {
     if (h.name === '異寶出世') return { key: `omen:${h.spot}`, text: `異寶出世：${h.where}`, why: `寶光落在${h.where}，只亮五天。已經有散修守在那裡了。` };
     if (h.name === '青雲宗開山收徒' && now && !s.flags.sect_member && !s.flags.recruit_declined) return { key: 'recruit', text: '開山收徒：去青雲宗', why: '十年一回。到青雲宗山門前測靈根，就能入門。也可以繼續做散修。' };
     if (h.name === '青雲宗大比' && now && s.flags.sect_member) return { key: 'tourney', text: '宗門大比：到任務堂', why: '每年六月初一到初十，在任務堂前開擂。連勝三場就是魁首。' };
+  }
+  // where 南嶺's stories stand
+  if (away) {
+    const g = nanlingGoal(s);
+    if (g) return g;
   }
   // the work you took
   const taken = Q.takenOf(s).map((q) => Q.progress(s, q)).filter(Boolean);
@@ -74,9 +105,9 @@ export function nextGoal(s) {
     return { key: `work:${w.key}`, text: `差事：${w.title}（${w.have}/${w.need}）`, why: Q.askOf(w) };
   }
   // 築基: the chapter's end is across the river
-  if (p.realm >= 2 && !s.flags.chapter1_done) return { key: 'ferry', text: '白鶴渡：渡江', why: '築基了，白鶴渡的老船夫肯載你過江了——那是第一章的終點。走之前，想見的人先見一見；渡過江，還可以回到東荒繼續走。' };
+  if (p.realm >= 2 && !s.flags.chapter1_done && !away) return { key: 'ferry', text: '白鶴渡：渡江', why: '築基了，白鶴渡的老船夫肯載你過江了——那是第一章的終點。走之前，想見的人先見一見；渡過江，還可以回到東荒繼續走。' };
   // the cave you found, not yet made your own
-  if (s.flags.cave_found && !s.flags.home_claimed) return { key: 'home', text: '收拾山腹洞府', why: '青石山腹那處洞府，收拾一下就是你的了：能閉關、煉丹、畫符，還能布聚靈陣，讓靈氣更濃。走到石縫前查看。' };
+  if (s.flags.cave_found && !s.flags.home_claimed && !away) return { key: 'home', text: '收拾山腹洞府', why: '青石山腹那處洞府，收拾一下就是你的了：能閉關、煉丹、畫符，還能布聚靈陣，讓靈氣更濃。走到石縫前查看。' };
   // somewhere you have heard of
   const go = nearestUnseen(s);
   if (go) return { key: `go:${go}`, text: `去看看：${NODES[go].name}`, why: `聽說過${NODES[go].name}，還沒去過。打開地圖，點它，選「走過去」。` };

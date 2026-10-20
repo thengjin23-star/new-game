@@ -24,6 +24,7 @@ import { regionAt, collides, isReachable, nearestOpen } from '../src/world/terra
 import { gearStats, wear } from '../src/core/body.js';
 import { serialize, parseSave } from '../src/core/save.js';
 import { checkFeats } from '../src/world/feats.js';
+import { nextGoal } from '../src/world/guide.js';
 import { startEvent } from '../src/core/events.js';
 import { fresh, resolvePending, goToPoi, pickText } from './helpers.js';
 
@@ -134,8 +135,10 @@ test('the well gone bitter: 岩伯 asks, 阿蘿 knows, the 蠱母 dies, its nest
   assert.ok(s.flags.well_seen);
   call(s, 'yan_bo', '寨井的事');
   assert.ok(s.flags.gu_task);
+  assert.equal(nextGoal(s)?.key, 'nl:ask', 'the line at the top: ask 阿蘿');
   call(s, 'a_luo', '寨井裡的死蟲');
   assert.ok(s.flags.luo_told);
+  assert.equal(nextGoal(s)?.key, 'nl:mother');
   // 萬蠱谷: the mother is there until she is dead, and then never again
   E.placeAt(s, ...nearestOpen(s, 4330, 1900));
   resolvePending(s);
@@ -143,6 +146,7 @@ test('the well gone bitter: 岩伯 asks, 阿蘿 knows, the 蠱母 dies, its nest
   s.vars.kills = { ...(s.vars.kills || {}), gu_mother: 1 };
   assert.ok(!CB.beastsInWorld(s, 2000).some((b) => b.kind === 'gu_mother'), 'gone for good');
   // not done until the nest is burned
+  assert.equal(nextGoal(s)?.key, 'nl:nest');
   call(s, 'yan_bo', '蠱母死了。');
   assert.ok(!s.flags.gu_cleared);
   at(s, 'gu_nest');

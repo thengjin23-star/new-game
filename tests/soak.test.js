@@ -10,15 +10,27 @@ import * as CB from '../src/world/combat.js';
 import * as SV from '../src/core/save.js';
 import * as A from '../src/core/actions.js';
 import * as SK from '../src/world/skills.js';
-import { NODES } from '../src/world/map.js';
-import { fresh, resolvePending, waitUntil } from './helpers.js';
+import { NODES, mapOf } from '../src/world/map.js';
+import { fresh, resolvePending, waitUntil, goToPoi, pickText } from './helpers.js';
 
 const ORIGINS = ['farmer', 'hunter', 'scholar', 'apprentice', 'orphan'];
 
-function soak(seed, steps, cultivated) {
+function soak(seed, steps, cultivated, south = false) {
   let r = seed * 7919;
   const rnd = () => (r = (r * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff;
   let s = fresh(seed, ORIGINS[seed % ORIGINS.length]);
+  if (south) {
+    // (0.21) over the pass: the whole of it played on 南嶺
+    Object.assign(s.player, { realm: 1, stage: 6 });
+    goToPoi(s, 'south_pass_gate', -40);
+    resolvePending(s);
+    E.interact(s, { kind: 'poi', id: 'south_pass_gate' });
+    pickText(s, '翻過去');
+    resolvePending(s);
+    E.step(s, 0.05, null);
+    resolvePending(s);
+    assert.equal(s.world.map, 'nanling');
+  }
   if (cultivated) {
     // a 築基 cultivator with a sword, a few arts and things to burn: every kind of move gets thrown
     Object.assign(s.player, { realm: 2, stage: 1, weapon: 'qinggang_sword' });
@@ -45,7 +57,7 @@ function soak(seed, steps, cultivated) {
         for (let f = 0; f < 45 && !s.pending && !s.dead; f++) E.step(s, 1 / 30, { x: Math.cos(a), y: Math.sin(a) });
       } else if (roll < 0.52) {
         what = 'travelling';
-        const known = Object.keys(NODES).filter((id) => s.nodes[id]?.known && NODES[id].at);
+        const known = Object.keys(NODES).filter((id) => s.nodes[id]?.known && NODES[id].at && mapOf(id) === s.world.map);
         E.walkTo(s, ...NODES[known[Math.floor(rnd() * known.length)]].at);
         for (let f = 0; f < 300 && !s.pending && !s.dead; f++) E.step(s, 1 / 30, null);
         tally.travels++;
@@ -108,4 +120,12 @@ test('長玩：隨機走動、趕路、互動、閉關、戰鬥、推演與存�
     casts += run.tally.casts;
   }
   assert.ok(casts > 0, 'the cultivated ones did cast');
+});
+
+test('長玩・南嶺：翻過山隘之後的隨機遊玩（瘴氣、毒蛛、蠱蟲、存讀檔），不出任何例外', () => {
+  for (const seed of [24, 25]) {
+    const run = soak(seed, 110, true, true);
+    assert.equal(run.error, null, run.error || '');
+    assert.equal(mapOf(run.s.player.loc), run.s.world.map, 'where you are is on the map you are on');
+  }
 });

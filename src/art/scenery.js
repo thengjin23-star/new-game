@@ -693,7 +693,7 @@ function toad(ctx, t, moving, king = false) {
 /** 蠱蟲群: a cloud of 蠱 — black-shelled insects the size of a thumb, the wings a blur, circling one another. */
 function swarm(ctx, t) {
   const haze = ctx.createRadialGradient(0, -22, 0, 0, -22, 16);
-  haze.addColorStop(0, 'rgba(40,36,30,0.3)');
+  haze.addColorStop(0, 'rgba(40,36,30,0.45)');
   haze.addColorStop(1, 'rgba(40,36,30,0)');
   ctx.fillStyle = haze;
   ctx.beginPath();
@@ -710,7 +710,7 @@ function swarm(ctx, t) {
     ctx.fill();
     ctx.fillStyle = n % 4 ? 'rgba(26,24,20,1)' : 'rgba(156,124,40,1)';
     ctx.beginPath();
-    ctx.ellipse(x, y, 1.6, 1.1, a, 0, Math.PI * 2);
+    ctx.ellipse(x, y, 2, 1.4, a, 0, Math.PI * 2);
     ctx.fill();
   }
 }
@@ -814,7 +814,7 @@ function centipede(ctx, t, moving) {
 /** The big ones: a demon wolf, the wolf king, the python, the iron-backed bear, the skeleton general. */
 export function drawBigBeast(ctx, kind, { t = 0, face = 1, moving = false } = {}) {
   ctx.save();
-  groundShadow(ctx, 0, 0, { demon_wolf: 15, wolf_king: 22, python: 24, bear: 22, skeleton: 12, fire_tiger: 25, shanxiao: 12, mumei: 12, xuan_turtle: 27, spider: 14, toad: 16, toad_king: 25, swarm: 9, gu_mother: 30 }[kind] || 14, 3);
+  groundShadow(ctx, 0, 0, { demon_wolf: 15, wolf_king: 22, python: 24, bear: 22, skeleton: 12, fire_tiger: 25, shanxiao: 12, mumei: 12, xuan_turtle: 27, spider: 14, toad: 16, toad_king: 25, swarm: 12, gu_mother: 30 }[kind] || 14, 3);
   ctx.scale(face, 1);
   switch (kind) {
     case 'demon_wolf':
@@ -859,6 +859,7 @@ export function drawBigBeast(ctx, kind, { t = 0, face = 1, moving = false } = {}
       toad(ctx, t, moving, true);
       break;
     case 'swarm':
+      ctx.scale(1.5, 1.5);
       swarm(ctx, t);
       break;
     case 'gu_mother':

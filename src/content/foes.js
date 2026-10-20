@@ -290,9 +290,9 @@ export const FOES = {
   },
   // 萬蠱谷: a cloud of 蠱, quick and hard to hit — stings that leave venom, a dart straight at you
   swarm: {
-    name: '蠱蟲群', el: '金', hp: 0.55, atk: 0.8,
+    name: '蠱蟲群', el: '金', hp: 0.75, atk: 0.8,
     rt: {
-      share: 1.2, tier: 1, speed: 172, walk: 60, sight: 220, lose: 440, loseT: 1.4, leash: 700, body: 10, bulk: 0.4, tall: 32,
+      share: 1.2, tier: 1, speed: 172, walk: 60, sight: 220, lose: 440, loseT: 1.4, leash: 700, body: 12, bulk: 0.4, tall: 50,
       notice: 0.3, moves: ['sting', 'swarmdart'], night: 0.85, noon: 1.1, pack: true, tokens: 2, ring: 90, dodge: 0.2,
       warn: '嗡嗡聲越來越近，像有人在耳邊搖一面破鑼。', cry: '一團黑雲從石縫裡湧出來——是蠱蟲！',
       scared: ['那團蠱蟲嗡的一聲散了。', '那幾團蠱蟲嗡嗡地散了。'], broke: '剩下的蠱蟲嗡的一聲，散進了林子。',

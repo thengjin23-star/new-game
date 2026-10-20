@@ -285,8 +285,8 @@ export const BEAST_MOVES = {
   toadrain: { shape: 'zone', min: 0, max: 300, radius: 40, windup: 1, recover: 0.7, cd: 8, mult: 0.85, count: 4, spread: 90, fx: 'venom', pool: { secs: 5, r: 40, dps: 0.28, kind: 'venom', poison: [3, 0.12] } },
   kinghop: { shape: 'leap', min: 80, max: 240, windup: 0.75, speed: 560, width: 50, overshoot: 20, recover: 1, cd: 8, mult: 1.6, combo: 2, again: 0.5 },
   croak: { shape: 'ring', radius: 125, windup: 0.85, recover: 0.7, cd: 9, mult: 0.7, push: 100, fx: 'croak' },
-  // 蠱蟲群: stings all round its front; a dart straight at you — both leave venom
-  sting: { shape: 'fan', reach: 40, arc: 2.2, windup: 0.3, recover: 0.45, cd: 1.1, mult: 0.7, lunge: 14, fx: 'punch', poison: [2, 0.08] },
+  // 蠱蟲群: stings all round its front; a dart straight at you, that leaves venom
+  sting: { shape: 'fan', reach: 40, arc: 2.2, windup: 0.38, recover: 0.55, cd: 1.5, mult: 0.75, lunge: 14, fx: 'punch' },
   swarmdart: { shape: 'leap', min: 60, max: 200, windup: 0.5, speed: 700, width: 30, overshoot: 30, recover: 0.6, cd: 5.5, mult: 1, poison: [2, 0.08] },
   // 蠱母: its jaws; a rush the length of the valley floor; venom sprayed out in front (it lies along
   // the ground after); its brood called out of its shell; under the ground, and up the other side of you

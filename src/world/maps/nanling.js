@@ -126,7 +126,10 @@ const ground = {
     const n = fbm(x / 150, y / 150, 605);
     return n > 0.56 ? T.TALLGRASS : n < 0.38 ? T.SAND : T.GRASS;
   },
-  miasma_forest: (x, y) => (fbm(x / 240, y / 240, 606) > 0.46 ? T.DEEP : T.FOREST),
+  miasma_forest: (x, y) => {
+    const n = fbm(x / 240, y / 240, 606);
+    return n > 0.55 ? T.DEEP : n < 0.32 ? T.TALLGRASS : T.FOREST;
+  },
   water_cave: () => T.GRASS,
   nanling_wilds: (x, y) => {
     const n = fbm(x / 300, y / 300, 607);
@@ -145,7 +148,7 @@ const trees = {
   wangu_valley: [['dark', 60], ['dead', 20], ['leaf', 20]],
   jade_pool: [['bamboo', 35], ['leaf', 45], ['willow', 20]],
   poison_marsh: [['willow', 45], ['dead', 35], ['leaf', 20]],
-  miasma_forest: [['dark', 45], ['bamboo', 25], ['leaf', 30]],
+  miasma_forest: [['dark', 35], ['bamboo', 30], ['leaf', 35]],
   water_cave: [['bamboo', 100]],
   nanling_wilds: [['leaf', 50], ['bamboo', 30], ['pine', 20]],
 };
@@ -254,7 +257,7 @@ const loot = {
 /** Where the people of 南嶺 stand, by the region they are in (places.js NPC_SPOTS). */
 const spots = {
   yan_bo: { qingzhu_village: [3080, 1095] },
-  a_luo: { qingzhu_village: [3150, 1282] },
+  a_luo: { qingzhu_village: [3100, 1300] },
   a_shan: { qingzhu_village: [3420, 1110] },
   han_san: { ling_pass: [2690, 520] },
 };
@@ -435,7 +438,7 @@ const BEASTS = [
   { id: 'toads_b', kind: 'toad', n: 1, x: 1900, y: 3850, r: 100, respawn: 25, power: 30 },
   { id: 'toad_king_a', kind: 'toad_king', title: '毒蟾王', x: 1480, y: 3900, r: 120, respawn: 40, power: 72 },
   // 萬蠱谷: swarms on the valley floor; the mother at her nest (once killed, gone for good)
-  { id: 'swarm_a', kind: 'swarm', n: 3, title: '蠱蟲', x: 4080, y: 2050, r: 140, respawn: 15, power: 38 },
+  { id: 'swarm_a', kind: 'swarm', n: 2, title: '蠱蟲', x: 4080, y: 2050, r: 140, respawn: 15, power: 38 },
   { id: 'swarm_b', kind: 'swarm', n: 2, title: '蠱蟲', x: 4400, y: 2150, r: 120, respawn: 15, power: 36 },
   { id: 'gu_mother_a', kind: 'gu_mother', title: '蠱母', x: 4330, y: 1780, r: 120, respawn: 60, power: 84, cond: (s) => !(s.vars.kills?.gu_mother > 0) },
 ];

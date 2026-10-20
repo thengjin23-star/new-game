@@ -137,7 +137,10 @@ export default [
         show: (s) => motherDead(s) && flag(s, 'gu_nest_burned') && !flag(s, 'gu_cleared'),
         out: {
           text: '岩伯沒有說話。他慢慢地轉過身，朝著萬蠱谷的方向跪了下去，磕了三個頭。\n\n那天晚上，寨子裡吹了一夜的蘆笙。第二天一早，寨井的水，清了。\n\n岩伯把一個布包塞到你手裡：「寨子窮，就這些。你別嫌棄。」又說：「阿蘿有東西要給你，你去找她。」',
-          effects: [['flag', 'gu_cleared'], ['flag', 'zhai_trust'], ['ls', 120], ['item', 'bizhang_pill', 3], ['favor', 'yan_bo', 30], ['sysexp', 40], ['log', '除了萬蠱谷的蠱母，青竹寨的井水清了']],
+          effects: [
+            ['flag', 'gu_cleared'], ['flag', 'zhai_trust'], ['ls', 120], ['item', 'bizhang_pill', 3], ['favor', 'yan_bo', 30], ['sysexp', 40],
+            ['log', '除了萬蠱谷的蠱母，青竹寨的井水清了'], ['rumor', '聽說有個東荒來的修士，翻過山隘，在南嶺的萬蠱谷裡除了一條蠱母。'],
+          ],
         },
       },
       {

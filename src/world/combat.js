@@ -326,6 +326,8 @@ export function bossOf(s) {
   for (const b of beastsOf(s, C)) {
     if (!b.K.boss || !foe(b) || !b.aggro || !b.armed || !alive(b) || !present(s, b)) continue;
     const d = Math.hypot(b.x - w.x, b.y - w.y);
+    // (one left far behind is not the one in front of you)
+    if (d > AWAKE) continue;
     if (d < bd) {
       bd = d;
       best = b;
@@ -1882,13 +1884,14 @@ function strikeLine(s, C, b, M, x0, y0, io) {
 
 /** Coiled about you: you cannot go anywhere, and it squeezes — until you step aside out of it. */
 function hold(C, b, M, root = false) {
-  C.me.held = { left: M.hold[0], tick: 0.5, mult: M.hold[1], by: b, root };
+  const web = M.fx === 'web';
+  C.me.held = { left: M.hold[0], tick: 0.5, mult: M.hold[1], by: b, root, web };
   C.me.kb = null;
   if (!root) {
     b.holding = true;
     b.went = b.len;
   }
-  say(C, 'bad', root ? '藤蔓從地下鑽出來，纏住了你的腳！快閃避掙脫！' : `${b.name}纏住了你！快閃避掙脫！`);
+  say(C, 'bad', web ? '蛛網兜頭罩下，黏住了你！快閃避掙脫！' : root ? '藤蔓從地下鑽出來，纏住了你的腳！快閃避掙脫！' : `${b.name}纏住了你！快閃避掙脫！`);
 }
 
 /** Everyone against it within r of (x, y) is caught (and you thrown out from there by push). */

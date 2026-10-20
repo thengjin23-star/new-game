@@ -1017,18 +1017,20 @@ export function drawCombatOverlay(ctx, proj, px, s, C, look, t, font) {
       ctx.fill();
     }
   }
-  // coiled about you: loops of the snake's body, tightening (or vines, out of the ground, round your legs)
+  // coiled about you: loops of the snake's body, tightening (or vines, out of the ground, round your
+  // legs; or a spider's web, pale and sticky, round the whole of you)
   if (me?.held) {
     const k = unitAt(proj, w.x, w.y);
     const sq = 1 - 0.08 * Math.sin(now * 9);
-    for (const up of me.held.root ? [3, 8, 13] : [6, 13, 20]) {
+    const H = me.held;
+    for (const up of H.web ? [5, 12, 19, 26] : H.root ? [3, 8, 13] : [6, 13, 20]) {
       const [cx, cy] = proj(w.x, w.y, up);
-      ctx.strokeStyle = me.held.root ? 'rgba(52,104,46,0.95)' : 'rgba(70,90,52,0.95)';
-      ctx.lineWidth = 3.4 * k * Math.max(1, px * 2);
+      ctx.strokeStyle = H.web ? 'rgba(232,230,222,0.85)' : H.root ? 'rgba(52,104,46,0.95)' : 'rgba(70,90,52,0.95)';
+      ctx.lineWidth = (H.web ? 1.6 : 3.4) * k * Math.max(1, px * 2);
       ctx.beginPath();
-      ctx.ellipse(cx, cy, 11 * k * sq, 4 * k, 0, 0, Math.PI * 2);
+      ctx.ellipse(cx, cy, 11 * k * sq, 4 * k, H.web ? up * 0.05 : 0, 0, Math.PI * 2);
       ctx.stroke();
-      ctx.strokeStyle = 'rgba(150,170,110,0.7)';
+      ctx.strokeStyle = H.web ? 'rgba(255,255,250,0.6)' : 'rgba(150,170,110,0.7)';
       ctx.lineWidth = 1 * k * Math.max(1, px * 2);
       ctx.stroke();
     }
