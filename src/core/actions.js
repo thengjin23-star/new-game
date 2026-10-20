@@ -322,7 +322,8 @@ export function shopHere(s) {
 export function priceOf(s, id) {
   const it = ITEMS[id];
   if (!it?.price) return 0;
-  return Math.max(1, Math.round(it.price * priceShare(s)));
+  const shop = shopHere(s);
+  return Math.max(1, Math.round(it.price * (shop?.share ? shop.share(s) : priceShare(s))));
 }
 
 export function buy(s, id) {
@@ -357,7 +358,9 @@ export function craft(s, id) {
   const c = craftCost(id);
   const report = newReport();
   applyEffects(s, [['ls', -(c.ls || 0)], ...Object.entries(c.items || {}).map(([k, n]) => ['item', k, -n]), ['item', id, 1]], {}, report);
-  notice(s, '打造', `${shopHere(s)?.keeper || '師傅'}收下東西，叮叮噹噹敲了大半天，把一件${ITEMS[id].name}交到你手上。`, { chips: report.chips });
+  const shop = shopHere(s);
+  const made = shop?.made || '{keeper}收下東西，叮叮噹噹敲了大半天，把一件{item}交到你手上。';
+  notice(s, '打造', made.replace('{keeper}', shop?.keeper || '師傅').replace('{item}', ITEMS[id].name), { chips: report.chips });
 }
 
 export function sellPrice(s, id) {

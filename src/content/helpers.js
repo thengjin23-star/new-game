@@ -12,6 +12,8 @@ export const alive = (s, id) => !!s.npcs[id]?.alive;
 export const met = (s, id) => !!s.npcs[id]?.met;
 export const within = (s, [a, b]) => s.day >= a && s.day < b;
 export const known = (s, node) => !!s.nodes[node]?.known;
+/** On that map now (world/atlas.js): a thing seen or heard in 東荒 is not seen or heard from 南嶺. */
+export const onMap = (s, id) => (s.world?.map || 'donghuang') === id;
 export const realmAtLeast = (s, realm, stage = 0) =>
   s.player.realm > realm || (s.player.realm === realm && s.player.stage >= stage);
 

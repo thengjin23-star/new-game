@@ -50,6 +50,12 @@ export const PASSIVES = {
     needs: { learn: ['xuanshui'] },
     stats: { mpCost: -0.12 },
   },
+  houtu: {
+    name: '厚土載物', school: '法修',
+    desc: '厚土訣的根基：受到的傷害減少 6%，土系招式傷害 +12%。',
+    needs: { learn: ['houtu'] },
+    stats: { def: 0.06, dmg: { el: { 土: 0.12 } } },
+  },
   tongpi: {
     name: '銅皮鐵骨', school: '體修',
     desc: '筋骨打熬過：受到的傷害減少 8%。',

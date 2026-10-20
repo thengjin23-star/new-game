@@ -57,6 +57,16 @@ export const TECHS = {
     elemBonus: 0.3,
     desc: '古戰場遺跡中得來的殘卷，只有前三層，卻遠勝坊間功法。',
   },
+  houtu: {
+    name: '厚土訣',
+    kind: 'cultivate',
+    grade: '黃品上',
+    mult: 1.5,
+    element: '土',
+    elemBonus: 0.3,
+    mindGuard: 0.1,
+    desc: '刻在南嶺水簾洞石壁上的土屬性功法，不知是哪一代先人留下的。厚德載物：進境不快不慢，根基卻打得極穩。身具土靈根者修習，事半功倍。學會之後，也使得出「地刺」。',
+  },
   qingyuan_sword: {
     name: '青元劍訣',
     kind: 'combat',

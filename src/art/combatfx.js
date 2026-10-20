@@ -39,7 +39,7 @@ const ICE_DEEP = [70, 130, 190];
 const BOLT = [214, 228, 255];
 const BOLT_DEEP = [86, 118, 210];
 /** The light a move gathers into as you cast it. */
-const GLOW = { fire: FIRE, shield: [120, 170, 230], foeqi: FOE_QI, foxfire: FOX, mend: LEAF, iron: GOLD, sweep: GOLD, charge: GOLD, bloodqi: BLOOD, bloodring: BLOOD, blink: FOX, mirror: [246, 232, 170], bell: GOLD, feijian: QI, jianzhen: QI, vine: LEAF, frost: ICE, thunder: BOLT_DEEP };
+const GLOW = { fire: FIRE, shield: [120, 170, 230], foeqi: FOE_QI, foxfire: FOX, mend: LEAF, iron: GOLD, sweep: GOLD, charge: GOLD, bloodqi: BLOOD, bloodring: BLOOD, blink: FOX, mirror: [246, 232, 170], bell: GOLD, feijian: QI, jianzhen: QI, vine: LEAF, frost: ICE, thunder: BOLT_DEEP, spikes: DUST };
 
 // ── figures ──
 
@@ -525,7 +525,7 @@ export function drawGroundMarks(g, s, C, kit, u = 1) {
       g.lineTo(cx, cy);
       g.stroke();
     } else if (k.aim === 'bolt') {
-      // 掌心雷: where the sky will strike (it does not travel: no line to it)
+      // 掌心雷 (地刺): where the sky (or the ground) will strike (it does not travel: no line to it)
       const r = Math.min(d, k.range);
       const cx = w.x + ux * r;
       const cy = w.y + uy * r;
@@ -667,9 +667,9 @@ export function drawGroundMarks(g, s, C, kit, u = 1) {
       g.lineWidth = lw(2);
       ring(g, f.x, f.y, 14 + p * 26);
       g.stroke();
-    } else if ((f.kind === 'ring' || f.kind === 'roar' || f.kind === 'bloodring' || f.kind === 'bell') && f.r) {
-      // a shockwave running out to where it reached (a bell's, gold)
-      const col = f.kind === 'bloodring' ? BLOOD : f.kind === 'roar' ? FIRE : f.kind === 'bell' ? GOLD : DUST;
+    } else if ((f.kind === 'ring' || f.kind === 'roar' || f.kind === 'bloodring' || f.kind === 'bell' || f.kind === 'croak') && f.r) {
+      // a shockwave running out to where it reached (a bell's, gold; a toad's croak, the green of its venom)
+      const col = f.kind === 'bloodring' ? BLOOD : f.kind === 'roar' ? FIRE : f.kind === 'bell' ? GOLD : f.kind === 'croak' ? VENOM : DUST;
       const r = f.r || 70;
       g.fillStyle = rgba(col, 0.14 * (1 - p));
       ring(g, f.x, f.y, r);
@@ -698,7 +698,7 @@ export function drawGroundMarks(g, s, C, kit, u = 1) {
         ring(g, f.x, f.y, f.r * (1.2 - q * 0.9));
         g.stroke();
       }
-    } else if (f.kind === 'quake') {
+    } else if (f.kind === 'quake' || f.kind === 'spikes') {
       // the ground split open: cracks running out from the heart of it, and dust
       g.strokeStyle = `rgba(60,48,38,${0.85 * (1 - p)})`;
       g.lineWidth = lw(2);
@@ -723,11 +723,35 @@ export function drawGroundMarks(g, s, C, kit, u = 1) {
         ring(g, f.x + Math.cos(a) * f.r * 0.6 * (0.4 + p), f.y + Math.sin(a) * f.r * 0.6 * (0.4 + p), 5 * (1 - p) + 2);
         g.fill();
       }
-    } else if (f.kind === 'breath') {
-      // a sheet of fire over the ground in front of it
-      g.fillStyle = rgba(FIRE, 0.42 * (1 - p));
+    } else if (f.kind === 'breath' || f.kind === 'spray') {
+      // a sheet of fire (or venom) over the ground in front of it
+      g.fillStyle = rgba(f.kind === 'spray' ? VENOM : FIRE, 0.42 * (1 - p));
       fan(g, f.x, f.y, f.dir, f.reach * Math.min(1, 0.4 + p * 2), f.arc);
       g.fill();
+    } else if (f.kind === 'web') {
+      // a web flung over the ground: threads out from the heart of it, and rings across them
+      const q = Math.min(1, p * 6);
+      const fade = p > 0.75 ? (1 - p) / 0.25 : 1;
+      g.strokeStyle = `rgba(236,234,226,${0.75 * fade})`;
+      g.lineWidth = lw(1.2);
+      g.beginPath();
+      for (let n = 0; n < 8; n++) {
+        const a = n * 0.785 + f.x * 0.01;
+        g.moveTo(f.x, f.y);
+        g.lineTo(f.x + Math.cos(a) * f.r * q, f.y + Math.sin(a) * f.r * q);
+      }
+      g.stroke();
+      for (const rr of [0.35, 0.65, 0.95]) {
+        g.beginPath();
+        for (let n = 0; n <= 8; n++) {
+          const a = n * 0.785 + f.x * 0.01;
+          const x = f.x + Math.cos(a) * f.r * rr * q;
+          const y = f.y + Math.sin(a) * f.r * rr * q;
+          if (n) g.lineTo(x, y);
+          else g.moveTo(x, y);
+        }
+        g.stroke();
+      }
     } else if (f.kind === 'slash' || f.kind === 'punch' || f.kind === 'cut') {
       // the sweep of the blow, along the ground
       g.fillStyle = f.foe ? rgba(RED, 0.2 * (1 - p)) : `rgba(250,246,236,${0.22 * (1 - p)})`;
@@ -1691,6 +1715,36 @@ function drawFx(ctx, proj, px, f, now) {
       }
       break;
     }
+    case 'tongue': {
+      // a toad's tongue: out along the line, long and pink, the sticky end swollen — and back
+      const out = p < 0.45 ? p / 0.45 : 1 - (p - 0.45) / 0.55;
+      const [x0, y0] = proj(f.x + f.dir[0] * 12, f.y + f.dir[1] * 12, 12);
+      const [x1, y1] = proj(f.x + f.dir[0] * f.reach * out, f.y + f.dir[1] * f.reach * out, 8);
+      ctx.strokeStyle = 'rgba(206,104,120,0.95)';
+      ctx.lineWidth = 3 * px * Math.max(1, k);
+      ctx.beginPath();
+      ctx.moveTo(x0, y0);
+      ctx.quadraticCurveTo((x0 + x1) / 2, (y0 + y1) / 2 - 8 * k * out, x1, y1);
+      ctx.stroke();
+      ctx.fillStyle = 'rgba(226,128,140,1)';
+      ctx.beginPath();
+      ctx.arc(x1, y1, 3.6 * k * Math.max(1, px * 2), 0, Math.PI * 2);
+      ctx.fill();
+      break;
+    }
+    case 'croak': {
+      // the croak: green arcs thrown out from its swelling throat
+      const [x, y] = proj(f.x, f.y, 14);
+      ctx.strokeStyle = rgba(VENOM, 0.85 * (1 - p));
+      ctx.lineWidth = 2.6 * px;
+      for (let n = 0; n < 4; n++) {
+        const q = (p * 1.4 + n * 0.22) % 1;
+        ctx.beginPath();
+        ctx.arc(x, y, (10 + q * 60) * k, -2.8, -0.3);
+        ctx.stroke();
+      }
+      break;
+    }
     case 'blink': {
       // a puff of blue fox fire where she was (or is)
       const [x, y] = proj(f.x, f.y, 18);
@@ -1700,6 +1754,20 @@ function drawFx(ctx, proj, px, f, now) {
         ctx.fillStyle = rgba(FOX, 0.6 * (1 - p));
         ctx.beginPath();
         ctx.arc(x + Math.cos(a) * r, y + Math.sin(a) * r * 0.7 - p * 10 * k, (3.5 - p * 2) * k * Math.max(1, px * 2), 0, Math.PI * 2);
+        ctx.fill();
+      }
+      break;
+    }
+    case 'spray': {
+      // venom sprayed from its jaws: green drops flung out over the ground in front
+      for (let n = 0; n < 12; n++) {
+        const q = (n / 12 + p * 0.9) % 1;
+        const side = Math.sin(n * 2.3) * f.arc * 0.45;
+        const a = Math.atan2(f.dir[1], f.dir[0]) + side;
+        const [x, y] = proj(f.x + Math.cos(a) * f.reach * q, f.y + Math.sin(a) * f.reach * q, 16 - q * 12);
+        ctx.fillStyle = rgba(VENOM, 0.85 * (1 - p));
+        ctx.beginPath();
+        ctx.arc(x, y, (2 + q * 2.5) * k * Math.max(1, px * 2), 0, Math.PI * 2);
         ctx.fill();
       }
       break;
@@ -1833,6 +1901,47 @@ function drawFx(ctx, proj, px, f, now) {
         ctx.beginPath();
         ctx.ellipse(x2, y2, 2.6 * k, 1.5 * k, n, 0, Math.PI * 2);
         ctx.fill();
+      }
+      break;
+    }
+    case 'web': {
+      // threads of web stuck from the ground up round whoever stands in it, sagging as it lets go
+      const fade = p > 0.75 ? (1 - p) / 0.25 : 1;
+      ctx.strokeStyle = `rgba(240,238,230,${0.8 * fade})`;
+      ctx.lineWidth = 1.1 * px * Math.max(1, k);
+      for (let n = 0; n < 7; n++) {
+        const an = n * 0.9 + f.x * 0.01;
+        const [x0, y0] = proj(f.x + Math.cos(an) * f.r * 0.8, f.y + Math.sin(an) * f.r * 0.6, 0);
+        const [x1, y1] = proj(f.x + Math.cos(an + 2.2) * 6, f.y + Math.sin(an + 2.2) * 4, 12 + (n % 3) * 7 - p * 6);
+        ctx.beginPath();
+        ctx.moveTo(x0, y0);
+        ctx.quadraticCurveTo((x0 + x1) / 2, (y0 + y1) / 2 + 4 * k * p, x1, y1);
+        ctx.stroke();
+      }
+      break;
+    }
+    case 'spikes': {
+      // 地刺: spikes of stone thrust up out of the ground all about the spot, then crumbling back
+      const up = p < 0.2 ? p / 0.2 : p > 0.7 ? (1 - p) / 0.3 : 1;
+      for (let n = 0; n < 7; n++) {
+        const an = n * 2.399 + f.x * 0.01;
+        const rr = f.r * (0.15 + ((n * 37) % 10) / 13);
+        const gx = f.x + Math.cos(an) * rr;
+        const gy = f.y + Math.sin(an) * rr * 0.7;
+        const tall = (16 + (n % 3) * 8) * up;
+        const [bx, by] = proj(gx, gy, 0);
+        const [tx, ty] = proj(gx + 1.5, gy, tall);
+        const wd = 4.2 * k * Math.max(1, px * 2);
+        ctx.fillStyle = `rgba(${126 - (n % 3) * 12},${104 - (n % 3) * 10},${76 - (n % 3) * 8},0.96)`;
+        ctx.beginPath();
+        ctx.moveTo(bx - wd, by);
+        ctx.lineTo(tx, ty);
+        ctx.lineTo(bx + wd, by);
+        ctx.closePath();
+        ctx.fill();
+        ctx.strokeStyle = rgba(INK, 0.6);
+        ctx.lineWidth = 0.8 * px;
+        ctx.stroke();
       }
       break;
     }

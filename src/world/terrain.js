@@ -464,7 +464,11 @@ function cellBlocked(g, i, j, gateOpen) {
 
 /** Does a circle at (x, y) overlap anything solid? */
 export function collides(s, x, y, r = PLAYER_R) {
-  const g = world();
+  return collidesIn(world(), s, x, y, r);
+}
+
+/** The same, on a world given (one still being made). */
+function collidesIn(g, s, x, y, r) {
   const gateOpen = !!s?.flags?.sect_member;
   if (x - r < 0 || y - r < 0 || x + r >= WORLD_W || y + r >= WORLD_H) return true;
   const i0 = colOf(x - r);
@@ -978,7 +982,8 @@ function makeHerbs(g) {
         if (hasNeighbor(g, i, j, (t) => t === T.ROAD || t === T.PAVED)) continue;
         const x = cellX(i) + (hash2(i, j, 400) - 0.5) * CELL * 0.5;
         const y = cellY(j) + (hash2(i, j, 401) - 0.5) * CELL * 0.5;
-        if (nearAny(clear, x, y)) continue;
+        // (nudged off the middle of its cell: not into the rock beside it)
+        if (nearAny(clear, x, y) || collidesIn(g, null, x, y, PLAYER_R)) continue;
         cand.push({ x, y, r: hash2(i, j, 402) });
       }
     }

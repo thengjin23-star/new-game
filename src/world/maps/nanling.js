@@ -156,6 +156,109 @@ const settled = { qingzhu_village: [124, 4] };
 /** How much wild ground rolls (height.js ROLL). */
 const roll = { nanling_wilds: 24, ling_pass: 20, miasma_forest: 18, poison_marsh: 4, wangu_valley: 8, jade_pool: 12, water_cave: 8 };
 
+/** Which herbs grow where, and how many spots (places.js GATHER). */
+const gather = {
+  miasma_forest: { n: 14, give: [[55, 'zhangling_zhi', 1, 1], [35, 'ningqi_grass', 1, 2], [10, 'blood_ginseng', 1, 1]] },
+  poison_marsh: { n: 8, give: [[60, 'zhixue_grass', 1, 2], [40, 'ningqi_grass', 1, 2]] },
+  wangu_valley: { n: 5, give: [[70, 'zhangling_zhi', 1, 2], [30, 'blood_ginseng', 1, 1]] },
+  jade_pool: { n: 6, give: [[80, 'ningqi_grass', 1, 3], [20, 'blood_ginseng', 1, 1]] },
+  nanling_wilds: { n: 18, give: [[70, 'ningqi_grass', 1, 2], [20, 'zhixue_grass', 1, 1], [10, 'zhangling_zhi', 1, 1]] },
+  qingzhu_village: { n: 2, give: [[100, 'zhixue_grass', 1, 1]] },
+};
+
+/** How many villagers walk about (places.js WANDERERS), what they say, and what they call out (world/people.js). */
+const wanderers = { qingzhu_village: 6 };
+const folk = {
+  qingzhu_village: [
+    '今年的蠱蟲，比往年多。', '別往萬蠱谷那邊走，那是蠱母的地方。', '阿蘿姐的藥，比山外的郎中靈。',
+    '寨井的水，最近有點苦……', '東荒來的？你們那邊的人，說話都快。', '阿山又進山了，一去就是半個月。',
+  ],
+};
+const calls = {
+  qingzhu_village: ['阿妹——回家吃飯咯——', '竹筒飯，香噴噴的竹筒飯！', '牛跑了，牛跑了！', '今晚有人吹蘆笙。', '又要去山溝裡挑水了……'],
+};
+
+/** Villagers with a place and an hour of their own (world/people.js EXTRAS). */
+const extras = [
+  {
+    id: 'zhai_rice', region: 'qingzhu_village', name: '賣竹筒飯的阿妹', look: 'villager_f', at: [3000, 1140], face: 1, hours: [7, 19], act: 'stand',
+    calls: ['竹筒飯——香噴噴的竹筒飯！', '一文錢一筒，自家的糯米！'],
+    chat: ['「東荒來的客人？嚐一筒竹筒飯吧，一文錢。」她把竹筒劈開，糯米飯的香氣一下子冒了出來。', '「寨井的水苦了，我們現在都要走好遠，去山溝裡挑水。」'],
+  },
+  {
+    id: 'zhai_lusheng', region: 'qingzhu_village', name: '吹蘆笙的老人', look: 'elder', at: [3440, 1176], face: -1, hours: [18, 22.5], act: 'sit',
+    calls: ['（蘆笙嗚嗚地響）'],
+    chat: ['老人吹完一曲，才抬起頭：「這調子，叫〈送蠱〉。從前送蠱母進谷的時候吹的。」'],
+  },
+];
+
+/** The small lives of each region (world/wildlife.js WILDLIFE); in 瘴林 and 萬蠱谷 nothing small lives long. */
+const wildlife = {
+  ling_pass: { n: 2, kinds: [['crow', 2, 'day', 'wild', [1, 2]], ['deer', 1, 'day', 'wild', [1, 1]]] },
+  qingzhu_village: { n: 2, kinds: [['crow', 2, 'day', 'wild', [1, 2]], ['rabbit', 1, 'any', 'wild', [1, 1]]] },
+  nanling_wilds: { n: 4, kinds: [['deer', 3, 'day', 'wild', [1, 2]], ['rabbit', 3, 'any', 'wild', [1, 1]], ['egret', 2, 'day', 'water', [1, 2]], ['redfox', 2, 'night', 'wild', [1, 1]]] },
+  jade_pool: { n: 4, kinds: [['egret', 4, 'day', 'water', [1, 3]], ['crane', 2, 'day', 'water', [1, 1]], ['deer', 2, 'day', 'wild', [1, 2]]] },
+  poison_marsh: { n: 3, kinds: [['egret', 3, 'day', 'water', [1, 2]], ['crow', 2, 'day', 'any', [2, 3]]] },
+};
+
+/** How often fog lies over a region (world/weather.js MISTY). */
+const misty = { miasma_forest: 0.15, poison_marsh: 0.14, wangu_valley: 0.12, jade_pool: 0.1, ling_pass: 0.08 };
+
+/** How far you walk before something may happen, and how likely it is (world/explore.js ENCOUNTER). */
+const encounter = {
+  ling_pass: [1400, 0.3], qingzhu_village: [1600, 0.35], miasma_forest: [1000, 0.5], poison_marsh: [1100, 0.45],
+  wangu_valley: [1000, 0.35], jade_pool: [1600, 0.35], nanling_wilds: [1400, 0.45], water_cave: [900, 0],
+};
+
+/** What you notice as you walk (world/explore.js; by region, before the lines kept by kind of place). */
+const ambient = {
+  ling_pass: ['往北望，東荒的田野只剩一片淡淡的青。', '風從山隘裡灌過來，一邊乾，一邊濕。'],
+  qingzhu_village: ['竹樓上有人在織布，梭子聲一下一下的。', '一群孩子光著腳跑過去，回頭偷偷看你。', '火塘的煙從竹樓頂上冒出來。', '有人在吹蘆笙，調子聽不懂，卻好聽。'],
+  miasma_forest: ['霧是淡紫色的，聞起來甜得發膩。', '頭頂的樹冠上掛著一團一團的白絲。', '有什麼東西在落葉底下爬過去了。', '林子裡的鳥叫，聽起來像人在笑。'],
+  poison_marsh: ['死水上冒起一個泡，啵的一聲破了。', '蘆葦叢裡有東西在咕咕地叫。', '一腳踩下去，泥一直沒到腳踝。', '水面上浮著一層油亮的光。'],
+  wangu_valley: ['石壁上爬滿了蟲殼，風一吹，沙沙地響。', '嗡嗡聲忽遠忽近。', '地上有一道拖過的痕跡，比水桶還粗。'],
+  jade_pool: ['瀑布的聲音大得蓋過了一切。', '水霧撲在臉上，涼絲絲的。', '潭水綠得像一塊玉。', '水霧裡掛著一道淡淡的虹。'],
+  water_cave: ['水簾把外面隔成一片白。', '石壁上的字，在水光裡一閃一閃。'],
+  nanling_wilds: ['石峰一根一根從林子裡拔起來，像插在地上的筍。', '山腰上的霧慢慢地流。', '一隻猴子蹲在石峰上看著你。', '遠處有人在唱山歌，一句也聽不懂。'],
+};
+
+/** Looking around properly (content/events/generic.js): what you find, by region. */
+const flavor = {
+  qingzhu_village: [
+    '你在寨子裡轉了半天。竹樓底下拴著牛，樓上晾著藍布，火塘的煙熏得人眼睛發酸。',
+    '你坐在銅鼓坪邊上，看一群孩子跳竹竿。竹竿一開一合，他們的腳一點也不怕。',
+    '寨子裡的婦人坐在竹樓上織布，一邊織，一邊唱。調子你聽不懂，卻聽得心裡發軟。',
+  ],
+  ling_pass: ['你在嶺口的石頭上坐了一會兒。風從北邊來，帶著東荒的乾爽；又從南邊來，帶著南嶺的濕甜。'],
+  miasma_forest: ['你在瘴林裡摸索了半天，衣服濕透了，分不清是汗還是霧。樹根底下，長著幾朵紫黑色的靈芝。', '林子裡的光是綠的。你走著走著，發現自己在繞圈子。'],
+  poison_marsh: ['你沿著蘆葦叢走了半天，鞋子裡全是泥。遠處的石人，好像一直在看著你。', '死水上浮著一層油亮的光。你用樹枝撥了撥，底下有東西縮了回去。'],
+  wangu_valley: ['你貼著石壁走，不敢弄出聲音。到處都是蟲殼，踩上去咔嚓咔嚓地響。'],
+  jade_pool: ['你在潭邊坐了很久。瀑布的聲音大得像要把人吞下去，坐久了，反而覺得很靜。', '潭水綠得像一塊玉。你伸手撈了一把，涼得手指發疼。'],
+  water_cave: ['洞裡很靜。石壁上的字，在水光裡一閃一閃。'],
+  nanling_wilds: [
+    '你在石峰之間繞了半天。每一根石峰，看起來都差不多；每一根，又都不一樣。',
+    '你在一片竹林裡歇腳，竹葉沙沙地響。一隻竹雞從腳邊竄過去，嚇了你一跳。',
+    '山腰上有一座小小的竹棚，棚裡沒人，桌上擺著一碗清水，像是留給過路人的。',
+  ],
+};
+const loot = {
+  qingzhu_village: [['mind', 1]],
+  miasma_forest: [['maybe', 0.5, [['item', 'zhangling_zhi', 1]]], ['maybe', 0.1, [['item', 'mystery', 1]]]],
+  poison_marsh: [['maybe', 0.4, [['item', 'zhixue_grass', [1, 2]]]]],
+  wangu_valley: [['maybe', 0.3, [['item', 'zhangling_zhi', 1]]], ['mind', -1]],
+  jade_pool: [['mind', 2]],
+  water_cave: [['mind', 2]],
+  nanling_wilds: [['maybe', 0.4, [['item', 'ningqi_grass', 1]]]],
+};
+
+/** Where the people of 南嶺 stand, by the region they are in (places.js NPC_SPOTS). */
+const spots = {
+  yan_bo: { qingzhu_village: [3080, 1095] },
+  a_luo: { qingzhu_village: [3150, 1282] },
+  a_shan: { qingzhu_village: [3420, 1110] },
+  han_san: { ling_pass: [2690, 520] },
+};
+
 /** What each region sounds like (audio/director.js PLACE). */
 const sound = {
   ling_pass: 'hill', qingzhu_village: 'village', miasma_forest: 'jungle', poison_marsh: 'marsh',
@@ -173,7 +276,29 @@ const moods = {
   nanling_wilds: { tint: [0.78, 0.86, 0.78], amount: 0.2, dim: 0.97, motes: null },
 };
 
-export const NANLING_LAND = { ground, trees, settled, roll, sound, moods };
+export const NANLING_LAND = { ground, trees, settled, roll, sound, moods, gather, wanderers, folk, calls, extras, wildlife, misty, encounter, ambient, flavor, loot, spots };
+
+// ── who lives here ──
+
+/** The people of 南嶺 (world/npcs.js NAMED). Nobody here has heard of you. */
+export const NANLING_PEOPLE = {
+  yan_bo: {
+    name: '岩伯', title: '青竹寨寨老', gender: '男', age: 74, realm: 0, stage: 0, loc: 'qingzhu_village',
+    bio: '青竹寨的寨老，白鬍子垂到胸口。說話慢，眼睛卻利。寨子裡的大事小事，最後都要他點頭。',
+  },
+  a_luo: {
+    name: '阿蘿', title: '百藥鋪的蠱婆', gender: '女', age: 38, realm: 1, stage: 3, loc: 'qingzhu_village',
+    bio: '寨子裡懂蠱的女人，開著一間百藥鋪。外人都怕她；寨子裡的人生了病，卻都來找她。手腕上纏著一條細細的青蛇。',
+  },
+  a_shan: {
+    name: '阿山', title: '青竹寨的獵戶', gender: '男', age: 24, realm: 0, stage: 0, loc: 'qingzhu_village',
+    bio: '寨子裡最好的獵手，弓不離身，一年有半年睡在山裡。話少。弟弟阿水，是他唯一的親人。',
+  },
+  han_san: {
+    name: '韓三', title: '落難散修', gender: '男', age: 41, realm: 1, stage: 4, loc: 'ling_pass',
+    bio: '從東荒翻過山隘來找機緣的散修，在瘴林裡丟了半條命。如今在嶺口搭了個草棚，給過路的人指路，自己卻再也不敢往下走。',
+  },
+};
 
 // ── places ──
 
@@ -228,17 +353,91 @@ const STRUCTURES = [
   { x: 3330, y: 1215, w: 70, h: 44, sprite: 'house' },
   { x: 3040, y: 1300, w: 54, h: 38, sprite: 'hut' },
   { x: 2780, y: 1150, w: 44, h: 36, sprite: 'shrine_small', name: '山神' },
-  // the boundary stone at the top of the pass
+  { x: 2990, y: 1190, w: 26, h: 20, sprite: 'well' },
+  // the boundary stone at the top of the pass, and 韓三's lean-to below it
   { x: 2560, y: 230, w: 30, h: 22, sprite: 'stele', block: false },
+  { x: 2750, y: 468, w: 54, h: 36, sprite: 'hut' },
+  // the stone at the mouth of 萬蠱谷; the old altar at the end of the trail through 瘴林
+  { x: 3880, y: 2066, w: 30, h: 22, sprite: 'stele', block: false },
+  { x: 830, y: 1848, w: 44, h: 36, sprite: 'shrine_small' },
+  // the stone men of 毒沼, sunk to the waist
+  { x: 1470, y: 3330, w: 18, h: 10, sprite: 'stele', block: false },
+  { x: 1530, y: 3342, w: 18, h: 10, sprite: 'stele', block: false },
 ];
 
+const lit = (s) => s.tod >= 19.5 || s.tod < 5;
+
+/** Places you can walk up to (places.js POIS, for this map). */
 const POIS = [
   {
     id: 'ling_pass_gate', region: 'ling_pass', x: 2615, y: 92, name: '山隘', verb: '翻回東荒',
     text: '山隘那頭，是東荒。',
   },
+  { id: 'han_shed', region: 'ling_pass', x: 2750, y: 500, name: '草棚', verb: '歇腳', rest: true, text: '竹子和芭蕉葉搭的草棚，棚下一個火塘，火塘邊鋪著乾草。風從山隘那頭灌過來，棚子吱吱地響。' },
+  // 青竹寨
+  {
+    id: 'zhai_well', region: 'qingzhu_village', x: 2990, y: 1216, name: '寨井', verb: '查看',
+    text: (s) => (s.flags.gu_cleared ? '井水又清又甜。打水的人排著隊，說說笑笑。' : '井沿上的石頭被繩子磨出了一道道溝。井水黑沉沉的，聞著有一股苦味。'),
+  },
+  { id: 'zhai_shop', region: 'qingzhu_village', x: 3190, y: 1270, name: '百藥鋪', verb: '購物', action: 'shop', shop: 'qingzhu' },
+  { id: 'zhai_drum', region: 'qingzhu_village', x: 3460, y: 1215, name: '銅鼓坪', verb: '打聽', action: 'inquire', glow: lit },
+  { id: 'zhai_shrine', region: 'qingzhu_village', x: 2780, y: 1186, name: '山神龕', verb: '查看', rest: true, text: '竹子搭的小龕，供著一塊黑石頭，石頭上纏著紅布。龕前的竹筒裡插著山花，是新的。' },
+  // 瘴林
+  { id: 'gu_altar', region: 'miasma_forest', x: 830, y: 1880, name: '古祭壇', verb: '查看', text: '長滿青苔的石台，台上刻著一圈一圈的蟲紋。供在台上的陶罐早就碎了。' },
+  { id: 'han_pack', region: 'miasma_forest', x: 1290, y: 1380, name: '掛在樹上的包袱', verb: '查看', hidden: { r: 100 }, show: (s) => !s.flags.han_pack_found, text: '樹枝上空空的。' },
+  {
+    id: 'web_hollow', region: 'miasma_forest', x: 1620, y: 2480, name: '白絲洞', verb: '查看', auto: 150,
+    show: (s) => !!s.flags.a_shui_lost && !s.flags.a_shui_found,
+    text: '兩棵老樹之間，掛滿了白絲，絲裡裹著一團一團的東西。',
+  },
+  { id: 'zl_miasma_a', region: 'miasma_forest', x: 880, y: 1020, name: '瘴氣', zone: 160, auto: 160 },
+  { id: 'zl_miasma_b', region: 'miasma_forest', x: 1900, y: 1150, name: '瘴氣', zone: 150, auto: 150 },
+  { id: 'zl_miasma_c', region: 'miasma_forest', x: 480, y: 2420, name: '瘴氣', zone: 170, auto: 170 },
+  { id: 'zl_miasma_d', region: 'miasma_forest', x: 1300, y: 2400, name: '瘴氣', zone: 150, auto: 150 },
+  // 毒沼
+  { id: 'stone_men', region: 'poison_marsh', x: 1500, y: 3376, name: '石人', verb: '查看', text: '兩尊石人陷在泥裡，只露出上半身，臉都朝著沼地正中。石頭上長滿了黑苔。' },
+  {
+    id: 'marsh_lotus', region: 'poison_marsh', x: 1480, y: 3826, name: '沼心蓮', verb: '查看', hidden: { r: 120 }, glow: () => true,
+    treasure: { text: '死水正中，一朵白蓮開得好好的，蓮心一點金。四周的泥水油亮發黑，蓮瓣上卻一點污跡也沒有。\n\n你踩著石人的肩膀，把它摘了下來。', effects: [['item', 'marsh_lotus', 1], ['sysexp', 10], ['log', '在毒沼正中摘得沼心蓮']] },
+  },
+  { id: 'zz_miasma_a', region: 'poison_marsh', x: 620, y: 3420, name: '瘴氣', zone: 170, auto: 170 },
+  { id: 'zz_miasma_b', region: 'poison_marsh', x: 2150, y: 3560, name: '瘴氣', zone: 150, auto: 150 },
+  // 碧潭: the falls, and what is behind them
+  { id: 'falls', region: 'jade_pool', x: 3760, y: 3340, name: '瀑布', verb: '查看', text: '碧水從斷崖上直落下來，砸進潭裡，水霧騰起一丈多高。' },
+  {
+    id: 'cave_carvings', region: 'water_cave', x: 3905, y: 3286, name: '石壁刻字', verb: '參悟', sprite: 'stele', rest: true,
+    show: (s) => !!s.flags.falls_cave_found,
+    text: '石壁上的字，你已經讀過了。水簾外的轟響聽起來很遠。這裡適合閉關。',
+  },
+  // 萬蠱谷
+  { id: 'valley_stele', region: 'wangu_valley', x: 3880, y: 2098, name: '谷口石碑', verb: '查看', text: '石碑上刻著四個大字，字縫裡塞滿了蟲殼：「生人勿入」。' },
+  {
+    id: 'gu_nest', region: 'wangu_valley', x: 4330, y: 1830, name: '蠱巢', verb: '查看', auto: 130,
+    text: (s) => (s.flags.gu_nest_burned ? '一片焦黑的土坑。風吹過來，帶著一點灰。' : '石壁底下一個大洞，洞口堆滿了蟲殼，比人還高。'),
+  },
+  { id: 'gu_miasma_a', region: 'wangu_valley', x: 4480, y: 1640, name: '瘴氣', zone: 150, auto: 150 },
+  { id: 'gu_miasma_b', region: 'wangu_valley', x: 4100, y: 2250, name: '瘴氣', zone: 140, auto: 140 },
+  // 南嶺山野: small things found off the road
+  { id: 'find_nl_hollow', region: 'nanling_wilds', x: 3020, y: 1800, name: '石峰下的小洞', verb: '查看', hidden: { r: 90 }, treasure: { text: '石峰腳下一個小洞，洞口被藤蔓遮著。洞裡乾燥，有人在這裡藏過東西：一個油布包，裡面幾塊靈石，三株曬乾的凝氣草。', effects: [['ls', 12], ['item', 'ningqi_grass', 3]] } },
+  { id: 'find_nl_basket', region: 'nanling_wilds', x: 2480, y: 2700, name: '倒在路邊的背簍', verb: '查看', hidden: { r: 90 }, treasure: { text: '一個竹背簍倒在路邊，簍子裡的藥草撒了一地，人卻不知道哪裡去了。你把還能用的撿了起來，又在簍子邊插了一根樹枝，好讓它的主人認得。', effects: [['item', 'zhangling_zhi', 1], ['item', 'blood_ginseng', 1], ['mind', 1]] } },
+  { id: 'find_nl_peak', region: 'nanling_wilds', x: 3300, y: 2380, name: '石峰頂', verb: '查看', hidden: { r: 90 }, treasure: { text: '你攀上一根矮些的石峰。往四面看，石峰一根一根，像一片插在綠海裡的筍。霧在峰與峰之間慢慢地流，流到天邊，和雲接在一起。\n\n你在峰頂坐了很久。', effects: [['insight', 1], ['mind', 3]] } },
 ];
 
-const BEASTS = [];
+/** What roams 南嶺 (places.js BEASTS, for this map). */
+const BEASTS = [
+  // 瘴林: nests of spiders; a pair of 山魈 where the jungle meets the rocks
+  { id: 'spiders_a', kind: 'spider', n: 3, title: '毒蛛', x: 1200, y: 1300, r: 140, respawn: 30, power: 38 },
+  { id: 'spiders_b', kind: 'spider', n: 3, title: '毒蛛', x: 1850, y: 2250, r: 140, respawn: 30, power: 38 },
+  { id: 'spiders_c', kind: 'spider', n: 2, title: '毒蛛', x: 700, y: 2050, r: 120, respawn: 30, power: 34 },
+  { id: 'shanxiao_nl', kind: 'shanxiao', n: 2, title: '山魈', x: 2200, y: 1950, r: 150, respawn: 40, power: 36 },
+  // 毒沼: toads by the pools; the old one by the lotus
+  { id: 'toads_a', kind: 'toad', n: 2, title: '巨蟾', x: 1000, y: 3500, r: 110, respawn: 25, power: 38 },
+  { id: 'toads_b', kind: 'toad', n: 1, x: 1900, y: 3850, r: 100, respawn: 25, power: 30 },
+  { id: 'toad_king_a', kind: 'toad_king', title: '毒蟾王', x: 1480, y: 3900, r: 120, respawn: 40, power: 72 },
+  // 萬蠱谷: swarms on the valley floor; the mother at her nest (once killed, gone for good)
+  { id: 'swarm_a', kind: 'swarm', n: 3, title: '蠱蟲', x: 4080, y: 2050, r: 140, respawn: 15, power: 38 },
+  { id: 'swarm_b', kind: 'swarm', n: 2, title: '蠱蟲', x: 4400, y: 2150, r: 120, respawn: 15, power: 36 },
+  { id: 'gu_mother_a', kind: 'gu_mother', title: '蠱母', x: 4330, y: 1780, r: 120, respawn: 60, power: 84, cond: (s) => !(s.vars.kills?.gu_mother > 0) },
+];
 
 export const NANLING_PLACES = { STRUCTURES, POIS, BEASTS };

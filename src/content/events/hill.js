@@ -1,5 +1,5 @@
 import { dayAt } from '../../core/calendar.js';
-import { has, flag, alive, season, variant } from '../helpers.js';
+import { has, flag, alive, season, variant, onMap } from '../helpers.js';
 import { weatherNow } from '../../world/weather.js';
 
 const H = ['qingshi_hill'];
@@ -392,7 +392,8 @@ export default [
     id: 'crane_return',
     trigger: 'scheduled',
     title: '鶴歸',
-    cond: (s) => flag(s, 'crane_saved'),
+    // (it finds you in 東荒: it waits if you are over the hills)
+    cond: (s) => flag(s, 'crane_saved') && onMap(s, 'donghuang'),
     text: '一聲清唳從雲中傳來。\n\n一隻雪白的大鶴落在你面前，頸上多了一圈金色的羽毛。牠歪著頭看你，眼神你很熟悉。\n\n是當年那隻白鶴。牠開了靈智。\n\n牠低下頭，把嘴裡銜著的東西放在你腳邊：一株紫色的靈芝。',
     choices: [
       {

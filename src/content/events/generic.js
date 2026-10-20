@@ -1,4 +1,5 @@
 import { NODES } from '../../world/map.js';
+import { landTable } from '../../world/maps/index.js';
 import { flag, variant } from '../helpers.js';
 
 const FLAVOR = {
@@ -31,7 +32,12 @@ const FLAVOR = {
   ],
   farm: ['你沿著田埂走了一圈。稻田裡的水映著天，一個老農在水裡彎著腰，像一張弓。', '水車吱呀吱呀地轉。幾個孩子在田邊放牛，看見你，一哄而散。'],
   lake: ['湖面平得像一面鏡子。你蹲下來，看見水裡的自己，有點陌生。', '蘆葦叢裡有一條破船，船底長滿了青苔。'],
+  marsh: ['你沿著蘆葦叢走了半天，鞋子裡全是泥。', '死水上浮著一層油亮的光。'],
+  pass: ['你在山隘的石頭上坐了一會兒，看雲從這邊的山頭，走到那邊的山頭。'],
 };
+/** A region's own (another map's, world/maps/): before the lines kept by kind of place. */
+const REGION_FLAVOR = landTable('flavor');
+const REGION_LOOT = landTable('loot');
 
 const LOOT = {
   mountain: [['maybe', 0.6, [['item', 'ningqi_grass', [1, 2]]]]],
@@ -50,8 +56,8 @@ export const GENERIC_EXPLORE = {
   id: 'generic_explore',
   trigger: 'fallback',
   title: (s) => NODES[s.player.loc].name,
-  text: (s) => variant(s, FLAVOR[NODES[s.player.loc].kind] || FLAVOR.town, s.stats.explores),
-  choices: [{ text: '繼續', out: { effects: (s) => LOOT[NODES[s.player.loc].kind] || [] } }],
+  text: (s) => variant(s, REGION_FLAVOR[s.player.loc] || FLAVOR[NODES[s.player.loc].kind] || FLAVOR.town, s.stats.explores),
+  choices: [{ text: '繼續', out: { effects: (s) => REGION_LOOT[s.player.loc] || LOOT[NODES[s.player.loc].kind] || [] } }],
 };
 
 export default [

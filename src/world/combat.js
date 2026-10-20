@@ -81,6 +81,8 @@ const DOWN = new Set(['dead', 'gone', 'vanish', 'flee', 'yield', 'leave', 'down'
 const FALL_TEXT = {
   demon_wolf: '妖狼把你撲倒在地。牠的牙擦過你的喉嚨，眼前一黑——\n\n醒來時，天色已經變了。那頭狼不見了，大概是嫌你不好吃。你身上多了好幾道血口。',
   fire_tiger: '赤炎妖虎把你撲倒在地，一股熱浪燎得你睜不開眼——\n\n醒來時，你躺在焦土邊上，衣衫燒得破破爛爛，渾身是傷。那頭大虎早已不見蹤影。',
+  toad_king: '毒蟾王的舌頭把你捲倒在泥水裡，一口毒漿噴在你臉上——\n\n醒來時，你趴在沼邊的蘆葦裡，渾身腫得發亮，喉嚨火辣辣的。',
+  gu_mother: '蠱母的毒鉗夾住了你，一股麻從腳底竄上頭頂——\n\n醒來時，你倒在谷口的亂石間，渾身青紫，嘴裡一股腥甜。蠱母沒有追出來：牠從不出谷。',
   beast: '你倒下了，眼前一黑——\n\n醒來時，天色已經變了。四下無人，只剩一身的傷。',
 };
 
@@ -744,9 +746,9 @@ function hurtMe(s, C, b, mult, io, push = null, M = null) {
     hit(C, 'dodge', w.x, w.y);
     return -1;
   }
-  // what you wear keeps some of it off (fire, what keeps fire off)
+  // what you wear keeps some of it off (fire, what keeps fire off; a pool of venom, what keeps venom off)
   const G = me.gear;
-  const kept = G ? (1 - G.def) * (M?.fire ? 1 - G.fire : 1) : 1;
+  const kept = G ? (1 - G.def) * (M?.fire ? 1 - G.fire : 1) * (M?.venom ? 1 - (G.venom || 0) : 1) : 1;
   let dmg = Math.max(1, Math.round(b.dmg * mult * (0.85 + rand(s) * 0.3) * (b.enraged ? 1.2 : 1) * kept));
   // 金剛: braced, the body takes only part of it
   if (me.ward) dmg = Math.max(1, Math.round(dmg * (1 - me.ward.k)));
@@ -770,7 +772,7 @@ function hurtMe(s, C, b, mult, io, push = null, M = null) {
     hit(C, 'hurt', w.x, w.y, { share: dmg / me.maxHp, boss: !!b.K.boss });
     if (M?.poison) {
       if (!me.poison) pop(C, w.x - 12, w.y, '中毒', 'status', 52);
-      me.poison = { left: M.poison[0], dps: b.dmg * M.poison[1], tick: 0.5 };
+      me.poison = { left: M.poison[0], dps: b.dmg * M.poison[1] * (1 - (G?.venom || 0)), tick: 0.5 };
     }
     if (M?.drain && alive(b)) {
       const back = Math.max(1, Math.round(dmg * M.drain));
@@ -1439,7 +1441,7 @@ function think(s, C, b, dt, io) {
         summon(s, C, b, M, io);
       } else if (M.shape === 'blink') {
         spent(b, M);
-        blinkAway(s, C, b, at);
+        blinkAway(s, C, b, at, M);
       } else {
         // loosed (one, or several fanned out): it flies on its own now (one of yours: at them)
         const n = M.count || 1;
@@ -1933,7 +1935,7 @@ function poolsTick(s, C, dt, io) {
     }
     if (!C.on || me.dash || me.inv > 0 || Math.hypot(w.x - p.x, w.y - p.y) > p.r + PLAYER_R * 0.5) continue;
     if (p.kind === 'water') me.slow = Math.max(me.slow || 0, 0.7);
-    hurtMe(s, C, p.by, p.mult, io, null, p.poison ? { poison: p.poison } : p.kind === 'fire' ? { fire: true } : null);
+    hurtMe(s, C, p.by, p.mult, io, null, p.kind === 'fire' ? { fire: true } : p.kind === 'venom' ? { venom: true, poison: p.poison } : p.poison ? { poison: p.poison } : null);
     if (s.pending || s.dead) return;
   }
 }
@@ -1960,18 +1962,23 @@ function summon(s, C, b, M, io) {
   if (K.line) io.feed('bad', K.line);
 }
 
-/** Gone from where it stood, and there: the other side of whoever it is after, at its distance. */
-function blinkAway(s, C, b, at) {
-  const far = (b.R.keep?.[1] ?? 200) * 0.85;
+/**
+ * Gone from where it stood, and there: the other side of whoever it is after, at its distance (or
+ * the move's own: at) — in a puff of fox fire; or, one that goes under the ground, the earth broken
+ * where it went down and came up.
+ */
+function blinkAway(s, C, b, at, M = null) {
+  const far = M?.at ?? (b.R.keep?.[1] ?? 200) * 0.85;
+  const mark = (x, y) => C.fx.push(M?.fx === 'burrow' ? { kind: 'quake', x, y, r: b.R.body * 1.6, t0: C.t, dur: 0.7 } : { kind: 'blink', x, y, t0: C.t, dur: 0.5 });
   const a0 = Math.atan2(b.y - at.y, b.x - at.x) + Math.PI;
   for (let k = 0; k < 9; k++) {
     const a = a0 + (k % 2 ? 1 : -1) * Math.ceil(k / 2) * 0.5 + (b.rng() - 0.5) * 0.4;
     const x = at.x + Math.cos(a) * far;
     const y = at.y + Math.sin(a) * far;
     if (collides(s, x, y, 12) || !isReachable(x, y)) continue;
-    C.fx.push({ kind: 'blink', x: b.x, y: b.y, t0: C.t, dur: 0.5 });
+    mark(b.x, b.y);
     Object.assign(b, { x, y, kb: null, path: null });
-    C.fx.push({ kind: 'blink', x, y, t0: C.t, dur: 0.5 });
+    mark(x, y);
     return;
   }
 }
@@ -2281,14 +2288,14 @@ function release(s, C, a, io) {
       me.shieldT = k.last;
     }
   } else if (k.aim === 'bolt') {
-    // 天雷: struck where you aimed, all at once — whoever is within its reach is hurt, and reels
+    // 天雷 (or 地刺): struck where you aimed, all at once — whoever is within its reach is hurt, and reels
     const [px, py] = a.pt;
-    C.fx.push({ kind: 'thunder', x: px, y: py, r: k.radius, t0: C.t, dur: 0.6 });
+    C.fx.push({ kind: k.fx, x: px, y: py, r: k.radius, t0: C.t, dur: 0.6 });
     for (const b of beastsOf(s, C)) {
       if (!alive(b) || !foe(b) || !present(s, b)) continue;
       const d = Math.hypot(b.x - px, b.y - py) || 1;
       if (d > k.radius + b.R.body) continue;
-      hurtBeast(s, C, b, me.atk * k.mult * boost, io, { kind: 'spirit', el, of: 'thunder' });
+      hurtBeast(s, C, b, me.atk * k.mult * boost, io, { kind: k.fx === 'thunder' ? 'spirit' : 'phys', el, of: k.fx });
       if (s.pending || s.dead) return;
       if (alive(b)) stagger(b, k.stun || 0, [(b.x - px) / d, (b.y - py) / d, k.push ?? 8]);
     }

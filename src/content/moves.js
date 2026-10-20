@@ -112,6 +112,12 @@ export const MOVES = {
     mastery: [[4, { radius: 60 }], [5, { stun: 1 }]],
     desc: '掌心引來一道天雷，劈在指定的地方：一圈之內的敵人一起受傷，麻上片刻。雷屬木，接在水系招式之後是相生。',
   },
+  dici: {
+    name: '地刺', school: '法修', el: '土', aim: 'bolt', mp: 9, cd: 6, cast: 0.35, range: 260, radius: 50, mult: 1.5, stun: 0.8, fx: 'spikes',
+    learn: ['houtu'],
+    mastery: [[4, { radius: 60 }], [5, { stun: 1.2 }]],
+    desc: '一掌按地，指定的地方石刺破土而出：一圈之內的敵人一起受傷、踉蹌片刻。屬土，剋水；接在火系招式之後是相生。',
+  },
   sweep: {
     name: '掃腿', school: '體修', el: '土', aim: 'around', mp: 0, cd: 5, cast: 0.16, radius: 58, mult: 0.6, stun: 0.9, fx: 'sweep', realm: 0,
     learn: ['wild_boxing'], gengu: 6,
@@ -141,7 +147,7 @@ export const MOVES = {
 };
 
 /** The order a set left to choose itself fills its places in (world/skills.js): the first of these you can use. */
-export const KIT_ORDER = ['feijian', 'swordqi', 'fireball', 'frost', 'thunder', 'guard', 'foxfire', 'vine', 'swordstep', 'jianzhen', 'charge', 'sweep', 'mend', 'iron', 'qi'];
+export const KIT_ORDER = ['feijian', 'swordqi', 'fireball', 'frost', 'thunder', 'dici', 'guard', 'foxfire', 'vine', 'swordstep', 'jianzhen', 'charge', 'sweep', 'mend', 'iron', 'qi'];
 
 /** What 戰鬥試煉 lends you (and what a 凡人 sees waiting, before 引氣入體). */
 export const TRIAL_KIT = ['swordqi', 'fireball', 'guard'];
@@ -177,7 +183,8 @@ export const PILL_CD = 8;
  *          spread about you); pool: what it leaves there
  *   'call' it calls others to it: call { kind, n, max (at once), share (of its strength), secs, line };
  *          first: how long into a fight before it first can
- *   'blink' gone from where it stood, and there, the other side of you (when you come within near)
+ *   'blink' gone from where it stood, and there, the other side of you (when you come within near;
+ *          at: how far behind you it comes up, if not at its own distance)
  * mult: as a multiple of its plain blow. poison: [seconds, share of a blow each second] it leaves
  * in you; drain: the share of what it takes that it keeps as its own blood. fx: how the blow looks.
  * combo: it does it this many times running, each after the first gathered in again seconds.
@@ -262,4 +269,30 @@ export const BEAST_MOVES = {
   whirlpool: { shape: 'zone', min: 0, max: 280, radius: 48, windup: 1, recover: 0.6, cd: 5.5, mult: 0.9, fx: 'whirl', pool: { secs: 4.5, r: 48, dps: 0.25, kind: 'water' } },
   whirlrain: { shape: 'zone', min: 0, max: 300, radius: 44, windup: 1.05, recover: 0.7, cd: 8.5, mult: 0.9, count: 3, spread: 90, fx: 'whirl', pool: { secs: 4.5, r: 44, dps: 0.25, kind: 'water' } },
   tide: { shape: 'ring', radius: 120, windup: 0.95, recover: 0.8, cd: 9, mult: 1.2, push: 90, fx: 'ring' },
+
+  // ── 0.21 南嶺 ──
+  // 瘴林毒蛛: a bite that leaves venom; a web flung where you stand, holding you fast (step aside to
+  // break free); a spring from the branches
+  spiderbite: { shape: 'fan', reach: 44, arc: 1.4, windup: 0.34, recover: 0.5, cd: 1.3, mult: 0.95, lunge: 12, fx: 'bite', poison: [3, 0.12] },
+  web: { shape: 'zone', min: 50, max: 230, radius: 36, windup: 0.75, recover: 0.6, cd: 6.5, mult: 0.4, fx: 'web', hold: [1.2, 0.25] },
+  spiderleap: { shape: 'leap', min: 70, max: 170, windup: 0.5, speed: 600, width: 26, overshoot: 24, recover: 0.7, cd: 5, mult: 1.3, poison: [3, 0.12] },
+  // 毒沼巨蟾: the tongue, long and narrow, from further off than a bite; venom spat where you stand
+  // (it lies there a while); a hop that comes down on you
+  tongue: { shape: 'fan', reach: 96, arc: 0.45, windup: 0.42, recover: 0.45, cd: 1.5, mult: 1.05, lunge: 0, fx: 'tongue' },
+  toadspit: { shape: 'zone', min: 60, max: 260, radius: 42, windup: 0.85, recover: 0.6, cd: 4.5, mult: 0.85, fx: 'venom', pool: { secs: 5, r: 42, dps: 0.28, kind: 'venom', poison: [3, 0.12] } },
+  hopslam: { shape: 'leap', min: 80, max: 210, windup: 0.7, speed: 520, width: 40, overshoot: 20, recover: 0.95, cd: 5, mult: 1.6 },
+  // 毒蟾王: venom spat all about you; two hops running; a croak that throws you back
+  toadrain: { shape: 'zone', min: 0, max: 300, radius: 40, windup: 1, recover: 0.7, cd: 8, mult: 0.85, count: 4, spread: 90, fx: 'venom', pool: { secs: 5, r: 40, dps: 0.28, kind: 'venom', poison: [3, 0.12] } },
+  kinghop: { shape: 'leap', min: 80, max: 240, windup: 0.75, speed: 560, width: 50, overshoot: 20, recover: 1, cd: 8, mult: 1.6, combo: 2, again: 0.5 },
+  croak: { shape: 'ring', radius: 125, windup: 0.85, recover: 0.7, cd: 9, mult: 0.7, push: 100, fx: 'croak' },
+  // 蠱蟲群: stings all round its front; a dart straight at you — both leave venom
+  sting: { shape: 'fan', reach: 40, arc: 2.2, windup: 0.3, recover: 0.45, cd: 1.1, mult: 0.7, lunge: 14, fx: 'punch', poison: [2, 0.08] },
+  swarmdart: { shape: 'leap', min: 60, max: 200, windup: 0.5, speed: 700, width: 30, overshoot: 30, recover: 0.6, cd: 5.5, mult: 1, poison: [2, 0.08] },
+  // 蠱母: its jaws; a rush the length of the valley floor; venom sprayed out in front (it lies along
+  // the ground after); its brood called out of its shell; under the ground, and up the other side of you
+  centbite: { shape: 'fan', reach: 62, arc: 1.4, windup: 0.5, recover: 0.6, cd: 1.8, mult: 1.25, lunge: 14, fx: 'bite', poison: [3, 0.12] },
+  centcharge: { shape: 'leap', min: 100, max: 280, windup: 0.8, speed: 640, width: 44, overshoot: 50, recover: 1, cd: 7, mult: 1.7 },
+  venomspray: { shape: 'fan', reach: 140, arc: 0.7, windup: 0.9, recover: 0.9, cd: 8, mult: 1.2, lunge: 0, fx: 'spray', poison: [3, 0.12], pool: { secs: 4, r: 30, dps: 0.25, kind: 'venom', poison: [3, 0.1] } },
+  broodcall: { shape: 'call', windup: 1, recover: 0.6, cd: 18, first: 3, fx: 'howl', call: { kind: 'swarm', n: 2, max: 2, share: 0.25, line: '蠱母的殼縫一張，兩團蠱蟲嗡地湧了出來！' } },
+  burrow: { shape: 'blink', near: 70, at: 64, windup: 0.6, recover: 0.4, cd: 11, fx: 'burrow' },
 };

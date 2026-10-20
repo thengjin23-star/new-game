@@ -4,7 +4,8 @@ import assert from 'node:assert/strict';
 import * as E from '../src/world/explore.js';
 import { ROUTINES, EXTRAS, entryAt, doorsOf } from '../src/world/people.js';
 import { regionIdAt, collides, isReachable, findPath } from '../src/world/terrain.js';
-import { NODES } from '../src/world/map.js';
+import { NODES, mapOf } from '../src/world/map.js';
+import { useMap } from '../src/world/atlas.js';
 import { fresh, resolvePending } from './helpers.js';
 
 const HOURS = Array.from({ length: 48 }, (_, k) => k / 2);
@@ -33,12 +34,17 @@ test('everyone has somewhere to stand at every hour, and a road between', () => 
       });
     }
   }
+  // (each on its own map)
   for (const x of EXTRAS) {
+    useMap(mapOf(x.region));
     for (const [px, py] of x.patrol || [x.at]) {
       assert.ok(!collides(null, px, py, 9) && isReachable(px, py), `${x.id} stands somewhere open`);
       assert.equal(regionIdAt(px, py), x.region, `${x.id} is in ${x.region}`);
     }
   }
+  useMap('nanling');
+  assert.ok(doorsOf('qingzhu_village').length >= 3, '青竹寨 has doors to go home to');
+  useMap('donghuang');
   for (const region of ['qingshi_town', 'luoxia_market', 'qingyun_sect']) assert.ok(doorsOf(region).length >= 3, `${region} has doors to go home to`);
 });
 

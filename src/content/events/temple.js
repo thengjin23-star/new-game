@@ -1,4 +1,4 @@
-import { has, flag, favor, alive, variant, night } from '../helpers.js';
+import { has, flag, favor, alive, variant, night, onMap } from '../helpers.js';
 
 const P = ['qingxu_temple'];
 
@@ -177,7 +177,8 @@ export default [
   {
     id: 'songhe_retry',
     trigger: 'scheduled',
-    cond: (s) => alive(s, 'song_he') && flag(s, 'songhe_saved'),
+    // (seen from 東荒 only: it waits if you are over the hills)
+    cond: (s) => alive(s, 'song_he') && flag(s, 'songhe_saved') && onMap(s, 'donghuang'),
     title: '衝關',
     text: '清虛觀的方向，一道靈光沖天而起。\n\n是松鶴道人。他在衝擊築基——時隔六十年，第二次。',
     choices: [

@@ -18,6 +18,11 @@ export const LOOKS = {
   qian_banxian: { robe: [120, 118, 110], trim: [60, 60, 56], hair: 'cap', beard: true, fan: true },
   zhao_hu: { robe: [40, 38, 36], trim: [120, 40, 30], hair: 'bun', big: true },
   stranger: { robe: [84, 104, 96], trim: [40, 50, 46], hair: 'bun', sword: true },
+  // 南嶺: indigo cloth, wound round the head
+  yan_bo: { robe: [44, 50, 78], trim: [170, 60, 50], hair: 'wrap', beard: true, white: true, cane: true },
+  a_luo: { robe: [36, 40, 66], trim: [150, 40, 50], hair: 'wrap', silver: true },
+  a_shan: { robe: [96, 84, 62], trim: [60, 52, 40], hair: 'wrap', wrapCol: [70, 60, 46], short: true },
+  han_san: { robe: [92, 96, 86], trim: [60, 60, 54], hair: 'bun', sword: true },
 };
 
 /** Townsfolk: farmer, woman, elder, child, cultivator, disciple. */
@@ -207,6 +212,32 @@ function head(ctx, look, face, t, y0 = -29) {
         ctx.fillRect(face * 2, y0 - 5, 3, 1);
       }
       break;
+    case 'wrap':
+      // a cloth wound high round the head (南嶺): indigo, or the color it is given; silver at its front
+      ctx.fillStyle = look.wrapCol ? rgba(look.wrapCol, 1) : 'rgba(40,46,74,1)';
+      ctx.beginPath();
+      ctx.ellipse(face * 0.5, y0 - 2.8, 4.7, 3.3, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = rgba(INK, 0.5);
+      ctx.lineWidth = 0.5;
+      ctx.beginPath();
+      ctx.moveTo(face * 0.5 - 4.5, y0 - 2.2);
+      ctx.quadraticCurveTo(face * 0.5, y0 - 4.6, face * 0.5 + 4.5, y0 - 2.2);
+      ctx.stroke();
+      if (look.silver) {
+        ctx.fillStyle = 'rgba(226,228,232,1)';
+        for (const dx of [-2, 0, 2]) {
+          ctx.beginPath();
+          ctx.arc(face * (0.5 + dx), y0 - 4.6, 0.75, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.strokeStyle = 'rgba(226,228,232,0.95)';
+        ctx.lineWidth = 0.8;
+        ctx.beginPath();
+        ctx.arc(face * 0.5, y0 + 2.6, 3.2, 0.3, Math.PI - 0.3);
+        ctx.stroke();
+      }
+      break;
     default:
       ctx.beginPath();
       ctx.arc(face * 0.5, y0 - 1.2, 3.8, Math.PI, 0);
@@ -216,7 +247,7 @@ function head(ctx, look, face, t, y0 = -29) {
       ctx.fill();
   }
   if (look.beard) {
-    ctx.fillStyle = look.hair === 'topknot' ? 'rgba(236,236,230,1)' : 'rgba(60,54,48,0.95)';
+    ctx.fillStyle = look.hair === 'topknot' || look.white ? 'rgba(236,236,230,1)' : 'rgba(60,54,48,0.95)';
     ctx.beginPath();
     ctx.moveTo(face * 0.5 - 2, y0 + 2);
     ctx.quadraticCurveTo(face * 1, y0 + 9, face * 0.5 + 2, y0 + 2);

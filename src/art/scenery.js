@@ -551,10 +551,270 @@ function skeleton(ctx, t, moving) {
   ctx.stroke();
 }
 
+// ── 0.21 南嶺 ──
+
+/** 瘴林毒蛛: a spider the size of a dog — a black-brown body with a red mark on it, eight jointed legs, a cluster of red eyes. */
+function spider(ctx, t, moving) {
+  const ph = moving ? Math.sin(t * 16) : 0;
+  const bob = moving ? Math.abs(Math.sin(t * 16)) * 0.8 : Math.sin(t * 2) * 0.3;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  // four legs a side, each bent up at the knee and down to the ground (the far side's darker, behind)
+  const legs = (far) => {
+    ctx.strokeStyle = far ? 'rgba(44,36,30,0.85)' : 'rgba(28,22,20,1)';
+    ctx.lineWidth = far ? 1.3 : 1.7;
+    ctx.beginPath();
+    for (let i = 0; i < 4; i++) {
+      const dx = [-13, -6, 6, 12][i] + (far ? 2 : 0);
+      const sw = ph * (i % 2 ? 2 : -2) * (far ? -1 : 1);
+      const bx = i * 1.6 - 1.4;
+      const by = -8 - bob;
+      ctx.moveTo(bx, by);
+      ctx.lineTo(bx + dx * 0.55 + sw * 0.4, by - (i === 0 || i === 3 ? 7 : 9));
+      ctx.lineTo(bx + dx + sw, 0);
+    }
+    ctx.stroke();
+  };
+  legs(true);
+  // the abdomen, round and dark, an hourglass of red on it
+  ctx.fillStyle = 'rgba(46,36,30,1)';
+  ctx.beginPath();
+  ctx.ellipse(-7, -10 - bob, 8.5, 6.5, -0.15, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = rgba(INK, 0.85);
+  ctx.lineWidth = 0.8;
+  ctx.stroke();
+  ctx.fillStyle = 'rgba(196,52,32,0.95)';
+  ctx.beginPath();
+  ctx.moveTo(-10, -14.5 - bob);
+  ctx.lineTo(-5, -14.5 - bob);
+  ctx.lineTo(-7.5, -11.5 - bob);
+  ctx.closePath();
+  ctx.moveTo(-7.5, -11.5 - bob);
+  ctx.lineTo(-10, -8.5 - bob);
+  ctx.lineTo(-5, -8.5 - bob);
+  ctx.closePath();
+  ctx.fill();
+  // the head
+  ctx.fillStyle = 'rgba(60,48,38,1)';
+  ctx.beginPath();
+  ctx.ellipse(3.5, -8.5 - bob, 5.2, 4, 0.1, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = rgba(INK, 0.85);
+  ctx.stroke();
+  legs(false);
+  // a fang, and the eyes
+  ctx.strokeStyle = 'rgba(30,24,20,1)';
+  ctx.lineWidth = 1.1;
+  ctx.beginPath();
+  ctx.moveTo(7.5, -7 - bob);
+  ctx.quadraticCurveTo(10, -5.5 - bob, 8.6, -3.6 - bob);
+  ctx.stroke();
+  ctx.fillStyle = 'rgba(232,52,40,1)';
+  for (const [ex, ey] of [[6.4, -10.6], [7.8, -10], [5.4, -11.4], [7, -11.8]]) {
+    ctx.beginPath();
+    ctx.arc(ex, ey - bob, 0.75, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+/**
+ * 毒沼巨蟾: a toad as big as a water jar — squat and warty, a pale throat that swells, a gold
+ * eye barred black. king: the lord of the marsh, purple-black, its warts yellow and weeping.
+ */
+function toad(ctx, t, moving, king = false) {
+  const hop = moving ? Math.abs(Math.sin(t * 6)) * 3 : 0;
+  const puff = 1 + Math.max(0, Math.sin(t * 2.2)) * 0.14;
+  const skin = king ? 'rgba(74,54,78,1)' : 'rgba(96,104,58,1)';
+  const dark = king ? 'rgba(42,30,46,1)' : 'rgba(58,64,34,1)';
+  const wart = king ? 'rgba(214,184,92,0.95)' : 'rgba(70,58,36,0.9)';
+  ctx.lineCap = 'round';
+  // the hind leg folded under the haunch, its long foot flat; a front leg propping it up
+  ctx.fillStyle = dark;
+  ctx.beginPath();
+  ctx.ellipse(-10, -6 - hop * 0.5, 8, 5.5, -0.3, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.ellipse(-5, -1, 7, 1.8, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = dark;
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.moveTo(9, -8 - hop);
+  ctx.lineTo(11, -0.5);
+  ctx.stroke();
+  // the body
+  ctx.fillStyle = skin;
+  ctx.beginPath();
+  ctx.ellipse(0, -11 - hop, 15, 9.5, -0.12, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = rgba(INK, 0.85);
+  ctx.lineWidth = 0.9;
+  ctx.stroke();
+  // the throat, swelling and going down
+  ctx.fillStyle = king ? 'rgba(206,184,206,0.92)' : 'rgba(222,214,160,0.92)';
+  ctx.beginPath();
+  ctx.ellipse(10, -6.5 - hop, 5.5 * puff, 3.6 * puff, 0, 0, Math.PI * 2);
+  ctx.fill();
+  // warts
+  ctx.fillStyle = wart;
+  for (const [wx, wy, wr] of [[-8, -15, 1.4], [-3, -18, 1.6], [3, -17, 1.2], [-11, -10, 1.1], [-2, -12, 1.2], [5, -13, 1], [-6, -7.5, 1]]) {
+    ctx.beginPath();
+    ctx.arc(wx, wy - hop, wr * (king ? 1.3 : 1), 0, Math.PI * 2);
+    ctx.fill();
+  }
+  // the head: a wide mouth, the eyes up on top
+  ctx.fillStyle = skin;
+  ctx.beginPath();
+  ctx.ellipse(11, -13 - hop, 7, 5.5, 0.15, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = rgba(INK, 0.85);
+  ctx.stroke();
+  ctx.strokeStyle = 'rgba(30,26,20,0.9)';
+  ctx.beginPath();
+  ctx.moveTo(5.5, -11 - hop);
+  ctx.quadraticCurveTo(12, -8.4 - hop, 17.6, -11.6 - hop);
+  ctx.stroke();
+  ctx.fillStyle = dark;
+  ctx.beginPath();
+  ctx.arc(9, -18.4 - hop, 2.2, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = king ? 'rgba(236,90,50,1)' : 'rgba(226,186,60,1)';
+  ctx.beginPath();
+  ctx.arc(12.4, -18 - hop, 2.7, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = rgba(INK, 0.85);
+  ctx.lineWidth = 0.7;
+  ctx.stroke();
+  ctx.fillStyle = 'rgba(20,16,14,1)';
+  ctx.fillRect(10.6, -18.5 - hop, 3.6, 1);
+}
+
+/** 蠱蟲群: a cloud of 蠱 — black-shelled insects the size of a thumb, the wings a blur, circling one another. */
+function swarm(ctx, t) {
+  const haze = ctx.createRadialGradient(0, -22, 0, 0, -22, 16);
+  haze.addColorStop(0, 'rgba(40,36,30,0.3)');
+  haze.addColorStop(1, 'rgba(40,36,30,0)');
+  ctx.fillStyle = haze;
+  ctx.beginPath();
+  ctx.ellipse(0, -22, 16, 12, 0, 0, Math.PI * 2);
+  ctx.fill();
+  for (let n = 0; n < 16; n++) {
+    const a = t * (2.2 + (n % 5) * 0.37) + n * 2.39;
+    const r = 4 + ((n * 37) % 11);
+    const x = Math.cos(a) * r;
+    const y = -22 + Math.sin(a * 1.3 + n) * r * 0.6;
+    ctx.fillStyle = 'rgba(222,228,232,0.55)';
+    ctx.beginPath();
+    ctx.ellipse(x - 0.5, y - 1.6, 1.8, 1, Math.sin(t * 40 + n), 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = n % 4 ? 'rgba(26,24,20,1)' : 'rgba(156,124,40,1)';
+    ctx.beginPath();
+    ctx.ellipse(x, y, 1.6, 1.1, a, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+/** 蠱母: the mother of the valley's 蠱 — a centipede as long as a boat, bronze plates edged with gold, its front reared up, jaws dripping. */
+function centipede(ctx, t, moving) {
+  const N = 12;
+  const pts = [];
+  for (let i = 0; i < N; i++) {
+    const u = i / (N - 1);
+    const wave = Math.sin(t * (moving ? 9 : 2) - i * 0.8) * (moving ? 1.6 : 0.6);
+    const rise = u > 0.55 ? Math.pow((u - 0.55) / 0.45, 1.4) * 24 : 0;
+    pts.push([-32 + u * 48, -5 - rise + (u <= 0.55 ? wave * 0.5 : wave * 0.2), u]);
+  }
+  ctx.lineCap = 'round';
+  // the legs, a pair to each plate, rippling down it as it goes (waving in the air, up front)
+  ctx.strokeStyle = 'rgba(126,74,32,1)';
+  ctx.lineWidth = 1.2;
+  ctx.beginPath();
+  for (let i = 0; i < N - 1; i++) {
+    const [x, y, u] = pts[i];
+    const sw = Math.sin(t * (moving ? 14 : 3) - i * 1.1) * 2.2;
+    if (u <= 0.55) {
+      ctx.moveTo(x - 1, y + 1);
+      ctx.lineTo(x - 3 + sw, 0);
+      ctx.moveTo(x + 1, y + 1);
+      ctx.lineTo(x + 3 - sw, 0.5);
+    } else {
+      ctx.moveTo(x, y + 2);
+      ctx.lineTo(x + 4 + sw, y + 7);
+      ctx.moveTo(x, y + 2);
+      ctx.lineTo(x - 3 - sw, y + 6.5);
+    }
+  }
+  ctx.stroke();
+  // the tail's two prongs
+  ctx.strokeStyle = 'rgba(70,48,28,1)';
+  ctx.lineWidth = 1.4;
+  ctx.beginPath();
+  ctx.moveTo(pts[0][0], pts[0][1]);
+  ctx.lineTo(pts[0][0] - 7, pts[0][1] - 3);
+  ctx.moveTo(pts[0][0], pts[0][1]);
+  ctx.lineTo(pts[0][0] - 6, pts[0][1] + 2);
+  ctx.stroke();
+  // the plates, from the tail up to the head
+  for (let i = 0; i < N - 1; i++) {
+    const [x, y, u] = pts[i];
+    const [nx, ny] = pts[i + 1];
+    const a = Math.atan2(ny - y, nx - x);
+    const r = 3.4 + Math.sin(u * Math.PI) * 1.6;
+    ctx.fillStyle = i % 2 ? 'rgba(76,52,30,1)' : 'rgba(96,66,34,1)';
+    ctx.beginPath();
+    ctx.ellipse(x, y, r * 1.25, r, a, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = rgba(INK, 0.7);
+    ctx.lineWidth = 0.6;
+    ctx.stroke();
+    ctx.strokeStyle = 'rgba(212,172,74,0.9)';
+    ctx.lineWidth = 0.8;
+    ctx.beginPath();
+    ctx.ellipse(x, y, r * 1.25, r, a, Math.PI * 1.1, Math.PI * 1.9);
+    ctx.stroke();
+  }
+  // the head: a flat plate, feelers swept back, two curved jaws, venom at their tips
+  const [hx, hy] = pts[N - 1];
+  const tw = Math.sin(t * 3) * 1.5;
+  ctx.strokeStyle = 'rgba(70,48,28,1)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(hx + 1, hy - 3);
+  ctx.quadraticCurveTo(hx - 4, hy - 14 + tw, hx - 14, hy - 12 + tw);
+  ctx.moveTo(hx + 2, hy - 3);
+  ctx.quadraticCurveTo(hx + 2, hy - 15 - tw, hx - 6, hy - 18 - tw);
+  ctx.stroke();
+  ctx.fillStyle = 'rgba(110,74,36,1)';
+  ctx.beginPath();
+  ctx.ellipse(hx + 1, hy, 5.6, 4, 0.3, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = rgba(INK, 0.85);
+  ctx.lineWidth = 0.8;
+  ctx.stroke();
+  const shut = Math.sin(t * 4) * 0.8;
+  ctx.strokeStyle = 'rgba(40,28,20,1)';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(hx + 4, hy + 1);
+  ctx.quadraticCurveTo(hx + 10, hy + 1 - shut, hx + 9, hy + 5);
+  ctx.moveTo(hx + 4, hy + 2.5);
+  ctx.quadraticCurveTo(hx + 8, hy + 5 + shut, hx + 5.5, hy + 7);
+  ctx.stroke();
+  ctx.fillStyle = 'rgba(120,190,70,0.9)';
+  ctx.beginPath();
+  ctx.arc(hx + 9, hy + 5.6, 1, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = 'rgba(232,60,40,1)';
+  ctx.beginPath();
+  ctx.arc(hx + 2.6, hy - 1.6, 0.9, 0, Math.PI * 2);
+  ctx.fill();
+}
+
 /** The big ones: a demon wolf, the wolf king, the python, the iron-backed bear, the skeleton general. */
 export function drawBigBeast(ctx, kind, { t = 0, face = 1, moving = false } = {}) {
   ctx.save();
-  groundShadow(ctx, 0, 0, { demon_wolf: 15, wolf_king: 22, python: 24, bear: 22, skeleton: 12, fire_tiger: 25, shanxiao: 12, mumei: 12, xuan_turtle: 27 }[kind] || 14, 3);
+  groundShadow(ctx, 0, 0, { demon_wolf: 15, wolf_king: 22, python: 24, bear: 22, skeleton: 12, fire_tiger: 25, shanxiao: 12, mumei: 12, xuan_turtle: 27, spider: 14, toad: 16, toad_king: 25, swarm: 9, gu_mother: 30 }[kind] || 14, 3);
   ctx.scale(face, 1);
   switch (kind) {
     case 'demon_wolf':
@@ -588,13 +848,30 @@ export function drawBigBeast(ctx, kind, { t = 0, face = 1, moving = false } = {}
       ctx.scale(1.1, 1.1);
       xuanTurtle(ctx, t, moving);
       break;
+    case 'spider':
+      spider(ctx, t, moving);
+      break;
+    case 'toad':
+      toad(ctx, t, moving);
+      break;
+    case 'toad_king':
+      ctx.scale(1.55, 1.55);
+      toad(ctx, t, moving, true);
+      break;
+    case 'swarm':
+      swarm(ctx, t);
+      break;
+    case 'gu_mother':
+      ctx.scale(1.15, 1.15);
+      centipede(ctx, t, moving);
+      break;
     default:
       break;
   }
   ctx.restore();
 }
 
-export const BIG_BEASTS = new Set(['demon_wolf', 'wolf_king', 'python', 'bear', 'skeleton', 'fire_tiger', 'shanxiao', 'mumei', 'xuan_turtle']);
+export const BIG_BEASTS = new Set(['demon_wolf', 'wolf_king', 'python', 'bear', 'skeleton', 'fire_tiger', 'shanxiao', 'mumei', 'xuan_turtle', 'spider', 'toad', 'toad_king', 'swarm', 'gu_mother']);
 
 /** Props that flicker or sway (repainted as they go); the rest are still. */
 export const LIVE_PROPS = new Set(['campfire', 'ginseng', 'wisp']);

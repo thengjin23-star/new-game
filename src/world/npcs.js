@@ -1,6 +1,7 @@
 import { DAYS_PER_YEAR } from '../core/calendar.js';
 import { rand, randInt, pick, chance } from '../core/rng.js';
 import { NODES, PEOPLE_PLACES, mapOf } from './map.js';
+import { LANDS } from './maps/index.js';
 
 // 命名人物. `luck` marks 氣運之子.
 export const NAMED = {
@@ -44,6 +45,8 @@ export const NAMED = {
     name: '趙虎', title: '鎮上惡霸', gender: '男', age: 24, realm: 0, stage: 0, loc: 'qingshi_town',
     bio: '仗著舅舅在縣衙當差，在鎮上橫行霸道。',
   },
+  // the people of the other maps (world/maps/): 南嶺's 寨老, 蠱婆, hunter, and the 散修 at the pass
+  ...Object.assign({}, ...LANDS.map((m) => m.people || {})),
 };
 
 export function initNpcs(s) {

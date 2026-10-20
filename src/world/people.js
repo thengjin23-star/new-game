@@ -12,6 +12,7 @@ import { world, regionAt, regionIdAt, collides, isReachable, findPath, hash2, RE
 import { STRUCTURES, NPC_SPOTS, NPC_SHOW, WANDERERS } from './places.js';
 import { NODES, PEOPLE_PLACES, mapOf } from './map.js';
 import { mapId, onMapChange } from './atlas.js';
+import { landTable, landList } from './maps/index.js';
 
 /** Beyond this distance from you, nobody walks: they are already there. */
 const SEE = 700;
@@ -294,6 +295,7 @@ export const FOLK_LINES = {
   ],
   farmland: ['靈溪的水澆出來的稻子，特別香。', '前些天田埂邊挖出個瓦罐，可惜是空的。', '天要下雨了，得趕緊收。'],
   qingyun_sect: ['外門大比快到了，師兄們都在閉關。', '藏經閣的老執事，脾氣古怪得很。', '聽說丹房又炸爐了。'],
+  ...landTable('folk'),
 };
 
 /** What the street sounds like: short things people call out as you pass. */
@@ -302,6 +304,7 @@ const CALLS = {
   luoxia_market: ['上好的符籙，一張五塊靈石！', '便宜賣了，便宜賣了！', '道友，看看法器？', '讓一讓！', '聽說了嗎？聚寶閣又進新貨了。'],
   farmland: ['今年收成好。', '天要下雨了。', '牛呢？誰看見我的牛了？'],
   qingyun_sect: ['師兄早。', '又要挑水了……', '噓，執事來了。'],
+  ...landTable('calls'),
 };
 
 /** Townsfolk with a place and an hour of their own. */
@@ -328,6 +331,8 @@ export const EXTRAS = [
     calls: ['再……再來一壺！', '我、我沒醉！', '嗝。'],
     chat: ['「想當年，老子也是築過基的……築、築過基的人，嗝，不跟你一般見識。」', '「你知道聚寶閣底下埋著什麼嗎？……嗝。我也不知道。」'],
   },
+  // (the other maps' own: world/maps/)
+  ...landList('extras'),
 ];
 
 const GENG = ['一', '二', '三', '四', '五'];

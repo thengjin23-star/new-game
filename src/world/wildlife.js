@@ -9,6 +9,7 @@
 import { WORLD_W, WORLD_H, CELL } from './geo.js';
 import { regionAt, collides, isReachable } from './terrain.js';
 import { groundOk } from './director.js';
+import { landTable } from './maps/index.js';
 
 const isNight = (s) => s.tod >= 19.5 || s.tod < 5;
 
@@ -25,6 +26,7 @@ export const WILDLIFE = {
   fox_shrine: { n: 3, kinds: [['fox', 4, 'night', 'wild', [1, 1]], ['rabbit', 3, 'day', 'wild', [1, 1]], ['crow', 1, 'day', 'wild', [1, 2]]] },
   ancient_ruins: { n: 3, kinds: [['crow', 5, 'day', 'any', [2, 4]]] },
   qingxu_temple: { n: 1, kinds: [['crane', 1, 'day', 'any', [1, 1]], ['rabbit', 2, 'any', 'wild', [1, 1]]] },
+  ...landTable('wildlife'),
 };
 
 /** How close you can come before they go, and how they go. */

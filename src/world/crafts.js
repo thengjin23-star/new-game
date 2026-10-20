@@ -83,9 +83,9 @@ export function hasFurnace(s) {
   return has(s, 'danlu') || atHome(s);
 }
 
-/** The 丹方 you know (築基丹 only once its 丹方 is read). */
+/** The 丹方 you know (築基丹 only once its 丹方 is read; 避瘴丹 once 阿蘿 has shown you). */
 export function recipesKnown(s) {
-  return Object.keys(RECIPES).filter((id) => !RECIPES[id].book || s.flags.recipe_zhuji);
+  return Object.keys(RECIPES).filter((id) => !RECIPES[id].known || s.flags[RECIPES[id].known]);
 }
 
 /** Why you cannot brew this now (null: you can). */
@@ -96,7 +96,7 @@ export function brewWhy(s, id) {
   if (busy) return busy;
   if (!hasFurnace(s)) return '身邊沒有丹爐。';
   if (s.player.realm < 1) return '凡人控不住爐火，要先引氣入體。';
-  if (R.book && !s.flags.recipe_zhuji) return '不懂這個丹方。';
+  if (R.known && !s.flags[R.known]) return '不懂這個丹方。';
   if (pools(s).mp < R.mp) return `靈力不夠（要 ${R.mp}）。`;
   return lacking(s, R.in);
 }
@@ -250,7 +250,7 @@ export function refinable(s) {
     const level = refineLevel(s, id);
     const cost = REFINE.cost[level + 1] || null;
     let why = null;
-    if (!shop?.recipes) why = '要到百煉坊。';
+    if (!shop?.recipes || shop.refine === false) why = '要到百煉坊。';
     else if (!cost) why = '已經精煉到頭了。';
     else if (s.player.ls < cost.ls) why = `靈石不夠（${s.player.ls}/${cost.ls}）`;
     else why = lacking(s, cost.items);

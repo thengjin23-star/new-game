@@ -250,4 +250,67 @@ export const FOES = {
       scared: ['那隻大龜慢慢沉回了湖底。', '那隻大龜慢慢沉回了湖底。'],
     },
   },
+  // ── 0.21 南嶺 ──
+  // 瘴林: spiders as big as a dog, three together — a bite that leaves venom, a web flung where you
+  // stand (it holds you), a spring from the branches
+  spider: {
+    name: '瘴林毒蛛', el: '木', hp: 0.8, atk: 1.05, loot: [[0.55, 'spider_silk', 1]],
+    rt: {
+      share: 1.3, tier: 1, speed: 150, walk: 30, sight: 190, lose: 400, loseT: 1.4, leash: 650, body: 11, bulk: 0.6, tall: 14,
+      notice: 0.35, moves: ['spiderbite', 'web', 'spiderleap'], hop: 0.45, night: 1.3, noon: 0.8, pack: true, tokens: 2, ring: 96,
+      warn: '頭頂的樹枝上掛著一團一團的白絲，絲裡有東西在動。', cry: '樹上垂下幾隻毒蛛，八隻眼睛一齊盯住了你！',
+      scared: ['那隻毒蛛順著絲爬回了樹上。', '那些毒蛛順著絲爬回了樹上。'], broke: '剩下的毒蛛順著絲爬回了樹上。',
+    },
+  },
+  // 毒沼: a toad as big as a water jar — its tongue from afar, venom spat where you stand, its whole
+  // weight come down on you
+  toad: {
+    name: '毒沼巨蟾', el: '水', hp: 1.1, atk: 1.3, loot: [[0.6, 'toad_venom', 1]],
+    rt: {
+      tier: 1, speed: 110, walk: 16, sight: 190, lose: 380, loseT: 1.4, leash: 520, body: 16, bulk: 0.9, tall: 22,
+      notice: 0.6, moves: ['tongue', 'toadspit', 'hopslam'], night: 1.1, noon: 0.85, poise: 1.4,
+      warn: '蘆葦叢裡傳來一聲悶悶的「咕——」，像有人在敲一面破鼓。', cry: '一隻水缸大的巨蟾從泥水裡撐起身子，鼓著兩腮瞪住了你！',
+      scared: ['那隻巨蟾咕的一聲，沉回了泥水裡。', '那兩隻巨蟾咕咕叫著，沉回了泥水裡。'],
+    },
+  },
+  // 毒沼深處, by the 沼心蓮: the lord of the marsh. Worn down, it spits venom all about and its croak
+  // throws you back; near the end, in a rage
+  toad_king: {
+    name: '毒蟾王', el: '水', hp: 1.6, atk: 1.15, boss: true, loot: [[1, 'beast_core', 2], [1, 'toad_venom', 2]],
+    rt: {
+      tier: 1, speed: 104, walk: 12, sight: 220, lose: 440, loseT: 1.6, leash: 520, body: 26, bulk: 0.9, tall: 34,
+      notice: 0.8, moves: ['tongue', 'toadspit', 'hopslam'],
+      phases: [
+        { at: 0.6, moves: ['tongue', 'toadrain', 'kinghop', 'croak'], line: '毒蟾王鼓起肚子，背上的毒疣一齊冒出白漿！' },
+        { at: 0.3, enrage: true, line: '毒蟾王渾身漲成了紫黑色——牠發狂了！' },
+      ],
+      warn: '沼地裡的蛙聲忽然全停了。', cry: '泥水嘩地翻開，一隻磨盤大的毒蟾王撐起了身子！',
+      scared: ['毒蟾王慢慢沉回了泥沼。', '毒蟾王慢慢沉回了泥沼。'],
+    },
+  },
+  // 萬蠱谷: a cloud of 蠱, quick and hard to hit — stings that leave venom, a dart straight at you
+  swarm: {
+    name: '蠱蟲群', el: '金', hp: 0.55, atk: 0.8,
+    rt: {
+      share: 1.2, tier: 1, speed: 172, walk: 60, sight: 220, lose: 440, loseT: 1.4, leash: 700, body: 10, bulk: 0.4, tall: 32,
+      notice: 0.3, moves: ['sting', 'swarmdart'], night: 0.85, noon: 1.1, pack: true, tokens: 2, ring: 90, dodge: 0.2,
+      warn: '嗡嗡聲越來越近，像有人在耳邊搖一面破鑼。', cry: '一團黑雲從石縫裡湧出來——是蠱蟲！',
+      scared: ['那團蠱蟲嗡的一聲散了。', '那幾團蠱蟲嗡嗡地散了。'], broke: '剩下的蠱蟲嗡的一聲，散進了林子。',
+    },
+  },
+  // 萬蠱谷深處: the mother of them all, a centipede as long as a boat. Worn down, it calls its brood out
+  // of its shell and goes under the ground to come up behind you; near the end, in a rage
+  gu_mother: {
+    name: '蠱母', el: '金', hp: 1.8, atk: 1.2, boss: true, loot: [[1, 'beast_core', 2], [1, 'gu_shell', 1]],
+    rt: {
+      tier: 1, speed: 150, walk: 26, sight: 240, lose: 480, loseT: 1.6, leash: 600, body: 24, bulk: 0.8, tall: 34,
+      notice: 0.7, moves: ['centbite', 'centcharge', 'venomspray'],
+      phases: [
+        { at: 0.65, moves: ['centbite', 'broodcall', 'burrow', 'centcharge', 'venomspray'], line: '蠱母的百足一齊刮地，殼縫裡湧出一團一團的蠱蟲！' },
+        { at: 0.3, enrage: true, line: '蠱母的甲殼裂開，滲出綠色的血——牠發狂了！' },
+      ],
+      warn: '石壁上爬滿了蠱蟲，地上鋪著一層薄薄的蟲殼。空氣腥得發甜。', cry: '地底轟隆一聲，一條丈長的百足蠱母破土而出！',
+      scared: ['蠱母縮回了地底。', '蠱母縮回了地底。'],
+    },
+  },
 };

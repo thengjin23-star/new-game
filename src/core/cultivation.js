@@ -47,6 +47,8 @@ export const BUFFS = {
   guided: { name: '松鶴指點', mult: 2.5 },
   valley_spring: { name: '靈泉洗髓', mult: 1.3 },
   epiphany: { name: '頓悟餘韻', mult: 1.4 },
+  // 避瘴丹 (南嶺): the miasma does not touch you while it lasts (it does nothing for cultivation)
+  bizhang: { name: '避瘴', mult: 1 },
 };
 
 export function realmOf(s) {

@@ -10,6 +10,7 @@ const BOSSES = Object.entries(FOES).filter(([, f]) => f.boss).map(([k]) => k);
 const kills = (s) => Object.values(s.vars.kills || {}).reduce((a, b) => a + b, 0);
 const visited = (s) => Object.entries(s.nodes || {}).filter(([id, n]) => n.visited && NODES[id]).length;
 const ALL_PLACES = Object.keys(NODES).filter((id) => NODES[id].at && id !== 'hidden_cave' && NODES[id].kind !== 'river' && mapOf(id) === 'donghuang');
+const NANLING_PLACES = Object.keys(NODES).filter((id) => NODES[id].at && mapOf(id) === 'nanling');
 
 /** The marks: name, what it took, and the test. */
 export const FEATS = [
@@ -24,6 +25,10 @@ export const FEATS = [
   { id: 'sheng', name: '五行相生', desc: '一口氣接上三招相生的招式。', test: (s) => (s.vars.chainBest || 0) >= 3 },
   { id: 'places', name: '足跡', desc: '去過十個地方。', test: (s) => visited(s) >= 10 },
   { id: 'all_places', name: '踏遍東荒', desc: '東荒的每個地方都去過。', test: (s) => ALL_PLACES.every((id) => s.nodes[id]?.visited) },
+  // 南嶺 (0.21)
+  { id: 'nanling', name: '過嶺', desc: '翻過山隘，到了南嶺。', test: (s) => !!s.flags.nanling_crossed },
+  { id: 'gu_mother', name: '除蠱', desc: '打倒萬蠱谷的蠱母。', test: (s) => s.vars.kills?.gu_mother > 0 },
+  { id: 'nanling_all', name: '踏遍南嶺', desc: '南嶺的每個地方都去過（瀑布後面的也算）。', test: (s) => NANLING_PLACES.every((id) => s.nodes[id]?.visited) },
   { id: 'walk', name: '雲遊', desc: '走滿一百里路。', test: (s) => (s.world?.walked || 0) >= 100000 },
   { id: 'fly', name: '御風而行', desc: '第一次飛上天。', test: (s) => Object.keys(s.vars.flownBy || {}).length > 0 },
   { id: 'sword', name: '御劍', desc: '御劍飛行。', test: (s) => !!s.vars.flownBy?.sword },

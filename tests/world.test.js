@@ -1,7 +1,7 @@
 // The open world: its ground, walking it, and what you run into.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { world, collides, isReachable, isAiry, canStand, regionIdAt, findPath, nearestOpen, REGION_IDS, terrainAt } from '../src/world/terrain.js';
+import { world, collides, isReachable, isAiry, canStand, regionIdAt, regionAt, findPath, nearestOpen, REGION_IDS, terrainAt } from '../src/world/terrain.js';
 import { POIS, NPC_SPOTS, BEASTS, STRUCTURES } from '../src/world/places.js';
 import * as CB from '../src/world/combat.js';
 import { NODES, mapOf } from '../src/world/map.js';
@@ -67,21 +67,31 @@ test('up where no road goes: the summits and the sandbar stand apart, with room 
   }
 });
 
-test('every place, person and beast stands somewhere reachable, in its region', () => {
-  for (const p of POIS) {
-    assert.ok(NODES[p.region]?.air ? airStandable(p.x, p.y) : standable(p.x, p.y), `${p.id} can be walked up to`);
-    assert.equal(regionIdAt(p.x, p.y), p.region, `${p.id} lies in ${p.region}`);
-  }
-  for (const [id, spots] of Object.entries(NPC_SPOTS)) {
-    for (const [region, [x, y]] of Object.entries(spots)) {
-      assert.ok(standable(x, y), `${id} at ${region}`);
-      assert.equal(regionIdAt(x, y), region, `${id} stands in ${region}`);
+test('every place, person and beast stands somewhere reachable, in its region (on every map)', () => {
+  // (a place hidden until it is found — behind the falls — reads as the region about it till then)
+  const found = { flags: { falls_cave_found: true } };
+  try {
+    for (const map of Object.keys(MAPS)) {
+      useMap(map);
+      for (const p of POIS) {
+        assert.ok(NODES[p.region]?.air ? airStandable(p.x, p.y) : standable(p.x, p.y), `${p.id} can be walked up to`);
+        assert.equal(regionAt(found, p.x, p.y), p.region, `${p.id} lies in ${p.region}`);
+      }
+      for (const [id, spots] of Object.entries(NPC_SPOTS)) {
+        for (const [region, [x, y]] of Object.entries(spots)) {
+          if (mapOf(region) !== map) continue;
+          assert.ok(standable(x, y), `${id} at ${region}`);
+          assert.equal(regionIdAt(x, y), region, `${id} stands in ${region}`);
+        }
+      }
+      for (const m of BEASTS) assert.ok(isReachable(m.x, m.y) && !collides(member, m.x, m.y, 12), `${m.id} roams reachable ground`);
+      for (const h of world().herbs) assert.ok(isReachable(h.x, h.y) && !collides(member, h.x, h.y), `herb ${h.id}`);
+      for (const st of STRUCTURES.filter((x) => x.sprite && x.block !== false)) {
+        assert.ok(collides(member, st.x, st.y), `building at ${st.x},${st.y} is solid`);
+      }
     }
-  }
-  for (const m of BEASTS) assert.ok(isReachable(m.x, m.y), `${m.id} roams reachable ground`);
-  for (const h of world().herbs) assert.ok(isReachable(h.x, h.y) && !collides(member, h.x, h.y), `herb ${h.id}`);
-  for (const st of STRUCTURES.filter((x) => x.sprite && x.block !== false)) {
-    assert.ok(collides(member, st.x, st.y), `building at ${st.x},${st.y} is solid`);
+  } finally {
+    useMap('donghuang');
   }
 });
 

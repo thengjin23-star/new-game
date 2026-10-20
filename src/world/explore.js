@@ -8,6 +8,7 @@ import { heightAt } from './height.js';
 import { POIS, POI_BY_ID, GATHER, GATHER_RESPAWN } from './places.js';
 import { NODES, mapOf } from './map.js';
 import { MAPS, CROSSINGS, mapId, useMap } from './atlas.js';
+import { landTable } from './maps/index.js';
 import { NAMED } from './npcs.js';
 import { reveal, fogOf, syncFog, forgetFog } from './fog.js';
 import { stageScene, updateScenes, sceneTargets, sceneByUid, meetScene, scenesOf } from './director.js';
@@ -905,6 +906,7 @@ const ENCOUNTER = {
   crane_peak: [700, 0],
   sword_peak: [700, 0],
   river_isle: [900, 0],
+  ...landTable('encounter'),
 };
 const ON_THE_ROAD = new Set(['wilds', 'farmland', 'mirror_lake', 'crane_ferry', 'fox_shrine']);
 
@@ -944,13 +946,18 @@ const AMBIENT = {
   ferry: ['江風很大。'],
   peak: ['山風很大，吹得衣袍獵獵作響。', '雲從腳下流過去。', '一隻鷹在你腳下盤旋。', '往下看，青石鎮小得像一把撒在地上的米。'],
   isle: ['江水從兩邊流過去，嘩嘩地響。', '蘆葦叢裡飛起一隻水鳥。', '江霧漫上來，又退下去。'],
+  marsh: ['死水上冒起一個泡，啵的一聲破了。', '蘆葦沙沙地響。'],
+  pass: ['山風從隘口灌過來。', '路邊的石頭上刻著幾道記號，像是給後來的人指路。'],
 };
+/** A region's own (another map's, world/maps/): before the lines kept by kind of place. */
+const REGION_AMBIENT = landTable('ambient');
 const NIGHT_AMBIENT = ['夜很靜。你聽得見自己的腳步聲。', '月亮被雲遮住了。', '遠處有一點燈火。', '貓頭鷹叫了兩聲。'];
 
 function ambient(s, L) {
   if (!chance(s, 0.5)) return;
-  const kind = NODES[s.world.region]?.kind;
-  const list = isNight(s) && chance(s, 0.5) ? NIGHT_AMBIENT : AMBIENT[kind];
+  const region = s.world.region;
+  const kind = NODES[region]?.kind;
+  const list = isNight(s) && chance(s, 0.5) ? NIGHT_AMBIENT : REGION_AMBIENT[region] || AMBIENT[kind];
   if (list) L.feed.push({ kind: 'ambient', text: list[Math.floor(rand(s) * list.length)] });
 }
 

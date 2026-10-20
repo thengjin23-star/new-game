@@ -7,7 +7,7 @@
 
 import { T } from './geo.js';
 import { omenAt } from './happenings.js';
-import { LANDS } from './maps/index.js';
+import { LANDS, landTable } from './maps/index.js';
 
 const night = (s) => s.tod >= 19.5 || s.tod < 5;
 
@@ -251,6 +251,7 @@ export const NPC_SPOTS = {
   hu_sanniang: { fox_shrine: [3080, 3040] },
   qian_banxian: { luoxia_market: [4090, 2516] },
   zhao_hu: { qingshi_town: [2340, 3172] },
+  ...landTable('spots'),
 };
 
 /** People who only show up under conditions. */
@@ -301,10 +302,11 @@ export const GATHER = {
   farmland: { n: 3, give: [[100, 'zhixue_grass', 1, 1]] },
   mirror_lake: { n: 4, give: [[80, 'ningqi_grass', 1, 2], [20, 'zhixue_grass', 1, 1]] },
   fox_shrine: { n: 3, give: [[100, 'ningqi_grass', 1, 1]] },
+  ...landTable('gather'),
 };
 
 /** Townsfolk and passers-by who walk around a region (they only talk). */
-export const WANDERERS = { qingshi_town: 8, luoxia_market: 11, farmland: 3, qingyun_sect: 4 };
+export const WANDERERS = { qingshi_town: 8, luoxia_market: 11, farmland: 3, qingyun_sect: 4, ...landTable('wanderers') };
 export const GATHER_RESPAWN = 25;
 
 // ── which map's things these are ──

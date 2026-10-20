@@ -2436,7 +2436,7 @@ export function startApp(root, { speed = 1, view = null } = {}) {
               h('div.item-acts', h('button.btn.small', { disabled: !A.canCraft(s, id) || !!s.secl, onclick: () => act((x) => A.craft(x, id)) }, '打造')),
             );
           })) : null,
-          shop.recipes?.length ? refineList() : null,
+          shop.recipes?.length && shop.refine !== false ? refineList() : null,
         ),
       );
     }

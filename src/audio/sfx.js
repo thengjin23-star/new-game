@@ -276,6 +276,31 @@ export function effect(kind, pan = 0, near = 1) {
       burst(t, o({ type: 'lowpass', hz: 150, q: 0.7, vel: 0.6 * v, len: 0.6 }));
       sweep(t, o({ from: 70, to: 32, dur: 0.5, vel: 0.5 * v }));
       break;
+    case 'spikes':
+      // 地刺: the ground heaving, and stone cracking up out of it
+      burst(t, o({ type: 'lowpass', hz: 180, q: 0.7, vel: 0.55 * v, len: 0.4 }));
+      sweep(t, o({ from: 90, to: 40, dur: 0.35, vel: 0.45 * v }));
+      crackle(t + 0.03, o({ dur: 0.18, count: 7, vel: 0.26 * v }));
+      break;
+    case 'web':
+      // a web flung: a soft rush of air, and it sticks
+      whoosh(t, o({ from: 1300, to: 500, dur: 0.22, vel: 0.14 * v }));
+      burst(t + 0.18, o({ type: 'lowpass', hz: 900, q: 0.8, vel: 0.12 * v, len: 0.05 }));
+      break;
+    case 'tongue':
+      // a toad's tongue: out with a wet smack
+      sweep(t, o({ type: 'sine', from: 520, to: 160, dur: 0.09, vel: 0.2 * v }));
+      burst(t + 0.06, o({ type: 'lowpass', hz: 600, q: 1, vel: 0.25 * v, len: 0.05 }));
+      break;
+    case 'croak':
+      // the croak of something far too big to be a toad: twice, low and rough
+      for (let k = 0; k < 2; k++) sweep(t + k * 0.22, o({ type: 'sawtooth', from: 96 - k * 8, to: 64, dur: 0.2, vel: 0.3 * v, lp: 500, attack: 0.02 }));
+      burst(t, o({ type: 'lowpass', hz: 160, q: 0.7, vel: 0.4 * v, len: 0.5 }));
+      break;
+    case 'spray':
+      // venom sprayed: a long hiss
+      whoosh(t, o({ from: 900, to: 2600, dur: 0.6, vel: 0.22 * v, peak: 0.3 }));
+      break;
     case 'blink':
       sweep(t, o({ type: 'sine', from: 1700, to: 280, dur: 0.22, vel: 0.14 * v }));
       break;

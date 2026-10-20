@@ -74,6 +74,29 @@ export const ITEMS = {
     name: '靈溪蟒鱗', kind: 'material', sell: 70,
     desc: '巴掌大的青黑鱗片，刀劍難傷。',
   },
+  // 南嶺 (0.21)
+  zhangling_zhi: {
+    name: '瘴靈芝', kind: 'herb', sell: 30,
+    desc: '瘴林裡長的靈芝，紫黑色，傘蓋上總掛著水珠。吸的是瘴氣，有毒也有靈氣：生吃傷神，入丹最好——避瘴丹的主藥。',
+    use: { text: '你咬了一口。舌頭一麻，一股熱氣直衝腦門：靈氣是有的，人也昏昏沉沉了大半天。', effects: [['xw', 70], ['mind', -3]] },
+  },
+  marsh_lotus: {
+    name: '沼心蓮', kind: 'herb', sell: 140,
+    desc: '毒沼正中，只在死水裡開的白蓮，蓮心一點金。污泥裡長出來，偏偏一點毒也不沾。',
+    use: { text: '蓮心入口，先是清苦，然後是一股說不出的甘甜，順著經脈一路涼下去。心裡的雜念，像是沉進了水底。', effects: [['xw', 300], ['mind', 10], ['insight', 1]] },
+  },
+  spider_silk: {
+    name: '毒蛛絲', kind: 'material', sell: 12,
+    desc: '瘴林毒蛛吐的絲，又輕又韌，刀割不斷。青竹寨的阿蘿會把它織成軟甲。',
+  },
+  toad_venom: {
+    name: '蟾酥', kind: 'material', sell: 16,
+    desc: '毒沼巨蟾耳後的白漿曬乾的，以毒攻毒的藥引。避瘴丹裡少不了它。',
+  },
+  gu_shell: {
+    name: '蠱母甲', kind: 'material', sell: 120,
+    desc: '蠱母背上的一片甲，金黃泛銅色，刀砍上去只留一道白印，百毒不侵。阿蘿說，這東西能做一件好甲。',
+  },
 
   // ── 丹藥 ──
   juqi_pill: {
@@ -89,6 +112,11 @@ export const ITEMS = {
   detox_pill: {
     name: '解毒丹', kind: 'pill', price: 15, sell: 6,
     desc: '可解尋常瘴毒。帶在身上，中毒時會自動服用。',
+  },
+  bizhang_pill: {
+    name: '避瘴丹', kind: 'pill', price: 30, sell: 12,
+    desc: '南嶺人自己配的丹：瘴靈芝為主，蟾酥為引。服下之後三天之內，瘴氣近不了身。',
+    use: { text: '丹藥入口，又苦又辣，一股辛氣從鼻子裡直衝出來。之後的每一口呼吸，都帶著一點清涼。', effects: [['buff', 'bizhang', 3]] },
   },
   qingxin_pill: {
     name: '清心丹', kind: 'pill', price: 40, sell: 16,
@@ -225,6 +253,14 @@ export const ITEMS = {
     name: '玄甲衣', kind: 'gear', slot: 'robe', sell: 150, stats: { hp: 0.14, def: 0.12, regen: 0.2 }, craft: { ls: 160, items: { turtle_shell: 1, beast_core: 2 } },
     desc: '玄龜甲片綴在內襯上的甲衣，又輕又硬，穿著傷口也好得快些。',
   },
+  silk_vest: {
+    name: '蛛絲軟甲', kind: 'gear', slot: 'robe', sell: 70, stats: { def: 0.08, speed: 0.04, venom: 0.25 }, craft: { ls: 80, items: { spider_silk: 4 } },
+    desc: '阿蘿用毒蛛絲織的軟甲，薄得能穿在衣服底下，輕得像沒穿。刀不容易砍進去，毒也不容易滲進來。',
+  },
+  gu_armor: {
+    name: '金蠱甲', kind: 'gear', slot: 'robe', sell: 180, stats: { hp: 0.12, def: 0.14, venom: 0.5 }, craft: { ls: 200, items: { gu_shell: 1, spider_silk: 2 } },
+    desc: '蠱母甲剖成片，用毒蛛絲綴起來的甲衣，金黃發亮。穿著它，被咬上一口，毒只進得來一半。',
+  },
   tiger_robe: {
     name: '赤炎虎皮袍', kind: 'gear', slot: 'robe', sell: 160, stats: { hp: 0.2, def: 0.08, fire: 0.5 }, craft: { ls: 200, items: { fire_tiger_pelt: 1 } },
     desc: '赤炎妖虎的皮做的袍子，終年溫熱，火燒不透。',
@@ -295,11 +331,15 @@ export const ITEMS = {
   },
   return_talisman: {
     name: '歸元符', kind: 'talisman', price: 40, sell: 12,
-    desc: '燒了，一陣風把你送回最近去過的城鎮（青石鎮、落霞坊市或清虛觀）。路上要過一個時辰。',
+    desc: '燒了，一陣風把你送回這一帶最近去過的城鎮（東荒：青石鎮、落霞坊市或清虛觀；南嶺：青竹寨）。路上要過一個時辰。',
   },
   xuesha_token: {
     name: '血煞令', kind: 'token', sell: 0,
     desc: '刻著血色骷髏的鐵牌，摸上去是溫的。',
+  },
+  han_pack: {
+    name: '韓三的包袱', kind: 'token', sell: 0,
+    desc: '灰布包袱，縫著一個「韓」字，沉甸甸的。嶺口草棚裡的韓三，說他在瘴林裡丟了包袱。',
   },
   beggar_map: {
     name: '泛黃的紙片', kind: 'token', sell: 0,
@@ -339,7 +379,12 @@ export function displayItem(s, id) {
   return { name: it.name, desc: it.desc };
 }
 
-/** Shops: what they sell (stock), and what they make from what you bring (recipes, see craft). */
+/**
+ * Shops: what they sell (stock), and what they make from what you bring (recipes, see craft;
+ * a shop that makes things refines them too, unless refine is false). made: how the making goes
+ * ({keeper}, {item}). share: what it asks, as a share of the price (the 坊市's by your standing
+ * there, if not its own).
+ */
 export const SHOPS = {
   luoxia: {
     name: '百草堂',
@@ -356,5 +401,15 @@ export const SHOPS = {
     keeper: '鐵匠老韓',
     stock: ['iron_saber', 'hantie_sword', 'cloth_robe', 'peace_buckle', 'zijin_bell'],
     recipes: ['wolf_coat', 'fang_pendant', 'scale_armor', 'xuangui_armor', 'tiger_robe'],
+  },
+  // 南嶺・青竹寨: 阿蘿 keeps the medicine house — and weaves silk and works shell for whoever brings them
+  qingzhu: {
+    name: '百藥鋪',
+    keeper: '阿蘿',
+    stock: ['bizhang_pill', 'detox_pill', 'heal_pill', 'juqi_pill', 'miasma_talisman'],
+    recipes: ['silk_vest', 'gu_armor'],
+    refine: false,
+    made: '{keeper}收下東西，進了竹樓後頭，關上門。大半天之後她出來，把一件{item}交到你手上，手指上全是細細的口子。',
+    share: (s) => (s.flags.gu_cleared ? 0.8 : s.flags.zhai_trust ? 0.9 : 1),
   },
 };

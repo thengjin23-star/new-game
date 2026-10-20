@@ -7,14 +7,17 @@
  * 丹方. in: herbs and the rest, by count; out: the pill and how many (at
  * 中品; 上品 gives one more, 下品 one fewer); mp: 靈力 to hold the fire;
  * zone: how wide the sweet spot of the fire is (narrower: harder);
- * book: a 丹方 you must have read first; min: the least grade that makes it.
+ * known: the flag that says you have the 丹方 (read in a book, or taught you) — none: everyone
+ * knows it; min: the least grade that makes it.
  */
 export const RECIPES = {
   juqi_pill: { in: { ningqi_grass: 3 }, out: 2, mp: 8, zone: 0.26 },
   heal_pill: { in: { zhixue_grass: 2, blood_ginseng: 1 }, out: 2, mp: 8, zone: 0.24 },
   detox_pill: { in: { snake_gall: 1, zhixue_grass: 1 }, out: 2, mp: 6, zone: 0.26 },
   qingxin_pill: { in: { ziyun_zhi: 1, ningqi_grass: 2 }, out: 1, mp: 12, zone: 0.2 },
-  zhuji_pill: { in: { ziyun_zhi: 2, blood_ginseng: 2, beast_core: 3, lake_pearl: 1 }, out: 1, mp: 30, zone: 0.14, book: 'book_zhuji_recipe', min: 2 },
+  zhuji_pill: { in: { ziyun_zhi: 2, blood_ginseng: 2, beast_core: 3, lake_pearl: 1 }, out: 1, mp: 30, zone: 0.14, known: 'recipe_zhuji', min: 2 },
+  // 南嶺: 阿蘿's way with the miasma
+  bizhang_pill: { in: { zhangling_zhi: 2, toad_venom: 1 }, out: 2, mp: 10, zone: 0.22, known: 'recipe_bizhang' },
 };
 
 /**

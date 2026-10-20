@@ -6,6 +6,7 @@
 
 import { seasonOf, dateOf, dayAt } from '../core/calendar.js';
 import { NODES } from './map.js';
+import { landTable } from './maps/index.js';
 
 /**
  * Kinds of weather. walk: how fast you go on foot in it; see: how far you
@@ -52,7 +53,7 @@ const LEAN = {
 };
 
 /** Places that keep their mists. */
-const MISTY = { lingxi_valley: 0.12, mirror_lake: 0.1, black_forest: 0.05, river_isle: 0.12, great_river: 0.12, crane_ferry: 0.08 };
+const MISTY = { lingxi_valley: 0.12, mirror_lake: 0.1, black_forest: 0.05, river_isle: 0.12, great_river: 0.12, crane_ferry: 0.08, ...landTable('misty') };
 
 /** The hour of the world, counted from the first morning. */
 const hourOf = (s) => s.day * 24 + (s.tod ?? 8);
