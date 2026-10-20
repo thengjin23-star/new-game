@@ -47,9 +47,18 @@ function over(seed) {
   return s;
 }
 
+/** A step this way and back: what is near is looked at again (as walking does). */
+function nudge(s) {
+  E.step(s, 0.05, { x: 1, y: 0 });
+  if (!s.pending) E.step(s, 0.05, { x: -1, y: 0 });
+}
+
 /** Walk up to a place and see to it (whatever it starts, played out with the choice named). */
 function at(s, id, pick = null) {
   goToPoi(s, id);
+  // (the first time somewhere: what it is like, said first; then a step about, as you would)
+  resolvePending(s);
+  nudge(s);
   resolvePending(s);
   E.interact(s, { kind: 'poi', id });
   if (pick) pickText(s, pick);
@@ -114,7 +123,9 @@ test('青竹寨: its elder meets you, its people stand where they live, and 阿�
 test('the miasma takes you unprotected; a 避瘴丹 keeps it off for days', () => {
   const s = over(32);
   goToPoi(s, 'zl_miasma_b', 0);
-  E.step(s, 0.05, null);
+  assert.equal(s.pending?.id, 'zl_arrive', 'the first sight of 瘴林');
+  resolvePending(s);
+  nudge(s);
   assert.equal(s.pending?.id, 'nl_miasma', 'the miasma closes round you');
   pickText(s, '閉氣');
   resolvePending(s);
@@ -124,7 +135,7 @@ test('the miasma takes you unprotected; a 避瘴丹 keeps it off for days', () =
   resolvePending(s);
   assert.ok(s.player.buffs.bizhang > 0);
   goToPoi(s, 'zl_miasma_d', 0);
-  E.step(s, 0.05, null);
+  nudge(s);
   assert.notEqual(s.pending?.id, 'nl_miasma', 'kept off');
   resolvePending(s);
 });
@@ -160,7 +171,8 @@ test('the well gone bitter: 岩伯 asks, 阿蘿 knows, the 蠱母 dies, its nest
   at(s, 'zhai_well');
   assert.ok(s.seen.zhai_well_sweet);
   goToPoi(s, 'zl_miasma_a', 0);
-  E.step(s, 0.05, null);
+  resolvePending(s);
+  nudge(s);
   assert.notEqual(s.pending?.id, 'nl_miasma');
   resolvePending(s);
   checkFeats(s);
@@ -173,7 +185,8 @@ test('阿山\'s brother: lost in 瘴林, found in the 白絲洞 (a fight), broug
   call(s, 'a_shan', '我去找');
   assert.ok(s.flags.a_shui_lost && E.poiVisible(s, POI_BY_ID.web_hollow));
   goToPoi(s, 'web_hollow');
-  E.step(s, 0.05, null);
+  if (s.pending?.id === 'zl_arrive') resolvePending(s);
+  nudge(s);
   assert.equal(s.pending?.id, 'zl_a_shui', 'the hollow, by itself as you come');
   pickText(s, '動手');
   resolvePending(s);

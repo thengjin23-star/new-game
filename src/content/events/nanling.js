@@ -556,6 +556,47 @@ export default [
     ],
   },
 
+  // ── the first time in each wild place ──
+  {
+    id: 'zl_arrive',
+    trigger: 'arrive',
+    nodes: FOREST,
+    once: true,
+    title: '瘴林',
+    text: '一走進林子，光就變成了綠的。\n\n樹幹上爬滿了藤，藤上開著小小的白花，甜得發膩。頭頂的樹枝間掛著一團一團的白絲，風一吹，輕輕地晃。腳下的落葉是濕的，踩下去沒有一點聲音。\n\n叮——偵測到瘴氣。本系統建議宿主：備好避瘴丹，別在紫霧裡久留。',
+    choices: [{ text: '屏住呼吸，往裡走。', out: { effects: [['sysexp', 3]] } }],
+  },
+  {
+    id: 'zz_arrive',
+    trigger: 'arrive',
+    nodes: MARSH,
+    once: true,
+    title: '毒沼',
+    text: '林子到了盡頭，眼前是一望無際的蘆葦和死水。水面上浮著一層油亮的光，底下時不時冒起一串泡。\n\n遠處的蘆葦叢裡立著兩個石人，只露出上半身，臉朝著沼地正中。\n\n蛙聲一陣一陣的，聽得人心裡發毛。',
+    choices: [{ text: '找結實的地方下腳。', out: { effects: [['sysexp', 3]] } }],
+  },
+  {
+    id: 'gu_arrive',
+    trigger: 'arrive',
+    nodes: VALLEY,
+    once: true,
+    title: '萬蠱谷',
+    text: '峽口很窄，兩邊的石壁陡得像刀切的。走過峽口，谷忽然開闊起來——四面都是峭壁，谷底一片林子，林子上浮著淡紫色的霧。\n\n石壁上、樹幹上、地上，到處都是蟲殼。嗡嗡聲從四面八方傳過來，分不清是遠是近。\n\n叮——此地危險等級：極高。本系統建議宿主：退出去。',
+    choices: [
+      { text: '不退。', out: { effects: [['sysexp', 5]] } },
+      { text: '……先退出去，準備好了再來。', out: { effects: [['sysexp', 2]] } },
+    ],
+  },
+  {
+    id: 'bt_arrive',
+    trigger: 'arrive',
+    nodes: POOL,
+    once: true,
+    title: '碧潭',
+    text: '水聲越來越大，大得蓋過了一切。\n\n轉過一根石峰，眼前是一道斷崖。碧水從崖頂直落下來，砸進一潭深綠的水裡，水霧騰起一丈多高，太陽一照，掛著一道虹。\n\n瘴林裡憋了一路的那口氣，到這裡才吐出來。',
+    choices: [{ text: '在潭邊歇一歇。', out: { effects: [['mind', 3], ['sysexp', 3]] } }],
+  },
+
   // ── on the paths of 南嶺 ──
   {
     id: 'nl_herb_girl',
