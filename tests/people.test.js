@@ -25,6 +25,7 @@ function setHour(s, tod) {
 test('everyone has somewhere to stand at every hour, and a road between', () => {
   for (const [id, regions] of Object.entries(ROUTINES)) {
     for (const [region, list] of Object.entries(regions)) {
+      useMap(mapOf(region));
       assert.equal(list[0][0], 0, `${id}'s day in ${region} starts at midnight`);
       list.forEach(([, [x, y], act], k) => {
         assert.ok(!collides(null, x, y, 9) && isReachable(x, y), `${id} ${region} #${k} (${act}) can be stood on`);
@@ -58,7 +59,8 @@ test('at any hour you can find them where their day says, and call on them', () 
     for (const [id, regions] of Object.entries(ROUTINES)) {
       const npc = s.npcs[id];
       const list = regions[npc.loc];
-      if (!list) continue;
+      // (someone on another map is not about here)
+      if (!list || mapOf(npc.loc) !== s.world.map) continue;
       const e = entryAt(list, s.tod);
       const p = E.peopleInWorld(s).find((x) => x.id === id);
       assert.ok(p, `${id} is somewhere at ${tod}`);

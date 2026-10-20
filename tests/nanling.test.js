@@ -250,3 +250,19 @@ test('a save on 南嶺 keeps its people and your doings there; an old save gains
   assert.ok(s.pending);
   resolvePending(s);
 });
+
+test('青竹寨 keeps hours: by day 阿蘿 minds her shop and 岩伯 sits before the 山神 of a morning; at night they are indoors', () => {
+  const s = over(39);
+  const at = (tod) => {
+    if (tod < s.tod) s.day += 1;
+    s.tod = tod;
+    for (let k = 0; k < 3; k++) E.step(s, 0.05, null);
+    return Object.fromEntries(E.peopleInWorld(s).map((p) => [p.id, p]));
+  };
+  let P = at(10);
+  assert.ok(!P.a_luo.inside && Math.hypot(P.a_luo.x - 3100, P.a_luo.y - 1300) < 1, '阿蘿 out by her shop');
+  P = at(8.5);
+  assert.equal(P.yan_bo.act, 'sit', '岩伯 sitting before the 山神');
+  P = at(23);
+  assert.ok(P.a_luo.inside && P.yan_bo.inside && P.a_shan.inside, 'indoors at night');
+});

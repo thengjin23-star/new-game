@@ -254,6 +254,38 @@ const loot = {
   nanling_wilds: [['maybe', 0.4, [['item', 'ningqi_grass', 1]]]],
 };
 
+/**
+ * Their days (world/people.js ROUTINES): [from hour, [x, y], what they do, facing?]. 岩伯 sits a while
+ * before the 山神 of a morning; 阿蘿 keeps her shop; 阿山 is off to the edge of the village at first
+ * light and back to see to his bow. At night, indoors (they come to the door if you call).
+ */
+const routines = {
+  yan_bo: {
+    qingzhu_village: [
+      [0, [3080, 1087], 'home'],
+      [6, [3080, 1095], 'stand'],
+      [8, [2800, 1200], 'sit'],
+      [10, [3080, 1095], 'stand'],
+      [19.5, [3080, 1087], 'home'],
+    ],
+  },
+  a_luo: {
+    qingzhu_village: [
+      [0, [3190, 1261], 'home'],
+      [7, [3100, 1300], 'stand'],
+      [20, [3190, 1261], 'home'],
+    ],
+  },
+  a_shan: {
+    qingzhu_village: [
+      [0, [3400, 1095], 'home'],
+      [5, [3480, 1330], 'stand', -1],
+      [8, [3420, 1110], 'sit'],
+      [20, [3400, 1095], 'home'],
+    ],
+  },
+};
+
 /** Where the people of 南嶺 stand, by the region they are in (places.js NPC_SPOTS). */
 const spots = {
   yan_bo: { qingzhu_village: [3080, 1095] },
@@ -279,7 +311,7 @@ const moods = {
   nanling_wilds: { tint: [0.78, 0.86, 0.78], amount: 0.2, dim: 0.97, motes: null },
 };
 
-export const NANLING_LAND = { ground, trees, settled, roll, sound, moods, gather, wanderers, folk, calls, extras, wildlife, misty, encounter, ambient, flavor, loot, spots };
+export const NANLING_LAND = { ground, trees, settled, roll, sound, moods, gather, wanderers, folk, calls, extras, wildlife, misty, encounter, ambient, flavor, loot, spots, routines };
 
 // ── who lives here ──
 

@@ -102,6 +102,8 @@ export const ROUTINES = {
       [19, [3830, 2366], 'home'],
     ],
   },
+  // (the other maps' people: world/maps/)
+  ...landTable('routines'),
 };
 
 /** What they say to nobody in particular, by what they are doing. */
