@@ -32,6 +32,12 @@
  *     when you are far too much for it ([alone, a group]); broke: when a group gives up
  *   phases (a boss): worn down to a share of its blood (at), it roars and fights another way —
  *     moves: what it does from then on; enrage: in a rage (quicker, harder); line: what you see
+ *   (0.20, how it takes a blow — world/combat.js:)
+ *   low: { at, mode, line } — worn down to a share of its blood, it fights another way: rage
+ *     (quicker, harder), wary (keeps its distance, springs back after every blow, sees your shots
+ *     coming more often). A pack has its own ways already (mourn, pack).
+ *   dodge: how often it sees a shot of yours coming in time, and springs aside
+ *   poise: seconds before a blow can check it again (a heavy beast: longer; a boss is never checked)
  */
 export const FOES = {
   wolf: {
@@ -83,7 +89,8 @@ export const FOES = {
     name: '鐵背熊', el: '土', hp: 1.5, atk: 1.25, loot: [[0.6, 'beast_core', 1]],
     rt: {
       tier: 1, speed: 150, walk: 40, sight: 220, lose: 420, loseT: 1.5, leash: 800, body: 18, bulk: 1.5, tall: 30,
-      notice: 0.5, moves: ['maul', 'bearcharge'],
+      notice: 0.5, moves: ['maul', 'bearcharge'], poise: 1.8,
+      low: { at: 0.3, mode: 'rage', line: '鐵背熊人立而起，一聲怒吼，紅著眼撲了上來！' },
     },
   },
   bandit: {
@@ -91,6 +98,7 @@ export const FOES = {
     rt: {
       share: 1.5, tier: 0, person: true, speed: 150, walk: 40, sight: 230, lose: 400, loseT: 1.5, leash: 700, body: 10, tall: 37,
       notice: 0.5, moves: ['slash', 'rush'], night: 1.15, tokens: 2, ring: 92, talk: 80,
+      low: { at: 0.3, mode: 'rage', line: '{name}紅了眼，揮著刀亂砍過來！' },
       warn: '林子裡有人在低聲說話。', cry: '有人衝了過來！', scared: ['那人看了你一眼，扭頭就跑。', '那幾個人看了你一眼，扭頭就跑。'], broke: '剩下的人見勢不妙，扭頭就跑。',
     },
   },
@@ -120,7 +128,7 @@ export const FOES = {
     name: '修士', hp: 1, atk: 1,
     rt: {
       share: 1.25, tier: 1, person: true, look: 'foe', speed: 176, walk: 40, sight: 240, lose: 380, loseT: 1.4, leash: 650, body: 10, tall: 37,
-      notice: 0.4, moves: ['slash', 'qi'], keep: [130, 230], flee: 0.3, talk: 80,
+      notice: 0.4, moves: ['slash', 'qi'], keep: [130, 230], flee: 0.3, talk: 80, dodge: 0.35,
       cry: '{name}冷笑一聲，劍已出鞘。', scared: ['那人看了你一眼，扭頭就跑。', '那幾個人看了你一眼，扭頭就跑。'],
     },
   },
@@ -128,7 +136,7 @@ export const FOES = {
     name: '執法弟子', hp: 1, atk: 1,
     rt: {
       share: 1.2, tier: 1, person: true, look: 'disciple', weapon: 'qinggang_sword', speed: 170, walk: 40, sight: 240, lose: 400, loseT: 1.5, leash: 700,
-      body: 10, tall: 37, notice: 0.4, moves: ['slash', 'qi'], tokens: 2, ring: 100, flee: 0.25, broke: '剩下的弟子不敢戀戰，退走了。',
+      body: 10, tall: 37, notice: 0.4, moves: ['slash', 'qi'], tokens: 2, ring: 100, flee: 0.25, dodge: 0.3, broke: '剩下的弟子不敢戀戰，退走了。',
     },
   },
   blood_robe: {
@@ -146,7 +154,8 @@ export const FOES = {
     name: '武人', hp: 0.9, atk: 1.1,
     rt: {
       tier: 0, person: true, look: 'sanxiu', weapon: 'qinggang_sword', speed: 178, walk: 40, sight: 240, lose: 400, loseT: 1.5, leash: 700,
-      body: 10, tall: 37, notice: 0.3, moves: ['slash', 'rush'], hop: 0.5,
+      body: 10, tall: 37, notice: 0.3, moves: ['slash', 'rush'], hop: 0.5, dodge: 0.3,
+      low: { at: 0.35, mode: 'wary', line: '{name}退開半步，換了個架勢，盯著你的破綻。' },
     },
   },
   escort: {
@@ -188,7 +197,7 @@ export const FOES = {
     name: '狐影', el: '火', hp: 0.5, atk: 0.8,
     rt: {
       tier: 1, person: true, look: 'foe', weapon: 'fists', speed: 170, walk: 40, sight: 300, lose: 600, loseT: 3, leash: 2000, body: 10, tall: 37,
-      notice: 0, moves: ['foxbolt', 'grasp'], keep: [110, 220],
+      notice: 0, moves: ['foxbolt', 'grasp'], keep: [110, 220], dodge: 0.4,
     },
   },
   // 古戰場北緣的焦土上: a tiger of fire. Worn down, it roars and breathes flame; near the end, in a rage
@@ -211,7 +220,8 @@ export const FOES = {
     name: '山魈', el: '土', hp: 1.1, atk: 1.05, loot: [[0.45, 'beast_core', 1]],
     rt: {
       share: 1.35, tier: 1, speed: 160, walk: 44, sight: 230, lose: 430, loseT: 1.5, leash: 740, body: 13, bulk: 1.1, tall: 30,
-      notice: 0.5, moves: ['apeswipe', 'stomp', 'rockthrow'], hop: 0.35, pack: true, tokens: 2, ring: 110,
+      notice: 0.5, moves: ['apeswipe', 'stomp', 'rockthrow'], hop: 0.35, pack: true, tokens: 2, ring: 110, poise: 1.2,
+      low: { at: 0.3, mode: 'rage', line: '{name}尖叫一聲，抓起石頭沒命地砸過來！' },
       warn: '亂石堆裡有石頭滾下來，還有一陣尖細的笑聲。', cry: '山魈從石頭後面跳了出來，手裡抓著石頭！',
       scared: ['那隻山魈尖叫一聲，竄上了山崖。', '那兩隻山魈尖叫著，竄上了山崖。'], broke: '剩下的山魈尖叫著逃上了山崖。',
     },

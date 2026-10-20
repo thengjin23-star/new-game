@@ -1,5 +1,6 @@
 import { h, paragraphs, clear, put } from './dom.js';
 import { skillsPage } from './skillsPage.js';
+import { createFeel, feelSettings, setFeel, SHAKE_LEVELS } from './feel.js';
 import { createScene } from '../art/ink.js';
 import { createWorldView, paintWorldThumb } from '../art/worldview.js';
 import { createWorld3D, canDraw3D } from '../art/world3d.js';
@@ -48,7 +49,7 @@ import { KE } from '../content/wuxing.js';
 import * as END from '../world/ending.js';
 import { refineLevel, refineMult } from '../core/refine.js';
 
-const VERSION = '0.19';
+const VERSION = '0.20';
 const ITEM_ORDER = ['weapon', 'gear', 'flyer', 'tool', 'pill', 'talisman', 'herb', 'material', 'book', 'treasure', 'token', 'unknown'];
 const ITEM_KIND = { pill: '丹藥', herb: '靈草', material: '材料', book: '典籍', weapon: '兵器', gear: '裝備', flyer: '飛行法器', tool: '工具', treasure: '寶物', talisman: '符籙', token: '信物', unknown: '未知' };
 const DOCK = [
@@ -428,6 +429,8 @@ export function startApp(root, { speed = 1, view = null } = {}) {
     // the stick under the left thumb, what you can do (or the fight's buttons) under the right
     const shell = h('div.game.worldmode',
       canvas,
+      // (hurt: the edge of the world goes red a moment — under the HUD, over the world)
+      h('div.hurt-edge', { 'aria-hidden': 'true' }),
       h('div.hud',
         h('div.hud-left',
           h('header.hud-top'),
@@ -465,6 +468,12 @@ export function startApp(root, { speed = 1, view = null } = {}) {
     ui.view.setState(ui.s);
     ui.view.start();
     bindPointer(shell.querySelector('canvas.world-canvas'));
+    // 手感: the world (and what is drawn over it) shakes as blows land; the buttons never do
+    let shaking = null;
+    ui.feel = createFeel({
+      canvases: () => (shaking?.every((c) => c.isConnected) ? shaking : (shaking = [...shell.querySelectorAll('canvas.world-canvas, canvas.world-overlay')])),
+      edge: shell.querySelector('.hurt-edge'),
+    });
   }
 
   /** While the title shows, quietly work out the lie of the land, so the world opens quickly. */
@@ -562,12 +571,14 @@ export function startApp(root, { speed = 1, view = null } = {}) {
     if (!paused) {
       const input = currentInput();
       const before = [s.world.x, s.world.y];
-      E.step(s, dt, input);
+      // (a blow landing stops the world a moment; the last of them falling slows it)
+      const pace = ui.feel ? ui.feel.frame(CB.combatOf(s), dt) : 1;
+      E.step(s, dt * pace, input);
       if (s.world.x !== before[0] || s.world.y !== before[1]) {
         ui.moved = true;
         if (ui.caption && Math.hypot(s.world.x - ui.caption.at[0], s.world.y - ui.caption.at[1]) > 60) hideCaption();
       }
-    }
+    } else ui.feel?.calm();
     combatHud();
     SND.frame(s, dt, { sheet: ui.sheet, cbtReady: ui.cbtReady });
     for (const f of E.takeFeed(s)) toast(f.text, f.kind);
@@ -2598,6 +2609,7 @@ export function startApp(root, { speed = 1, view = null } = {}) {
           )
         : null,
       soundCard(),
+      feelCard(),
       h('section.card',
         h('h3', '畫面'),
         h('p.muted.small', canDraw3D() ? '立體：有山有水、有房有雲海的世界。平面：手繪地圖的畫法，最省電。' : '這台裝置無法顯示立體畫面，目前使用平面地圖。'),
@@ -2670,6 +2682,29 @@ export function startApp(root, { speed = 1, view = null } = {}) {
         h('button.btn.small' + (set.buzz ? '.on' : ''), { type: 'button', onclick: () => { setSound({ buzz: !set.buzz }); renderLayer(); } }, set.buzz ? '震動：開' : '震動：關'),
       ),
       h('p.muted.small', 'iPhone 的靜音鍵開著時聽不到聲音；手機震動只有部分 Android 支援。'),
+    );
+  }
+
+  /** 戰鬥手感 (0.20): how much the world shakes as blows land, and whether it stops a moment. */
+  function feelCard() {
+    const set = feelSettings();
+    const choose = (patch) => {
+      setFeel(patch);
+      ui.feel?.reload();
+      renderLayer();
+    };
+    return h('section.card.sound',
+      h('h3', '戰鬥手感'),
+      h('p.muted.small', '打中的時候畫面會頓一下、震一下，重擊與暴擊更明顯；擊倒最後一個對手時會放慢一瞬。只有畫面會動，按鈕不會。'),
+      h('div.sound-row',
+        h('span', '畫面震動'),
+        h('div.seg', SHAKE_LEVELS.map(([id, word]) =>
+          h('button.btn.small' + (set.shake === id ? '.on' : ''), { type: 'button', onclick: () => choose({ shake: id }) }, word)))),
+      h('div.sound-row',
+        h('span', '命中停頓'),
+        h('div.seg', [['開', true], ['關', false]].map(([word, v]) =>
+          h('button.btn.small' + (set.stop === v ? '.on' : ''), { type: 'button', onclick: () => choose({ stop: v }) }, word)))),
+      h('p.muted.small', '系統設定了「減少動態效果」時，畫面震動預設為關。'),
     );
   }
 

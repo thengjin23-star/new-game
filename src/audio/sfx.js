@@ -153,9 +153,14 @@ export function hurt(pan = 0) {
 export function hit(kind = 'dmg', pan = 0, near = 1) {
   if (!ctx() || !every('hit', 0.045)) return;
   const t = t0();
-  const v = (kind === 'crit' ? 0.62 : kind === 'weak' ? 0.3 : 0.45) * near;
-  sweep(t, S({ from: 175, to: 62, dur: 0.09, vel: v, pan }));
+  const v = (kind === 'crit' ? 0.62 : kind === 'heavy' ? 0.58 : kind === 'weak' ? 0.3 : 0.45) * near;
+  sweep(t, S({ from: kind === 'heavy' ? 140 : 175, to: kind === 'heavy' ? 46 : 62, dur: kind === 'heavy' ? 0.13 : 0.09, vel: v, pan }));
   burst(t, S({ hz: 2300, q: 0.9, vel: v * 0.45, len: 0.016, pan }));
+  // the heavy third of a run: a thud under it
+  if (kind === 'heavy') {
+    burst(t, S({ type: 'lowpass', hz: 380, q: 0.7, vel: v * 0.6, len: 0.09, pan }));
+    buzz(14);
+  }
   if (kind === 'crit') {
     bell('qing', 93, t + 0.01, S({ vel: 0.25, pan }));
     buzz(10);
@@ -293,6 +298,16 @@ export function effect(kind, pan = 0, near = 1) {
       // the ground splitting, and the vines writhing up out of it
       burst(t, o({ type: 'lowpass', hz: 300, q: 0.8, vel: 0.35 * v, len: 0.2 }));
       for (let k = 0; k < 5; k++) burst(t + 0.04 + k * 0.05, o({ hz: 700 + Math.random() * 900, q: 1.5, vel: 0.12 * v, len: 0.06 }));
+      break;
+    case 'fell': {
+      // one goes down: a heavy thump (a boss: a gong under it)
+      sweep(t, o({ from: 110, to: 38, dur: 0.24, vel: 0.5 * v }));
+      burst(t, o({ type: 'lowpass', hz: 520, q: 0.7, vel: 0.35 * v, len: 0.12 }));
+      buzz(28);
+      break;
+    }
+    case 'shieldhit':
+      bell('qing', 88, t, o({ vel: 0.28 }));
       break;
     case 'thunder':
       // 掌心雷: a crack overhead, then the roll of it

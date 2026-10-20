@@ -213,7 +213,7 @@ function fightSounds(s) {
     if (D.seen.has(p)) continue;
     D.seen.add(p);
     const pp = pan(p.x);
-    if (p.kind === 'dmg' || p.kind === 'crit' || p.kind === 'weak') FX.hit(p.kind, pp, near(p.x, p.y));
+    if (p.kind === 'dmg' || p.kind === 'crit' || p.kind === 'heavy' || p.kind === 'weak') FX.hit(p.kind, pp, near(p.x, p.y));
     // 五行: a blow that overcomes it lands like a crit; a run of 相生 rings out
     else if (p.kind === 'ke') FX.hit('crit', pp, near(p.x, p.y));
     else if (p.kind === 'sheng') FX.sheng();

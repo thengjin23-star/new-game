@@ -71,7 +71,7 @@ export const TIER_NAME = ['凡獸', '一階', '二階', '三階', '四階'];
 const PERSON_RANK = ['凡人', '煉氣', '築基', '金丹', '元嬰'];
 
 /** What a beast is doing that means it is after you. */
-const HUNTING = new Set(['chase', 'windup', 'leap', 'recover', 'hop', 'howl', 'roar', 'stun']);
+const HUNTING = new Set(['chase', 'windup', 'leap', 'recover', 'hop', 'howl', 'roar', 'stun', 'flinch']);
 /**
  * Out of the fight: dead and fading, gone until it comes back, running off,
  * on its knees, on its way (the matter settled).
@@ -92,7 +92,7 @@ export function combatOf(s) {
   let C = LIVE.get(s);
   if (!C) {
     C = {
-      on: false, t: 0, me: null, beasts: null, shots: [], fx: [], pops: [], pools: [], preview: null, notes: [], signals: [],
+      on: false, t: 0, me: null, beasts: null, shots: [], fx: [], pops: [], pools: [], hits: [], preview: null, notes: [], signals: [],
       beaten: 0, foes: new Set(), quiet: 0, outcome: null, trial: null, rt: null, heard: {}, told: {}, uid: 0,
     };
     LIVE.set(s, C);
@@ -349,7 +349,7 @@ function reset(b) {
     x: b.home[0], y: b.home[1], tx: b.home[0], ty: b.home[1], state: homeState(b), st: 0, wait: 1, aggro: false,
     hp: b.maxHp, armed: false, burn: null, enraged: false, howled: false, fade: 0, lostT: 0, calm: 0, move: null, moving: false,
     token: false, rest: 0, pause: 0, stay: false, Dset: null, tierSet: b.baseTier, rank: b.baseRank, name: b.baseName, tgt: null,
-    phase: 0, moves: null, combo: 0, zones: null, holding: false,
+    phase: 0, moves: null, combo: 0, zones: null, holding: false, lowDone: false, wary: false, poise: 0, dodgeT: 0,
   });
   // a leap or a shot takes a moment to come: it does not open with one (nor with a call to others)
   b.cds = Object.fromEntries((b.R.moves || []).map((id) => [id, BEAST_MOVES[id].first ?? (BEAST_MOVES[id].shape === 'fan' ? 0 : 1.2)]));
@@ -527,10 +527,82 @@ function pop(C, x, y, text, kind, up) {
   C.pops.push({ x, y, up, text, kind, t0: C.t });
 }
 
+/**
+ * 手感 (0.20): what landed, and how hard — for the screen, not the fight. A
+ * moment's stop, a shake, the world slowing as the last of them falls are
+ * the screen's own business (ui/feel.js reads these; the fight never does).
+ * kind: strike | heavy | crit | skill | array — your blows; kill; hurt | block
+ * | dodge — at you; phase — a boss gathering itself. share: of its blood (or
+ * yours) the blow took.
+ */
+function hit(C, kind, x, y, more = null) {
+  C.hits.push({ kind, x, y, t0: C.t, ...more });
+}
+
+/**
+ * 受擊 (0.20): your blow checks it — a moment's pause, its footing lost, a step
+ * back; a heavy one (the third of a run, or a telling blow) breaks off what it
+ * was gathering itself for. Not a boss; and not again at once (it steadies
+ * itself: no holding one down with blow on blow). Only as it comes at you: a
+ * beast spent after its own blow is open already, and this does not shorten that.
+ */
+const FLINCH = { secs: 0.16, every: 0.9, push: 7, broke: 0.35, brokeEvery: 3 };
+
+function flinch(C, b, blow, crit, ux, uy) {
+  if (b.K.boss || !alive(b) || C.t < (b.poise || 0)) return;
+  if (b.state === 'windup' && (crit || blow === 'heavy')) {
+    stagger(b, FLINCH.broke, [ux, uy, FLINCH.push * 1.5]);
+    b.poise = C.t + FLINCH.brokeEvery;
+    return;
+  }
+  if (b.state !== 'chase') return;
+  Object.assign(b, { state: 'flinch', st: 0, moving: false });
+  b.kb = { ux, uy, left: FLINCH.push };
+  // (a heavy beast is checked less often: R.poise)
+  b.poise = C.t + (b.R.poise ?? FLINCH.every);
+}
+
+/**
+ * 血少 (0.20, R.low: { at, mode, line }): worn down to a share of its blood,
+ * it fights another way. rage — it comes on quicker and harder; wary — it
+ * keeps its distance, springs back after every blow, and sees your shots
+ * coming more often. (A pack has its own ways already: one falls and the rest
+ * turn savage; more than half down, and the rest run.)
+ */
+function lowBlood(s, C, b, io) {
+  const L = b.R.low;
+  b.lowDone = true;
+  if (L.mode === 'rage') {
+    b.enraged = true;
+    if (!b.R.person) C.fx.push({ kind: 'howl', x: b.x, y: b.y, t0: C.t, dur: 0.9 });
+  } else if (L.mode === 'wary') b.wary = true;
+  if (L.line) io.feed('bad', L.line.replaceAll('{name}', b.name));
+}
+
+/**
+ * A shot of yours coming at it (R.dodge: how often it sees one in time — more
+ * often, wary): a quick spring aside, the shorter way out of its line. It
+ * looks only so often (once in a while, not every moment a shot is near).
+ */
+function dodgeShot(C, b) {
+  for (const sh of C.shots) {
+    if (sh.foe || sh.done) continue;
+    const dx = b.x - sh.x;
+    const dy = b.y - sh.y;
+    const d = Math.hypot(dx, dy);
+    if (d > 130 || d < 1 || (dx * sh.ux + dy * sh.uy) / d < 0.8) continue;
+    b.dodgeT = C.t + 2.5;
+    if (b.rng() >= (b.R.dodge || 0) + (b.wary ? 0.25 : 0)) return;
+    const side = dx * -sh.uy + dy * sh.ux >= 0 ? 1 : -1;
+    Object.assign(b, { state: 'hop', st: 0, hopDir: [-sh.uy * side, sh.ux * side], moving: false });
+    return;
+  }
+}
+
 // ── blows ──
 
 /** You land a blow (or a spell) on a beast. kind: 'phys' | 'fire' | 'spirit' | 'burn'. */
-function hurtBeast(s, C, b, base, io, { kind = 'phys', by = null, el = null } = {}) {
+function hurtBeast(s, C, b, base, io, { kind = 'phys', by = null, el = null, blow = 'skill', of = null } = {}) {
   if (!alive(b) || !foe(b)) return false;
   // it turns on whoever struck it
   if (kind !== 'burn') {
@@ -555,7 +627,19 @@ function hurtBeast(s, C, b, base, io, { kind = 'phys', by = null, el = null } = 
   const dmg = Math.max(1, Math.round(base * roll * (crit ? 1.6 : 1) * b.taken * spirit * wet * wx * (sneak ? 1.5 : 1)));
   b.hp -= dmg;
   b.flashT = C.t;
-  pop(C, b.x, b.y, String(dmg), crit ? 'crit' : kind === 'burn' ? 'burn' : spirit < 1 || ke === 'under' ? 'weak' : ke === 'over' ? 'ke' : 'dmg', b.R.tall);
+  // the way the blow came (from you, or whoever struck it): it reels back along it
+  const from = by || s.world;
+  const fd = Math.hypot(b.x - from.x, b.y - from.y) || 1;
+  const ux = (b.x - from.x) / fd;
+  const uy = (b.y - from.y) / fd;
+  const mine = !by;
+  if (kind !== 'burn') {
+    b.hitT = C.t;
+    b.hitDir = [ux, uy];
+    C.fx.push({ kind: 'hitfx', x: b.x, y: b.y, tall: b.R.tall, t0: C.t, dur: crit ? 0.42 : 0.3, el, of, blow: mine ? blow : 'ally', crit, dir: [ux, uy] });
+    if (mine) hit(C, crit ? 'crit' : blow, b.x, b.y, { el, share: dmg / b.maxHp, boss: !!b.K.boss });
+  }
+  pop(C, b.x, b.y, String(dmg), crit ? 'crit' : kind === 'burn' ? 'burn' : spirit < 1 || ke === 'under' ? 'weak' : ke === 'over' ? 'ke' : mine && blow === 'heavy' ? 'heavy' : 'dmg', b.R.tall);
   if (spirit < 1 && !C.told.spirit) {
     C.told.spirit = true;
     io.feed('sys', `兵刃從${b.name}身上穿了過去，傷不了它多少——法術才管用。`);
@@ -568,16 +652,19 @@ function hurtBeast(s, C, b, base, io, { kind = 'phys', by = null, el = null } = 
   if (b.hp <= 0 && b.def.spar) b.hp = 1;
   if (b.hp <= 0) {
     fell(s, C, b, io);
+    killed(s, C, b);
     return true;
   }
   const R = b.R;
   if (R.yield && b.hp <= b.maxHp * R.yield) {
     giveUp(s, C, b, io);
+    killed(s, C, b, true);
     return true;
   }
   if (R.flee && b.hp <= b.maxHp * R.flee) {
     rout(s, C, b, io, `${b.name}捂著傷口逃了！`);
     morale(s, C, b, io);
+    killed(s, C, b, true);
     return true;
   }
   if (sneak) {
@@ -593,7 +680,20 @@ function hurtBeast(s, C, b, base, io, { kind = 'phys', by = null, el = null } = 
     engage(s, C, b, io);
   }
   if (R.phases) phaseUp(s, C, b, io);
+  if (R.low && !b.lowDone && b.hp <= b.maxHp * R.low.at && HUNTING.has(b.state)) lowBlood(s, C, b, io);
+  if (mine && kind !== 'burn') flinch(C, b, blow, crit, ux, uy);
   return true;
+}
+
+/**
+ * It is down (or beaten — on its knees, or running: soft): the moment for the
+ * eye — a burst where it fell (not for one that only gave up), and whether it
+ * was the last of them (the screen slows as the last falls).
+ */
+function killed(s, C, b, soft = false) {
+  const last = !beastsOf(s, C).some((x) => x !== b && hunting(x));
+  if (!soft) C.fx.push({ kind: 'fell', x: b.x, y: b.y, tall: b.R.tall, t0: C.t, dur: b.K.boss ? 1.1 : 0.7, boss: !!b.K.boss, spirit: !!b.K.spirit });
+  hit(C, 'kill', b.x, b.y, { boss: !!b.K.boss, last, soft });
 }
 
 /**
@@ -619,6 +719,7 @@ function phaseUp(s, C, b, io) {
   if (!up) return;
   Object.assign(b, { state: 'roar', st: 0, moving: false, move: null, combo: 0, zones: null, kb: null });
   C.fx.push({ kind: 'roar', x: b.x, y: b.y, t0: C.t, dur: 0.9 });
+  hit(C, 'phase', b.x, b.y, { boss: true });
   io.signal({ combat: 'phase', name: b.name, phase: b.phase, enraged: b.enraged });
 }
 
@@ -633,6 +734,7 @@ function hurtMe(s, C, b, mult, io, push = null, M = null) {
   if (!b.armed) arm(s, C, b);
   if (me.inv > 0) {
     pop(C, w.x, w.y, '閃', 'miss', 40);
+    hit(C, 'dodge', w.x, w.y);
     return -1;
   }
   // what you wear keeps some of it off (fire, what keeps fire off)
@@ -646,6 +748,8 @@ function hurtMe(s, C, b, mult, io, push = null, M = null) {
     me.shield -= held;
     dmg -= held;
     pop(C, w.x + 10, w.y, `擋 ${held}`, 'block', 46);
+    C.fx.push({ kind: 'shieldhit', x: w.x, y: w.y, t0: C.t, dur: 0.4, broke: me.shield <= 0 });
+    if (dmg <= 0) hit(C, 'block', w.x, w.y, { share: held / me.maxHp });
     if (me.shield <= 0) {
       me.shield = 0;
       me.shieldT = 0;
@@ -656,6 +760,7 @@ function hurtMe(s, C, b, mult, io, push = null, M = null) {
     me.hurtT = C.t;
     me.flashT = C.t;
     pop(C, w.x, w.y, String(dmg), 'hurt', 40);
+    hit(C, 'hurt', w.x, w.y, { share: dmg / me.maxHp, boss: !!b.K.boss });
     if (M?.poison) {
       if (!me.poison) pop(C, w.x - 12, w.y, '中毒', 'status', 52);
       me.poison = { left: M.poison[0], dps: b.dmg * M.poison[1], tick: 0.5 };
@@ -883,7 +988,7 @@ function engage(s, C, b, io, line = null) {
 
 /** It gives up on you and goes home (and its wounds close as it goes). */
 function calmDown(b, heal = false) {
-  Object.assign(b, { state: 'return', st: 0, aggro: false, calm: 4, move: null, burn: null, enraged: false, howled: false, lostT: 0, token: false, pause: 0, phase: 0, moves: null, combo: 0, zones: null, holding: false });
+  Object.assign(b, { state: 'return', st: 0, aggro: false, calm: 4, move: null, burn: null, enraged: false, howled: false, lostT: 0, token: false, pause: 0, phase: 0, moves: null, combo: 0, zones: null, holding: false, lowDone: false, wary: false });
   if (heal && b.maxHp) b.hp = b.maxHp;
 }
 
@@ -1154,6 +1259,7 @@ export function updateCombat(s, dt, io) {
   if (s.pending || s.dead) return STILL;
   C.fx = C.fx.filter((f) => C.t - f.t0 < (f.dur || 0.6));
   C.pops = C.pops.filter((p) => C.t - p.t0 < 1.1);
+  C.hits = C.hits.filter((h) => C.t - h.t0 < 0.6);
   if (C.on) {
     const still = beastsOf(s, C).some((b) => hunting(b) && present(s, b));
     C.quiet = still ? 0 : C.quiet + dt;
@@ -1220,6 +1326,7 @@ function think(s, C, b, dt, io) {
   const d = Math.hypot(dx, dy) || 1;
   const ux = dx / d;
   const uy = dy / d;
+  if (b.state === 'chase' && (R.dodge || b.wary) && foe(b) && C.t >= (b.dodgeT || 0)) dodgeShot(C, b);
   switch (b.state) {
     case 'idle':
     case 'hide': {
@@ -1381,7 +1488,7 @@ function think(s, C, b, dt, io) {
           b.token = false;
           b.rest = 0.5 + b.rng() * 0.8;
         }
-        if (M?.shape === 'fan' && b.rng() < (R.hop ?? 0)) {
+        if (M?.shape === 'fan' && b.rng() < (b.wary ? 0.9 : R.hop ?? 0)) {
           b.state = 'hop';
           b.hopDir = [-ux, -uy];
         } else b.state = 'chase';
@@ -1405,6 +1512,16 @@ function think(s, C, b, dt, io) {
       // reeling: it can do nothing, for a moment
       b.moving = false;
       if (b.st >= b.stunT) {
+        b.state = 'chase';
+        b.st = 0;
+      }
+      break;
+    }
+    case 'flinch': {
+      // checked by your blow: a moment's pause, then on again
+      b.moving = false;
+      look(b, ux, uy);
+      if (b.st >= FLINCH.secs) {
         b.state = 'chase';
         b.st = 0;
       }
@@ -1961,7 +2078,7 @@ function heroTick(s, C, dt, io) {
         if (!alive(b) || !foe(b) || !present(s, b) || (A.hits[b.uid] ?? -9) > C.t) continue;
         if (Math.hypot(b.x - bx, b.y - by) > b.R.body + 12) continue;
         A.hits[b.uid] = C.t + 0.5;
-        hurtBeast(s, C, b, A.dmg, io, { el: A.el });
+        hurtBeast(s, C, b, A.dmg, io, { el: A.el, blow: 'array', of: 'jianzhen' });
         if (s.pending || s.dead) return 0;
         C.fx.push({ kind: 'spark', x: bx, y: by, t0: C.t, dur: 0.25, of: 'feijian' });
       }
@@ -2092,13 +2209,13 @@ function release(s, C, a, io) {
       C.fx.push({ kind: S.fx, x: w.x, y: w.y, dir: [a.ux, a.uy], reach, arc: S.arc, t0: C.t, dur: H ? 0.32 : 0.24, heavy: !!H });
       for (const b of beastsOf(s, C)) {
         if (alive(b) && foe(b) && present(s, b) && inFan(w.x, w.y, [a.ux, a.uy], reach + b.R.body, S.arc, b.x, b.y)) {
-          hurtBeast(s, C, b, me.atk * S.mult * (H ? H.mult : 1), io);
+          hurtBeast(s, C, b, me.atk * S.mult * (H ? H.mult : 1), io, { blow: H ? 'heavy' : 'strike', of: 'strike' });
           if (H && alive(b)) stagger(b, H.stun, [a.ux, a.uy, H.push]);
         }
         if (s.pending || s.dead) return;
       }
     } else {
-      shoot(C, { kind: 'arrow', x: w.x + a.ux * 10, y: w.y + a.uy * 10, ux: a.ux, uy: a.uy, speed: S.speed, left: S.range, r: S.width / 2, dmg: me.atk * S.mult * (H ? H.mult : 1), stun: H ? H.stun : 0 });
+      shoot(C, { kind: 'arrow', x: w.x + a.ux * 10, y: w.y + a.uy * 10, ux: a.ux, uy: a.uy, speed: S.speed, left: S.range, r: S.width / 2, dmg: me.atk * S.mult * (H ? H.mult : 1), stun: H ? H.stun : 0, blow: H ? 'heavy' : 'strike' });
     }
     return;
   }
@@ -2148,7 +2265,7 @@ function release(s, C, a, io) {
       const d = Math.hypot(b.x - w.x, b.y - w.y) || 1;
       if (!alive(b) || !foe(b) || !present(s, b) || d > k.radius + b.R.body) continue;
       if (k.only === 'spirit' && !b.K.spirit) continue;
-      hurtBeast(s, C, b, me.atk * k.mult * boost, io, { kind: k.holy ? 'holy' : 'phys', el });
+      hurtBeast(s, C, b, me.atk * k.mult * boost, io, { kind: k.holy ? 'holy' : 'phys', el, of: k.fx });
       if (s.pending || s.dead) return;
       stagger(b, k.stun, [(b.x - w.x) / d, (b.y - w.y) / d, k.push ?? 18]);
     }
@@ -2164,7 +2281,7 @@ function release(s, C, a, io) {
       if (!alive(b) || !foe(b) || !present(s, b)) continue;
       const d = Math.hypot(b.x - px, b.y - py) || 1;
       if (d > k.radius + b.R.body) continue;
-      hurtBeast(s, C, b, me.atk * k.mult * boost, io, { kind: 'spirit', el });
+      hurtBeast(s, C, b, me.atk * k.mult * boost, io, { kind: 'spirit', el, of: 'thunder' });
       if (s.pending || s.dead) return;
       if (alive(b)) stagger(b, k.stun || 0, [(b.x - px) / d, (b.y - py) / d, k.push ?? 8]);
     }
@@ -2245,7 +2362,7 @@ function dashHits(s, C, D, x0, y0, io) {
     if (!alive(b) || !foe(b) || !present(s, b) || D.hit.has(b.uid)) continue;
     if (segDist(x0, y0, w.x, w.y, b.x, b.y) > k.width / 2 + b.R.body) continue;
     D.hit.add(b.uid);
-    hurtBeast(s, C, b, C.me.atk * k.mult * (k.boost || 1), io, { el: k.el || null });
+    hurtBeast(s, C, b, C.me.atk * k.mult * (k.boost || 1), io, { el: k.el || null, of: k.fx });
     if (s.pending || s.dead) return;
     C.fx.push({ kind: k.first ? 'impact' : 'spark', x: b.x, y: b.y, t0: C.t, dur: 0.35, of: k.fx });
     stagger(b, k.stun, k.push ? [D.ux, D.uy, k.push] : null);
@@ -2327,7 +2444,7 @@ function flyShots(s, C, dt, io) {
           break;
         }
         sh.hit.add(b.uid);
-        hurtBeast(s, C, b, sh.dmg, io, { kind: sh.hurt || 'phys', by: sh.by || null, el: sh.el || null });
+        hurtBeast(s, C, b, sh.dmg, io, { kind: sh.hurt || 'phys', by: sh.by || null, el: sh.el || null, blow: sh.blow || 'skill', of: sh.kind });
         if (s.pending || s.dead) return;
         if (sh.burn && alive(b)) b.burn = { left: sh.burnT, tick: 0.5, dps: sh.burn, el: sh.el || null };
         if (sh.stun && alive(b)) stagger(b, sh.stun);
@@ -2377,7 +2494,7 @@ function burst(s, C, sh, io) {
   C.fx.push({ kind: sh.kind === 'vine' ? 'vines' : 'boom', x: sh.x, y: sh.y, r: sh.radius, t0: C.t, dur: sh.kind === 'vine' ? Math.max(0.8, sh.stun || 0) : 0.6 });
   for (const b of beastsOf(s, C)) {
     if (!alive(b) || !foe(b) || !present(s, b) || Math.hypot(b.x - sh.x, b.y - sh.y) > sh.radius + b.R.body) continue;
-    hurtBeast(s, C, b, sh.dmg, io, { kind: sh.hurt || 'fire', el: sh.el || null });
+    hurtBeast(s, C, b, sh.dmg, io, { kind: sh.hurt || 'fire', el: sh.el || null, of: sh.kind });
     if (s.pending || s.dead) return;
     if (sh.burn && alive(b)) b.burn = { left: sh.burnT, tick: 0.5, dps: sh.burn, el: sh.el || null };
     // 藤縛: held fast where it stands
@@ -2498,7 +2615,10 @@ export function stopStriking(s) {
   if (me) Object.assign(me, { auto: false, hold: false, press: 0, steer: null });
 }
 
-/** Where a spell aimed for you goes: at whoever you are after (a little ahead of them, if they are moving), else straight ahead. */
+/**
+ * Where a spell aimed for you goes: at whoever you are after (a little ahead of them, if they are
+ * moving — by as long as the move takes to gather and to get there), else straight ahead.
+ */
 export function autoAim(s, k) {
   const C = combatOf(s);
   const me = hero(s, C);
@@ -2507,7 +2627,7 @@ export function autoAim(s, k) {
   const b = pickTarget(s, C, null, range * 1.4);
   if (!b) return [w.x + me.dir[0] * range, w.y + me.dir[1] * range];
   const d = Math.hypot(b.x - w.x, b.y - w.y);
-  const lead = k.speed ? (d / k.speed) * 0.8 : 0;
+  const lead = ((k.cast || 0) + (k.speed ? d / k.speed : 0)) * 0.8;
   return [b.x + b.vx * lead, b.y + b.vy * lead];
 }
 

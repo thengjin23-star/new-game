@@ -78,6 +78,7 @@
  "./src/platform/orient.js",
  "./src/ui/app.js",
  "./src/ui/dom.js",
+ "./src/ui/feel.js",
  "./src/ui/skillsPage.js",
  "./src/vendor/three.LICENSE.txt",
  "./src/vendor/three.module.min.js",

@@ -104,6 +104,15 @@ export function paintBeast(ctx, b, t, now, { tint = true, pic = null } = {}) {
   } else if (st === 'stun') {
     // reeling: a sway it cannot help
     ctx.rotate(Math.sin(now * 14) * 0.12);
+  } else if (st === 'flinch') {
+    // checked by a blow: thrown back on its heels a moment
+    ctx.rotate(-b.face * 0.16 * (1 - Math.min(1, b.st / 0.16)));
+  }
+  // (0.20) a blow just landed: it gives a little, away from it, and comes back
+  const struck = b.hitT !== undefined ? 1 - (now - b.hitT) / 0.14 : 0;
+  if (struck > 0 && st !== 'dead') {
+    ctx.translate(-b.face * 3.5 * struck, 0);
+    ctx.scale(1 - 0.06 * struck, 1 + 0.04 * struck);
   }
   // about to be somewhere else: fading as it gathers itself
   if (st === 'windup' && M?.shape === 'blink') ctx.globalAlpha *= 1 - 0.75 * p;
@@ -121,7 +130,8 @@ export function paintBeast(ctx, b, t, now, { tint = true, pic = null } = {}) {
     }
     const flash = Math.max(0, 1 - (now - b.flashT) / 0.2);
     if (flash > 0) {
-      ctx.fillStyle = `rgba(230,40,30,${0.65 * flash})`;
+      // (0.20) white-hot the moment it lands, then red as it fades
+      ctx.fillStyle = flash > 0.75 ? `rgba(255,250,240,${0.85 * flash})` : `rgba(230,40,30,${0.65 * flash})`;
       ctx.fillRect(-70, -90, 140, 100);
     }
   }
@@ -609,6 +619,11 @@ export function drawGroundMarks(g, s, C, kit, u = 1) {
       ring(g, f.x, f.y, f.r);
       g.stroke();
     }
+    if (f.kind === 'fell') {
+      g.fillStyle = f.spirit ? rgba(SOUL, 0.25 * (1 - p)) : `rgba(30,26,22,${0.32 * (1 - p)})`;
+      ring(g, f.x, f.y, (f.boss ? 30 : 16) * Math.min(1, 0.4 + p * 1.6));
+      g.fill();
+    }
     if (f.kind === 'thunder') {
       // 掌心雷: the ground lit white where it struck, then a scorch going grey
       g.fillStyle = rgba(p < 0.25 ? BOLT : [50, 50, 60], (p < 0.25 ? 0.55 : 0.28) * (1 - p));
@@ -731,8 +746,154 @@ function unitAt(proj, x, y) {
   return Math.max(0.2, Math.abs(a[1] - b[1]) / 30);
 }
 
+/** Moves of the sword: what they strike shows a cut across it. */
+const CUTS = new Set(['swordqi', 'swordstep', 'jianzhen', 'feijian']);
+
+/** What each of the 五行 throws off where it lands (and a plain blow: ink). */
+const HIT_EL = { 金: [246, 214, 120], 木: [96, 168, 96], 水: [120, 180, 235], 火: [250, 140, 50], 土: [150, 120, 84] };
+
+/**
+ * (0.20) The moment a blow lands, at the height of its body: a star of light
+ * (larger and brighter for a heavy blow, larger again for a telling one), and
+ * what the blow is made of flying off along its way — sparks of 金, leaves of
+ * 木, drops of 水, embers of 火, dust of 土; a plain blow throws ink.
+ */
+function hitFx(ctx, proj, px, f, p, k) {
+  const up = (f.tall || 20) * 0.55;
+  const [x, y] = proj(f.x, f.y, up);
+  const [dx, dy] = f.dir || [0, 0];
+  const big = f.crit ? 1.7 : f.blow === 'heavy' ? 1.35 : f.blow === 'ally' || f.blow === 'array' ? 0.7 : 1;
+  const u = Math.max(1, k) * px;
+  // the star
+  const rays = f.crit ? 8 : f.blow === 'heavy' ? 6 : 4;
+  const flash = Math.max(0, 1 - p * 2.2);
+  if (flash > 0) {
+    ctx.strokeStyle = f.crit ? `rgba(255,236,170,${flash})` : `rgba(255,252,240,${0.95 * flash})`;
+    ctx.lineWidth = (f.crit ? 2.6 : 1.8) * u;
+    for (let n = 0; n < rays; n++) {
+      const a = (n / rays) * Math.PI * 2 + (f.t0 * 13) % 1;
+      const r0 = (3 + p * 6) * big * u;
+      const r1 = (9 + p * 16) * big * u * (n % 2 ? 0.65 : 1);
+      ctx.beginPath();
+      ctx.moveTo(x + Math.cos(a) * r0, y + Math.sin(a) * r0);
+      ctx.lineTo(x + Math.cos(a) * r1, y + Math.sin(a) * r1);
+      ctx.stroke();
+    }
+    if (f.crit) {
+      ctx.strokeStyle = `rgba(220,60,40,${0.8 * flash})`;
+      ctx.lineWidth = 1.6 * u;
+      ctx.beginPath();
+      ctx.arc(x, y, (6 + p * 22) * u, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+  }
+  // a sword's cut: a bright line across it, drawn out, then gone
+  if (CUTS.has(f.of)) {
+    const q = Math.min(1, p * 3);
+    const fade = 1 - p;
+    // (across the way the blow went: on screen, at a slant)
+    const [ox, oy] = proj(f.x + dy * 20, f.y - dx * 20, up + 8);
+    const [qx, qy] = proj(f.x - dy * 20, f.y + dx * 20, up - 8);
+    const mx = (ox + qx) / 2;
+    const my = (oy + qy) / 2;
+    const ex = mx + (qx - mx) * q;
+    const ey = my + (qy - my) * q;
+    const sx = mx + (ox - mx) * q;
+    const sy = my + (oy - my) * q;
+    for (const [wd, c] of [[5, `rgba(150,225,235,${0.4 * fade})`], [1.8, `rgba(255,255,255,${0.95 * fade})`]]) {
+      ctx.strokeStyle = c;
+      ctx.lineWidth = wd * u;
+      ctx.beginPath();
+      ctx.moveTo(sx, sy);
+      ctx.lineTo(ex, ey);
+      ctx.stroke();
+    }
+  }
+  // lightning: it crackles over what it struck
+  if (f.of === 'thunder') {
+    const fade = 1 - p;
+    ctx.strokeStyle = `rgba(200,220,255,${0.95 * fade})`;
+    ctx.lineWidth = 1.5 * u;
+    for (let i = 0; i < 4; i++) {
+      const a = (i / 4) * Math.PI * 2 + ((f.t0 * 37) % 1) * 6 + p * 3;
+      let cx = x;
+      let cy = y;
+      ctx.beginPath();
+      ctx.moveTo(cx, cy);
+      for (let j = 1; j <= 3; j++) {
+        const r = j * 6 * u * (0.8 + p);
+        const jit = (((i * 7 + j * 13 + Math.floor(p * 12)) % 5) - 2) * 0.35;
+        cx = x + Math.cos(a + jit) * r;
+        cy = y + Math.sin(a + jit) * r * 0.8;
+        ctx.lineTo(cx, cy);
+      }
+      ctx.stroke();
+    }
+    return;
+  }
+  // what flies off, along the blow (玄冰: shards of ice; 狐火: blue embers)
+  const ice = f.of === 'frost';
+  const fox = f.of === 'foxfire';
+  const col = ice ? [210, 235, 255] : fox ? [110, 160, 255] : HIT_EL[f.el] || null;
+  const n = Math.round((f.el ? 7 : 5) * Math.min(1.5, big));
+  for (let i = 0; i < n; i++) {
+    const seed = ((f.t0 * 977 + i * 0.618) % 1 + 1) % 1;
+    const spread = (seed - 0.5) * 2.2;
+    // (along the blow's way, fanned out; in screen terms, from where it landed)
+    const [ax, ay] = proj(f.x + (dx * Math.cos(spread) - dy * Math.sin(spread)) * 30, f.y + (dy * Math.cos(spread) + dx * Math.sin(spread)) * 30, up);
+    const vx = (ax - x) / 30;
+    const vy = (ay - y) / 30;
+    const go = (10 + seed * 18) * p * big;
+    let px2 = x + vx * go;
+    let py2 = y + vy * go;
+    const fade = 1 - p;
+    if (f.el === '火') py2 -= p * 14 * u;
+    else if (f.el === '水' || f.el === '土' || !f.el) py2 += p * p * 10 * u;
+    if (ice) {
+      // shards of ice: thin bright splinters
+      ctx.strokeStyle = rgba(col, 0.95 * fade);
+      ctx.lineWidth = 1.8 * u;
+      ctx.beginPath();
+      ctx.moveTo(px2, py2);
+      ctx.lineTo(px2 - vx * 5 + 1.5 * u, py2 - vy * 5 - 1.5 * u);
+      ctx.stroke();
+    } else if (f.el === '金') {
+      // sparks: bright streaks
+      ctx.strokeStyle = rgba(col, fade);
+      ctx.lineWidth = 1.4 * u;
+      ctx.beginPath();
+      ctx.moveTo(px2, py2);
+      ctx.lineTo(px2 - vx * 7, py2 - vy * 7);
+      ctx.stroke();
+    } else if (f.el === '木') {
+      // leaves: small, turning
+      ctx.save();
+      ctx.translate(px2, py2);
+      ctx.rotate(seed * 6 + p * 5);
+      ctx.fillStyle = rgba(col, 0.9 * fade);
+      ctx.beginPath();
+      ctx.ellipse(0, 0, 3.2 * u, 1.4 * u, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    } else if (f.el === '土') {
+      // dust: puffs that grow and thin out
+      ctx.fillStyle = rgba(col, 0.45 * fade);
+      ctx.beginPath();
+      ctx.arc(px2, py2, (2 + p * 5) * u, 0, Math.PI * 2);
+      ctx.fill();
+    } else {
+      // drops of water, embers of fire, ink of a plain blow
+      ctx.fillStyle = col ? rgba(col, 0.95 * fade) : `rgba(30,26,22,${0.75 * fade})`;
+      ctx.beginPath();
+      ctx.arc(px2, py2, (col ? 1.9 : 1.6 + seed) * u, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+}
+
 const POP = {
   dmg: ['rgba(196,46,36,1)', 15, '700'],
+  heavy: ['rgba(176,30,22,1)', 18, '900'],
   crit: ['rgba(220,36,28,1)', 21, '900'],
   burn: ['rgba(214,110,40,1)', 12, '700'],
   hurt: ['rgba(150,20,20,1)', 16, '800'],
@@ -932,11 +1093,11 @@ export function drawCombatOverlay(ctx, proj, px, s, C, look, t, font) {
     const [sx, sy0] = proj(pp.x, pp.y, pp.up + 9);
     const lift = 24;
     const [col, size, weight] = POP[pp.kind] || POP.dmg;
-    const grow = pp.kind === 'crit' ? 1 + Math.max(0, 0.3 - age) * 1.8 : 1;
+    const grow = pp.kind === 'crit' ? 1 + Math.max(0, 0.3 - age) * 1.8 : pp.kind === 'heavy' ? 1 + Math.max(0, 0.2 - age) * 1.5 : 1;
     ctx.globalAlpha = Math.max(0, Math.min(1, (1.1 - age) / 0.4));
     ctx.font = `${weight} ${size * grow * px}px ${font}`;
     const y = sy0 - (lift + age * 34 + k * 16) * px;
-    const text = pp.kind === 'crit' ? `${pp.text}!` : pp.kind === 'heal' ? `+${pp.text}` : MINUS.has(pp.kind) ? `-${pp.text}` : pp.text;
+    const text = pp.kind === 'crit' ? `暴擊 ${pp.text}!` : pp.kind === 'heal' ? `+${pp.text}` : MINUS.has(pp.kind) ? `-${pp.text}` : pp.text;
     ctx.lineWidth = 3.2 * px;
     ctx.strokeStyle = 'rgba(250,246,236,0.95)';
     ctx.strokeText(text, sx, y);
@@ -948,7 +1109,7 @@ export function drawCombatOverlay(ctx, proj, px, s, C, look, t, font) {
 }
 
 /** Numbers that are blood lost. */
-const MINUS = new Set(['dmg', 'burn', 'hurt', 'poison', 'weak', 'ally', 'ke']);
+const MINUS = new Set(['dmg', 'heavy', 'burn', 'hurt', 'poison', 'weak', 'ally', 'ke']);
 
 /** A name over someone's head. */
 function nameTag(ctx, x, y, text, col, px, font) {
@@ -1249,7 +1410,9 @@ function drawShot(ctx, proj, px, sh, now) {
   // sword qi: a crescent of cold light, a faint wake behind it (red, thrown at you)
   const col = sh.kind === 'foeqi' ? FOE_QI : sh.kind === 'bloodqi' ? BLOOD : QI;
   const core = sh.kind === 'foeqi' ? 'rgba(255,236,230,0.95)' : sh.kind === 'bloodqi' ? 'rgba(255,200,196,0.95)' : 'rgba(235,252,255,0.95)';
-  const [bx, by] = proj(sh.x - sh.ux * 40, sh.y - sh.uy * 40, 15);
+  // (0.20) the way it cut: a long wake from where it was loosed, a bright thread down its middle
+  const wake = Math.min(sh.went || 40, sh.kind === 'swordqi' ? 110 : 40);
+  const [bx, by] = proj(sh.x - sh.ux * wake, sh.y - sh.uy * wake, 15);
   const tail = ctx.createLinearGradient(bx, by, x, y);
   tail.addColorStop(0, rgba(col, 0));
   tail.addColorStop(1, rgba(col, 0.45));
@@ -1259,7 +1422,28 @@ function drawShot(ctx, proj, px, sh, now) {
   ctx.moveTo(bx, by);
   ctx.lineTo(x, y);
   ctx.stroke();
+  if (sh.kind === 'swordqi') {
+    const thread = ctx.createLinearGradient(bx, by, x, y);
+    thread.addColorStop(0, 'rgba(255,255,255,0)');
+    thread.addColorStop(1, 'rgba(255,255,255,0.8)');
+    ctx.strokeStyle = thread;
+    ctx.lineWidth = 1.2 * px * Math.max(1, k);
+    ctx.stroke();
+  }
   const r = 13 * k;
+  // after-images of the crescent along its way
+  if (sh.kind === 'swordqi') {
+    for (let n = 1; n <= 3; n++) {
+      const back = n * 16;
+      if (back > (sh.went || 0)) break;
+      const [ax, ay] = proj(sh.x - sh.ux * back, sh.y - sh.uy * back, 15);
+      ctx.strokeStyle = rgba(col, 0.32 - n * 0.08);
+      ctx.lineWidth = (3.2 - n * 0.6) * px * Math.max(1, k);
+      ctx.beginPath();
+      ctx.arc(ax - Math.cos(a) * r * 0.55, ay - Math.sin(a) * r * 0.55, r * (1 - n * 0.08), a - 1.1, a + 1.1);
+      ctx.stroke();
+    }
+  }
   for (const [wd, c] of [[7, rgba(col, 0.35)], [3.2, core]]) {
     ctx.strokeStyle = c;
     ctx.lineWidth = wd * px * Math.max(1, k);
@@ -1540,12 +1724,89 @@ function drawFx(ctx, proj, px, f, now) {
       break;
     }
     case 'shield': {
+      // (0.20) 護體 closing round you: a flash, the shell drawing in from wide to close, six
+      // marks of light turning on it — then the pale bubble that stays while it holds
       const [x, y] = proj(f.x, f.y, 17);
-      ctx.strokeStyle = `rgba(130,180,235,${0.9 * (1 - p)})`;
-      ctx.lineWidth = 2.4 * px;
+      const q = Math.min(1, p / 0.4);
+      const ease = 1 - (1 - q) ** 3;
+      const rx = (15 + (1 - ease) * 20) * k;
+      const ry = (22 + (1 - ease) * 24) * k;
+      ctx.fillStyle = `rgba(170,205,245,${0.32 * (1 - p)})`;
       ctx.beginPath();
-      ctx.ellipse(x, y, (15 + p * 12) * k, (22 + p * 14) * k, 0, 0, Math.PI * 2);
+      ctx.ellipse(x, y, rx, ry, 0, 0, Math.PI * 2);
+      ctx.fill();
+      for (const [lag, wd, a] of [[0, 2.6, 0.95], [0.12, 1.4, 0.6]]) {
+        const qq = Math.max(0, Math.min(1, (p - lag) / 0.4));
+        const e2 = 1 - (1 - qq) ** 3;
+        ctx.strokeStyle = `rgba(130,180,235,${a * (1 - p)})`;
+        ctx.lineWidth = wd * px * Math.max(1, k);
+        ctx.beginPath();
+        ctx.ellipse(x, y, (15 + (1 - e2) * 20) * k, (22 + (1 - e2) * 24) * k, 0, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+      ctx.fillStyle = `rgba(235,245,255,${0.95 * (1 - p)})`;
+      for (let n = 0; n < 6; n++) {
+        const a = (n / 6) * Math.PI * 2 + now * 2.2;
+        const mx = x + Math.cos(a) * rx;
+        const my = y + Math.sin(a) * ry;
+        const r = 2.4 * px * Math.max(1, k);
+        ctx.beginPath();
+        ctx.moveTo(mx, my - r * 1.5);
+        ctx.lineTo(mx + r, my);
+        ctx.lineTo(mx, my + r * 1.5);
+        ctx.lineTo(mx - r, my);
+        ctx.closePath();
+        ctx.fill();
+      }
+      break;
+    }
+    case 'shieldhit': {
+      // a blow on the shield: a ripple running over it (and if it broke, shards of it flying)
+      const [x, y] = proj(f.x, f.y, 17);
+      ctx.strokeStyle = `rgba(200,225,255,${0.95 * (1 - p)})`;
+      ctx.lineWidth = (2.6 - p * 1.6) * px * Math.max(1, k);
+      ctx.beginPath();
+      ctx.ellipse(x, y, (15 + p * 9) * k, (22 + p * 11) * k, 0, 0, Math.PI * 2);
       ctx.stroke();
+      if (f.broke) {
+        ctx.strokeStyle = `rgba(150,195,240,${0.9 * (1 - p)})`;
+        ctx.lineWidth = 1.8 * px * Math.max(1, k);
+        for (let n = 0; n < 8; n++) {
+          const a = (n / 8) * Math.PI * 2 + 0.3;
+          const r0 = (16 + p * 20) * k;
+          ctx.beginPath();
+          ctx.moveTo(x + Math.cos(a) * r0, y + Math.sin(a) * r0 * 1.3);
+          ctx.lineTo(x + Math.cos(a + 0.18) * (r0 + 6 * k), y + Math.sin(a + 0.18) * (r0 + 6 * k) * 1.3);
+          ctx.stroke();
+        }
+      }
+      break;
+    }
+    case 'hitfx':
+      hitFx(ctx, proj, px, f, p, k);
+      break;
+    case 'fell': {
+      // one going down: ink thrown up off it (pale, from a thing of spirit; a ring of gold for a boss)
+      const up = (f.tall || 20) * 0.5;
+      const col = f.spirit ? SOUL : INK;
+      const n = f.boss ? 14 : 9;
+      for (let i = 0; i < n; i++) {
+        const a = (i / n) * Math.PI * 2 + (f.t0 * 7) % 1;
+        const r = (f.boss ? 46 : 26) * Math.min(1, p * 2.4);
+        const [x, y] = proj(f.x + Math.cos(a) * r, f.y + Math.sin(a) * r * 0.6, up + Math.sin(p * Math.PI) * (f.boss ? 30 : 16) + (i % 3) * 3);
+        ctx.fillStyle = rgba(col, (f.spirit ? 0.8 : 0.7) * (1 - p));
+        ctx.beginPath();
+        ctx.arc(x, y, (2.8 - p * 1.6 + (i % 2)) * px * Math.max(1, k), 0, Math.PI * 2);
+        ctx.fill();
+      }
+      if (f.boss) {
+        const [x, y] = proj(f.x, f.y, up);
+        ctx.strokeStyle = rgba(GOLD, 0.85 * (1 - p));
+        ctx.lineWidth = 3 * px * Math.max(1, k);
+        ctx.beginPath();
+        ctx.ellipse(x, y, (20 + p * 70) * k, (12 + p * 40) * k, 0, 0, Math.PI * 2);
+        ctx.stroke();
+      }
       break;
     }
     case 'vines': {

@@ -1942,6 +1942,15 @@ canvas.world-canvas {
   -webkit-touch-callout: none;
 }
 
+/* (0.20) hurt: the rim of the world reddens a moment (over the world, under all the rest) */
+.hurt-edge {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+  background: radial-gradient(ellipse at center, rgba(160, 22, 16, 0) 50%, rgba(160, 22, 16, 0.38) 82%, rgba(140, 16, 12, 0.62) 100%);
+}
+
 canvas.world-overlay {
   position: absolute;
   inset: 0;
