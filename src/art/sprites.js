@@ -967,8 +967,9 @@ function buildingSprite(key, st, season) {
   const snow = season === 'winter';
   const tall = { teahouse: 2, auction: 3, tower: 2, bighall: 2, pagoda: 1, beacon: 3, fort: 3, observatory: 2 }[sprite] || 1;
   const wallH = { mansion: 24, house: 17, shop: 20, teahouse: 18, auction: 18, hall: 26, bighall: 28, farmhouse: 15, shrine_small: 11, shrine: 18, hut: 14, tower: 18, teashed: 16, adobe: 18, beacon: 22, fort: 26, ruinwall: 24, observatory: 22 }[sprite] || 16;
-  const extraTop = sprite === 'pagoda' ? 150 : sprite === 'bigtree' ? 130 : 0;
-  const W = sprite === 'bigtree' ? 130 : w * 1.4 + 24;
+  const great = sprite === 'bigtree' || sprite === 'bigpoplar';
+  const extraTop = sprite === 'pagoda' ? 150 : great ? 130 : 0;
+  const W = great ? 130 : w * 1.4 + 24;
   const H = wallH * tall + d * 0.95 + 26 + extraTop;
   const fx = W / 2;
   const fy = H - 4;
@@ -1589,6 +1590,14 @@ const BUILD = {
     line(ctx, [[cx, cy + 13], [cx, y]], 1.6, rgba([86, 120, 104], 0.95));
     line(ctx, [[cx - 8, y], [cx + 8, y]], 2, rgba(STONE, 1));
     if (b.snow) dab(ctx, cx, y - 1, hw, SNOW, 0.7, 0.2);
+  },
+  bigpoplar(ctx, rnd, b) {
+    // 月泉's old 胡楊: older than the spring's oldest story, its trunk split and twisted, still green
+    ctx.save();
+    ctx.translate(b.fx, b.base);
+    ctx.scale(1.45, 1.25);
+    poplarTree(ctx, rnd, 0, 0, 100, b.season);
+    ctx.restore();
   },
   bigtree(ctx, rnd, b) {
     // 老槐樹: older than the town, wider than three men can reach around

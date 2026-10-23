@@ -1,5 +1,6 @@
-// The pass over the southern hills: 東荒 on one side, 南嶺 on the other. The
-// way takes most of a day; on the far side the map is another (a 'cross'
+// The ways out of 東荒: the pass over the southern hills (南嶺 on the other
+// side), and the gap in the western mountains past 古戰場 (西漠). Each way
+// takes most of a day or more; on the far side the map is another (a 'cross'
 // effect: world/atlas.js CROSSINGS, world/explore.js crossTo).
 import { flag } from '../helpers.js';
 
@@ -53,6 +54,68 @@ export default [
       { text: '回東荒。', out: { text: '你翻過山隘，一路往北。', effects: [['cross', 'ling_pass']] } },
       { text: '再待一陣。', out: {} },
     ],
+  },
+
+  // ── 西風口: out to the desert (0.22) ──
+  {
+    id: 'west_pass_arrive',
+    trigger: 'arrive',
+    nodes: ['west_pass'],
+    once: true,
+    title: '西風口',
+    text: '古道越走越窄，最後鑽進兩座光禿禿的山之間。風從前面灌過來，一陣緊似一陣，打在臉上，是細細的沙。\n\n山口下立著一座烽燧，土夯的，塌了一角，頂上沒有柴。\n\n風是從西邊來的。西邊，是西漠。',
+    choices: [{ text: '迎著風站了一會兒。', out: { effects: [['sysexp', 5]] } }],
+  },
+
+  {
+    id: 'pass_to_ximo',
+    trigger: 'explore',
+    poi: 'west_pass_gate',
+    nodes: ['west_pass'],
+    priority: 10,
+    title: '出西風口',
+    text: (s) =>
+      flag(s, 'ximo_crossed')
+        ? '山口那頭，是西漠。這一趟出去，要走上一天一夜。'
+        : '山口那頭，就是西漠了。\n\n古戰場上的散修說，出了西風口，先是一天的山路，然後就只有沙：沙丘一道接著一道，白天燙得落不了腳，夜裡冷得結霜，沒有水。\n\n凡人進去，三天就成了乾屍；煉氣的修士，也撐不過十天。只有築基、辟了穀的人，才走得過那片沙。\n\n沙海裡有一眼泉，駝隊在那裡歇腳。再往西，就沒人說得清了。',
+    choices: [
+      {
+        text: '出關。',
+        need: (s) => (s.player.realm >= 2 ? null : '還沒築基，辟不了穀，走不過沙海'),
+        out: {
+          text: (s) =>
+            flag(s, 'ximo_crossed')
+              ? '你又一次出了西風口。'
+              : '你出了西風口，一路往西。\n\n山路先是往上，然後往下，一直往下。樹越來越少，草越來越黃，最後連草也沒有了。走到第二天的黃昏，眼前忽然一空：\n\n天和地之間，只剩下沙。',
+          effects: (s) => [['cross', 'west_pass'], ...(flag(s, 'ximo_crossed') ? [] : [['flag', 'ximo_crossed'], ['sysexp', 25], ['log', '出了西風口，進了西漠']])],
+        },
+      },
+      { text: '改天吧。', out: {} },
+    ],
+  },
+
+  {
+    id: 'pass_to_donghuang_w',
+    trigger: 'explore',
+    poi: 'luori_gate',
+    nodes: ['luori_pass'],
+    priority: 10,
+    title: '山口',
+    text: '山口那頭，是東荒：古戰場、黑風林、青石鎮，你熟悉的一切。翻回去，要走上一天一夜。',
+    choices: [
+      { text: '回東荒。', out: { text: '你翻過山口，一路往東。', effects: [['cross', 'luori_pass']] } },
+      { text: '再待一陣。', out: {} },
+    ],
+  },
+
+  {
+    id: 'ximo_arrive',
+    trigger: 'arrive',
+    nodes: ['luori_pass'],
+    once: true,
+    title: '西漠',
+    text: '山路的盡頭，是一座土城。\n\n城牆是土夯的，被風削得圓了邊角，城樓上的瓦掉了一半。城門朝西開著，門外就是沙——一道一道的沙丘，金黃的，一直排到天邊，排到落日底下。\n\n城門洞裡坐著一個老兵，抱著一桿生了鏽的長槍，抬頭看了你一眼。\n\n叮——檢測到新地圖：西漠。\n\n……\n\n叮——本系統……好像，來過這裡。',
+    choices: [{ text: '走過去。', out: { effects: [['sysexp', 10]] } }],
   },
 
   {

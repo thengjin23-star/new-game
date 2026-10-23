@@ -33,6 +33,7 @@ import * as CB from '../world/combat.js';
 import { paintBeast, paintHero, drawGroundMarks, drawCombatOverlay } from './combatfx.js';
 import { stream } from '../core/rng.js';
 import { fallOf, skyLight, drawSkyVeil } from './sky.js';
+import { arid } from '../world/weather.js';
 
 const DEG = Math.PI / 180;
 const FONT = "'LXGW WenKai TC', 'Kaiti TC', 'STKaiti', 'BiauKai', serif";
@@ -674,10 +675,10 @@ export function createWorld3D(canvas, { onFrame, idle, quality = 'high', onSlow 
   function paperAndWeather(dt) {
     // weather and paper; a region's own motes over the season's
     const dark = E.darkness(s.tod);
-    const fireflies = dark > 0.6 && (season === 'summer' || season === 'spring') && !['qingshi_town', 'luoxia_market', 'qingyun_sect'].includes(s.player.loc);
+    const fireflies = dark > 0.6 && (season === 'summer' || season === 'spring') && !['qingshi_town', 'luoxia_market', 'qingyun_sect'].includes(s.player.loc) && !arid(s.player.loc);
     // what falls: rain or snow when the weather brings it; else the region's own motes, fireflies, the season's petals and leaves
     const [fall, count] = fallOf(s, season);
-    const wet = fall === 'rain' || fall === 'storm' || fall === 'snow';
+    const wet = fall === 'rain' || fall === 'storm' || fall === 'snow' || fall === 'sand';
     const kind = wet ? fall : motes || (fireflies ? 'firefly' : fall);
     if (!reduce && kind) {
       if (particleKind !== kind) {

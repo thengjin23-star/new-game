@@ -145,8 +145,8 @@ export function walkMult(s) {
   // (a 神行符 burning: half as fast again; a 輕功: a little faster always)
   const swift = combatOf(s).me?.swift > 0 ? 1.5 : 1;
   const art = bodyArt(s);
-  // (rain, snow and mud slow you a little)
-  const sky = weatherNow(s).walk;
+  // (rain, snow and mud slow you a little; a sandstorm a lot, unless you carry what turns the wind)
+  const sky = windproof(s) ? 1 : weatherNow(s).walk;
   return m * [1, 0.9, 0.75, 0.6][p.injury || 0] * (1 + gearStats(s).speed + passiveStats(s).speed) * swift * (1 + (art?.walk || 0)) * sky;
 }
 
@@ -161,8 +161,13 @@ function revealRadius(s) {
   const base = isNight(s) ? 170 : 260;
   // up in the air you see further (the higher, the further)
   const up = s.world?.fly ? (s.world.fly.by === 'sword' ? 1.6 : 1.3) : 1;
-  // (in fog or rain you see less)
-  return (base + 20 * Math.min(4, s.player.realm)) * up * weatherNow(s).see;
+  // (in fog or rain you see less; in blown sand, less still)
+  return (base + 20 * Math.min(4, s.player.realm)) * up * (windproof(s) ? Math.max(0.8, weatherNow(s).see) : weatherNow(s).see);
+}
+
+/** A sandstorm, and what you carry turns its wind aside (a 定風珠): it slows you no more, and hides little. */
+export function windproof(s) {
+  return !!weatherNow(s).sand && gearStats(s).wind >= 1;
 }
 
 // ── the frame step ──
@@ -390,6 +395,10 @@ export function takeOff(s, by = flyMeans(s).by) {
     L.feed.push({ kind: 'bad', text: '靈力不足，飛不起來。' });
     return false;
   }
+  if (weatherNow(s).sand && !windproof(s)) {
+    L.feed.push({ kind: 'bad', text: '沙暴裡睜不開眼，風一陣一陣地把你往地上按——飛不起來。' });
+    return false;
+  }
   stopWalking(L);
   L.resume = null;
   w.fly = { by, z: heightAt(w.x, w.y), state: 'up' };
@@ -539,7 +548,16 @@ function flyStep(s, L, dt, input) {
   if (moved > 0) afterFlight(s, L, moved, mode);
   if (w.fly) riverWatch(s, L, dt);
   if (w.fly) thunderWatch(s, L, dt);
+  if (w.fly) sandWatch(s, L);
   if (w.fly && F.state === 'down' && F.z - ground < 2.5) touchDown(s, L);
+}
+
+/** A sandstorm comes up while you are in the air: it beats you down (unless the wind turns aside from you). */
+function sandWatch(s, L) {
+  const w = s.world;
+  if (w.fly.state === 'down' || w.fly.forced || !weatherNow(s).sand || windproof(s)) return;
+  L.feed.push({ kind: 'bad', text: '沙暴撲過來，風裡全是沙子，打得你睜不開眼。你被風壓了下去。' });
+  comeDown(s, L, true);
 }
 
 /** In a thunderstorm the lightning looks for what stands highest; up in the air, that is you. */

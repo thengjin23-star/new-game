@@ -17,7 +17,7 @@ import * as CB from '../world/combat.js';
 import { paintBeast, paintHero, drawGroundMarks, drawCombatOverlay } from './combatfx.js';
 import { seasonOf } from '../core/calendar.js';
 import { stream } from '../core/rng.js';
-import { onMapChange } from '../world/atlas.js';
+import { onMapChange, MAPS, mapId } from '../world/atlas.js';
 import { landTable } from '../world/maps/index.js';
 
 const CH = 640; // chunk size in world units
@@ -52,7 +52,12 @@ const GROUND = {
   [T.VOID]: { all: [244, 242, 236] },
 };
 
-const groundColor = (t, season) => GROUND[t]?.[season] || GROUND[t]?.all || GROUND[T.GRASS][season];
+/** A map's own colours for its ground (another map's: the desert's dark gravel, its dry grass), over the rest. */
+const own = () => MAPS[mapId()]?.palette || {};
+const groundColor = (t, season) => {
+  const o = own()[t];
+  return o?.[season] || o?.all || GROUND[t]?.[season] || GROUND[t]?.all || GROUND[T.GRASS][season];
+};
 
 /** Under a mountain the ground is whatever the land around it is. */
 const UNDER_MOUNTAIN = { qingshi_hill: T.HILL, black_forest: T.FOREST, ancient_ruins: T.WASTE, qingyun_sect: T.HILL, lingxi_valley: T.GRASS, ...landTable('under') };

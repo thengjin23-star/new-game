@@ -29,6 +29,9 @@ export const STAT_WORD = {
   sense: (v) => `神識 +${Math.round(v * 100)}%`,
   fire: (v) => `抗火 ${Math.round(v * 100)}%`,
   venom: (v) => `抗毒 ${Math.round(v * 100)}%`,
+  // (西漠) the sun cannot burn you; the sandstorm's wind turns aside
+  cool: () => '不畏烈日',
+  wind: () => '定風',
 };
 
 /** What you have on, place by place (the weapon in your hand counts). */
@@ -42,10 +45,11 @@ export function gearOf(s) {
  * All your gear gives you, added up: hp (a share more blood), mp (more
  * 靈力), def (a share of every blow kept off), regen / mpRegen (blood and
  * 靈力 back that much faster), crit, speed (on foot), sense (神識 reaches
- * further), fire (a share of fire kept off), venom (of venom: what lingers in you, and pools of it).
+ * further), fire (a share of fire kept off), venom (of venom: what lingers in you, and pools of it),
+ * cool (西漠's noon sun cannot burn you), wind (a sandstorm's wind turns aside from you).
  */
 export function gearStats(s) {
-  const out = { hp: 0, mp: 0, def: 0, regen: 0, mpRegen: 0, crit: 0, speed: 0, sense: 0, fire: 0, venom: 0 };
+  const out = { hp: 0, mp: 0, def: 0, regen: 0, mpRegen: 0, crit: 0, speed: 0, sense: 0, fire: 0, venom: 0, cool: 0, wind: 0 };
   for (const id of Object.values(gearOf(s))) {
     const st = id && ITEMS[id]?.stats;
     if (!st) continue;

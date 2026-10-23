@@ -878,6 +878,29 @@ export function makeParticles(kind, rnd, W, H, count) {
 
 export function drawParticles(ctx, kind, list, W, H, dt, t, still) {
   if (!list.length) return;
+  if (kind === 'sand') {
+    // blown sand: short streaks driven hard across the picture by the wind (it blows from the west)
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.strokeStyle = 'rgba(150,112,64,0.42)';
+    for (const p of list) {
+      if (!still) {
+        p.x += (1.4 + p.v * 1.6) * dt * 0.9;
+        p.y += Math.sin(t / 400 + p.ph) * 0.6 + (p.v - 0.5) * dt * 0.08;
+        if (p.x > W + 30) {
+          p.x = -30;
+          p.y = Math.random() * H;
+        }
+        if (p.y > H + 10) p.y = -10;
+        if (p.y < -10) p.y = H + 10;
+      }
+      const len = 8 + p.r * 5;
+      ctx.moveTo(p.x, p.y);
+      ctx.lineTo(p.x - len, p.y - len * 0.08);
+    }
+    ctx.stroke();
+    return;
+  }
   if (kind === 'rain' || kind === 'storm') {
     // rain: thin slanting strokes, falling fast
     ctx.strokeStyle = 'rgba(70,82,96,0.32)';

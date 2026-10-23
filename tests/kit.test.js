@@ -4,20 +4,24 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { Kit } from '../src/art/gl/kit.js';
 import { BUILD } from '../src/art/gl/buildings.js';
-import { STRUCTURES } from '../src/world/places.js';
+import { LANDS } from '../src/world/maps/index.js';
+import { DONGHUANG_PLACES } from '../src/world/places.js';
 import { stream } from '../src/core/rng.js';
 
 // decals need a canvas; for geometry, any rectangle of the atlas will do
 const decals = new Proxy({}, { get: () => () => [0, 0, 1, 1] });
 
-test('every building in the world has a builder', () => {
+/** Every map's buildings. */
+const STRUCTURES = [...DONGHUANG_PLACES.STRUCTURES, ...LANDS.flatMap((m) => m.places.STRUCTURES)];
+
+test('every building in the world has a builder (on every map)', () => {
   for (const st of STRUCTURES) {
-    if (!st.sprite || st.sprite === 'bigtree') continue;
+    if (!st.sprite || st.sprite === 'bigtree' || st.sprite === 'bigpoplar') continue;
     assert.ok(BUILD[st.sprite], `a 3D builder for ${st.sprite}`);
   }
 });
 
-test('each building stands on its footprint at a sensible height', () => {
+test('each building stands on its footprint at a sensible height (on every map)', () => {
   for (const [i, st] of STRUCTURES.entries()) {
     const make = BUILD[st.sprite];
     if (!make) continue;

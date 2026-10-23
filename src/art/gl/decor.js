@@ -10,6 +10,8 @@ import { STRUCTURES } from '../../world/places.js';
 import { GLSL_COMMON, GLSL_LIGHT } from './env.js';
 
 const RES = 2; // atlas pixels per world unit (as the sprites are painted)
+/** Landmark trees (STRUCTURES): cards among the rest, not buildings. */
+const GREAT_TREES = new Set(['bigtree', 'bigpoplar']);
 const SWAY = { pine: 0.6, leaf: 1, dark: 0.7, dead: 0.3, bamboo: 1.4, willow: 1.6, bush: 0.5, tuft: 1.2, reed: 1.6, scarecrow: 0.2, poplar: 0.7, deadpoplar: 0.1, tamarisk: 1.1, thorn: 0.8 };
 
 const VERT = /* glsl */ `
@@ -86,7 +88,7 @@ function pack(rects, width) {
 export function createDecor(env) {
   const g = world();
   // the trees of the wild, and the great trees that stand as landmarks
-  const items = [...g.decor, ...STRUCTURES.map((st, i) => ({ st, i })).filter(({ st }) => st.sprite === 'bigtree').map(({ st, i }) => ({ kind: 'big', v: i, st, x: st.x, y: st.y + st.h / 2, s: 1 }))];
+  const items = [...g.decor, ...STRUCTURES.map((st, i) => ({ st, i })).filter(({ st }) => GREAT_TREES.has(st.sprite)).map(({ st, i }) => ({ kind: 'big', v: i, st, x: st.x, y: st.y + st.h / 2, s: 1 }))];
   const kinds = [...new Set(items.map((d) => `${d.kind}:${d.v}`))];
   const index = new Map(kinds.map((k, n) => [k, n]));
 

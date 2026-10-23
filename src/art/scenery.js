@@ -1168,7 +1168,7 @@ function lying(ctx, look, face) {
 export function drawBeast(ctx, kind, { t = 0, face = 1, moving = false, fly = 0 } = {}) {
   if (kind === 'wolf' || kind === 'snake' || kind === 'bandit' || kind === 'ghost') return drawMob(ctx, kind, 0, 0, { t, face, moving });
   ctx.save();
-  if (!fly) groundShadow(ctx, 0, 0, kind === 'deer' || kind === 'spirit_deer' || kind === 'fox_trapped' ? 11 : 6, 2);
+  if (!fly) groundShadow(ctx, 0, 0, kind === 'camel' ? 14 : kind === 'deer' || kind === 'spirit_deer' || kind === 'fox_trapped' ? 11 : 6, 2);
   ctx.scale(face, 1);
   switch (kind) {
     case 'fox':
@@ -1194,10 +1194,85 @@ export function drawBeast(ctx, kind, { t = 0, face = 1, moving = false, fly = 0 
     case 'crow':
       crow(ctx, t, fly);
       break;
+    case 'camel':
+      camel(ctx, t, moving);
+      break;
     default:
       break;
   }
   ctx.restore();
+}
+
+/** A camel of the caravans (月泉): two humps, a long curved neck, knobbed knees; it chews, and its head nods as it walks. */
+function camel(ctx, t, moving) {
+  const ph = moving ? Math.sin(t * 6) : 0;
+  const nod = moving ? Math.sin(t * 6) * 1.2 : Math.sin(t * 0.8) * 0.6;
+  const coat = 'rgba(178,140,92,1)';
+  ctx.lineCap = 'round';
+  // the far legs, then the near
+  ctx.strokeStyle = 'rgba(140,108,70,1)';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(-7, -14);
+  ctx.lineTo(-6 - ph * 3, 0);
+  ctx.moveTo(6, -14);
+  ctx.lineTo(7 + ph * 3, 0);
+  ctx.stroke();
+  ctx.strokeStyle = 'rgba(160,124,82,1)';
+  ctx.lineWidth = 2.2;
+  ctx.beginPath();
+  ctx.moveTo(-5, -14);
+  ctx.lineTo(-4 + ph * 3, -6);
+  ctx.lineTo(-4 + ph * 3.4, 0);
+  ctx.moveTo(8, -14);
+  ctx.lineTo(9 - ph * 3, -6);
+  ctx.lineTo(9 - ph * 3.4, 0);
+  ctx.stroke();
+  // the body and the two humps
+  ctx.fillStyle = coat;
+  ctx.beginPath();
+  ctx.ellipse(1, -17, 12, 5.5, 0, 0, Math.PI * 2);
+  ctx.fill();
+  for (const hx of [-4.5, 4.5]) {
+    ctx.beginPath();
+    ctx.ellipse(hx, -21.5, 3.6, 4.4, 0, Math.PI, 0);
+    ctx.fill();
+  }
+  ctx.strokeStyle = rgba(INK, 0.7);
+  ctx.lineWidth = 0.8;
+  ctx.beginPath();
+  ctx.ellipse(1, -17, 12, 5.5, 0, 0, Math.PI * 2);
+  ctx.stroke();
+  // the neck curving down and up to the head
+  ctx.strokeStyle = coat;
+  ctx.lineWidth = 3.4;
+  ctx.beginPath();
+  ctx.moveTo(11, -18);
+  ctx.quadraticCurveTo(17, -16 + nod, 17, -26 + nod);
+  ctx.stroke();
+  ctx.fillStyle = coat;
+  ctx.beginPath();
+  ctx.ellipse(19.5, -27 + nod, 4, 2.2, 0.15, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = rgba(INK, 0.7);
+  ctx.lineWidth = 0.6;
+  ctx.stroke();
+  ctx.fillStyle = rgba(INK, 0.9);
+  ctx.fillRect(18.6, -28.6 + nod, 1, 0.9);
+  // a pack and a little bell under the neck
+  ctx.fillStyle = 'rgba(150,52,40,0.95)';
+  ctx.fillRect(-3, -20, 7, 3.2);
+  ctx.fillStyle = 'rgba(206,166,82,1)';
+  ctx.beginPath();
+  ctx.arc(14.5, -15 + nod * 0.5, 1, 0, Math.PI * 2);
+  ctx.fill();
+  // the tail
+  ctx.strokeStyle = 'rgba(120,92,60,1)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(-11, -18);
+  ctx.quadraticCurveTo(-13, -14, -12.5, -11);
+  ctx.stroke();
 }
 
 /**

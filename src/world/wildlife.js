@@ -39,6 +39,8 @@ const SHY = {
   egret: { r: 110, fly: true },
   crane: { r: 120, fly: true },
   crow: { r: 100, fly: true },
+  // the caravans' camels: used to people, they only shuffle off a little
+  camel: { r: 46, run: 50 },
 };
 const BIRDS = new Set(['egret', 'crane', 'crow']);
 

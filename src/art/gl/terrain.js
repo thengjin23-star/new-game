@@ -9,6 +9,7 @@ import { heights, HS, HW, HH } from '../../world/height.js';
 import { world } from '../../world/terrain.js';
 import { STRUCTURES } from '../../world/places.js';
 import { paintGround } from '../worldview.js';
+import { MAPS, mapId } from '../../world/atlas.js';
 import { GLSL_COMMON, GLSL_LIGHT } from './env.js';
 
 export const TILE = 640;
@@ -39,6 +40,7 @@ uniform float uPainted;
 uniform float uSnow;
 uniform sampler2D uMarks;
 uniform vec4 uMarkRect;
+uniform vec3 uRock;
 varying vec3 vPos;
 varying vec3 vNor;
 varying vec2 vUv;
@@ -53,6 +55,8 @@ void main() {
   float streak = vnoise(vec2(vPos.x * 0.11 + vPos.z * 0.03, vPos.y * 0.022 + vPos.z * 0.004));
   vec3 rock = mix(vec3(0.44, 0.43, 0.4), vec3(0.64, 0.62, 0.57), grain);
   rock *= 0.72 + 0.36 * smoothstep(0.3, 0.8, streak);
+  // (each map's own stone: grey in 東荒, sandstone in the desert)
+  rock *= uRock;
   float r = smoothstep(0.14, 0.4, steep + (grain - 0.5) * 0.14);
   vec3 col = mix(paint, rock, r);
   // high ground is paler, as if seen through more air
@@ -181,7 +185,7 @@ export function createTerrain(renderer, env) {
   const base = new THREE.ShaderMaterial({
     vertexShader: VERT,
     fragmentShader: FRAG,
-    uniforms: { ...env.u, uPaint: { value: null }, uGlobal: { value: globalTex }, uPainted: { value: 0 } },
+    uniforms: { ...env.u, uPaint: { value: null }, uGlobal: { value: globalTex }, uPainted: { value: 0 }, uRock: { value: new THREE.Vector3(...(MAPS[mapId()]?.rock || [1, 1, 1])) } },
   });
   base.extensions = { derivatives: true };
 
@@ -193,7 +197,7 @@ export function createTerrain(renderer, env) {
       const mat = new THREE.ShaderMaterial({
         vertexShader: VERT,
         fragmentShader: FRAG,
-        uniforms: { ...env.u, uGlobal: base.uniforms.uGlobal, uPaint: { value: null }, uPainted: { value: 0 } },
+        uniforms: { ...env.u, uGlobal: base.uniforms.uGlobal, uPaint: { value: null }, uPainted: { value: 0 }, uRock: base.uniforms.uRock },
       });
       mat.extensions = { derivatives: true };
       const mesh = new THREE.Mesh(tileGeometry(tx, ty, H), mat);

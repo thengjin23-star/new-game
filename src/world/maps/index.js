@@ -1,13 +1,15 @@
 // The maps beyond 東荒 (東荒's own data stays where it always was: geo.js,
 // places.js, map.js). Each gives its land (geo), how its ground lies and what
-// grows on it (land), its places (nodes), and what stands on it (places).
+// grows on it (land), its places (nodes), and what stands on it (places);
+// rock: how its stone is tinted in the 3D world (sandstone in the desert);
+// palette: its own ground colours, where they are not 東荒's.
 
 import { NANLING_GEO, NANLING_LAND, NANLING_NODES, NANLING_PLACES, NANLING_PEOPLE } from './nanling.js';
-import { XIMO_GEO, XIMO_LAND, XIMO_NODES, XIMO_PLACES, XIMO_PEOPLE } from './ximo.js';
+import { XIMO_GEO, XIMO_LAND, XIMO_NODES, XIMO_PLACES, XIMO_PEOPLE, XIMO_PALETTE } from './ximo.js';
 
 export const LANDS = [
   { id: 'nanling', name: '南嶺', title: '南嶺・青竹一帶', home: 'qingzhu_village', geo: NANLING_GEO, land: NANLING_LAND, nodes: NANLING_NODES, places: NANLING_PLACES, people: NANLING_PEOPLE },
-  { id: 'ximo', name: '西漠', title: '西漠・月泉一帶', home: 'yuequan', geo: XIMO_GEO, land: XIMO_LAND, nodes: XIMO_NODES, places: XIMO_PLACES, people: XIMO_PEOPLE },
+  { id: 'ximo', name: '西漠', title: '西漠・月泉一帶', home: 'yuequan', rock: [1.24, 1.02, 0.78], palette: XIMO_PALETTE, geo: XIMO_GEO, land: XIMO_LAND, nodes: XIMO_NODES, places: XIMO_PLACES, people: XIMO_PEOPLE },
 ];
 
 /** One table from every map's entries of a kind (by region): e.g. landTable('trees'). */

@@ -61,6 +61,11 @@ const MISTY = { lingxi_valley: 0.12, mirror_lake: 0.1, black_forest: 0.05, river
 /** Dry country (another map's, world/maps/): no rain and no mist there. */
 const ARID = landTable('arid');
 
+/** Is this dry country (no petals drift there, no leaves: only sand)? */
+export function arid(region) {
+  return !!ARID[region];
+}
+
 /** The hour of the world, counted from the first morning. */
 const hourOf = (s) => s.day * 24 + (s.tod ?? 8);
 

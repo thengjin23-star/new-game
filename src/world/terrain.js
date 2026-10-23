@@ -795,6 +795,8 @@ const TREE_MIX = {
   ...landTable('trees'),
 };
 
+/** Dry country (another map's): its stony ground lies bare, a stone here and there. */
+const ARID = landTable('arid');
 /** Regions where the grass grows trees thicker than wild ground does (another map's: an oasis), by region: the share of cells. */
 const GROVE = landTable('grove');
 /** Regions strewn with what is left of something (another map's: a buried city), by region: [prop, share of cells]. */
@@ -888,8 +890,8 @@ function makeDecor(g) {
             else if (r0 < 0.32) place('bones', 1, 192);
             else if (r0 < 0.36) place('dead', 1, 193);
             else if (r0 < 0.46) place('rock', 1, 194);
-          } else if (r0 < 0.1) place('rock', 1, 195);
-          else if (TREE_MIX[region]?.some(([k]) => k === 'tamarisk') && r0 < 0.16) place('thorn', 1, 196);
+          } else if (r0 < (ARID[region] ? 0.03 : 0.1)) place('rock', 1, 195, ARID[region] ? 0.8 : 1);
+          else if (ARID[region] && r0 < 0.09) place('thorn', 1, 196);
           break;
         case T.SAND:
           if (nearWater && r0 < 0.3) place('reed', 2, 200);
