@@ -8,7 +8,7 @@ import * as THREE from './three.js';
 export const OUTLINE = 0.9;
 
 /** Surface kinds the building shader knows how to paint. */
-export const K = { PLAIN: 0, WALL: 1, TILE: 2, STRAW: 3, STONE: 4, WOOD: 5, CLOTH: 6 };
+export const K = { PLAIN: 0, WALL: 1, TILE: 2, STRAW: 3, STONE: 4, WOOD: 5, CLOTH: 6, EARTH: 7 };
 
 /** A float array that grows as it is filled (no per-number pushes). */
 class Grow {

@@ -5,7 +5,7 @@
 // piers. All of it is one still mesh with an ink outline.
 
 import * as THREE from './three.js';
-import { CELL, T, MARKET_WALL } from '../../world/geo.js';
+import { CELL, T, MARKET_WALL, WALL_LOOK } from '../../world/geo.js';
 import { world, idxOf, colOf, rowOf, hash2 } from '../../world/terrain.js';
 import { STRUCTURES } from '../../world/places.js';
 import { heights, heightAt, waterAt } from '../../world/height.js';
@@ -29,6 +29,9 @@ const COL = {
   stoneDark: C(128, 124, 116),
   gold: C(206, 166, 82),
   mud: C(198, 172, 130),
+  earth: C(194, 162, 118),
+  earthDark: C(160, 128, 90),
+  bronze: C(86, 120, 104),
   canvas: C(156, 126, 90),
   ink: C(46, 42, 38),
   water: C(30, 34, 40),
@@ -90,6 +93,10 @@ void main() {
     col *= 0.88 + 0.14 * vnoise(vec2(vUv.x * 0.5, vUv.y * 1.5));
   } else if (k == 6) {
     col *= 0.92 + 0.1 * vnoise(vPos.xz * 0.4);
+  } else if (k == 7) {
+    // rammed earth: the layers it was beaten in, weathered unevenly
+    float layer = abs(fract(vPos.y / 4.6) - 0.5);
+    col *= 0.9 + 0.08 * smoothstep(0.32, 0.48, layer) + 0.1 * (vnoise(vec2(vPos.x + vPos.z, vPos.y * 3.0) * 0.18) - 0.5);
   }
   // snow settles on whatever faces the sky
   col = mix(col, vec3(0.95, 0.95, 0.97), uSnow * smoothstep(0.5, 0.85, n.y) * (k == 2 || k == 3 ? 0.92 : 0.7));
@@ -312,7 +319,7 @@ export const BUILD = {
     posts(kit, spread(6, w / 2 - 1), d / 2 + 4, 6, 30);
     kit.decal(dc.door(16, 22, [140, 46, 34]), 0, 6, d / 2 + 0.25, 16, 22);
     for (const s of [-1, 1]) kit.decal(dc.window(11, 11), s * w * 0.3, 15, d / 2 + 0.25, 11, 11, 1);
-    kit.decal(dc.plaque('清虛觀', 22, 7), 0, 29, d / 2 + 4.5, 22, 7);
+    kit.decal(dc.plaque(st.name || '清虛觀', 22, 7), 0, 29, d / 2 + 4.5, 22, 7);
     roofAt(kit, 0, 0, { w: w + 2, d: d + 8, y: 36, rise: d * 0.55 + 12, over: 8, col: COL.tile, lift: 8, ornament: COL.gold });
   },
   bighall(kit, dc, st) {
@@ -459,6 +466,92 @@ export const BUILD = {
     }
     roofAt(kit, 0, 0, { w: r * 2.2, d: r * 2.2, y: 30, rise: 24, over: 8, col: COL.tile, lift: 6, sides: 6, ornament: COL.gold });
   },
+  // ── the desert's (西漠) ──
+  /** 烽燧: rammed earth in three tapering lifts, a ladder up one side, brushwood on top. */
+  beacon(kit, dc, st) {
+    const w = st.w;
+    kit.box(0, 0, 0, w, 24, w, COL.earth, K.EARTH);
+    kit.box(0, 24, 0, w * 0.82, 22, w * 0.82, COL.earth, K.EARTH);
+    kit.box(0, 46, 0, w * 0.66, 18, w * 0.66, COL.earth, K.EARTH);
+    for (const s of [-1, 1]) kit.beam([-w / 2 - 3, 0, s * 3], [-w * 0.33 - 3, 62, s * 3], 1, COL.wood);
+    for (let y = 6; y < 60; y += 7) {
+      const t = y / 64;
+      const x = -w / 2 - 3 + (w * 0.17) * t;
+      kit.beam([x, y, -3], [x, y, 3], 0.7, COL.wood);
+    }
+    for (let k = 0; k < 6; k++) {
+      const a = (k / 6) * Math.PI * 2;
+      kit.beam([Math.cos(a) * 3, 64, Math.sin(a) * 3], [Math.cos(a) * 6, 72, Math.sin(a) * 6], 1.1, C(96, 70, 44));
+    }
+  },
+  /** 土房: mud-brick walls, a flat roof with a parapet, beam ends, a rug in the door. */
+  adobe(kit, dc, st, rnd) {
+    const w = st.w - 2;
+    const d = st.h - 2;
+    const H = 20;
+    kit.box(0, 0, 0, w, H, d, COL.earth, K.EARTH);
+    kit.box(0, H, 0, w + 2, 1.5, d + 2, COL.earthDark, K.EARTH, { hull: false });
+    for (const [x, z, sx, sz] of [[0, d / 2, w + 2, 2], [0, -d / 2, w + 2, 2], [w / 2, 0, 2, d], [-w / 2, 0, 2, d]]) kit.box(x, H + 1.5, z, sx, 3, sz, COL.earth, K.EARTH, { hull: false });
+    for (let x = -w / 2 + 4; x < w / 2 - 2; x += 7) kit.box(x, H - 3, d / 2 + 1.5, 1.6, 1.6, 3, COL.wood, K.WOOD, { hull: false });
+    const rug = [C(150, 52, 40), C(60, 92, 120), C(176, 132, 52)][Math.floor(rnd() * 3)];
+    kit.box(0, 0, d / 2 + 0.6, 9, 14, 0.8, rug, K.CLOTH, { hull: false });
+    if (w > 40) kit.decal(dc.window(5, 5), -w * 0.28, 10, d / 2 + 0.25, 5, 5, 1);
+  },
+  /** 關城: a gate of rammed earth with crenellations and an arch, a tiled gate-tower on top. */
+  fort(kit, dc, st) {
+    const w = st.w;
+    const d = st.h;
+    const H = 38;
+    for (const s of [-1, 1]) kit.box(s * (w / 4 + 6), 0, 0, w / 2 - 12, H, d, COL.earth, K.EARTH);
+    kit.box(0, 24, 0, 24, H - 24, d, COL.earth, K.EARTH);
+    kit.box(0, 0, -d / 2 + 4, 24, 24, 8, COL.ink, K.PLAIN, { hull: false });
+    for (let x = -w / 2 + 4; x < w / 2 - 2; x += 10) kit.box(x, H, d / 2 - 2, 6, 5, 4, COL.earth, K.EARTH, { hull: false });
+    const tw = w * 0.46;
+    walls(kit, H, tw, d * 0.5, 16, C(214, 196, 160), 12);
+    posts(kit, spread(4, tw / 2 - 1), d * 0.25 + 1.2, H, 16);
+    kit.decal(dc.plaque(st.name || '落日關', 20, 7), 0, H - 10, d / 2 + 0.4, 20, 7);
+    roofAt(kit, 0, 0, { w: tw + 2, d: d * 0.5 + 2, y: H + 16, rise: 12, over: 7, col: COL.tile, lift: 6, ornament: COL.gold });
+  },
+  /** A stretch of buried city wall: rammed earth, its top broken unevenly. */
+  ruinwall(kit, dc, st, rnd) {
+    const w = st.w;
+    const d = st.h;
+    const n = Math.max(3, Math.round(w / 14));
+    for (let k = 0; k < n; k++) {
+      const seg = w / n;
+      const h = rnd() < 0.15 ? 6 + rnd() * 4 : 16 + rnd() * 16;
+      kit.box(-w / 2 + seg * (k + 0.5), -2, 0, seg + 0.5, h + 2, d, COL.earth, K.EARTH, { hull: k === 0 || k === n - 1 || h > 20 });
+    }
+  },
+  /** 觀星台: three stone terraces, a stair up the front, a broken armillary of bronze on top. */
+  observatory(kit, dc, st) {
+    let w = st.w;
+    let d = st.h;
+    let y = 0;
+    for (let k = 0; k < 3; k++) {
+      kit.box(0, y, 0, w, 12, d, COL.stone, K.STONE);
+      // the stair up its front, from this terrace's foot to its top
+      for (let n = 0; n < 4; n++) kit.box(0, y, d / 2 + 4 - n * 2.5, 14, ((n + 1) * 12) / 4, 2.5, COL.stone, K.STONE, { hull: n === 0 });
+      y += 12;
+      w *= 0.74;
+      d *= 0.74;
+    }
+    const cy = y + 16;
+    const ring = (r, tilt, from = 0, to = Math.PI * 2) => {
+      const n = 16;
+      let prev = null;
+      for (let k = 0; k <= n; k++) {
+        const a = from + ((to - from) * k) / n;
+        const p = [Math.cos(a) * r, cy + Math.sin(a) * r * Math.cos(tilt), Math.sin(a) * r * Math.sin(tilt)];
+        if (prev) kit.beam(prev, p, 1.4, COL.bronze);
+        prev = p;
+      }
+    };
+    ring(13, 0);
+    ring(13, Math.PI / 2);
+    ring(12, 1.1, 0.4, Math.PI * 1.4);
+    kit.beam([0, y, 0], [0, cy - 13, 0], 1.8, COL.bronze);
+  },
   teashed(kit, dc, st) {
     const w = st.w - 4;
     const d = st.h - 4;
@@ -489,6 +582,7 @@ function marketWalls(kit, dc) {
   if (!MARKET_WALL) return;
   const g = world();
   const [x0, y0, x1, y1] = MARKET_WALL;
+  const mud = !!WALL_LOOK.mud;
   const sides = [
     { fixed: rowOf(y0 + 1), along: 'x', from: colOf(x0 + 1), to: colOf(x1 - 1), outward: -1 },
     { fixed: rowOf(y1 - 1), along: 'x', from: colOf(x0 + 1), to: colOf(x1 - 1), outward: 1 },
@@ -524,11 +618,11 @@ function marketWalls(kit, dc) {
       const p = place(a, b);
       const ground = Math.min(heightAt(p.x, p.z), ...[-0.45, 0.45].map((f) => (p.rot ? heightAt(p.x, p.z + f * p.len) : heightAt(p.x + f * p.len, p.z))));
       kit.at(p.x, ground - 2, p.z, p.rot);
-      kit.box(0, 0, 0, p.len, H + 2, TH, COL.stoneDark, K.STONE);
+      kit.box(0, 0, 0, p.len, H + 2, TH, mud ? COL.earth : COL.stoneDark, mud ? K.EARTH : K.STONE);
       // battlements on the outer side
       const outer = sd.outward * (TH / 2 - 1.5);
-      for (let x = -p.len / 2 + 5; x < p.len / 2 - 3; x += 11) kit.box(x, H + 2, outer, 6, 5, 3, COL.stoneDark, K.STONE, { hull: false });
-      kit.box(0, H + 2, 0, p.len, 1, TH - 3, COL.stone, K.STONE, { hull: false });
+      for (let x = -p.len / 2 + 5; x < p.len / 2 - 3; x += 11) kit.box(x, H + 2, outer, 6, 5, 3, mud ? COL.earth : COL.stoneDark, mud ? K.EARTH : K.STONE, { hull: false });
+      kit.box(0, H + 2, 0, p.len, 1, TH - 3, mud ? COL.earthDark : COL.stone, mud ? K.EARTH : K.STONE, { hull: false });
     }
     // a gatehouse over each gap
     for (let r = 0; r < runs.length - 1; r++) {
@@ -537,11 +631,18 @@ function marketWalls(kit, dc) {
       const p = place(a, b);
       const ground = heightAt(p.x, p.z);
       kit.at(p.x, ground - 2, p.z, p.rot);
-      for (const s of [-1, 1]) kit.box(s * (p.len / 2 + 8), 0, 0, 18, H + 8, TH + 8, COL.stoneDark, K.STONE);
-      kit.box(0, H - 4, 0, p.len + 34, 12, TH + 8, COL.stoneDark, K.STONE);
+      for (const s of [-1, 1]) kit.box(s * (p.len / 2 + 8), 0, 0, 18, H + 8, TH + 8, mud ? COL.earth : COL.stoneDark, mud ? K.EARTH : K.STONE);
+      kit.box(0, H - 4, 0, p.len + 34, 12, TH + 8, mud ? COL.earth : COL.stoneDark, mud ? K.EARTH : K.STONE);
+      // (a bandits' fort has a plank lookout over its gate, not a hall)
+      if (mud) {
+        for (const sx of [-1, 1]) for (const sz of [-1, 1]) kit.beam([sx * (p.len / 2 + 2), H + 8, sz * (TH / 2 - 2)], [sx * (p.len / 2 + 2), H + 22, sz * (TH / 2 - 2)], 1.2, COL.wood);
+        kit.box(0, H + 21, 0, p.len + 8, 1.6, TH, COL.wood, K.WOOD);
+        if (!p.rot && WALL_LOOK.name) kit.decal(dc.plaque(WALL_LOOK.name, 22, 7), 0, H - 2, TH / 2 + 4.2, 22, 7);
+        continue;
+      }
       walls(kit, H + 8, p.len + 20, TH, 16, COL.plaster, 12);
       posts(kit, spread(4, (p.len + 20) / 2 - 1), TH / 2 + 1.2, H + 8, 16);
-      if (!p.rot) kit.decal(dc.plaque('落霞坊', 22, 7), 0, H + 12, TH / 2 + 2.2, 22, 7);
+      if (!p.rot) kit.decal(dc.plaque(WALL_LOOK.name || '落霞坊', 22, 7), 0, H + 12, TH / 2 + 2.2, 22, 7);
       roofAt(kit, 0, 0, { w: p.len + 22, d: TH + 2, y: H + 24, rise: 14, over: 7, col: COL.tile, lift: 7, ornament: COL.gold });
     }
   }

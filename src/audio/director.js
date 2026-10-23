@@ -37,6 +37,7 @@ export const PLACE = {
   crane_peak: 'peak',
   sword_peak: 'peak',
   south_pass: 'hill',
+  west_pass: 'hill',
   // the other maps' regions
   ...landTable('sound'),
 };
@@ -64,6 +65,14 @@ const SOUNDS = {
   gu: { beds: { wind: 0.4, drone: 0.35, leaves: 0.3 }, day: {}, night: { owl: 0.008 } },
   falls: { beds: { river: 1.1, wind: 0.3 }, day: { birds: 0.05 }, night: {} },
   nanwilds: { beds: { wind: 0.5, leaves: 0.35 }, day: { birds: 0.08 }, night: { owl: 0.01, howl: 0.004 } },
+  // 西漠: wind and sand, a caravan's bells far off; at the spring, people and water
+  fort: { beds: { wind: 0.95, sand: 0.2 }, day: { camelbell: 0.006 }, night: { howl: 0.006 } },
+  oasis: { beds: { wind: 0.3, crowd: 0.45, stream: 0.12, leaves: 0.2 }, day: { birds: 0.05, camelbell: 0.02 }, night: { frogs: 0.02, camelbell: 0.006 } },
+  gobi: { beds: { wind: 0.85, sand: 0.25 }, day: { camelbell: 0.005 }, night: { howl: 0.008 } },
+  desert: { beds: { wind: 0.7, sand: 0.35 }, day: {}, night: { howl: 0.004 } },
+  lostcity: { beds: { wind: 0.8, sand: 0.2, drone: 0.35 }, day: {}, night: { howl: 0.004 } },
+  deadtemple: { beds: { wind: 0.6, drone: 0.25 }, day: { chimes: 0.015 }, night: { chimes: 0.02, bell: 0.004 } },
+  tomb: { beds: { drone: 0.4 }, day: { drip: 0.08 }, night: { drip: 0.08 } },
 };
 
 /**
@@ -118,6 +127,19 @@ export function soundScene(s, view = {}) {
   if (wx.fog) {
     cut = Math.min(cut, 4500);
     if (beds.wind) beds.wind *= 0.6;
+  }
+  // a sandstorm roars and hisses and drowns the rest; a burning noon is very still
+  if (wx.sand) {
+    beds.wind = 1.25;
+    beds.sand = 1;
+    delete ev.birds;
+    delete ev.camelbell;
+    if (beds.crowd) beds.crowd *= 0.3;
+    cut = Math.min(cut, 6000);
+  }
+  if (wx.heat) {
+    if (beds.wind) beds.wind *= 0.5;
+    delete ev.birds;
   }
   // the sky's signs, at night
   if (night && signs.includes('bloodmoon')) beds.drone = Math.max(beds.drone || 0, 0.7);
@@ -255,7 +277,7 @@ function groundAt(s, x, y) {
   if (seasonOf(s.day) === 'winter') return 'snow';
   if (t === T.HILL || t === T.PEAK || t === T.CLIFF) return 'stone';
   if (t === T.FOREST || t === T.DEEP) return 'leaves';
-  if (t === T.SAND) return 'sand';
+  if (t === T.SAND || t === T.DUNE || t === T.QUICK) return 'sand';
   if (t === T.ROAD || t === T.TRAIL || t === T.WASTE) return 'dirt';
   return 'grass';
 }

@@ -30,7 +30,25 @@ const SETTLED = {
 };
 
 /** How much wild ground rolls, by region. */
-const ROLL = { south_pass: 20, wilds: 18, black_forest: 20, qingshi_hill: 22, ancient_ruins: 14, lingxi_valley: 4, qingyun_sect: 10, hidden_cave: 8, ...landTable('roll') };
+const ROLL = { south_pass: 20, west_pass: 22, wilds: 18, black_forest: 20, qingshi_hill: 22, ancient_ruins: 14, lingxi_valley: 4, qingyun_sect: 10, hidden_cave: 8, ...landTable('roll') };
+
+/** How high the dunes stand on a region's ground (a desert's: world/maps/), by region. */
+const DUNES = landTable('dunes');
+
+/**
+ * Dunes, as the wind leaves them: long ridges running across it (it blows
+ * from the west), a gentle slope up the windward side and a steep fall on
+ * the lee, the crests wandering and the heights rising and falling along
+ * them. 0–1.
+ */
+function dune(x, y) {
+  const warp = 2.6 * (fbm(x / 700, y / 700, 91) - 0.5) + 1.4 * (fbm(x / 260, y / 260, 92) - 0.5);
+  const u = x / 240 + warp + y / 1900;
+  const f = u - Math.floor(u);
+  // up most of the way, then down the slip face
+  const ridge = f < 0.68 ? smoothstep(0, 0.68, f) : 1 - smoothstep(0.68, 1, f);
+  return ridge * (0.45 + 0.55 * fbm(x / 520, y / 520, 93));
+}
 
 /** Fixed levels: the great river's surface, the sect's plateau, the lake. */
 export const LEVEL = { river: -12, sect: 236, lake: 3 };
@@ -171,6 +189,8 @@ function buildHeights() {
   // 1. the lie of the land: settled ground level, wild ground following the uplands
   const base = new Float32Array(N);
   const roll = new Float32Array(N);
+  const sand = new Float32Array(N);
+  let dry = false;
   for (let j = 0; j < ROWS; j++) {
     for (let i = 0; i < COLS; i++) {
       const k = idxOf(i, j);
@@ -178,10 +198,13 @@ function buildHeights() {
       const set = SETTLED[id];
       base[k] = set ? set[0] : upland(cellX(i), cellY(j));
       roll[k] = set ? set[1] : ROLL[id] ?? ROLL[HOME_REGION] ?? ROLL.wilds;
+      sand[k] = DUNES[id] || 0;
+      if (sand[k]) dry = true;
     }
   }
   const baseB = blur(base, 2, 3);
   const rollB = blur(roll, 2, 2);
+  const sandB = dry ? blur(sand, 3, 2) : null;
 
   // 2. mountains, raised from the same shapes the grid was cut from (the rim
   //    of the world, the peaks, the sect's massif, 靈溪谷's ring), so they rise
@@ -259,7 +282,8 @@ function buildHeights() {
 
   const ground = new Float32Array(HW * HH);
   eachIn(0, 0, WORLD_W, WORLD_H, (k, x, y) => {
-    const z = sampleCell(baseB, x, y) + (fbm(x / 520, y / 520, 61) - 0.5) * 2 * sampleCell(rollB, x, y);
+    let z = sampleCell(baseB, x, y) + (fbm(x / 520, y / 520, 61) - 0.5) * 2 * sampleCell(rollB, x, y);
+    if (sandB) z += sampleCell(sandB, x, y) * dune(x, y);
     ground[k] = z;
     let m = rockAt(x, y);
     // rock rises sheer from the edge of open ground, never out over it

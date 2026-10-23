@@ -72,6 +72,10 @@ export const NODES = {
     name: '南嶺山隘', kind: 'pass', qi: 0.6, danger: 1, at: [2580, 4300], label: [2620, 4200],
     desc: '鎮南丘陵間的一道山隘。翻過去，就是南嶺——瘴氣、蠱、說另一種話的人。鎮上的人一輩子也不往那邊去。',
   },
+  west_pass: {
+    name: '西風口', kind: 'pass', qi: 0.6, danger: 2, at: [330, 560], label: [330, 430],
+    desc: '古戰場往西，一條埋了一半的古道鑽進山裡。山口的風一年到頭往東吹，帶著沙。翻過去，就是西漠。',
+  },
   // up where no road goes (air: you get there by flying, or leaping)
   crane_peak: {
     name: '孤鶴峰', kind: 'peak', air: true, qi: 1.2, danger: 0, at: [1620, 2212],

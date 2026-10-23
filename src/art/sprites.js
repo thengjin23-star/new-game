@@ -18,6 +18,10 @@ const STRAW = [178, 150, 98];
 const STONE = [158, 152, 140];
 const GOLD = [196, 158, 78];
 const SNOW = [250, 250, 252];
+// the desert's (西漠): rammed earth and mud brick, and the sand drifted against them
+const MUD = [192, 160, 116];
+const MUD_DARK = [150, 120, 84];
+const SAND = [226, 200, 150];
 
 const LEAF = {
   spring: [[118, 156, 96], [140, 172, 108]],
@@ -424,6 +428,143 @@ function scarecrow(ctx, rnd, fx, fy, H) {
   ctx.fill();
 }
 
+// ── the desert's (西漠) ──
+
+/** 胡楊: a thick trunk that twists and splits low, ragged clumps of leaves at the ends of its limbs (gold in autumn). */
+function poplarTree(ctx, rnd, fx, fy, H, season) {
+  shadow(ctx, fx, fy, H * 0.32, H * 0.08);
+  const lean = (rnd() - 0.5) * H * 0.16;
+  const forkY = fy - H * (0.3 + rnd() * 0.1);
+  stroke(ctx, fx - H * 0.04, fy, fx + lean * 0.3 + (rnd() - 0.5) * 6, fy - H * 0.16, fx + lean * 0.5, forkY, H * 0.15, H * 0.08, rgba(INK, 0.86));
+  // the bark: furrows twisting up it
+  ctx.strokeStyle = rgba(PAPER, 0.35);
+  ctx.lineWidth = 0.6;
+  for (let k = 0; k < 3; k++) {
+    const x = fx + (k - 1) * H * 0.03;
+    ctx.beginPath();
+    ctx.moveTo(x, fy - 2);
+    ctx.quadraticCurveTo(x + (rnd() - 0.5) * 6, fy - H * 0.15, x + lean * 0.45, forkY + 4);
+    ctx.stroke();
+  }
+  const limbs = 2 + Math.floor(rnd() * 2);
+  const tips = [];
+  for (let i = 0; i < limbs; i++) {
+    const a = -Math.PI / 2 + (i / (limbs - 1) - 0.5) * 1.6 + (rnd() - 0.5) * 0.4;
+    const len = H * (0.3 + rnd() * 0.16);
+    const bx = fx + lean * 0.5;
+    const ex = bx + Math.cos(a) * len;
+    const ey = forkY + Math.sin(a) * len * 0.9;
+    stroke(ctx, bx, forkY, bx + Math.cos(a + (rnd() - 0.5) * 0.9) * len * 0.5, forkY + Math.sin(a) * len * 0.42, ex, ey, H * 0.07, H * 0.02, rgba(INK, 0.82));
+    tips.push([ex, ey]);
+  }
+  if (season === 'winter') {
+    for (const [tx, ty] of tips) dab(ctx, tx, ty - 1, H * 0.05, SNOW, 0.75, 0.4);
+    return;
+  }
+  const pal = season === 'autumn' ? [[226, 170, 52], [238, 198, 82], [200, 134, 42]] : season === 'spring' ? [[152, 178, 122], [176, 196, 140]] : [[126, 148, 102], [150, 166, 118]];
+  for (const [tx, ty] of tips) {
+    for (let k = 0; k < 4; k++) dab(ctx, tx + (rnd() - 0.5) * H * 0.24, ty + (rnd() - 0.55) * H * 0.16, H * (0.08 + rnd() * 0.06), pal[k % pal.length], 0.62, 0.78);
+    for (let k = 0; k < 14; k++) dab(ctx, tx + (rnd() - 0.5) * H * 0.3, ty + (rnd() - 0.6) * H * 0.2, H * 0.022, rnd() < 0.4 ? INK : pal[0], 0.3 + rnd() * 0.4, 0.6);
+  }
+}
+
+/** A dead 胡楊: 死而千年不倒 — a bare, silvered trunk, twisted, its limbs broken off short. */
+function deadPoplar(ctx, rnd, fx, fy, H, season) {
+  shadow(ctx, fx, fy, H * 0.24, H * 0.06);
+  const grey = [134, 124, 108];
+  const lean = (rnd() - 0.5) * H * 0.34;
+  const top = [fx + lean, fy - H * (0.55 + rnd() * 0.15)];
+  stroke(ctx, fx, fy, fx + lean * 0.15 + (rnd() - 0.5) * 8, fy - H * 0.3, top[0], top[1], H * 0.13, H * 0.05, rgba(grey, 0.96));
+  stroke(ctx, fx + H * 0.03, fy, fx + lean * 0.2, fy - H * 0.3, top[0] + 2, top[1], H * 0.05, H * 0.02, rgba(INK, 0.55));
+  for (let i = 0; i < 3; i++) {
+    const t = 0.35 + rnd() * 0.5;
+    const bx = fx + lean * t;
+    const by = fy - (fy - top[1]) * t;
+    const a = -Math.PI / 2 + (rnd() < 0.5 ? -1 : 1) * (0.5 + rnd() * 0.7);
+    const len = H * (0.1 + rnd() * 0.14);
+    stroke(ctx, bx, by, bx + Math.cos(a) * len * 0.5, by + Math.sin(a) * len * 0.5, bx + Math.cos(a) * len, by + Math.sin(a) * len, H * 0.045, H * 0.03, rgba(grey, 0.95));
+    // broken off: a blunt dark end
+    dab(ctx, bx + Math.cos(a) * len, by + Math.sin(a) * len, H * 0.016, INK, 0.7, 1);
+  }
+  // a split down the trunk
+  line(ctx, [[fx + lean * 0.1, fy - H * 0.08], [fx + lean * 0.25, fy - H * 0.26], [fx + lean * 0.32, fy - H * 0.34]], 0.8, rgba(INK, 0.6));
+  if (season === 'winter') dab(ctx, top[0], top[1] - 1, H * 0.05, SNOW, 0.6, 0.4);
+}
+
+/** 紅柳: a shrub of thin red stems and feathery grey-green, pink with plumes in summer and autumn. */
+function tamarisk(ctx, rnd, fx, fy, H, season) {
+  shadow(ctx, fx, fy, H * 0.55, H * 0.13);
+  for (let i = 0; i < 12; i++) {
+    const a = -Math.PI / 2 + (rnd() - 0.5) * 1.7;
+    const len = H * (0.55 + rnd() * 0.45);
+    const x = fx + (rnd() - 0.5) * H * 0.2;
+    stroke(ctx, x, fy, x + Math.cos(a) * len * 0.4, fy + Math.sin(a) * len * 0.5, x + Math.cos(a) * len, fy + Math.sin(a) * len, 1.6, 0.4, rgba([136, 66, 52], 0.85));
+  }
+  const plume = season === 'summer' || season === 'autumn' ? [218, 144, 166] : season === 'winter' ? [150, 132, 122] : [158, 172, 144];
+  const green = season === 'winter' ? [138, 130, 120] : [140, 156, 126];
+  for (let i = 0; i < 18; i++) dab(ctx, fx + (rnd() - 0.5) * H * 0.95, fy - H * (0.42 + rnd() * 0.55), H * (0.07 + rnd() * 0.05), rnd() < 0.45 ? plume : green, 0.6, 0.7);
+  for (let i = 0; i < 16; i++) dab(ctx, fx + (rnd() - 0.5) * H, fy - H * (0.4 + rnd() * 0.6), H * 0.02, INK, 0.35, 0.6);
+}
+
+/** 駱駝刺: a low, spiny clump. */
+function camelThorn(ctx, rnd, fx, fy, H, season) {
+  const col = season === 'winter' ? [140, 128, 110] : season === 'autumn' ? [168, 136, 82] : [118, 138, 94];
+  for (let i = 0; i < 10; i++) {
+    const x = fx + (rnd() - 0.5) * H * 1.4;
+    const lean = (rnd() - 0.5) * H * 0.9;
+    const h = H * (0.45 + rnd() * 0.55);
+    stroke(ctx, x, fy, x + lean * 0.4, fy - h * 0.5, x + lean, fy - h, 1.3, 0.2, rgba(rnd() < 0.4 ? INK : col, 0.72));
+  }
+  ctx.strokeStyle = rgba(INK, 0.5);
+  ctx.lineWidth = 0.5;
+  ctx.beginPath();
+  for (let i = 0; i < 8; i++) {
+    const x = fx + (rnd() - 0.5) * H * 1.3;
+    const y = fy - rnd() * H * 0.8;
+    ctx.moveTo(x, y);
+    ctx.lineTo(x + (rnd() - 0.5) * 3, y - 2);
+  }
+  ctx.stroke();
+}
+
+/** What is left of a mud-brick wall: a broken block, its courses showing, sand drifted against its foot. */
+function ruinChunk(ctx, rnd, fx, fy) {
+  shadow(ctx, fx, fy, 18, 4, 0.22);
+  const w = 24 + rnd() * 12;
+  const h = 12 + rnd() * 13;
+  const x0 = fx - w / 2;
+  const pts = [[x0, fy], [x0, fy - h * (0.5 + rnd() * 0.4)]];
+  for (let k = 1; k < 5; k++) pts.push([x0 + (w * k) / 5 + (rnd() - 0.5) * 3, fy - h * (0.55 + rnd() * 0.45)]);
+  pts.push([x0 + w, fy - h * (0.3 + rnd() * 0.5)], [x0 + w, fy]);
+  ctx.fillStyle = rgba(MUD, 0.97);
+  ctx.beginPath();
+  pts.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)));
+  ctx.closePath();
+  ctx.fill();
+  ctx.save();
+  ctx.clip();
+  ctx.strokeStyle = rgba(MUD_DARK, 0.7);
+  ctx.lineWidth = 0.5;
+  ctx.beginPath();
+  for (let y = fy - 4, k = 0; y > fy - h - 2; y -= 4, k++) {
+    ctx.moveTo(x0, y);
+    ctx.lineTo(x0 + w, y);
+    for (let x = x0 + (k % 2 ? 3 : 0); x < x0 + w; x += 7) {
+      ctx.moveTo(x, y);
+      ctx.lineTo(x, y + 4);
+    }
+  }
+  ctx.stroke();
+  ctx.restore();
+  ctx.strokeStyle = rgba(INK, 0.75);
+  ctx.lineWidth = 0.9;
+  ctx.beginPath();
+  pts.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)));
+  ctx.stroke();
+  // the sand drifted against it
+  dab(ctx, fx + (rnd() - 0.5) * 6, fy, w * 0.6, SAND, 0.95, 0.2);
+}
+
 const DECOR = {
   pine: { w: 56, h: 100, fx: 28, fy: 96, draw: (c, r, s, v) => pineTree(c, r, 28, 96, 92, s) },
   leaf: { w: 64, h: 84, fx: 32, fy: 80, draw: (c, r, s, v) => leafyTree(c, r, 32, 80, 78, s, v) },
@@ -439,6 +580,11 @@ const DECOR = {
   pillar: { w: 30, h: 50, fx: 15, fy: 47, draw: (c, r) => pillarProp(c, r, 15, 47, 42) },
   bones: { w: 30, h: 12, fx: 15, fy: 10, draw: (c, r) => bonesProp(c, r, 13, 10) },
   scarecrow: { w: 40, h: 48, fx: 20, fy: 45, draw: (c, r) => scarecrow(c, r, 20, 45, 42) },
+  poplar: { w: 80, h: 98, fx: 40, fy: 94, draw: (c, r, s) => poplarTree(c, r, 40, 94, 86, s) },
+  deadpoplar: { w: 64, h: 80, fx: 32, fy: 76, draw: (c, r, s) => deadPoplar(c, r, 32, 76, 70, s) },
+  tamarisk: { w: 48, h: 46, fx: 24, fy: 43, draw: (c, r, s) => tamarisk(c, r, 24, 43, 36, s) },
+  thorn: { w: 28, h: 16, fx: 14, fy: 14, draw: (c, r, s) => camelThorn(c, r, 14, 14, 11, s) },
+  ruin: { w: 48, h: 34, fx: 24, fy: 30, draw: (c, r) => ruinChunk(c, r, 24, 30) },
 };
 
 /** A tree, rock or prop (8 variants each, per season). */
@@ -819,8 +965,8 @@ function stoneBase(ctx, x0, x1, base, h) {
 function buildingSprite(key, st, season) {
   const { w, h: d, sprite } = st;
   const snow = season === 'winter';
-  const tall = { teahouse: 2, auction: 3, tower: 2, bighall: 2, pagoda: 1 }[sprite] || 1;
-  const wallH = { mansion: 24, house: 17, shop: 20, teahouse: 18, auction: 18, hall: 26, bighall: 28, farmhouse: 15, shrine_small: 11, shrine: 18, hut: 14, tower: 18, teashed: 16 }[sprite] || 16;
+  const tall = { teahouse: 2, auction: 3, tower: 2, bighall: 2, pagoda: 1, beacon: 3, fort: 3, observatory: 2 }[sprite] || 1;
+  const wallH = { mansion: 24, house: 17, shop: 20, teahouse: 18, auction: 18, hall: 26, bighall: 28, farmhouse: 15, shrine_small: 11, shrine: 18, hut: 14, tower: 18, teashed: 16, adobe: 18, beacon: 22, fort: 26, ruinwall: 24, observatory: 22 }[sprite] || 16;
   const extraTop = sprite === 'pagoda' ? 150 : sprite === 'bigtree' ? 130 : 0;
   const W = sprite === 'bigtree' ? 130 : w * 1.4 + 24;
   const H = wallH * tall + d * 0.95 + 26 + extraTop;
@@ -984,7 +1130,7 @@ const BUILD = {
     lattice(ctx, b.x0 + 14, b.base - 6 - b.wallH * 0.72, 10, 10);
     lattice(ctx, b.x1 - 24, b.base - 6 - b.wallH * 0.72, 10, 10);
     roofShape(ctx, b.x0 - 4, b.x1 + 4, b.base - 6 - b.wallH, b.d * 0.85, TILE, { snow: b.snow, lift: 7, ornament: GOLD });
-    plaque(ctx, b.fx, b.base - 6 - b.wallH + 5, '清虛觀', 22);
+    plaque(ctx, b.fx, b.base - 6 - b.wallH + 5, b.st.name || '清虛觀', 22);
   },
   bighall(ctx, rnd, b) {
     shadow(ctx, b.fx, b.base + 1, b.w * 0.66, 10, 0.28);
@@ -1230,6 +1376,220 @@ const BUILD = {
     line(ctx, [[b.fx, top - 28], [b.fx, top - 36]], 1.4, rgba(INK, 0.9));
     dab(ctx, b.fx, top - 36, 2, GOLD, 1, 1);
   },
+  // ── the desert's (西漠) ──
+  /** 烽燧: a beacon tower of rammed earth, tapering, the rammed layers showing, brushwood stacked on top. */
+  beacon(ctx, rnd, b) {
+    shadow(ctx, b.fx, b.base, b.w * 0.75, 6, 0.24);
+    const top = b.base - 62;
+    const hw0 = b.w * 0.5;
+    const hw1 = b.w * 0.34;
+    ctx.fillStyle = rgba(MUD, 1);
+    ctx.beginPath();
+    ctx.moveTo(b.fx - hw0, b.base);
+    ctx.lineTo(b.fx - hw1, top);
+    ctx.lineTo(b.fx + hw1, top);
+    ctx.lineTo(b.fx + hw0, b.base);
+    ctx.closePath();
+    ctx.fill();
+    // the shaded side
+    ctx.fillStyle = rgba(MUD_DARK, 0.55);
+    ctx.beginPath();
+    ctx.moveTo(b.fx + hw0 * 0.35, b.base);
+    ctx.lineTo(b.fx + hw1 * 0.35, top);
+    ctx.lineTo(b.fx + hw1, top);
+    ctx.lineTo(b.fx + hw0, b.base);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = rgba(MUD_DARK, 0.75);
+    ctx.lineWidth = 0.6;
+    ctx.beginPath();
+    for (let y = b.base - 5; y > top; y -= 5) {
+      const t = (b.base - y) / (b.base - top);
+      const hw = hw0 + (hw1 - hw0) * t;
+      ctx.moveTo(b.fx - hw, y);
+      ctx.lineTo(b.fx + hw, y);
+    }
+    ctx.stroke();
+    ctx.strokeStyle = rgba(INK, 0.8);
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(b.fx - hw0, b.base);
+    ctx.lineTo(b.fx - hw1, top);
+    ctx.lineTo(b.fx + hw1, top);
+    ctx.lineTo(b.fx + hw0, b.base);
+    ctx.stroke();
+    // a ladder up the side, and the brushwood waiting on top
+    line(ctx, [[b.fx - hw0 - 3, b.base], [b.fx - hw1 - 3, top + 4]], 1, rgba(WOOD, 1));
+    line(ctx, [[b.fx - hw0 + 3, b.base], [b.fx - hw1 + 3, top + 4]], 1, rgba(WOOD, 1));
+    for (let y = b.base - 6; y > top + 6; y -= 6) {
+      const t = (b.base - y) / (b.base - top);
+      const x = b.fx - hw0 + (hw0 - hw1) * t;
+      line(ctx, [[x - 3, y], [x + 3, y]], 0.8, rgba(WOOD, 1));
+    }
+    for (let k = 0; k < 7; k++) {
+      const x = b.fx + (rnd() - 0.5) * hw1 * 1.4;
+      line(ctx, [[x, top + 1], [x + (rnd() - 0.5) * 4, top - 7 - rnd() * 4]], 1.1, rgba([96, 70, 44], 0.9));
+    }
+    if (b.snow) dab(ctx, b.fx, top, hw1, SNOW, 0.8, 0.25);
+  },
+  /** 土房: a mud-brick house with a flat roof, the ends of its beams showing under the parapet, a rug for a door. */
+  adobe(ctx, rnd, b) {
+    shadow(ctx, b.fx, b.base + 1, b.w * 0.62, 7, 0.22);
+    const top = b.base - b.wallH;
+    // the roof seen from above: a flat of packed earth
+    ctx.fillStyle = rgba([206, 178, 132], 1);
+    ctx.fillRect(b.x0, top - b.d * 0.5, b.w, b.d * 0.5);
+    ctx.strokeStyle = rgba(INK, 0.6);
+    ctx.lineWidth = 0.8;
+    ctx.strokeRect(b.x0, top - b.d * 0.5, b.w, b.d * 0.5);
+    // the front wall
+    ctx.fillStyle = rgba(MUD, 1);
+    ctx.fillRect(b.x0, top, b.w, b.wallH);
+    ctx.fillStyle = rgba(MUD_DARK, 0.25);
+    for (let k = 0; k < 5; k++) ctx.fillRect(b.x0 + rnd() * (b.w - 8), top + rnd() * (b.wallH - 4), 6 + rnd() * 6, 2);
+    ctx.strokeStyle = rgba(INK, 0.75);
+    ctx.lineWidth = 0.9;
+    ctx.strokeRect(b.x0, top, b.w, b.wallH);
+    // the parapet and the beam ends under it
+    ctx.fillStyle = rgba([176, 146, 104], 1);
+    ctx.fillRect(b.x0 - 1, top - 3, b.w + 2, 3);
+    for (let x = b.x0 + 4; x < b.x1 - 2; x += 7) dab(ctx, x, top + 2, 1.2, WOOD, 1, 1);
+    // a door hung with a rug, a small dark window
+    const rug = [[150, 52, 40], [60, 92, 120], [176, 132, 52]][Math.floor(rnd() * 3)];
+    ctx.fillStyle = rgba(rug, 1);
+    ctx.fillRect(b.fx - 4, b.base - b.wallH * 0.66, 8, b.wallH * 0.66);
+    ctx.strokeStyle = rgba(PAPER, 0.7);
+    ctx.lineWidth = 0.5;
+    ctx.beginPath();
+    for (let y = b.base - b.wallH * 0.6; y < b.base - 1; y += 3) {
+      ctx.moveTo(b.fx - 4, y);
+      ctx.lineTo(b.fx + 4, y);
+    }
+    ctx.stroke();
+    if (b.w > 40) {
+      ctx.fillStyle = rgba(INK, 0.8);
+      ctx.fillRect(b.x0 + b.w * 0.2, top + b.wallH * 0.3, 5, 4);
+    }
+    if (b.snow) {
+      ctx.fillStyle = rgba(SNOW, 0.85);
+      ctx.fillRect(b.x0, top - b.d * 0.5, b.w, b.d * 0.3);
+    }
+  },
+  /** 關城: a gate of rammed earth with crenellations, an arch through it, and a tiled gate-tower up on top. */
+  fort(ctx, rnd, b) {
+    shadow(ctx, b.fx, b.base + 1, b.w * 0.66, 9, 0.26);
+    const H = 40;
+    const top = b.base - H;
+    ctx.fillStyle = rgba(MUD, 1);
+    ctx.fillRect(b.x0, top, b.w, H);
+    ctx.strokeStyle = rgba(MUD_DARK, 0.6);
+    ctx.lineWidth = 0.6;
+    ctx.beginPath();
+    for (let y = b.base - 5; y > top; y -= 5) {
+      ctx.moveTo(b.x0, y);
+      ctx.lineTo(b.x1, y);
+    }
+    ctx.stroke();
+    // crenellations
+    ctx.fillStyle = rgba(MUD, 1);
+    for (let x = b.x0; x < b.x1 - 4; x += 10) ctx.fillRect(x, top - 5, 6, 5);
+    ctx.strokeStyle = rgba(INK, 0.8);
+    ctx.lineWidth = 1;
+    ctx.strokeRect(b.x0, top, b.w, H);
+    // the arch, dark
+    ctx.fillStyle = rgba(INK, 0.85);
+    ctx.beginPath();
+    ctx.moveTo(b.fx - 9, b.base);
+    ctx.lineTo(b.fx - 9, b.base - 18);
+    ctx.quadraticCurveTo(b.fx, b.base - 30, b.fx + 9, b.base - 18);
+    ctx.lineTo(b.fx + 9, b.base);
+    ctx.closePath();
+    ctx.fill();
+    // the gate-tower: plaster and pillars under a tiled roof
+    const tx0 = b.fx - b.w * 0.24;
+    const tx1 = b.fx + b.w * 0.24;
+    wall(ctx, tx0, tx1, top - 5 - 18, top - 5, [214, 196, 160]);
+    pillars(ctx, tx0, tx1, top - 5 - 18, top - 5, 4, [140, 48, 36]);
+    roofShape(ctx, tx0 - 4, tx1 + 4, top - 5 - 18, b.d * 0.5, TILE, { snow: b.snow, lift: 5, ornament: GOLD });
+    plaque(ctx, b.fx, top + 6, b.st.name || '落日關', 20);
+  },
+  /** A stretch of a city wall the sand has half buried: rammed earth, its top broken and uneven. */
+  ruinwall(ctx, rnd, b) {
+    shadow(ctx, b.fx, b.base + 1, b.w * 0.6, 5, 0.2);
+    const H = 20 + rnd() * 12;
+    const pts = [[b.x0, b.base], [b.x0, b.base - H * (0.4 + rnd() * 0.4)]];
+    const n = Math.max(4, Math.round(b.w / 12));
+    for (let k = 1; k < n; k++) {
+      const gap = rnd() < 0.15;
+      pts.push([b.x0 + (b.w * k) / n, b.base - (gap ? H * 0.2 : H * (0.6 + rnd() * 0.4))]);
+    }
+    pts.push([b.x1, b.base - H * (0.3 + rnd() * 0.5)], [b.x1, b.base]);
+    ctx.fillStyle = rgba(MUD, 1);
+    ctx.beginPath();
+    pts.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)));
+    ctx.closePath();
+    ctx.fill();
+    ctx.save();
+    ctx.clip();
+    ctx.strokeStyle = rgba(MUD_DARK, 0.6);
+    ctx.lineWidth = 0.6;
+    ctx.beginPath();
+    for (let y = b.base - 5; y > b.base - H - 2; y -= 5) {
+      ctx.moveTo(b.x0, y);
+      ctx.lineTo(b.x1, y);
+    }
+    ctx.stroke();
+    ctx.fillStyle = rgba(MUD_DARK, 0.35);
+    ctx.fillRect(b.fx + b.w * 0.1, b.base - H, b.w * 0.4, H);
+    ctx.restore();
+    ctx.strokeStyle = rgba(INK, 0.75);
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    pts.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)));
+    ctx.stroke();
+    // sand drifted up against it
+    for (let k = 0; k < 3; k++) dab(ctx, b.x0 + b.w * (0.2 + 0.3 * k) + (rnd() - 0.5) * 8, b.base, b.w * 0.24, SAND, 0.95, 0.25);
+  },
+  /** 觀星台: three stone terraces stepped up one on another, and on top what is left of a ring of bronze that once turned with the stars. */
+  observatory(ctx, rnd, b) {
+    shadow(ctx, b.fx, b.base + 1, b.w * 0.66, 9, 0.26);
+    let y = b.base;
+    let hw = b.w / 2;
+    for (let k = 0; k < 3; k++) {
+      const h = 12;
+      stoneBase(ctx, b.fx - hw, b.fx + hw, y, h);
+      // the stair up the middle
+      ctx.fillStyle = rgba([136, 130, 120], 1);
+      ctx.fillRect(b.fx - 7, y - h, 14, h);
+      ctx.strokeStyle = rgba(INK, 0.5);
+      ctx.lineWidth = 0.5;
+      ctx.beginPath();
+      for (let s = y - 3; s > y - h; s -= 3) {
+        ctx.moveTo(b.fx - 7, s);
+        ctx.lineTo(b.fx + 7, s);
+      }
+      ctx.stroke();
+      y -= h;
+      hw *= 0.74;
+    }
+    // the armillary: rings of green bronze, one of them broken and fallen askew
+    const cx = b.fx;
+    const cy = y - 16;
+    ctx.strokeStyle = rgba([86, 120, 104], 0.95);
+    ctx.lineWidth = 1.8;
+    ctx.beginPath();
+    ctx.ellipse(cx, cy, 13, 13, 0, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.ellipse(cx, cy, 13, 5, 0.4, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.ellipse(cx + 2, cy + 3, 5, 13, -0.3, 0.4, Math.PI * 1.5);
+    ctx.stroke();
+    line(ctx, [[cx, cy + 13], [cx, y]], 1.6, rgba([86, 120, 104], 0.95));
+    line(ctx, [[cx - 8, y], [cx + 8, y]], 2, rgba(STONE, 1));
+    if (b.snow) dab(ctx, cx, y - 1, hw, SNOW, 0.7, 0.2);
+  },
   bigtree(ctx, rnd, b) {
     // 老槐樹: older than the town, wider than three men can reach around
     ctx.save();
@@ -1254,13 +1614,55 @@ const BUILD = {
   },
 };
 
+/** A fort's wall of rammed earth, one cell long, with crenellations. */
+function mudWallSprite(dir, season) {
+  if (dir === 'v') {
+    return bake(`wm:v:${season}`, 22, 60, 11, 56, (ctx) => {
+      ctx.fillStyle = rgba(MUD, 1);
+      ctx.fillRect(4, 6, 14, 50);
+      ctx.fillStyle = rgba(MUD_DARK, 0.4);
+      ctx.fillRect(11, 6, 7, 50);
+      ctx.strokeStyle = rgba(INK, 0.7);
+      ctx.lineWidth = 0.8;
+      ctx.strokeRect(4, 6, 14, 50);
+      for (let y = 8; y < 54; y += 8) {
+        ctx.fillStyle = rgba(MUD, 1);
+        ctx.fillRect(2, y, 3, 4);
+      }
+    });
+  }
+  return bake(`wm:h:${season}`, 44, 38, 22, 34, (ctx) => {
+    shadow(ctx, 22, 34, 24, 3, 0.2);
+    ctx.fillStyle = rgba(MUD, 1);
+    ctx.fillRect(1, 12, 42, 22);
+    ctx.strokeStyle = rgba(MUD_DARK, 0.6);
+    ctx.lineWidth = 0.5;
+    ctx.beginPath();
+    for (let y = 17; y < 34; y += 5) {
+      ctx.moveTo(1, y);
+      ctx.lineTo(43, y);
+    }
+    ctx.stroke();
+    ctx.fillStyle = rgba(MUD, 1);
+    for (let x = 2; x < 42; x += 10) ctx.fillRect(x, 7, 6, 5);
+    ctx.strokeStyle = rgba(INK, 0.75);
+    ctx.lineWidth = 0.9;
+    ctx.strokeRect(1, 12, 42, 22);
+    if (season === 'winter') {
+      ctx.fillStyle = rgba(SNOW, 0.85);
+      ctx.fillRect(1, 11, 42, 2);
+    }
+  });
+}
+
 /** A building or painted object from places.js STRUCTURES (by its index, on the map you are on). */
 export function structureSprite(st, index, season) {
   return buildingSprite(`st:${mapId()}:${index}:${season}`, st, season);
 }
 
-/** A stretch of the market's wall, one cell long: 'h' runs across, 'v' runs away from you. */
-export function wallSprite(dir, season) {
+/** A stretch of the market's wall (a fort's of mud, if mud), one cell long: 'h' runs across, 'v' runs away from you. */
+export function wallSprite(dir, season, mud = false) {
+  if (mud) return mudWallSprite(dir, season);
   if (dir === 'v') {
     return bake(`w:v:${season}`, 22, 66, 11, 62, (ctx) => {
       ctx.fillStyle = rgba([150, 144, 132], 1);

@@ -3,9 +3,11 @@
 // grows on it (land), its places (nodes), and what stands on it (places).
 
 import { NANLING_GEO, NANLING_LAND, NANLING_NODES, NANLING_PLACES, NANLING_PEOPLE } from './nanling.js';
+import { XIMO_GEO, XIMO_LAND, XIMO_NODES, XIMO_PLACES, XIMO_PEOPLE } from './ximo.js';
 
 export const LANDS = [
   { id: 'nanling', name: '南嶺', title: '南嶺・青竹一帶', home: 'qingzhu_village', geo: NANLING_GEO, land: NANLING_LAND, nodes: NANLING_NODES, places: NANLING_PLACES, people: NANLING_PEOPLE },
+  { id: 'ximo', name: '西漠', title: '西漠・月泉一帶', home: 'yuequan', geo: XIMO_GEO, land: XIMO_LAND, nodes: XIMO_NODES, places: XIMO_PLACES, people: XIMO_PEOPLE },
 ];
 
 /** One table from every map's entries of a kind (by region): e.g. landTable('trees'). */

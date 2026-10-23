@@ -24,6 +24,8 @@ export const MAPS = {
 export const CROSSINGS = {
   south_pass: { to: 'nanling', at: [2614, 210], hours: 6 },
   ling_pass: { to: 'donghuang', at: [2610, 4400], hours: 6 },
+  west_pass: { to: 'ximo', at: [5080, 1650], hours: 10 },
+  luori_pass: { to: 'donghuang', at: [120, 560], hours: 10 },
 };
 
 let current = 'donghuang';

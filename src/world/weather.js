@@ -20,6 +20,9 @@ export const WEATHER = {
   storm: { name: '雷雨', walk: 0.86, see: 0.65, dim: 0.42, wet: true, thunder: true },
   fog: { name: '霧', walk: 0.97, see: 0.55, dim: 0.12, fog: true },
   snow: { name: '雪', walk: 0.88, see: 0.8, dim: 0.16, snow: true },
+  // dry country's (西漠, 0.22): a noon sun that burns, a wind that is all sand (nothing flies in it)
+  heat: { name: '烈日', walk: 0.94, see: 0.94, dim: 0, heat: true },
+  sandstorm: { name: '沙暴', walk: 0.7, see: 0.4, dim: 0.36, sand: true },
 };
 
 /** Signs in the sky. */
@@ -55,6 +58,9 @@ const LEAN = {
 /** Places that keep their mists. */
 const MISTY = { lingxi_valley: 0.12, mirror_lake: 0.1, black_forest: 0.05, river_isle: 0.12, great_river: 0.12, crane_ferry: 0.08, ...landTable('misty') };
 
+/** Dry country (another map's, world/maps/): no rain and no mist there. */
+const ARID = landTable('arid');
+
 /** The hour of the world, counted from the first morning. */
 const hourOf = (s) => s.day * 24 + (s.tod ?? 8);
 
@@ -71,6 +77,7 @@ export function weatherAt(s, region = s.player?.loc, hour = hourOf(s)) {
   // up on a high peak you stand above it all
   if (NODES[region]?.kind === 'peak') return 'clear';
   const wet = noise1(seed, hour / 14) * 0.7 + noise1(seed + 7, hour / 5) * 0.3 + L.wet;
+  if (ARID[region]) return dryWeather(seed, hour, wet, season);
   if (wet > 0.66) {
     if (season === 'winter') return 'snow';
     return wet > 0.72 && noise1(seed + 29, hour / 6) < L.storm ? 'storm' : 'rain';
@@ -82,18 +89,32 @@ export function weatherAt(s, region = s.player?.loc, hour = hourOf(s)) {
   return 'clear';
 }
 
+/**
+ * Over dry country the same front brings no rain: where it would rain hard
+ * the wind gets up and fills with sand; a little less, and the sky is only
+ * dull with dust. A clear day burns from late morning to the middle of the
+ * afternoon (not in winter: the desert's winter sun is thin).
+ */
+function dryWeather(seed, hour, wet, season) {
+  if (wet > 0.8) return 'sandstorm';
+  if (wet > 0.72 || noise1(seed + 13, hour / 20) > 0.8) return 'cloudy';
+  const tod = ((hour % 24) + 24) % 24;
+  if (tod >= 11 && tod < 16 && season !== 'winter') return 'heat';
+  return 'clear';
+}
+
 /** The weather now, with what it does. */
 export function weatherNow(s, region) {
   const id = weatherAt(s, region);
   return { id, ...WEATHER[id] };
 }
 
-/** How many hours until it stops raining (or snowing) here: at most a day. */
+/** How many hours until it stops raining (or snowing, or blowing sand) here: at most a day. */
 export function hoursToClear(s, region = s.player?.loc) {
   const h0 = hourOf(s);
   for (let k = 1; k <= 24; k++) {
     const w = WEATHER[weatherAt(s, region, h0 + k)];
-    if (!w.wet && !w.snow) return k;
+    if (!w.wet && !w.snow && !w.sand) return k;
   }
   return 24;
 }

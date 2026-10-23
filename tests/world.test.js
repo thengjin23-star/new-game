@@ -52,18 +52,26 @@ test('every region of every map has ground you can walk to (from the temple, in 
   useMap('donghuang');
 });
 
-test('up where no road goes: the summits and the sandbar stand apart, with room to stand', () => {
-  const g = world();
-  for (const [id, n] of Object.entries(NODES)) {
-    if (!n.air) continue;
-    assert.ok(g.regionCells[id] >= 10, `${id} has room (${g.regionCells[id]} cells)`);
-    assert.equal(findPath({ flags: {} }, ...NODES.qingxu_temple.at, ...n.at), null, `no walk reaches ${id}`);
-  }
-  // every cell of the air is in an air region, and none of them is walked to
-  for (let k = 0; k < g.air.length; k++) {
-    if (!g.air[k]) continue;
-    assert.ok(NODES[REGION_IDS[g.reg[k]]]?.air, `air cell ${k} lies in an air region`);
-    assert.ok(!g.reach[k]);
+test('up where no road goes: the summits and the sandbar stand apart, with room to stand (on every map)', () => {
+  try {
+    for (const map of Object.keys(MAPS)) {
+      useMap(map);
+      const g = world();
+      const home = NODES[MAPS[map].home].at;
+      for (const [id, n] of Object.entries(NODES)) {
+        if (!n.air || mapOf(id) !== map) continue;
+        assert.ok(g.regionCells[id] >= 10, `${id} has room (${g.regionCells[id]} cells)`);
+        assert.equal(findPath({ flags: {} }, ...home, ...n.at), null, `no walk reaches ${id}`);
+      }
+      // every cell of the air is in an air region, and none of them is walked to
+      for (let k = 0; k < g.air.length; k++) {
+        if (!g.air[k]) continue;
+        assert.ok(NODES[REGION_IDS[g.reg[k]]]?.air, `${map}: air cell ${k} lies in an air region`);
+        assert.ok(!g.reach[k]);
+      }
+    }
+  } finally {
+    useMap('donghuang');
   }
 });
 

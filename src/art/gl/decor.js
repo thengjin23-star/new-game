@@ -10,7 +10,7 @@ import { STRUCTURES } from '../../world/places.js';
 import { GLSL_COMMON, GLSL_LIGHT } from './env.js';
 
 const RES = 2; // atlas pixels per world unit (as the sprites are painted)
-const SWAY = { pine: 0.6, leaf: 1, dark: 0.7, dead: 0.3, bamboo: 1.4, willow: 1.6, bush: 0.5, tuft: 1.2, reed: 1.6, scarecrow: 0.2 };
+const SWAY = { pine: 0.6, leaf: 1, dark: 0.7, dead: 0.3, bamboo: 1.4, willow: 1.6, bush: 0.5, tuft: 1.2, reed: 1.6, scarecrow: 0.2, poplar: 0.7, deadpoplar: 0.1, tamarisk: 1.1, thorn: 0.8 };
 
 const VERT = /* glsl */ `
 ${GLSL_COMMON}

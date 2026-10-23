@@ -12,7 +12,7 @@ import { SCENE_OF_EVENT } from './scenes.js';
 import { EVENTS } from '../content/index.js';
 import { eligible, startEvent } from '../core/events.js';
 
-const NATURAL = new Set([T.GRASS, T.TALLGRASS, T.HILL, T.WASTE, T.SAND, T.FARM]);
+const NATURAL = new Set([T.GRASS, T.TALLGRASS, T.HILL, T.WASTE, T.SAND, T.FARM, T.DUNE]);
 const WOODS = new Set([T.FOREST, T.DEEP]);
 const ROADS = new Set([T.ROAD, T.TRAIL]);
 const WATER = new Set([T.WATER]);

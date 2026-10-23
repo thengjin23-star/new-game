@@ -51,6 +51,9 @@ export let STRUCTURES = [
   { x: 1150, y: 3088, w: 26, h: 20, sprite: 'well' },
   // 獵戶營地
   { x: 1730, y: 2765, w: 50, h: 30, sprite: 'tent' },
+  // 西風口: a beacon tower nobody lights, a stone at the top of the gap
+  { x: 470, y: 470, w: 40, h: 40, sprite: 'beacon', landmark: true },
+  { x: 210, y: 618, w: 18, h: 8, sprite: 'stele', block: false, name: '西風口' },
   // 落霞坊市
   { x: 3820, y: 2470, w: 100, h: 56, sprite: 'shop' },
   { x: 3690, y: 2420, w: 90, h: 56, sprite: 'teahouse' },
@@ -233,6 +236,11 @@ export let POIS = [
   {
     id: 'south_pass_gate', region: 'south_pass', x: 2614, y: 4520, name: '山隘', verb: '翻過山隘',
     text: '山隘那頭，是南嶺。',
+  },
+  // the gap to 西漠 (0.22)
+  {
+    id: 'west_pass_gate', region: 'west_pass', x: 60, y: 560, name: '山口', verb: '出西風口',
+    text: '山口那頭，是西漠。',
   },
   { id: 'sword_cleft', region: 'sword_peak', x: 3656, y: 400, name: '劍痕', verb: '參悟', sprite: 'sword_scar', text: '一道把峰頂整個劈開的裂口，深不見底。風從裡面吹出來，冷得像刀。' },
 ];

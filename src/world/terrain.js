@@ -102,7 +102,7 @@ function smooth(a, b, x) {
 /** The regions of the map you are on (the grid keeps each cell's as an index into this). */
 export let REGION_IDS = REGION_SHAPES.map((r) => r.id);
 let RIDX = Object.fromEntries(REGION_IDS.map((id, k) => [id, k]));
-const NATURAL = new Set([T.GRASS, T.TALLGRASS, T.HILL, T.FOREST, T.DEEP, T.FARM, T.WASTE, T.SAND]);
+const NATURAL = new Set([T.GRASS, T.TALLGRASS, T.HILL, T.FOREST, T.DEEP, T.FARM, T.WASTE, T.SAND, T.DUNE]);
 
 export const idxOf = (i, j) => j * COLS + i;
 export const cellX = (i) => (i + 0.5) * CELL;
@@ -118,6 +118,10 @@ const BASE = {
   mirror_lake: (x, y) => (fbm(x / 200, y / 200, 4) > 0.6 ? T.TALLGRASS : T.GRASS),
   crane_ferry: (x, y) => (fbm(x / 180, y / 180, 5) > 0.52 ? T.GRASS : T.SAND),
   south_pass: (x, y) => (fbm(x / 140, y / 140, 15) > 0.55 ? T.HILL : T.GRASS),
+  west_pass: (x, y) => {
+    const n = fbm(x / 130, y / 130, 16);
+    return n > 0.6 ? T.HILL : n < 0.4 ? T.WASTE : T.GRASS;
+  },
   farmland: () => T.FARM,
   lingxi_valley: (x, y) => (fbm(x / 140, y / 140, 6) > 0.58 ? T.FOREST : T.GRASS),
   qingyun_sect: (x, y) => (fbm(x / 200, y / 200, 7) > 0.55 ? T.FOREST : T.GRASS),
@@ -786,9 +790,15 @@ const TREE_MIX = {
   sword_peak: [['pine', 45], ['dead', 55]],
   river_isle: [['willow', 100]],
   south_pass: [['pine', 70], ['leaf', 30]],
+  west_pass: [['pine', 45], ['dead', 55]],
   // the other maps' regions
   ...landTable('trees'),
 };
+
+/** Regions where the grass grows trees thicker than wild ground does (another map's: an oasis), by region: the share of cells. */
+const GROVE = landTable('grove');
+/** Regions strewn with what is left of something (another map's: a buried city), by region: [prop, share of cells]. */
+const STREWN = landTable('strewn');
 
 function pickMix(mix, r) {
   let total = 0;
@@ -821,6 +831,24 @@ function makeDecor(g) {
         }
       };
       const nearWater = hasNeighbor(g, i, j, (nt) => nt === T.WATER);
+      // what is left of the old, lying about in the sand
+      const strewn = STREWN[region];
+      if (strewn && (t === T.DUNE || t === T.SAND || t === T.WASTE)) {
+        let acc = 0;
+        let hit = null;
+        const rs = hash2(i, j, 240);
+        for (const [kind, share] of strewn) {
+          acc += share;
+          if (rs < acc) {
+            hit = kind;
+            break;
+          }
+        }
+        if (hit) {
+          place(hit, 1, 241);
+          continue;
+        }
+      }
       // up on a summit: wind-bent pines and bare rock
       if (summits.has(region) && (t === T.GRASS || t === T.HILL)) {
         if (r0 < 0.3) place(pickMix(mix, hash2(i, j, 220)), 1, 221, 0.9);
@@ -843,7 +871,7 @@ function makeDecor(g) {
           else if (r0 < 0.5) place('tuft', 1, 163);
           break;
         case T.GRASS:
-          if (r0 < 0.035) place(pickMix(mix, hash2(i, j, 170)), 1, 171);
+          if (r0 < (GROVE[region] || 0.035)) place(pickMix(mix, hash2(i, j, 170)), 1, 171);
           else if (r0 < 0.08) place('bush', 1, 172);
           else if (r0 < 0.26 && region !== 'qingshi_town') place('tuft', 1, 173);
           else if (r0 < 0.3 && nearWater) place('reed', 2, 174);
@@ -861,10 +889,20 @@ function makeDecor(g) {
             else if (r0 < 0.36) place('dead', 1, 193);
             else if (r0 < 0.46) place('rock', 1, 194);
           } else if (r0 < 0.1) place('rock', 1, 195);
+          else if (TREE_MIX[region]?.some(([k]) => k === 'tamarisk') && r0 < 0.16) place('thorn', 1, 196);
           break;
         case T.SAND:
           if (nearWater && r0 < 0.3) place('reed', 2, 200);
           else if (r0 < 0.07) place('rock', 1, 201, 0.8);
+          break;
+        // the desert: a dead tree now and then, camel-thorn, the bones of what did not get across
+        case T.DUNE:
+          if (r0 < 0.012) place(pickMix(mix, hash2(i, j, 250)), 1, 251, 0.95);
+          else if (r0 < 0.06) place('thorn', 1, 252);
+          else if (r0 < 0.064) place('bones', 1, 253);
+          break;
+        case T.QUICK:
+          if (r0 < 0.02) place('bones', 1, 255);
           break;
         case T.FARM:
           if (r0 < 0.008) place('scarecrow', 1, 210);
@@ -971,7 +1009,7 @@ function makeMountains(g) {
 
 function makeHerbs(g) {
   const clear = clearings();
-  const GOOD = new Set([T.GRASS, T.HILL, T.FOREST, T.DEEP, T.TALLGRASS, T.SAND, T.FARM]);
+  const GOOD = new Set([T.GRASS, T.HILL, T.FOREST, T.DEEP, T.TALLGRASS, T.SAND, T.FARM, T.DUNE, T.WASTE]);
   const out = [];
   for (const [region, conf] of Object.entries(GATHER)) {
     const cand = [];
@@ -1005,7 +1043,7 @@ export function asciiMap() {
   const ch = {
     [T.VOID]: ' ', [T.GRASS]: '.', [T.ROAD]: '=', [T.FARM]: '"', [T.FOREST]: 'f', [T.DEEP]: 'F', [T.HILL]: ',',
     [T.PEAK]: '^', [T.CLIFF]: '#', [T.WATER]: '~', [T.SAND]: ':', [T.WASTE]: '_', [T.PAVED]: '+', [T.BRIDGE]: 'H',
-    [T.WALL]: '|', [T.GATE]: 'G', [T.TRAIL]: '-', [T.TALLGRASS]: ';',
+    [T.WALL]: '|', [T.GATE]: 'G', [T.TRAIL]: '-', [T.TALLGRASS]: ';', [T.DUNE]: 'd', [T.QUICK]: 'q',
   };
   const lines = [];
   for (let j = 0; j < ROWS; j++) {

@@ -31,6 +31,8 @@ export const T = {
   GATE: 15,
   TRAIL: 16,
   TALLGRASS: 17,
+  DUNE: 18,
+  QUICK: 19,
 };
 
 export const TERRAIN = {
@@ -52,6 +54,9 @@ export const TERRAIN = {
   [T.GATE]: { name: '山門', pass: true, speed: 1 },
   [T.TRAIL]: { name: '小徑', pass: true, speed: 1.1 },
   [T.TALLGRASS]: { name: '荒草', pass: true, speed: 0.8 },
+  // the desert's (西漠, 0.22): dunes the wind shapes, and sand that swallows what stands on it
+  [T.DUNE]: { name: '沙丘', pass: true, speed: 0.8 },
+  [T.QUICK]: { name: '流沙', pass: true, speed: 0.55 },
 };
 
 /**
@@ -73,6 +78,8 @@ export let REGION_SHAPES = [
   { id: 'crane_ferry', poly: [[4200, 3600], [4700, 3560], [4760, 4320], [4220, 4340]] },
   // the pass over the southern hills, to 南嶺
   { id: 'south_pass', poly: [[2440, 4180], [2800, 4180], [2820, 4600], [2420, 4600]] },
+  // the gap in the western mountains, past 古戰場: to 西漠
+  { id: 'west_pass', poly: [[0, 380], [420, 380], [440, 760], [0, 760]] },
   { id: 'farmland', poly: [[1650, 3420], [2880, 3400], [2880, 3990], [1700, 4000]] },
   { id: 'lingxi_valley', ellipse: [600, 1820, 420, 460] },
   { id: 'qingyun_sect', poly: [[3780, 560], [4720, 600], [4740, 1760], [3820, 1790]] },
@@ -170,6 +177,8 @@ export let ROADS = [
   { kind: 'trail', width: 26, pts: [[2250, 3420], [2250, 3920]] },
   // on south, up over the hills to the pass (and 南嶺 beyond)
   { kind: 'trail', width: 30, pts: [[2250, 3920], [2390, 4060], [2550, 4230], [2600, 4400], [2614, 4570]] },
+  // 西陲古道: on west from 古戰場, half buried, to the gap in the mountains (and 西漠 beyond)
+  { kind: 'trail', width: 28, pts: [[2600, 700], [2250, 640], [1900, 600], [1560, 500], [1100, 470], [650, 520], [300, 560], [20, 560]] },
   { kind: 'trail', width: 26, pts: [[1760, 3800], [2860, 3790]] },
   { kind: 'trail', width: 24, pts: [[1400, 3220], [1450, 2980], [1700, 2780]] },
   { kind: 'trail', width: 24, pts: [[1060, 3240], [1060, 3120]] },
@@ -183,6 +192,8 @@ export let ROADS = [
 
 /** 落霞坊市的城牆: the ring of cells just inside this rectangle. Roads make the gates. */
 export let MARKET_WALL = [3600, 2240, 4320, 2880];
+/** How that wall is built (another map's may be of mud), and the name over its gate. */
+export let WALL_LOOK = { mud: false, name: '落霞坊' };
 
 /**
  * The world's edge: mountains to the north, west and south (and east, if
@@ -190,7 +201,10 @@ export let MARKET_WALL = [3600, 2240, 4320, 2880];
  * next map ({ side, at: where along that side, half: half its width, depth:
  * how far the mountains stand back there }).
  */
-export let BORDER = { north: 170, west: 150, south: 4370, eastRiver: 'great', gaps: [{ side: 'south', at: 2610, half: 170, depth: 360 }] };
+export let BORDER = {
+  north: 170, west: 150, south: 4370, eastRiver: 'great',
+  gaps: [{ side: 'south', at: 2610, half: 170, depth: 360 }, { side: 'west', at: 560, half: 170, depth: 360 }],
+};
 
 /** The river whose far bank is the edge of the world (beyond it only mist and water), and its region. */
 export let EDGE_RIVER = 'great';
@@ -223,7 +237,7 @@ export let UPLAND = [
 
 /** 東荒・青石一帶, as above (what a map file gives for its own land). */
 export const DONGHUANG_GEO = {
-  REGION_SHAPES, PEAKS, AIRY, CLIFF_LINES, VALLEY, SECT, RIVERS, LAKES, ROADS, MARKET_WALL, BORDER,
+  REGION_SHAPES, PEAKS, AIRY, CLIFF_LINES, VALLEY, SECT, RIVERS, LAKES, ROADS, MARKET_WALL, WALL_LOOK, BORDER,
   EDGE_RIVER, RIVER_REGION, HOME_REGION, REACH_FROM, UPLAND,
 };
 
@@ -239,6 +253,7 @@ export function setGeo(g) {
   LAKES = g.LAKES || [];
   ROADS = g.ROADS || [];
   MARKET_WALL = g.MARKET_WALL || null;
+  WALL_LOOK = g.WALL_LOOK || { mud: false, name: '' };
   BORDER = g.BORDER;
   EDGE_RIVER = g.EDGE_RIVER || null;
   RIVER_REGION = g.RIVER_REGION || null;

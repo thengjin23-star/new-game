@@ -2,7 +2,7 @@
 // chunks, everything standing on it sorted by depth, clouds over what you
 // have not seen, and the light of the hour.
 
-import { WORLD_W, WORLD_H, CELL, COLS, ROWS, T, AIRY } from '../world/geo.js';
+import { WORLD_W, WORLD_H, CELL, COLS, ROWS, T, AIRY, WALL_LOOK } from '../world/geo.js';
 import { world, idxOf, cellX, cellY, hash2, REGION_IDS, colOf, rowOf } from '../world/terrain.js';
 import { STRUCTURES, POIS } from '../world/places.js';
 import { NODES } from '../world/map.js';
@@ -18,6 +18,7 @@ import { paintBeast, paintHero, drawGroundMarks, drawCombatOverlay } from './com
 import { seasonOf } from '../core/calendar.js';
 import { stream } from '../core/rng.js';
 import { onMapChange } from '../world/atlas.js';
+import { landTable } from '../world/maps/index.js';
 
 const CH = 640; // chunk size in world units
 const CHX = Math.ceil(WORLD_W / CH);
@@ -36,6 +37,9 @@ const GROUND = {
   [T.FARM]: { spring: [170, 196, 124], summer: [128, 170, 96], autumn: [218, 190, 106], winter: [206, 198, 180] },
   [T.WASTE]: { spring: [172, 166, 152], summer: [168, 162, 148], autumn: [176, 164, 146], winter: [212, 212, 208] },
   [T.SAND]: { spring: [216, 202, 164], summer: [218, 204, 162], autumn: [214, 196, 156], winter: [226, 222, 212] },
+  // the desert's (西漠): dunes the colour of millet, and the darker, smoother sand that swallows
+  [T.DUNE]: { spring: [224, 198, 146], summer: [228, 198, 140], autumn: [222, 192, 138], winter: [226, 210, 180] },
+  [T.QUICK]: { all: [192, 166, 120] },
   [T.PAVED]: { all: [198, 192, 180] },
   [T.WALL]: { all: [198, 192, 180] },
   [T.GATE]: { all: [190, 176, 140] },
@@ -51,7 +55,7 @@ const GROUND = {
 const groundColor = (t, season) => GROUND[t]?.[season] || GROUND[t]?.all || GROUND[T.GRASS][season];
 
 /** Under a mountain the ground is whatever the land around it is. */
-const UNDER_MOUNTAIN = { qingshi_hill: T.HILL, black_forest: T.FOREST, ancient_ruins: T.WASTE, qingyun_sect: T.HILL, lingxi_valley: T.GRASS };
+const UNDER_MOUNTAIN = { qingshi_hill: T.HILL, black_forest: T.FOREST, ancient_ruins: T.WASTE, qingyun_sect: T.HILL, lingxi_valley: T.GRASS, ...landTable('under') };
 
 const PAPER_BG = { spring: '#e9e5d4', summer: '#e3e3d0', autumn: '#ece0c8', winter: '#efefec' };
 
@@ -114,7 +118,6 @@ function chunkOf(x, y) {
 
 // ── painting the ground ──
 
-const NATURAL = new Set([T.GRASS, T.TALLGRASS, T.HILL, T.FOREST, T.DEEP, T.WASTE, T.SAND, T.PEAK, T.CLIFF, T.VOID, T.PAVED, T.WALL, T.GATE, T.WATER, T.BRIDGE, T.ROAD, T.TRAIL]);
 
 export function paintGround(ctx, x0, y0, x1, y1, season, detail = 1) {
   const g = world();
@@ -294,6 +297,41 @@ function groundMarks(ctx, rnd, t, x, y, season, region) {
     case T.SAND: {
       ctx.fillStyle = rgba(INK, 0.16);
       for (let k = 0; k < 4; k++) ctx.fillRect(x + (rnd() - 0.5) * CELL, y + (rnd() - 0.5) * CELL, 1.1, 1.1);
+      break;
+    }
+    case T.DUNE: {
+      // ripples the wind leaves: short strokes across it, a little bowed
+      ctx.strokeStyle = rgba([150, 116, 70], 0.3);
+      ctx.lineWidth = 0.7;
+      ctx.beginPath();
+      const n = 2 + Math.floor(r * 3);
+      for (let k = 0; k < n; k++) {
+        const rx = x + (rnd() - 0.5) * CELL;
+        const ry = y + (rnd() - 0.5) * CELL;
+        const len = 5 + rnd() * 7;
+        ctx.moveTo(rx, ry - len);
+        ctx.quadraticCurveTo(rx + 2.2, ry, rx, ry + len);
+      }
+      ctx.stroke();
+      if (r > 0.93) {
+        ctx.fillStyle = rgba(INK, 0.14);
+        for (let k = 0; k < 3; k++) ctx.fillRect(x + (rnd() - 0.5) * CELL, y + (rnd() - 0.5) * CELL, 1.2, 1.2);
+      }
+      break;
+    }
+    case T.QUICK: {
+      // smooth, with a slow whirl here and there where it is drawing something down
+      if (r < 0.35) {
+        ctx.strokeStyle = rgba([110, 84, 52], 0.28);
+        ctx.lineWidth = 0.8;
+        const cx = x + (rnd() - 0.5) * CELL * 0.6;
+        const cy = y + (rnd() - 0.5) * CELL * 0.6;
+        for (let k = 1; k <= 3; k++) {
+          ctx.beginPath();
+          ctx.ellipse(cx, cy, 3.5 * k, 2 * k, 0, rnd() * 2, rnd() * 2 + 4.2);
+          ctx.stroke();
+        }
+      }
       break;
     }
     case T.PEAK:
@@ -936,7 +974,7 @@ export function createWorldView(canvas, { onFrame, idle } = {}) {
         break;
       }
       case 'wall':
-        drawSprite(wallSprite(it.a.dir, season), it.a.x, it.a.y);
+        drawSprite(wallSprite(it.a.dir, season, WALL_LOOK.mud), it.a.x, it.a.y);
         break;
       case 'struct': {
         const st = it.a;

@@ -1,9 +1,9 @@
 // The sound of a place: beds that run all the time (wind, leaves, a
-// stream, a big river, rain, a crowd, insects, a low drone, a shimmer), each
+// stream, a big river, rain, a crowd, insects, blown sand, a low drone, a shimmer), each
 // at a level audio/director.js sets from where you are and what the sky is
 // doing; and things that happen now and then over them (a bird, thunder, a
 // wind chime, a far bell, the night watchman's clapper, a drop of water in
-// a cave, a wolf far off). A bed that has been silent a while is put to
+// a cave, a wolf far off, a caravan's bells). A bed that has been silent a while is put to
 // sleep, and woken when it is wanted again.
 
 import { ctx, bus, noise } from './engine.js';
@@ -19,6 +19,8 @@ const BEDS = {
   crowd: { filters: [['bandpass', 480, 0.9], ['peaking', 1100, 1.4, 5]], wob: [[0.23, 0.4], [0.57, 0.25]], gain: 0.17 },
   // crickets: a narrow, high hiss, trilled fast and swelling slow
   insects: { filters: [['bandpass', 4600, 9], ['peaking', 4600, 3, 9]], wob: [[23, 0.85], [0.55, 0.5]], gain: 0.08 },
+  // blown sand: a dry hiss, high up, that comes and goes with the gusts
+  sand: { filters: [['highpass', 2600, 0.5], ['lowpass', 7000, 0.6]], wob: [[0.09, 0.5], [0.33, 0.3]], gain: 0.1 },
   drone: { tones: [55, 82.4, 110.2], gain: 0.05 },
   shimmer: { tones: [2093, 2637, 3136], wobTone: 0.17, gain: 0.006 },
 };
@@ -171,6 +173,10 @@ export function happen(ev, dt) {
       for (let k = 0; k < 3; k++) burst(t + k * 0.14, { ...o, hz: 700 + Math.random() * 200, q: 6, vel: 0.12, len: 0.05 });
     } else if (name === 'moonbell') {
       bell('chime', 88 + Math.floor(Math.random() * 3), t, { ...o, vel: 0.35 });
+    } else if (name === 'camelbell') {
+      // a caravan far off: a dull bell, once with each step of the beast
+      const top = 74 + Math.floor(Math.random() * 3);
+      for (let k = 0; k < 4; k++) bell('chime', top + (k % 2 ? 0 : 2), t + k * 0.64, { ...o, vel: 0.3 - k * 0.05 });
     }
   }
 }
