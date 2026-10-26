@@ -295,4 +295,39 @@ export const BEAST_MOVES = {
   venomspray: { shape: 'fan', reach: 140, arc: 0.7, windup: 0.9, recover: 0.9, cd: 8, mult: 1.2, lunge: 0, fx: 'spray', poison: [3, 0.12], pool: { secs: 4, r: 30, dps: 0.25, kind: 'venom', poison: [3, 0.1] } },
   broodcall: { shape: 'call', windup: 1, recover: 0.6, cd: 18, first: 3, fx: 'howl', call: { kind: 'swarm', n: 2, max: 2, share: 0.25, line: '蠱母的殼縫一張，兩團蠱蟲嗡地湧了出來！' } },
   burrow: { shape: 'blink', near: 70, at: 64, windup: 0.6, recover: 0.4, cd: 11, fx: 'burrow' },
+
+  // ── 0.22 西漠 ──
+  // 沙蠍: the pincers, two snaps running; the tail brought over its back and down on you (the venom
+  // stays in you); a scuttle at you
+  pincer: { shape: 'fan', reach: 50, arc: 1.5, windup: 0.36, recover: 0.5, cd: 1.5, mult: 0.85, lunge: 10, fx: 'claw', combo: 2, again: 0.24 },
+  stinger: { shape: 'fan', reach: 66, arc: 0.6, windup: 0.62, recover: 0.6, cd: 4.2, mult: 1.35, lunge: 6, fx: 'sting', poison: [4, 0.14] },
+  scuttle: { shape: 'leap', min: 70, max: 180, windup: 0.45, speed: 620, width: 28, overshoot: 22, recover: 0.6, cd: 5, mult: 1.2 },
+  // 沙盜: a curved blade; sand flung in your eyes (slow: for a moment you stumble, half blind)
+  sabre: { shape: 'fan', reach: 56, arc: 1.8, windup: 0.4, recover: 0.5, cd: 1.3, mult: 1.05, lunge: 10, fx: 'cut' },
+  sandthrow: { shape: 'fan', reach: 92, arc: 0.9, windup: 0.5, recover: 0.5, cd: 6, mult: 0.5, lunge: 0, fx: 'sand', slow: 1.4 },
+  // 禿鷲: his great curved blade, three cuts running; a whirl of sand all round him
+  vulturecut: { shape: 'fan', reach: 66, arc: 2.2, windup: 0.55, recover: 0.7, cd: 3.4, mult: 1.15, lunge: 10, fx: 'cut', combo: 3, again: 0.3 },
+  sandwhirl: { shape: 'ring', radius: 110, windup: 0.9, recover: 0.8, cd: 8, mult: 1.2, push: 70, fx: 'sandring', slow: 1.2 },
+  // 乾屍: dust breathed out of a dead mouth, that sickens (and a clutch that drinks: grasp)
+  dustbreath: { shape: 'fan', reach: 84, arc: 0.9, windup: 0.7, recover: 0.7, cd: 6, mult: 0.8, lunge: 0, fx: 'sand', poison: [3, 0.1] },
+  // 枯禪: a palm of gold; beads flung, five at once; a roar like a lion's that throws you back; the dead
+  // monks called up off their cushions
+  zenpalm: { shape: 'fan', reach: 74, arc: 1.3, windup: 0.6, recover: 0.6, cd: 2.4, mult: 1.35, lunge: 14, fx: 'zen' },
+  beads: { shape: 'shot', min: 50, max: 300, range: 330, windup: 0.65, speed: 400, width: 16, recover: 0.5, cd: 4.5, mult: 0.85, count: 5, spread: 0.22, fx: 'beads' },
+  lionroar: { shape: 'ring', radius: 140, windup: 0.9, recover: 0.8, cd: 10, mult: 0.8, push: 120, fx: 'roar' },
+  monkcall: { shape: 'call', windup: 1, recover: 0.6, cd: 20, first: 4, fx: 'howl', call: { kind: 'mummy', n: 2, max: 2, share: 0.3, line: '枯禪的唇動了動。殿裡的蒲團上，兩具乾屍慢慢站了起來。' } },
+  // 沙蛟: its jaws; the tail swept all round it; sand spouting up where you stand; down into the sand
+  // and up behind you; the sand about it turned to quicksand (it drags at your feet)
+  jiaobite: { shape: 'fan', reach: 66, arc: 1.3, windup: 0.5, recover: 0.6, cd: 1.8, mult: 1.35, lunge: 16, fx: 'bite' },
+  tailsweep: { shape: 'ring', radius: 96, windup: 0.85, recover: 0.8, cd: 6, mult: 1.5, push: 80, fx: 'sandring' },
+  sandspout: { shape: 'zone', min: 0, max: 280, radius: 52, windup: 1, recover: 0.7, cd: 5, mult: 1.6, fx: 'sandspout' },
+  sandsink: { shape: 'blink', near: 70, at: 70, windup: 0.6, recover: 0.4, cd: 10, fx: 'burrow' },
+  quickpool: { shape: 'zone', min: 0, max: 300, radius: 46, windup: 1, recover: 0.7, cd: 8.5, mult: 0.6, count: 3, spread: 90, fx: 'sandspout', pool: { secs: 5, r: 46, dps: 0.15, kind: 'sand' } },
+  // 石傀: a stone fist on a long stone arm (and the ground stamped where you stand: stomp; a head-down charge: bearcharge)
+  stonefist: { shape: 'fan', reach: 66, arc: 1.4, windup: 0.6, recover: 0.7, cd: 2, mult: 1.4, lunge: 12, fx: 'punch' },
+  // 石翁仲: the halberd swept wide; starlight from its eyes, straight at you; the ground split where you
+  // stand (smash); the stone guards called up
+  halberd: { shape: 'fan', reach: 84, arc: 2.4, windup: 0.7, recover: 0.9, cd: 3.6, mult: 1.6, lunge: 8, fx: 'cut' },
+  starbeam: { shape: 'shot', min: 60, max: 340, range: 380, windup: 0.9, speed: 720, width: 26, recover: 0.6, cd: 5, mult: 1.45, fx: 'star' },
+  stonecall: { shape: 'call', windup: 1.1, recover: 0.7, cd: 22, first: 6, fx: 'howl', call: { kind: 'stone_puppet', n: 2, max: 2, share: 0.3, line: '石翁仲把戟往地上一頓。兩旁的石傀，眼裡亮起了光。' } },
 };

@@ -191,7 +191,10 @@ const sound = {
   lost_city: 'lostcity', underpalace: 'tomb', wanghe_terrace: 'peak', ximo_wilds: 'desert',
 };
 
-export const XIMO_LAND_BASE = { ground, trees, settled, roll, dunes, under, arid, grove, strewn, sound };
+/** Where the noon sun and a sandstorm do not wear on you (world/explore.js exposure): the town, the fort, the canyon, under the ground. */
+const shade = { yuequan: 1, luori_pass: 1, shatuo_temple: 1, underpalace: 1 };
+
+export const XIMO_LAND_BASE = { ground, trees, settled, roll, dunes, under, arid, grove, strewn, sound, shade };
 
 /** The desert's own ground colours (art/worldview.js): dark gravel for its stony waste, dry grass, sandy hills. */
 export const XIMO_PALETTE = {
@@ -372,7 +375,32 @@ const POIS = [
   { id: 'find_xm_cache', region: 'gobi', x: 2060, y: 1760, name: '石堆', verb: '查看', hidden: { r: 90 }, treasure: { text: '一堆壘得整整齊齊的石頭，底下藏著一個油布包：幾瓶丹藥，一袋靈石。大概是哪個沙盜偷偷攢下的。', effects: [['ls', 40], ['item', 'heal_pill', 2]] } },
 ];
 
-export const XIMO_PLACES = { STRUCTURES, POIS, BEASTS: [] };
+const dark = (s) => s.tod >= 19.5 || s.tod < 5;
+const killed = (s, kind) => (s.vars.kills?.[kind] || 0) > 0;
+
+/**
+ * What roams (places.js BEASTS, for this map): 沙蠍 under the sand of 黑戈壁 and the 沙海; 沙狼 out on
+ * the dunes; 禿鷲寨's men on the caravan road below their fort, and their master inside it (they talk
+ * first; once he is dealt with, they are gone); the dead monks of 沙陀寺 up and walking by night (until
+ * they are at rest), and their abbot before his hall; the old 蛟 in its hollow in 流沙 (once killed, gone
+ * for good); stone guards along the avenue of 沉沙古城. (The 石翁仲 at the 星門 is the steles' story's.)
+ */
+const BEASTS = [
+  { id: 'scorpions_a', kind: 'scorpion', n: 3, title: '沙蠍', x: 2150, y: 1720, r: 140, respawn: 20, power: 110 },
+  { id: 'scorpions_b', kind: 'scorpion', n: 3, title: '沙蠍', x: 3300, y: 2700, r: 150, respawn: 20, power: 110 },
+  { id: 'scorpions_c', kind: 'scorpion', n: 2, title: '沙蠍', x: 4100, y: 2650, r: 130, respawn: 20, power: 96 },
+  { id: 'sand_wolves_a', kind: 'sand_wolf', n: 3, title: '沙狼', x: 3800, y: 3300, r: 160, respawn: 30, power: 180 },
+  { id: 'sand_wolves_b', kind: 'sand_wolf', n: 3, title: '沙狼', x: 1700, y: 3500, r: 160, respawn: 30, power: 180 },
+  { id: 'sand_bandits_a', kind: 'sand_bandit', n: 3, title: '沙盜', x: 2330, y: 1480, r: 170, event: 'xm_bandits', respawn: 20, power: 120, cond: (s) => !s.flags.vulture_done },
+  { id: 'vulture_a', kind: 'vulture', title: '禿鷲', x: 2570, y: 1120, r: 110, event: 'xm_vulture', respawn: 999, power: 230, cond: (s) => !s.flags.vulture_done },
+  { id: 'mummies_a', kind: 'mummy', n: 3, title: '乾屍', x: 2640, y: 3460, r: 150, respawn: 5, power: 100, cond: (s) => dark(s) && !s.flags.shatuo_rest },
+  { id: 'kuchan_a', kind: 'kuchan', title: '枯禪', x: 2700, y: 3790, r: 90, respawn: 999, power: 240, cond: (s) => dark(s) && !killed(s, 'kuchan') },
+  { id: 'sand_jiao_a', kind: 'sand_jiao', title: '沙蛟', x: 1100, y: 2350, r: 140, respawn: 999, power: 260, cond: (s) => !killed(s, 'sand_jiao') },
+  { id: 'stone_puppets_a', kind: 'stone_puppet', n: 2, title: '石傀', x: 660, y: 760, r: 120, respawn: 15, power: 160 },
+  { id: 'stone_puppets_b', kind: 'stone_puppet', n: 2, title: '石傀', x: 1240, y: 760, r: 120, respawn: 15, power: 160 },
+];
+
+export const XIMO_PLACES = { STRUCTURES, POIS, BEASTS };
 
 // ── who lives here ──
 

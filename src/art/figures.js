@@ -23,6 +23,12 @@ export const LOOKS = {
   a_luo: { robe: [36, 40, 66], trim: [150, 40, 50], hair: 'wrap', silver: true },
   a_shan: { robe: [96, 84, 62], trim: [60, 52, 40], hair: 'wrap', wrapCol: [70, 60, 46], short: true },
   han_san: { robe: [92, 96, 86], trim: [60, 60, 54], hair: 'bun', sword: true },
+  // 西漠: faces the sun has darkened, cloth wound round the head against the sand
+  lao_qin: { robe: [104, 92, 72], trim: [150, 60, 44], hair: 'cap', beard: true, white: true, skin: [204, 166, 126] },
+  kang_tuotou: { robe: [150, 88, 54], trim: [214, 176, 96], hair: 'turban', wrapCol: [236, 228, 208], beard: true, skin: [196, 152, 110] },
+  yue_niang: { robe: [168, 70, 56], trim: [222, 190, 120], hair: 'long', pin: true, skin: [214, 178, 140] },
+  song_fuzi: { robe: [86, 94, 104], trim: [56, 60, 66], hair: 'topknot', beard: true },
+  liao_kong: { robe: [184, 140, 72], trim: [140, 64, 40], hair: 'bald', skin: [200, 164, 124] },
 };
 
 /** Townsfolk: farmer, woman, elder, child, cultivator, disciple. */
@@ -159,7 +165,7 @@ export function drawPerson(ctx, x, y, look, opts = {}) {
 }
 
 function head(ctx, look, face, t, y0 = -29) {
-  ctx.fillStyle = rgba(SKIN, 1);
+  ctx.fillStyle = rgba(look.skin || SKIN, 1);
   ctx.beginPath();
   ctx.arc(face * 0.5, y0, 3.8, 0, Math.PI * 2);
   ctx.fill();
@@ -238,6 +244,28 @@ function head(ctx, look, face, t, y0 = -29) {
         ctx.stroke();
       }
       break;
+    case 'turban': {
+      // a long cloth wound round and round the head (西漠), its end hanging down behind: sand-white, or the color it is given
+      ctx.fillStyle = look.wrapCol ? rgba(look.wrapCol, 1) : 'rgba(226,218,196,1)';
+      ctx.beginPath();
+      ctx.ellipse(face * 0.3, y0 - 3.3, 5, 3.2, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(-face * 3.4, y0 - 2);
+      ctx.quadraticCurveTo(-face * 6, y0 + 3, -face * 5 + Math.sin(t * 2) * 0.5, y0 + 8);
+      ctx.lineTo(-face * 2.8, y0 + 2);
+      ctx.closePath();
+      ctx.fill();
+      ctx.strokeStyle = rgba(INK, 0.5);
+      ctx.lineWidth = 0.5;
+      ctx.beginPath();
+      ctx.moveTo(face * 0.3 - 4.6, y0 - 1.6);
+      ctx.quadraticCurveTo(face * 0.3, y0 - 4.2, face * 0.3 + 4.6, y0 - 3.4);
+      ctx.moveTo(face * 0.3 - 4, y0 - 3.8);
+      ctx.quadraticCurveTo(face * 0.3, y0 - 6, face * 0.3 + 3.8, y0 - 5.2);
+      ctx.stroke();
+      break;
+    }
     default:
       ctx.beginPath();
       ctx.arc(face * 0.5, y0 - 1.2, 3.8, Math.PI, 0);
@@ -245,6 +273,22 @@ function head(ctx, look, face, t, y0 = -29) {
       ctx.beginPath();
       ctx.arc(face * 0.2, y0 - 5.4, 1.9, 0, Math.PI * 2);
       ctx.fill();
+  }
+  if (look.veil) {
+    // the face wrapped up to the eyes against the sand: only a slit between turban and veil, and the eyes in it
+    ctx.fillStyle = look.wrapCol ? rgba(look.wrapCol, 1) : 'rgba(226,218,196,1)';
+    ctx.beginPath();
+    ctx.moveTo(face * 0.5 - 3.9, y0 + 0.8);
+    ctx.lineTo(face * 0.5 + 3.9, y0 + 0.8);
+    ctx.quadraticCurveTo(face * 0.5 + 3.6, y0 + 4.6, face * 0.5, y0 + 4.5);
+    ctx.quadraticCurveTo(face * 0.5 - 3.6, y0 + 4.6, face * 0.5 - 3.9, y0 + 0.8);
+    ctx.fill();
+    ctx.strokeStyle = rgba(INK, 0.4);
+    ctx.lineWidth = 0.5;
+    ctx.stroke();
+    ctx.fillStyle = rgba(INK, 0.95);
+    ctx.fillRect(face * 1.3 - 0.35, y0 - 0.15, 0.7, 0.7);
+    ctx.fillRect(face * 3 - 0.35, y0 - 0.15, 0.7, 0.7);
   }
   if (look.beard) {
     ctx.fillStyle = look.hair === 'topknot' || look.white ? 'rgba(236,236,230,1)' : 'rgba(60,54,48,0.95)';

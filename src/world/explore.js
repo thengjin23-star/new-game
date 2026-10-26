@@ -170,6 +170,41 @@ export function windproof(s) {
   return !!weatherNow(s).sand && gearStats(s).wind >= 1;
 }
 
+/** The noon sun cannot touch you: what you wear keeps you cool (寒玉佩, 蛟鱗甲), or a 冰心丹 is still working. */
+export function sunproof(s) {
+  return gearStats(s).cool >= 1 || (s.player.buffs?.bingxin || 0) > 0;
+}
+
+/**
+ * Out on the open sand (西漠, 0.22) the noon sun and a sandstorm wear on you as you go: so far,
+ * and you are warned; as far again, and something comes of it (a 'sky' event, content/events/ximo.js).
+ * Not where there is shade (a town, a fort, a canyon: the land's 'shade' table), not with what keeps
+ * it off; there, and once it lets up, it wears off again.
+ */
+const EXPOSED = { heat: 1400, sandstorm: 700 };
+const SHADE = landTable('shade');
+function exposure(s, L, moved) {
+  const w = s.world;
+  const sky = weatherNow(s);
+  const need = EXPOSED[sky.id];
+  if (!need || SHADE[w.region] || (sky.heat ? sunproof(s) : windproof(s))) {
+    if (w.exposed) w.exposed = Math.max(0, w.exposed - moved * 2);
+    return false;
+  }
+  const was = w.exposed || 0;
+  w.exposed = was + moved;
+  if (was < need * 0.6 && w.exposed >= need * 0.6) {
+    L.feed.push({ kind: 'bad', text: sky.heat ? '日頭毒得像火，你的嘴唇乾裂了，頭一陣一陣地發暈。該找個陰涼地方，或者喝口水了。' : '沙子打在臉上生疼，眼睛睜不開，腳下的路也快看不清了。' });
+  }
+  if (w.exposed < need) return false;
+  w.exposed = 0;
+  const id = pickEvent(s, 'sky', w.region);
+  if (!id) return false;
+  stopWalking(L);
+  startEvent(s, id);
+  return true;
+}
+
 // ── the frame step ──
 
 /**
@@ -706,6 +741,7 @@ function afterMove(s, L, moved, fighting = false) {
   findHidden(s, L, 1);
   if (fighting) return;
   if (autoTriggers(s, L)) return;
+  if (exposure(s, L, moved)) return;
   if (L.dayTurned) {
     L.dayTurned = false;
     if (fireDue(s, L)) return;

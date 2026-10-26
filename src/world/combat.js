@@ -83,6 +83,13 @@ const FALL_TEXT = {
   fire_tiger: '赤炎妖虎把你撲倒在地，一股熱浪燎得你睜不開眼——\n\n醒來時，你躺在焦土邊上，衣衫燒得破破爛爛，渾身是傷。那頭大虎早已不見蹤影。',
   toad_king: '毒蟾王的舌頭把你捲倒在泥水裡，一口毒漿噴在你臉上——\n\n醒來時，你趴在沼邊的蘆葦裡，渾身腫得發亮，喉嚨火辣辣的。',
   gu_mother: '蠱母的毒鉗夾住了你，一股麻從腳底竄上頭頂——\n\n醒來時，你倒在谷口的亂石間，渾身青紫，嘴裡一股腥甜。蠱母沒有追出來：牠從不出谷。',
+  // 西漠 (0.22)
+  scorpion: '沙蠍的尾巴扎進你的肩頭，一股火燒似的疼往心口鑽——\n\n醒來時，你躺在沙窩裡，半邊身子還是麻的。那些沙蠍早鑽回沙子底下了。',
+  sand_wolf: '沙狼把你撲倒在沙地上，熱沙灌了你一嘴——\n\n醒來時，風已經把狼的足跡抹平了。你身上多了幾道血口，水囊也被咬破了。',
+  vulture: '禿鷲的彎刀架上了你的脖子。他沒有砍下去，只是笑了笑，一刀柄砸在你的後腦上——\n\n醒來時，你被扔在戈壁邊上，身上的東西被翻過一遍。風裡還有他的笑聲。',
+  kuchan: '一記金色的掌印印在你的胸口，耳邊轟的一聲，像有人撞響了一口大鐘——\n\n醒來時，你躺在峽谷口的沙地上，不知道是怎麼出來的。寺裡的唸經聲，還在一遍一遍地響。',
+  sand_jiao: '沙蛟把你拖進了流沙，沙子灌進你的口鼻——\n\n醒來時，你趴在流沙邊上的硬地上，不知道是怎麼爬出來的。身後的沙地平得像什麼也沒發生過。',
+  stone_general: '石戟掃中了你，你飛出去，撞在殘牆上——\n\n醒來時，天已經黑了。星門前的石翁仲又站回了原處，一動不動，好像從來沒有動過。',
   beast: '你倒下了，眼前一黑——\n\n醒來時，天色已經變了。四下無人，只剩一身的傷。',
 };
 
@@ -781,6 +788,11 @@ function hurtMe(s, C, b, mult, io, push = null, M = null) {
       b.hp = Math.min(b.maxHp, b.hp + back);
       pop(C, b.x, b.y, String(back), 'heal', b.R.tall);
     }
+    // sand in your eyes: you stumble a moment
+    if (M?.slow) {
+      if (!(me.slow > 0)) pop(C, w.x + 12, w.y, M.fx === 'sand' ? '迷眼' : '遲滯', 'status', 52);
+      me.slow = Math.max(me.slow || 0, M.slow);
+    }
   }
   if (push && !me.dash) me.kb = { ux: push[0], uy: push[1], left: push[2] };
   if (me.hp <= 0) {
@@ -1278,7 +1290,7 @@ export function updateCombat(s, dt, io) {
     if (s.pending || s.dead) return STILL;
   }
   const act = me.act;
-  // (slower while casting or swinging; dragged at by a whirlpool)
+  // (slower while casting or swinging; dragged at by a whirlpool, quicksand; sand in your eyes)
   const mult = (act && !act.done ? (act.kind === 'cast' ? 0.35 : 0.55) : act ? 0.75 : 1) * (me.slow > 0 ? 0.55 : 1);
   return { on: C.on, moved, hold: !!(me.dash || me.kb || me.held), mult, steer: me.auto ? me.steer : null };
 }
@@ -1937,7 +1949,8 @@ function poolsTick(s, C, dt, io) {
       hurtAlly(s, C, a, p.by, p.mult, io);
     }
     if (!C.on || me.dash || me.inv > 0 || Math.hypot(w.x - p.x, w.y - p.y) > p.r + PLAYER_R * 0.5) continue;
-    if (p.kind === 'water') me.slow = Math.max(me.slow || 0, 0.7);
+    // (a whirlpool, quicksand: dragged at)
+    if (p.kind === 'water' || p.kind === 'sand') me.slow = Math.max(me.slow || 0, 0.7);
     hurtMe(s, C, p.by, p.mult, io, null, p.kind === 'fire' ? { fire: true } : p.kind === 'venom' ? { venom: true, poison: p.poison } : p.poison ? { poison: p.poison } : null);
     if (s.pending || s.dead) return;
   }

@@ -11,6 +11,7 @@ import shrine from './events/shrine.js';
 import ferry from './events/ferry.js';
 import pass from './events/pass.js';
 import nanling from './events/nanling.js';
+import ximo from './events/ximo.js';
 import travel from './events/travel.js';
 import air from './events/air.js';
 import realms from './events/realms.js';
@@ -21,7 +22,7 @@ import generic, { GENERIC_EXPLORE } from './events/generic.js';
 
 export const EVENT_LIST = [
   ...opening, ...town, ...hill, ...temple, ...forest, ...market, ...valley,
-  ...sect, ...ruins, ...shrine, ...ferry, ...pass, ...nanling, ...travel, ...air, ...realms, ...world, ...chapter, ...inquire, ...generic,
+  ...sect, ...ruins, ...shrine, ...ferry, ...pass, ...nanling, ...ximo, ...travel, ...air, ...realms, ...world, ...chapter, ...inquire, ...generic,
   GENERIC_INQUIRE, GENERIC_EXPLORE,
 ];
 

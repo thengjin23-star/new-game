@@ -14,6 +14,7 @@ import { NODES } from '../src/world/map.js';
 import { nearestOpen } from '../src/world/terrain.js';
 import { ITEMS, SHOPS } from '../src/content/items.js';
 import { MOVES } from '../src/content/moves.js';
+import { FOES } from '../src/content/foes.js';
 import { SPELLS, TALISMANS } from '../src/content/arts.js';
 import { fresh, resolvePending, goToPoi } from './helpers.js';
 
@@ -163,6 +164,8 @@ test('every piece of gear is worn somewhere, gives something, and can be had (bo
   const { EVENT_LIST } = await import('../src/content/index.js');
   const given = JSON.stringify(EVENT_LIST, (k, v) => (typeof v === 'function' ? undefined : v));
   for (const id of Object.keys(ITEMS)) if (given.includes(`["item","${id}"`)) sold.add(id);
+  // (or something you beat leaves it)
+  for (const f of Object.values(FOES)) for (const [, id] of f.loot || []) sold.add(id);
   for (const [id, it] of Object.entries(ITEMS)) {
     if (it.kind !== 'gear') continue;
     assert.ok(['robe', 'charm', 'relic'].includes(it.slot), `${id}: where`);

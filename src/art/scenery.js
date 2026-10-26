@@ -3,7 +3,7 @@
 // foot at (0, 0), in world units. Shared by the flat map and the 3D world.
 
 import { INK, rgba } from './ink.js';
-import { drawPerson, drawMob, groundShadow, FOLK_LOOKS, LOOKS } from './figures.js';
+import { drawPerson, drawMob, groundShadow, FOLK_LOOKS, LOOKS, FIGURE } from './figures.js';
 
 const SKIN = [230, 210, 182];
 const WOOD = [96, 64, 42];
@@ -811,10 +811,451 @@ function centipede(ctx, t, moving) {
   ctx.fill();
 }
 
+// ── 0.22 西漠 ──
+
+/** 沙蠍: a scorpion as long as a dog — a black shell gone brown at its edges, pincers held out in front, the tail curled up over its back, an amber sting hanging at the end of it. */
+function scorpion(ctx, t, moving) {
+  const ph = moving ? Math.sin(t * 18) : 0;
+  const bob = moving ? Math.abs(Math.sin(t * 18)) * 0.6 : 0;
+  const shell = 'rgba(48,36,28,1)';
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  // four short bent legs a side, scuttling (the far side's paler, behind)
+  const legs = (far) => {
+    ctx.strokeStyle = far ? 'rgba(70,54,40,0.85)' : 'rgba(34,26,20,1)';
+    ctx.lineWidth = far ? 1.1 : 1.4;
+    ctx.beginPath();
+    for (let i = 0; i < 4; i++) {
+      const bx = -6 + i * 3.2;
+      const sw = ph * (i % 2 ? 1.6 : -1.6) * (far ? -1 : 1);
+      ctx.moveTo(bx, -5 - bob);
+      ctx.lineTo(bx - 2.4 + sw * 0.4, -8 - bob);
+      ctx.lineTo(bx - 4 + sw, 0);
+    }
+    ctx.stroke();
+  };
+  // a pincer: the arm out in front, a swollen claw, its two fingers opening and snapping shut
+  const claw = (far) => {
+    const o = far ? -1.6 : 0;
+    const snap = Math.max(0, Math.sin(t * 3 + (far ? 1.4 : 0))) * 0.9;
+    ctx.strokeStyle = far ? 'rgba(70,54,40,1)' : shell;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(5, -6 + o - bob);
+    ctx.lineTo(9.5, -9.5 + o - bob);
+    ctx.lineTo(12.5, -7.5 + o - bob);
+    ctx.stroke();
+    ctx.fillStyle = far ? 'rgba(78,60,42,1)' : 'rgba(66,50,36,1)';
+    ctx.beginPath();
+    ctx.ellipse(15, -7.6 + o - bob, 3.3, 2.3, -0.2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = rgba(INK, 0.8);
+    ctx.lineWidth = 0.6;
+    ctx.stroke();
+    ctx.strokeStyle = far ? 'rgba(70,54,40,1)' : shell;
+    ctx.lineWidth = 1.3;
+    ctx.beginPath();
+    ctx.moveTo(17.6, -8.6 + o - bob);
+    ctx.quadraticCurveTo(20.6, -9.8 - snap * 2 + o - bob, 21.2, -7.6 + o - bob);
+    ctx.moveTo(17.6, -6.8 + o - bob);
+    ctx.quadraticCurveTo(20.2, -5.2 + snap * 2 + o - bob, 20.8, -6.9 + o - bob);
+    ctx.stroke();
+  };
+  legs(true);
+  claw(true);
+  // the body: a long low shell, ridged across
+  ctx.fillStyle = shell;
+  ctx.beginPath();
+  ctx.ellipse(-1, -6 - bob, 9, 3.8, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = rgba(INK, 0.85);
+  ctx.lineWidth = 0.8;
+  ctx.stroke();
+  ctx.strokeStyle = 'rgba(132,98,58,0.85)';
+  ctx.lineWidth = 0.6;
+  ctx.beginPath();
+  for (const x of [-6, -3, 0, 3]) {
+    ctx.moveTo(x, -9.4 - bob);
+    ctx.quadraticCurveTo(x + 0.8, -6 - bob, x, -2.6 - bob);
+  }
+  ctx.stroke();
+  legs(false);
+  // the tail: segments curling up from the rear and over, each smaller than the last
+  const sw = Math.sin(t * 2.4) * 1.2;
+  const segs = [[-9, -7.5, 2.6], [-12.5, -10.5, 2.5], [-14.4, -15, 2.4], [-13.4, -19.8, 2.3], [-9.6, -23 + sw * 0.4, 2.2], [-4.6, -23.6 + sw * 0.7, 2.1]];
+  for (const [x, y, r] of segs) {
+    ctx.fillStyle = shell;
+    ctx.beginPath();
+    ctx.arc(x, y - bob, r, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = rgba(INK, 0.8);
+    ctx.lineWidth = 0.6;
+    ctx.stroke();
+    ctx.strokeStyle = 'rgba(132,98,58,0.8)';
+    ctx.beginPath();
+    ctx.arc(x, y - bob, r * 0.7, -2.4, -0.8);
+    ctx.stroke();
+  }
+  // the sting: a bulb, and the hook of it, hanging over its head
+  ctx.fillStyle = 'rgba(176,120,44,1)';
+  ctx.beginPath();
+  ctx.ellipse(-0.6, -21.8 + sw - bob, 2.6, 2, 0.5, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = rgba(INK, 0.8);
+  ctx.lineWidth = 0.6;
+  ctx.stroke();
+  ctx.strokeStyle = 'rgba(40,28,18,1)';
+  ctx.lineWidth = 1.1;
+  ctx.beginPath();
+  ctx.moveTo(1.4, -20.6 + sw - bob);
+  ctx.quadraticCurveTo(3.6, -19.6 + sw - bob, 3, -17 + sw - bob);
+  ctx.stroke();
+  claw(false);
+  // two small eyes on the front of the shell
+  ctx.fillStyle = 'rgba(214,170,90,1)';
+  ctx.fillRect(6, -8.4 - bob, 1, 0.9);
+  ctx.fillRect(7.4, -8 - bob, 1, 0.9);
+}
+
+/** How the dead of 沙陀寺 look (drawn with the people's brush): the robe gone the color of the sand, the skin dried dark to the bone; their abbot's 袈裟 still red and gold. */
+const MUMMY_LOOK = { robe: [150, 126, 90], trim: [110, 84, 56], hair: 'bald', skin: [112, 90, 66] };
+const KUCHAN_LOOK = { robe: [140, 60, 38], trim: [214, 170, 70], hair: 'bald', skin: [104, 84, 60] };
+
+/** 乾屍: a monk of 沙陀寺 dead sixty years and up again — a lurch, not a walk; stiff arms held out, wrappings, rags of the robe hanging, two embers for eyes. */
+function mummy(ctx, t, moving) {
+  ctx.save();
+  ctx.rotate(Math.sin(t * 2.2) * 0.05);
+  const was = FIGURE.shadows;
+  FIGURE.shadows = false;
+  drawPerson(ctx, 0, 0, MUMMY_LOOK, { t: t * 0.6, moving, face: 1 });
+  FIGURE.shadows = was;
+  ctx.lineCap = 'round';
+  // the wrappings across the robe
+  ctx.strokeStyle = 'rgba(214,200,170,0.85)';
+  ctx.lineWidth = 0.9;
+  ctx.beginPath();
+  for (const y of [-21, -17, -12, -8]) {
+    ctx.moveTo(-5.5, y + 1.5);
+    ctx.lineTo(5.5, y - 1);
+  }
+  ctx.stroke();
+  // rags hanging off the hem
+  ctx.fillStyle = 'rgba(150,126,90,1)';
+  for (const x of [-6, -2, 3, 6]) {
+    const sg = Math.sin(t * 3 + x) * 0.8;
+    ctx.beginPath();
+    ctx.moveTo(x - 1.2, -2.5);
+    ctx.lineTo(x + sg, 1.2);
+    ctx.lineTo(x + 1.2, -2.5);
+    ctx.fill();
+  }
+  // the arms held stiff out in front, the fingers hooked
+  ctx.strokeStyle = 'rgba(96,76,56,1)';
+  ctx.lineWidth = 1.8;
+  const a1 = Math.sin(t * 2) * 0.6;
+  const a2 = Math.sin(t * 2 + 1) * 0.6;
+  ctx.beginPath();
+  ctx.moveTo(3, -23);
+  ctx.lineTo(13, -22 + a1);
+  ctx.moveTo(1, -22);
+  ctx.lineTo(12, -19 + a2);
+  ctx.stroke();
+  ctx.lineWidth = 0.7;
+  ctx.beginPath();
+  for (const [hx, hy] of [[13, -22 + a1], [12, -19 + a2]]) {
+    ctx.moveTo(hx, hy);
+    ctx.lineTo(hx + 2, hy + 1.2);
+    ctx.moveTo(hx, hy);
+    ctx.lineTo(hx + 1.6, hy - 1);
+  }
+  ctx.stroke();
+  // the face: the sockets dark, an ember in each, the mouth fallen open
+  ctx.fillStyle = 'rgba(36,26,18,0.92)';
+  ctx.beginPath();
+  ctx.arc(1.8, -29.6, 1.05, 0, Math.PI * 2);
+  ctx.arc(3.8, -29.4, 0.95, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillRect(2, -27.4, 2, 1);
+  ctx.fillStyle = `rgba(240,150,60,${0.7 + 0.3 * Math.sin(t * 4)})`;
+  ctx.fillRect(1.4, -30, 0.9, 0.9);
+  ctx.fillRect(3.4, -29.8, 0.9, 0.9);
+  ctx.restore();
+}
+
+/** 枯禪: 沙陀寺's abbot, sixty years dead and still sitting — cross-legged on the air, a 袈裟 of red and gold in rags, beads round his neck, a ring of gold behind his head gone dull, his eyes shut (and then not). */
+function kuchan(ctx, t) {
+  const hover = 7 + Math.sin(t * 1.4) * 1.5;
+  const hy = -20 - hover;
+  // the light about him, and the ring behind his head
+  const glow = ctx.createRadialGradient(0, -14 - hover, 0, 0, -14 - hover, 24);
+  glow.addColorStop(0, 'rgba(240,200,110,0.28)');
+  glow.addColorStop(1, 'rgba(240,200,110,0)');
+  ctx.fillStyle = glow;
+  ctx.beginPath();
+  ctx.arc(0, -14 - hover, 24, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = `rgba(226,180,80,${0.55 + 0.2 * Math.sin(t * 2)})`;
+  ctx.lineWidth = 1.3;
+  ctx.beginPath();
+  ctx.arc(0.5, hy, 6.8, 0, Math.PI * 2);
+  ctx.stroke();
+  const was = FIGURE.shadows;
+  FIGURE.shadows = false;
+  drawPerson(ctx, 0, -hover, KUCHAN_LOOK, { t, sit: true });
+  FIGURE.shadows = was;
+  // the 袈裟's patchwork: gold lines over the red, and a tear or two
+  ctx.strokeStyle = 'rgba(214,170,70,0.85)';
+  ctx.lineWidth = 0.6;
+  ctx.beginPath();
+  ctx.moveTo(-8, -3 - hover);
+  ctx.lineTo(8, -3 - hover);
+  ctx.moveTo(-6, -8 - hover);
+  ctx.lineTo(6, -8 - hover);
+  ctx.moveTo(-3.5, -14 - hover);
+  ctx.lineTo(-5.5, -1 - hover);
+  ctx.moveTo(3.5, -14 - hover);
+  ctx.lineTo(5.5, -1 - hover);
+  ctx.stroke();
+  ctx.fillStyle = 'rgba(70,40,28,0.9)';
+  ctx.beginPath();
+  ctx.moveTo(6, -5 - hover);
+  ctx.lineTo(9, -1 - hover);
+  ctx.lineTo(5, -2 - hover);
+  ctx.fill();
+  // beads round his neck
+  ctx.fillStyle = 'rgba(84,52,30,1)';
+  for (let n = 0; n < 7; n++) {
+    const a = Math.PI * (0.2 + n * 0.1);
+    ctx.beginPath();
+    ctx.arc(0.5 + Math.cos(a) * 3.8, hy + 3 + Math.sin(a) * 3, 0.8, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  // the eyes: two dark lines (now and then a glint of gold between them)
+  ctx.strokeStyle = 'rgba(30,22,16,0.9)';
+  ctx.lineWidth = 0.6;
+  ctx.beginPath();
+  ctx.moveTo(1.2, hy - 0.4);
+  ctx.lineTo(2.6, hy - 0.2);
+  ctx.moveTo(3.2, hy - 0.2);
+  ctx.lineTo(4.4, hy - 0.4);
+  ctx.stroke();
+  if (Math.sin(t * 0.9) > 0.85) {
+    ctx.fillStyle = 'rgba(250,210,110,0.95)';
+    ctx.fillRect(1.6, hy - 0.8, 0.8, 0.7);
+    ctx.fillRect(3.4, hy - 0.8, 0.8, 0.7);
+  }
+}
+
+/** 沙蛟: the last 蛟 of the dried 西海, that learned to swim in sand — a body as thick as a man, the gold-brown of the dunes banded darker, humped up out of the sand and under again; the head reared, two horns swept back, a fin down its neck. */
+function sandJiao(ctx, t, moving) {
+  const sw = Math.sin(t * (moving ? 5 : 1.5));
+  const hide = 'rgba(178,140,86,1)';
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  const body = (draw) => {
+    ctx.beginPath();
+    draw();
+    ctx.strokeStyle = 'rgba(70,50,30,1)';
+    ctx.lineWidth = 8.4;
+    ctx.stroke();
+    ctx.strokeStyle = hide;
+    ctx.lineWidth = 6.6;
+    ctx.stroke();
+    ctx.strokeStyle = 'rgba(112,82,48,0.9)';
+    ctx.lineWidth = 6.6;
+    ctx.setLineDash([2, 4]);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.strokeStyle = 'rgba(228,206,160,0.7)';
+    ctx.lineWidth = 1.2;
+    ctx.stroke();
+  };
+  // two humps of the body out of the sand behind it
+  body(() => {
+    ctx.moveTo(-31, 0);
+    ctx.bezierCurveTo(-29, -11 + sw, -19, -11 + sw, -17, 0);
+  });
+  body(() => {
+    ctx.moveTo(-13, 0);
+    ctx.bezierCurveTo(-11, -14 - sw, -1, -14 - sw, 1, 0);
+  });
+  // the fin down the neck (behind it), then the neck rearing up out of the sand
+  const nx = 9 + sw * 1.2;
+  ctx.fillStyle = 'rgba(132,64,40,0.95)';
+  ctx.beginPath();
+  ctx.moveTo(3, -6);
+  for (let k = 0; k <= 5; k++) ctx.lineTo(1 + k * 1.4 + sw * k * 0.2 - 2.4, -8 - k * 3.6 - (k % 2 ? 2.4 : 0));
+  ctx.lineTo(nx - 2, -25);
+  ctx.closePath();
+  ctx.fill();
+  body(() => {
+    ctx.moveTo(4, 0);
+    ctx.bezierCurveTo(5, -10, 3 + sw, -18, nx, -25);
+  });
+  // the head: long, jaws a little open, the horns swept back, an amber eye
+  const hx = nx + 4;
+  const hy = -27.5;
+  ctx.strokeStyle = 'rgba(206,190,150,1)';
+  ctx.lineWidth = 1.6;
+  ctx.beginPath();
+  ctx.moveTo(hx - 3, hy - 3);
+  ctx.quadraticCurveTo(hx - 7, hy - 7, hx - 11, hy - 8);
+  ctx.moveTo(hx - 1, hy - 3.5);
+  ctx.quadraticCurveTo(hx - 3, hy - 9, hx - 7, hy - 11.5);
+  ctx.stroke();
+  ctx.fillStyle = hide;
+  ctx.beginPath();
+  ctx.moveTo(hx - 4, hy - 3);
+  ctx.quadraticCurveTo(hx + 3, hy - 5, hx + 9, hy - 1.2);
+  ctx.lineTo(hx + 8.6, hy + 0.2);
+  ctx.lineTo(hx + 1, hy + 0.6);
+  ctx.lineTo(hx + 8, hy + 2.2);
+  ctx.quadraticCurveTo(hx + 2, hy + 4.4, hx - 4, hy + 2.6);
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = rgba(INK, 0.85);
+  ctx.lineWidth = 0.8;
+  ctx.stroke();
+  ctx.fillStyle = 'rgba(240,190,60,1)';
+  ctx.beginPath();
+  ctx.arc(hx + 1.6, hy - 2, 1.2, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = 'rgba(20,16,12,1)';
+  ctx.fillRect(hx + 1.4, hy - 2.7, 0.5, 1.4);
+  // the sand heaped where it goes under and comes up, rippling round it
+  ctx.fillStyle = 'rgba(214,186,134,1)';
+  ctx.strokeStyle = 'rgba(150,120,80,0.7)';
+  ctx.lineWidth = 0.7;
+  for (const x of [-31, -17, -13, 1, 4]) {
+    ctx.beginPath();
+    ctx.ellipse(x, -0.6, 4.6, 2.2, 0, Math.PI, 0);
+    ctx.fill();
+    ctx.stroke();
+  }
+  if (moving) {
+    ctx.fillStyle = 'rgba(214,186,134,0.8)';
+    for (let n = 0; n < 6; n++) {
+      const q = (t * 2 + n / 6) % 1;
+      ctx.fillRect(-31 + n * 7 - q * 4, -1 - Math.sin(q * Math.PI) * 4, 1.2, 1.2);
+    }
+  }
+}
+
+/** 石傀 (and 石翁仲, the great one at the 星門): a guard of the old city cut from the yellow stone — blocks for a body, a thousand years of cracks across it, light in its eye slits. general: a helmet, a stone halberd, starlight in the cracks. */
+function stoneGuard(ctx, t, moving, general = false) {
+  const stone = general ? 'rgba(150,142,126,1)' : 'rgba(166,150,120,1)';
+  const shade = general ? 'rgba(104,98,88,1)' : 'rgba(118,104,82,1)';
+  const lit = general ? [190, 214, 255] : [240, 176, 80];
+  const step = moving ? Math.sin(t * 6) : 0;
+  const block = (x, y, w, h, fill = stone) => {
+    ctx.fillStyle = fill;
+    ctx.fillRect(x, y, w, h);
+    ctx.strokeStyle = rgba(INK, 0.8);
+    ctx.lineWidth = 0.8;
+    ctx.strokeRect(x, y, w, h);
+  };
+  // legs: two stubby pillars, one lifted at a time
+  block(-6.5, -11 - Math.max(0, step) * 1.6, 5, 11, shade);
+  block(1.5, -11 - Math.max(0, -step) * 1.6, 5, 11, shade);
+  // the far arm
+  block(-11, -29, 4.5, 15, shade);
+  // the body: wider at the shoulders, a belt of carved scales
+  ctx.fillStyle = stone;
+  ctx.beginPath();
+  ctx.moveTo(-8, -31);
+  ctx.lineTo(8, -31);
+  ctx.lineTo(6.5, -10);
+  ctx.lineTo(-6.5, -10);
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = rgba(INK, 0.8);
+  ctx.lineWidth = 0.8;
+  ctx.stroke();
+  ctx.strokeStyle = 'rgba(90,80,64,0.8)';
+  ctx.lineWidth = 0.6;
+  ctx.beginPath();
+  for (const y of [-24, -20.5]) {
+    for (let x = -6; x < 6; x += 2.4) {
+      ctx.moveTo(x, y);
+      ctx.quadraticCurveTo(x + 1.2, y + 2, x + 2.4, y);
+    }
+  }
+  ctx.moveTo(-6.8, -15);
+  ctx.lineTo(6.8, -15);
+  ctx.stroke();
+  // the head: a block, a heavy brow, two slits of light
+  block(-4.5, -39, 9, 8);
+  ctx.fillStyle = shade;
+  ctx.fillRect(-5, -36.6, 10, 1.4);
+  ctx.fillStyle = rgba(lit, 0.75 + 0.25 * Math.sin(t * 3));
+  ctx.fillRect(0.2, -35, 2.2, 1);
+  ctx.fillRect(3, -35, 1.6, 1);
+  if (general) {
+    // a helmet with a crest, flared at the neck
+    ctx.fillStyle = shade;
+    ctx.beginPath();
+    ctx.moveTo(-6, -38);
+    ctx.lineTo(6, -38);
+    ctx.lineTo(5, -43);
+    ctx.lineTo(-5, -43);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = rgba(INK, 0.8);
+    ctx.stroke();
+    ctx.fillRect(-1, -48, 2, 5);
+    ctx.fillStyle = 'rgba(120,58,40,0.9)';
+    ctx.beginPath();
+    ctx.moveTo(0, -48);
+    ctx.quadraticCurveTo(-6, -49, -8, -44);
+    ctx.quadraticCurveTo(-4, -46, 0, -45);
+    ctx.fill();
+  }
+  // the cracks of a thousand years (starlight in them, in the great one)
+  ctx.strokeStyle = general ? rgba(lit, 0.6 + 0.3 * Math.sin(t * 2.2)) : 'rgba(70,60,46,0.9)';
+  ctx.lineWidth = general ? 0.8 : 0.6;
+  ctx.beginPath();
+  ctx.moveTo(-3, -31);
+  ctx.lineTo(-1, -27);
+  ctx.lineTo(-3.5, -23);
+  ctx.lineTo(-2, -18);
+  ctx.moveTo(4, -29);
+  ctx.lineTo(2.5, -25);
+  ctx.moveTo(-3, -39);
+  ctx.lineTo(-1.5, -36.6);
+  ctx.moveTo(5, -12);
+  ctx.lineTo(3.4, -15);
+  ctx.stroke();
+  // the near arm: a fist (the great one's holding its halberd upright)
+  block(7, -29, 4.5, 15);
+  if (general) {
+    ctx.strokeStyle = 'rgba(96,88,76,1)';
+    ctx.lineWidth = 2.2;
+    ctx.beginPath();
+    ctx.moveTo(9.5, 2);
+    ctx.lineTo(9.5, -56);
+    ctx.stroke();
+    ctx.fillStyle = 'rgba(140,134,122,1)';
+    ctx.beginPath();
+    ctx.moveTo(9.5, -62);
+    ctx.lineTo(11, -56);
+    ctx.lineTo(8, -56);
+    ctx.closePath();
+    ctx.moveTo(10.5, -54);
+    ctx.quadraticCurveTo(18, -56, 17, -47);
+    ctx.quadraticCurveTo(14, -51, 10.5, -50);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = rgba(INK, 0.8);
+    ctx.lineWidth = 0.7;
+    ctx.stroke();
+  }
+  block(7.4, -15.5, 4, 3.4, shade);
+}
+
 /** The big ones: a demon wolf, the wolf king, the python, the iron-backed bear, the skeleton general. */
 export function drawBigBeast(ctx, kind, { t = 0, face = 1, moving = false } = {}) {
   ctx.save();
-  groundShadow(ctx, 0, 0, { demon_wolf: 15, wolf_king: 22, python: 24, bear: 22, skeleton: 12, fire_tiger: 25, shanxiao: 12, mumei: 12, xuan_turtle: 27, spider: 14, toad: 16, toad_king: 25, swarm: 12, gu_mother: 30 }[kind] || 14, 3);
+  groundShadow(ctx, 0, 0, { demon_wolf: 15, wolf_king: 22, python: 24, bear: 22, skeleton: 12, fire_tiger: 25, shanxiao: 12, mumei: 12, xuan_turtle: 27, spider: 14, toad: 16, toad_king: 25, swarm: 12, gu_mother: 30, scorpion: 15, sand_wolf: 16, mummy: 8, kuchan: 13, sand_jiao: 30, stone_puppet: 11, stone_general: 19 }[kind] || 14, 3);
   ctx.scale(face, 1);
   switch (kind) {
     case 'demon_wolf':
@@ -866,13 +1307,38 @@ export function drawBigBeast(ctx, kind, { t = 0, face = 1, moving = false } = {}
       ctx.scale(1.15, 1.15);
       centipede(ctx, t, moving);
       break;
+    case 'scorpion':
+      scorpion(ctx, t, moving);
+      break;
+    case 'sand_wolf':
+      ctx.scale(1.3, 1.3);
+      wolfShape(ctx, t, moving, { body: 'rgba(186,154,106,1)', dark: 'rgba(126,98,62,1)', eye: 'rgba(240,190,70,1)' });
+      break;
+    case 'mummy':
+      mummy(ctx, t, moving);
+      break;
+    case 'kuchan':
+      ctx.scale(1.2, 1.2);
+      kuchan(ctx, t);
+      break;
+    case 'sand_jiao':
+      ctx.scale(1.15, 1.15);
+      sandJiao(ctx, t, moving);
+      break;
+    case 'stone_puppet':
+      stoneGuard(ctx, t, moving);
+      break;
+    case 'stone_general':
+      ctx.scale(1.6, 1.6);
+      stoneGuard(ctx, t, moving, true);
+      break;
     default:
       break;
   }
   ctx.restore();
 }
 
-export const BIG_BEASTS = new Set(['demon_wolf', 'wolf_king', 'python', 'bear', 'skeleton', 'fire_tiger', 'shanxiao', 'mumei', 'xuan_turtle', 'spider', 'toad', 'toad_king', 'swarm', 'gu_mother']);
+export const BIG_BEASTS = new Set(['demon_wolf', 'wolf_king', 'python', 'bear', 'skeleton', 'fire_tiger', 'shanxiao', 'mumei', 'xuan_turtle', 'spider', 'toad', 'toad_king', 'swarm', 'gu_mother', 'scorpion', 'sand_wolf', 'mummy', 'kuchan', 'sand_jiao', 'stone_puppet', 'stone_general']);
 
 /** Props that flicker or sway (repainted as they go); the rest are still. */
 export const LIVE_PROPS = new Set(['campfire', 'ginseng', 'wisp']);

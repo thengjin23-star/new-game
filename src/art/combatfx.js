@@ -39,7 +39,10 @@ const ICE_DEEP = [70, 130, 190];
 const BOLT = [214, 228, 255];
 const BOLT_DEEP = [86, 118, 210];
 /** The light a move gathers into as you cast it. */
-const GLOW = { fire: FIRE, shield: [120, 170, 230], foeqi: FOE_QI, foxfire: FOX, mend: LEAF, iron: GOLD, sweep: GOLD, charge: GOLD, bloodqi: BLOOD, bloodring: BLOOD, blink: FOX, mirror: [246, 232, 170], bell: GOLD, feijian: QI, jianzhen: QI, vine: LEAF, frost: ICE, thunder: BOLT_DEEP, spikes: DUST };
+const GLOW = { fire: FIRE, shield: [120, 170, 230], foeqi: FOE_QI, foxfire: FOX, mend: LEAF, iron: GOLD, sweep: GOLD, charge: GOLD, bloodqi: BLOOD, bloodring: BLOOD, blink: FOX, mirror: [246, 232, 170], bell: GOLD, feijian: QI, jianzhen: QI, vine: LEAF, frost: ICE, thunder: BOLT_DEEP, spikes: DUST, sandring: [196, 164, 110] };
+/** 西漠's: sand flung and whirled; the gold of a dead abbot's palm and beads; starlight from a stone guard's eyes. */
+const SAND = [196, 164, 110];
+const STAR = [196, 214, 255];
 
 // ── figures ──
 
@@ -47,10 +50,14 @@ const GLOW = { fire: FIRE, shield: [120, 170, 230], foeqi: FOE_QI, foxfire: FOX,
 const PEOPLE = {
   bandit: { look: { robe: [36, 34, 32], trim: [110, 30, 26], hair: 'bun', short: true }, weapon: 'chaidao', mask: true },
   bandit_chief: { look: { robe: [62, 44, 36], trim: [168, 132, 64], hair: 'bun', big: true }, weapon: 'chaidao', patch: true, blade: 20 },
+  // 西漠: 沙盜 in sand-colored cloth, the faces veiled; 禿鷲 big, black-turbaned, a great curved blade (the veil torn off when he goes all in)
+  sand_bandit: { look: { robe: [138, 112, 78], trim: [96, 58, 40], hair: 'turban', wrapCol: [196, 180, 146], veil: true, short: true, skin: [196, 156, 116] }, weapon: 'sabre' },
+  vulture: { look: { robe: [58, 46, 40], trim: [170, 130, 60], hair: 'turban', wrapCol: [44, 40, 38], veil: true, big: true, skin: [184, 140, 100] }, weapon: 'sabre', blade: 22, unveil: true },
 };
 
 function personLook(b) {
   const P = PEOPLE[b.kind];
+  if (P?.unveil && b.enraged) return { ...P, look: { ...P.look, veil: false } };
   if (P) return P;
   return { look: (b.npcId && LOOKS[b.npcId]) || lookOf(b.R.look || 'foe'), weapon: b.R.weapon || 'qinggang_sword', mask: b.kind === 'masked' };
 }
@@ -274,12 +281,16 @@ function swing(ctx, weapon, face, p, after, blade = null) {
   const ang = p < 1 ? -2.3 + p * 2.9 : 0.6 - after * 0.9;
   const hx = face * 5;
   const hy = -18;
-  const len = blade || (weapon === 'qinggang_sword' ? 19 : 14);
-  ctx.strokeStyle = weapon === 'qinggang_sword' ? 'rgba(214,224,232,1)' : 'rgba(190,190,182,1)';
-  ctx.lineWidth = weapon === 'qinggang_sword' ? 1.4 : 2.4;
+  const len = blade || (weapon === 'qinggang_sword' ? 19 : weapon === 'sabre' ? 16 : 14);
+  ctx.strokeStyle = weapon === 'qinggang_sword' ? 'rgba(214,224,232,1)' : weapon === 'sabre' ? 'rgba(206,202,190,1)' : 'rgba(190,190,182,1)';
+  ctx.lineWidth = weapon === 'qinggang_sword' ? 1.4 : weapon === 'sabre' ? 2 : 2.4;
   ctx.beginPath();
   ctx.moveTo(hx, hy);
-  ctx.lineTo(hx + face * Math.cos(ang) * len, hy + Math.sin(ang) * len);
+  const ex = hx + face * Math.cos(ang) * len;
+  const ey = hy + Math.sin(ang) * len;
+  // a curved blade (西漠's), bowed back along its length
+  if (weapon === 'sabre') ctx.quadraticCurveTo(hx + face * Math.cos(ang - 0.45) * len * 0.62, hy + Math.sin(ang - 0.45) * len * 0.62, ex, ey);
+  else ctx.lineTo(ex, ey);
   ctx.stroke();
   ctx.strokeStyle = rgba(INK, 0.55);
   ctx.lineWidth = 0.5;
@@ -443,7 +454,7 @@ export function drawGroundMarks(g, s, C, kit, u = 1) {
   // ground that hurts: venom spat, fire, blood (fading in, and out as it ends)
   for (const pl of C.pools || []) {
     const a = Math.min(1, (now - pl.t0) / 0.25) * Math.max(0, Math.min(1, (pl.until - now) / 0.6));
-    const col = pl.kind === 'venom' ? VENOM : pl.kind === 'blood' ? BLOOD : pl.kind === 'water' ? WATER : FIRE;
+    const col = pl.kind === 'venom' ? VENOM : pl.kind === 'blood' ? BLOOD : pl.kind === 'water' ? WATER : pl.kind === 'sand' ? SAND : FIRE;
     const fl = pl.kind === 'fire' ? 0.06 * Math.sin(now * 13 + pl.x * 0.3) : 0.03 * Math.sin(now * 4 + pl.y);
     g.fillStyle = rgba(col, (pl.kind === 'fire' ? 0.3 : 0.34) * a);
     ring(g, pl.x, pl.y, pl.r * (1 + fl));
@@ -452,12 +463,13 @@ export function drawGroundMarks(g, s, C, kit, u = 1) {
     g.lineWidth = lw(1.4);
     ring(g, pl.x, pl.y, pl.r * (0.94 + fl));
     g.stroke();
-    // a whirlpool: arms of it turning in toward the heart
-    if (pl.kind === 'water') {
-      g.strokeStyle = rgba([210, 232, 248], 0.7 * a);
+    // a whirlpool: arms of it turning in toward the heart (quicksand: slower, the sand dark where it sinks)
+    if (pl.kind === 'water' || pl.kind === 'sand') {
+      const sand = pl.kind === 'sand';
+      g.strokeStyle = sand ? rgba([120, 92, 58], 0.6 * a) : rgba([210, 232, 248], 0.7 * a);
       g.lineWidth = lw(1.6);
       for (let n = 0; n < 3; n++) {
-        const a0 = now * 3.2 + (n * Math.PI * 2) / 3;
+        const a0 = now * (sand ? 1.4 : 3.2) + (n * Math.PI * 2) / 3;
         g.beginPath();
         for (let q = 0; q <= 12; q++) {
           const t = q / 12;
@@ -667,9 +679,9 @@ export function drawGroundMarks(g, s, C, kit, u = 1) {
       g.lineWidth = lw(2);
       ring(g, f.x, f.y, 14 + p * 26);
       g.stroke();
-    } else if ((f.kind === 'ring' || f.kind === 'roar' || f.kind === 'bloodring' || f.kind === 'bell' || f.kind === 'croak') && f.r) {
-      // a shockwave running out to where it reached (a bell's, gold; a toad's croak, the green of its venom)
-      const col = f.kind === 'bloodring' ? BLOOD : f.kind === 'roar' ? FIRE : f.kind === 'bell' ? GOLD : f.kind === 'croak' ? VENOM : DUST;
+    } else if ((f.kind === 'ring' || f.kind === 'roar' || f.kind === 'bloodring' || f.kind === 'bell' || f.kind === 'croak' || f.kind === 'sandring') && f.r) {
+      // a shockwave running out to where it reached (a bell's, gold; a toad's croak, the green of its venom; a whirl of sand)
+      const col = f.kind === 'bloodring' ? BLOOD : f.kind === 'roar' ? FIRE : f.kind === 'bell' ? GOLD : f.kind === 'croak' ? VENOM : f.kind === 'sandring' ? SAND : DUST;
       const r = f.r || 70;
       g.fillStyle = rgba(col, 0.14 * (1 - p));
       ring(g, f.x, f.y, r);
@@ -715,6 +727,15 @@ export function drawGroundMarks(g, s, C, kit, u = 1) {
       g.lineWidth = lw(3);
       ring(g, f.x, f.y, f.r * (0.5 + p * 0.6));
       g.stroke();
+    } else if (f.kind === 'sandspout') {
+      // the sand heaving up from under where it burst: a mound of it, the hollow it leaves
+      g.fillStyle = rgba(SAND, 0.4 * (1 - p));
+      ring(g, f.x, f.y, f.r * Math.min(1, 0.4 + p * 1.4));
+      g.fill();
+      g.strokeStyle = `rgba(120,92,58,${0.7 * (1 - p)})`;
+      g.lineWidth = lw(2.2);
+      ring(g, f.x, f.y, f.r * (0.6 + p * 0.5));
+      g.stroke();
     } else if (f.kind === 'venom') {
       // a splash of venom where it came down
       g.fillStyle = rgba(VENOM, 0.45 * (1 - p));
@@ -723,9 +744,9 @@ export function drawGroundMarks(g, s, C, kit, u = 1) {
         ring(g, f.x + Math.cos(a) * f.r * 0.6 * (0.4 + p), f.y + Math.sin(a) * f.r * 0.6 * (0.4 + p), 5 * (1 - p) + 2);
         g.fill();
       }
-    } else if (f.kind === 'breath' || f.kind === 'spray') {
-      // a sheet of fire (or venom) over the ground in front of it
-      g.fillStyle = rgba(f.kind === 'spray' ? VENOM : FIRE, 0.42 * (1 - p));
+    } else if (f.kind === 'breath' || f.kind === 'spray' || f.kind === 'sand' || f.kind === 'zen') {
+      // a sheet of fire (or venom, or flung sand, or the gold of a palm) over the ground in front of it
+      g.fillStyle = rgba(f.kind === 'spray' ? VENOM : f.kind === 'sand' ? SAND : f.kind === 'zen' ? GOLD : FIRE, (f.kind === 'zen' ? 0.3 : 0.42) * (1 - p));
       fan(g, f.x, f.y, f.dir, f.reach * Math.min(1, 0.4 + p * 2), f.arc);
       g.fill();
     } else if (f.kind === 'web') {
@@ -1413,6 +1434,81 @@ function drawShot(ctx, proj, px, sh, now) {
     ctx.fill();
     return;
   }
+  if (sh.kind === 'beads') {
+    // a prayer bead flung, spinning, gold edged in light, a short gleam behind it
+    for (let n = 3; n >= 1; n--) {
+      const [tx, ty] = proj(sh.x - sh.ux * n * 6, sh.y - sh.uy * n * 6, 15);
+      ctx.fillStyle = rgba(GOLD, 0.3 - n * 0.07);
+      ctx.beginPath();
+      ctx.arc(tx, ty, (4.5 - n) * k, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    const r = 3.6 * k * Math.max(1, px * 2);
+    const g = ctx.createRadialGradient(x, y, 0, x, y, r * 2.4);
+    g.addColorStop(0, 'rgba(255,246,200,0.9)');
+    g.addColorStop(0.5, rgba(GOLD, 0.45));
+    g.addColorStop(1, rgba(GOLD, 0));
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(x, y, r * 2.4, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = 'rgba(122,82,40,1)';
+    ctx.strokeStyle = 'rgba(240,206,120,1)';
+    ctx.lineWidth = 0.8 * px * Math.max(1, k);
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    // the hole bored through it, turning
+    const sp = now * 14 + sh.x * 0.1;
+    ctx.fillStyle = 'rgba(40,26,14,0.9)';
+    ctx.beginPath();
+    ctx.ellipse(x, y, r * 0.3, r * 0.3 * Math.abs(Math.cos(sp)), sp, 0, Math.PI * 2);
+    ctx.fill();
+    return;
+  }
+  if (sh.kind === 'star') {
+    // starlight out of a stone guard's eyes: a long cold beam, a hard white point, motes falling off it
+    const wake = Math.min(sh.went || 60, 150);
+    const [bx, by] = proj(sh.x - sh.ux * wake, sh.y - sh.uy * wake, 15);
+    const tail = ctx.createLinearGradient(bx, by, x, y);
+    tail.addColorStop(0, rgba(STAR, 0));
+    tail.addColorStop(1, rgba(STAR, 0.6));
+    ctx.strokeStyle = tail;
+    ctx.lineWidth = 7 * k;
+    ctx.beginPath();
+    ctx.moveTo(bx, by);
+    ctx.lineTo(x, y);
+    ctx.stroke();
+    ctx.strokeStyle = 'rgba(250,252,255,0.9)';
+    ctx.lineWidth = 1.4 * px * Math.max(1, k);
+    ctx.stroke();
+    for (let n = 0; n < 5; n++) {
+      const q = ((now * 2.2 + n * 0.2) % 1) * Math.min(1, wake / 150);
+      const [mx, my] = proj(sh.x - sh.ux * wake * q + Math.sin(n * 7.1) * 6, sh.y - sh.uy * wake * q + Math.cos(n * 5.3) * 5, 15 - q * 10);
+      ctx.fillStyle = rgba(STAR, 0.8 * (1 - q));
+      ctx.fillRect(mx - k, my - k, 2 * k, 2 * k);
+    }
+    const r = 6 * k;
+    const g = ctx.createRadialGradient(x, y, 0, x, y, r * 2.2);
+    g.addColorStop(0, 'rgba(255,255,255,1)');
+    g.addColorStop(0.35, rgba(STAR, 0.9));
+    g.addColorStop(1, rgba(STAR, 0));
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(x, y, r * 2.2, 0, Math.PI * 2);
+    ctx.fill();
+    // a four-pointed glint
+    ctx.strokeStyle = 'rgba(255,255,255,0.85)';
+    ctx.lineWidth = 0.9 * px * Math.max(1, k);
+    ctx.beginPath();
+    ctx.moveTo(x - r * 1.8, y);
+    ctx.lineTo(x + r * 1.8, y);
+    ctx.moveTo(x, y - r * 1.8);
+    ctx.lineTo(x, y + r * 1.8);
+    ctx.stroke();
+    return;
+  }
   if (sh.kind === 'soul') {
     // a pale bolt of cold, wisps trailing off it
     for (let n = 5; n >= 1; n--) {
@@ -1945,6 +2041,131 @@ function drawFx(ctx, proj, px, f, now) {
         ctx.lineWidth = 0.8 * px;
         ctx.stroke();
       }
+      break;
+    }
+    case 'sting': {
+      // the tail brought over its back and down: a dark hooked stroke from behind to where it strikes, venom where it lands
+      const down = Math.min(1, p * 3);
+      const [x0, y0] = proj(f.x - f.dir[0] * 8, f.y - f.dir[1] * 8, 18);
+      const [cx, cy] = proj(f.x + f.dir[0] * f.reach * 0.3, f.y + f.dir[1] * f.reach * 0.3, 44);
+      const [x1, y1] = proj(f.x + f.dir[0] * f.reach * 0.85, f.y + f.dir[1] * f.reach * 0.85, 4 + (1 - down) * 24);
+      ctx.strokeStyle = `rgba(40,30,24,${0.85 * (1 - p)})`;
+      ctx.lineWidth = 3 * px * Math.max(1, k);
+      ctx.beginPath();
+      ctx.moveTo(x0, y0);
+      ctx.quadraticCurveTo(cx, cy, x1, y1);
+      ctx.stroke();
+      ctx.strokeStyle = `rgba(232,196,110,${0.9 * (1 - p)})`;
+      ctx.lineWidth = 1.2 * px * Math.max(1, k);
+      ctx.stroke();
+      if (down >= 1) {
+        const q = (p - 1 / 3) * 1.5;
+        for (let n = 0; n < 6; n++) {
+          const a = n * 1.05 + f.x * 0.01;
+          ctx.fillStyle = rgba(VENOM, 0.85 * (1 - p));
+          ctx.beginPath();
+          ctx.arc(x1 + Math.cos(a) * 10 * k * q, y1 + Math.sin(a) * 5 * k * q - 4 * k * Math.sin(q * Math.PI), 1.8 * k * Math.max(1, px * 2), 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+      break;
+    }
+    case 'sand': {
+      // sand flung (or dust breathed) from it: grains thrown out over the ground in front, a haze of dust behind them
+      for (let n = 0; n < 16; n++) {
+        const q = (n / 16 + p * 0.9) % 1;
+        const side = Math.sin(n * 2.3) * f.arc * 0.48;
+        const a = Math.atan2(f.dir[1], f.dir[0]) + side;
+        const [x, y] = proj(f.x + Math.cos(a) * f.reach * q, f.y + Math.sin(a) * f.reach * q, 16 - q * 10);
+        ctx.fillStyle = rgba(n % 3 ? SAND : [150, 118, 76], 0.9 * (1 - p));
+        ctx.fillRect(x - k, y - k, 2 * k * Math.max(1, px * 2), 2 * k * Math.max(1, px * 2));
+      }
+      const [hx, hy] = proj(f.x + f.dir[0] * f.reach * 0.6, f.y + f.dir[1] * f.reach * 0.6, 12);
+      const r = f.reach * 0.45 * k * (0.5 + p * 0.7);
+      const g = ctx.createRadialGradient(hx, hy, 0, hx, hy, r);
+      g.addColorStop(0, rgba(SAND, 0.45 * (1 - p)));
+      g.addColorStop(1, rgba(SAND, 0));
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.arc(hx, hy, r, 0, Math.PI * 2);
+      ctx.fill();
+      break;
+    }
+    case 'sandring': {
+      // a whirl of sand all round it: streaks going round and out, grains thrown wide
+      for (let n = 0; n < 14; n++) {
+        const an = n * 0.449 + p * 5;
+        const rr = f.r * (0.25 + 0.75 * Math.min(1, p * 1.6)) * (0.7 + ((n * 37) % 10) / 33);
+        const [x0, y0] = proj(f.x + Math.cos(an) * rr, f.y + Math.sin(an) * rr * 0.8, 6 + (n % 4) * 5);
+        const [x1, y1] = proj(f.x + Math.cos(an + 0.5) * rr, f.y + Math.sin(an + 0.5) * rr * 0.8, 6 + (n % 4) * 5);
+        ctx.strokeStyle = rgba(n % 3 ? SAND : [150, 118, 76], 0.75 * (1 - p));
+        ctx.lineWidth = 1.6 * px * Math.max(1, k);
+        ctx.beginPath();
+        ctx.moveTo(x0, y0);
+        ctx.lineTo(x1, y1);
+        ctx.stroke();
+      }
+      break;
+    }
+    case 'sandspout': {
+      // the sand bursting up out of the ground where it marked: a column of it, falling back
+      const up = p < 0.35 ? p / 0.35 : 1;
+      for (let n = 0; n < 18; n++) {
+        const an = n * 2.399 + f.x * 0.01;
+        const rr = f.r * 0.7 * (((n * 37) % 10) / 10);
+        const hgt = (30 + (n % 5) * 9) * up * (p < 0.35 ? 1 : 1 - (p - 0.35) / 0.65 * 0.8);
+        const [x, y] = proj(f.x + Math.cos(an) * rr * (1 + p * 0.4), f.y + Math.sin(an) * rr * 0.7 * (1 + p * 0.4), hgt);
+        ctx.fillStyle = rgba(n % 3 ? SAND : [150, 118, 76], 0.9 * (1 - p * 0.8));
+        ctx.beginPath();
+        ctx.arc(x, y, (2.4 - (n % 3) * 0.5) * k * Math.max(1, px * 2), 0, Math.PI * 2);
+        ctx.fill();
+      }
+      const [bx, by] = proj(f.x, f.y, 14 * up);
+      const r = f.r * 0.8 * k * (0.6 + up * 0.4);
+      const g = ctx.createRadialGradient(bx, by, 0, bx, by, r);
+      g.addColorStop(0, rgba(SAND, 0.5 * (1 - p)));
+      g.addColorStop(1, rgba(SAND, 0));
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.arc(bx, by, r, 0, Math.PI * 2);
+      ctx.fill();
+      break;
+    }
+    case 'zen': {
+      // a palm of gold thrust out: the print of a hand, as big as a door, driving forward and fading
+      const q = Math.min(1, p * 2.2);
+      const [x, y] = proj(f.x + f.dir[0] * f.reach * (0.4 + q * 0.5), f.y + f.dir[1] * f.reach * (0.4 + q * 0.5), 18);
+      const s = (10 + q * 9) * k;
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.globalAlpha *= 0.85 * (1 - p);
+      const g = ctx.createRadialGradient(0, 0, 0, 0, 0, s * 2);
+      g.addColorStop(0, 'rgba(255,240,190,0.7)');
+      g.addColorStop(1, rgba(GOLD, 0));
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.arc(0, 0, s * 2, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = rgba(GOLD, 0.75);
+      ctx.strokeStyle = 'rgba(255,236,170,0.9)';
+      ctx.lineWidth = 1 * px * Math.max(1, k);
+      ctx.beginPath();
+      ctx.ellipse(0, s * 0.25, s * 0.6, s * 0.62, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+      for (let n = 0; n < 4; n++) {
+        const dx = (n - 1.5) * s * 0.3;
+        const fl = s * (0.62 + (n === 1 || n === 2 ? 0.16 : 0));
+        ctx.beginPath();
+        ctx.ellipse(dx, -s * 0.2 - fl * 0.5, s * 0.12, fl * 0.5, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+      }
+      ctx.beginPath();
+      ctx.ellipse(-s * 0.62, s * 0.05, s * 0.12, s * 0.32, -0.7, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+      ctx.restore();
       break;
     }
     case 'dash': {

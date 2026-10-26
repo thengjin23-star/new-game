@@ -313,4 +313,117 @@ export const FOES = {
       scared: ['蠱母縮回了地底。', '蠱母縮回了地底。'],
     },
   },
+  // ── 0.22 西漠 (二階: a match for 築基) ──
+  // 沙海、黑戈壁: scorpions as big as a dog, in threes under the sand — they lie in wait there and come
+  // up under you (神識 shows them); two snaps of the pincers, the tail over the back and down on you (the
+  // venom stays), a scuttle at you. They keep out of the noon sun.
+  scorpion: {
+    name: '沙蠍', el: '金', hp: 0.95, atk: 1.1, loot: [[0.5, 'scorpion_tail', 1]],
+    rt: {
+      share: 1.3, tier: 2, speed: 158, walk: 0, sight: 110, lose: 380, loseT: 1.4, leash: 640, body: 13, bulk: 0.7, tall: 15,
+      notice: 0, moves: ['pincer', 'stinger', 'scuttle'], ambush: true, hop: 0.35, night: 1.3, noon: 0.7, pack: true, tokens: 2, ring: 96, poise: 1.2,
+      warn: '沙子底下沙沙作響，像有很多隻腳在爬。', cry: '沙子一翻，幾隻黑殼的沙蠍鑽了出來，尾巴高高翹起！',
+      scared: ['那隻沙蠍鑽回了沙子底下。', '那些沙蠍鑽回了沙子底下。'], broke: '剩下的沙蠍鑽回了沙子底下。',
+    },
+  },
+  // 沙海: wolves the colour of the sand, three together, worst by night
+  sand_wolf: {
+    name: '沙狼', el: '土', hp: 0.9, atk: 1.05, loot: [[0.5, 'wolf_pelt', 1]],
+    rt: {
+      share: 1.3, tier: 2, speed: 182, walk: 54, sight: 230, lose: 460, loseT: 1.4, leash: 820, body: 12, bulk: 1.25, tall: 20,
+      notice: 0.45, moves: ['nip', 'lunge'], hop: 0.4, night: 1.35, noon: 0.6, pack: true, mourn: true, tokens: 2, ring: 100,
+      warn: '沙丘那邊傳來狼嚎，一聲接著一聲。', cry: '沙丘頂上冒出幾個黃影子——沙狼！',
+      scared: ['那頭沙狼夾著尾巴跑了。', '沙狼們夾著尾巴，翻過沙丘跑了。'], broke: '剩下的沙狼翻過沙丘跑了。',
+    },
+  },
+  // 黑戈壁: the bandits of 禿鷲寨 — men with curved blades and their faces wrapped, who fling sand in your eyes
+  sand_bandit: {
+    name: '沙盜', hp: 1, atk: 1.05,
+    rt: {
+      share: 1.45, tier: 1, person: true, rank: '煉氣九層', speed: 160, walk: 40, sight: 240, lose: 420, loseT: 1.5, leash: 760, body: 10, tall: 37,
+      notice: 0.45, moves: ['sabre', 'sandthrow', 'rush'], night: 1.1, tokens: 2, ring: 92, flee: 0.2, talk: 90,
+      low: { at: 0.3, mode: 'rage', line: '{name}紅了眼，揮著彎刀撲了上來！' },
+      warn: '土台後面有人在低聲說話，還有刀出鞘的聲音。', cry: '幾個蒙著臉的人從土台後面衝了出來！',
+      scared: ['那人看了你一眼，翻身就跑。', '那幾個人看了你一眼，翻身就跑。'], broke: '剩下的沙盜見勢不妙，翻身就跑。',
+    },
+  },
+  // 禿鷲寨's master: a 築基 bandit with a great curved blade — three cuts running, a whirl of sand all
+  // round him, a rush; beaten, he throws down his blade
+  vulture: {
+    name: '禿鷲', hp: 1.4, atk: 1.2, boss: true,
+    rt: {
+      tier: 2, person: true, rank: '築基中期', speed: 176, walk: 40, sight: 260, lose: 480, loseT: 1.6, leash: 900, body: 12, tall: 40,
+      notice: 0.4, moves: ['sabre', 'sandthrow', 'rush'], yield: 0.16,
+      phases: [
+        { at: 0.6, moves: ['vulturecut', 'sandwhirl', 'sandthrow', 'rush'], line: '禿鷲把彎刀在手裡一轉，腳下的沙子打著旋兒捲了起來！' },
+        { at: 0.3, enrage: true, line: '禿鷲扯下蒙臉的布，啐了一口血——他拚命了！' },
+      ],
+      cry: '禿鷲提著彎刀，一步一步走了過來。',
+    },
+  },
+  // 沙陀寺, by night: the monks who died sitting, up and walking — a clutch that drinks what it takes,
+  // dust breathed out of a dead mouth
+  mummy: {
+    name: '乾屍', el: '土', hp: 1.05, atk: 1, spirit: true,
+    rt: {
+      share: 1.2, tier: 2, speed: 112, walk: 20, sight: 180, lose: 380, loseT: 1.6, leash: 560, body: 11, bulk: 0.7, tall: 36,
+      notice: 0.6, moves: ['grasp', 'dustbreath'], night: 1.3, day: 0.5, tokens: 2, ring: 86,
+      warn: '風裡有一股陳年的檀香味，混著塵土。', cry: '一具乾屍搖搖晃晃地走了過來，空空的眼眶對著你。',
+      scared: ['那具乾屍停了下來，又慢慢坐回了地上。', '那些乾屍停了下來，又慢慢坐回了地上。'],
+    },
+  },
+  // 沙陀寺's abbot, sixty years dead and sitting still in the hall: a palm of gold, beads flung five at
+  // once, a roar like a lion's; worn down, he calls the dead monks up off their cushions
+  kuchan: {
+    name: '枯禪', el: '金', hp: 1.5, atk: 1.15, boss: true, spirit: true, loot: [[1, 'sarira', 1]],
+    rt: {
+      tier: 2, speed: 120, walk: 0, sight: 150, lose: 520, loseT: 1.8, leash: 520, body: 13, bulk: 0.8, tall: 40,
+      notice: 0.8, moves: ['zenpalm', 'beads'],
+      phases: [
+        { at: 0.6, moves: ['lionroar', 'zenpalm', 'beads', 'monkcall'], line: '枯禪睜開了眼。一圈金光從他身上盪開，殿裡的乾屍一齊站了起來！' },
+        { at: 0.28, enrage: true, line: '枯禪身上的袈裟寸寸碎裂，金光裡透出黑氣——他發狂了！' },
+      ],
+      warn: '殿裡有人在唸經，聲音乾澀，像風吹過枯葉。', cry: '蒲團上的老僧緩緩抬起了頭。',
+    },
+  },
+  // 流沙: the last 蛟 of the old 西海, that learned to swim in sand when the sea dried — its jaws, its
+  // tail swept round, sand spouting where you stand; worn down, it goes under and comes up behind
+  // you, and turns the ground about it to quicksand
+  sand_jiao: {
+    name: '沙蛟', el: '水', hp: 1.7, atk: 1.2, boss: true, loot: [[1, 'beast_core', 3], [1, 'jiao_scale', 3], [1, 'dingfeng_pearl', 1]],
+    rt: {
+      tier: 2, speed: 150, walk: 24, sight: 260, lose: 520, loseT: 1.8, leash: 640, body: 24, bulk: 0.6, tall: 34,
+      notice: 0.7, moves: ['jiaobite', 'tailsweep', 'sandspout'],
+      phases: [
+        { at: 0.62, moves: ['jiaobite', 'sandsink', 'sandspout', 'quickpool', 'tailsweep'], line: '沙蛟一頭扎進沙裡，四周的沙地一齊轉了起來！' },
+        { at: 0.3, enrage: true, line: '沙蛟昂起頭一聲長吟，背上的鱗片根根豎起——牠發狂了！' },
+      ],
+      warn: '沙地底下有什麼大東西慢慢游過去，沙面隆起長長的一道脊。', cry: '沙渦裡猛地探出一顆頭，頭上兩隻彎角——是沙蛟！',
+      scared: ['沙蛟沉回了流沙底下。', '沙蛟沉回了流沙底下。'],
+    },
+  },
+  // 沉沙古城: the stone guards of the old city, slow and heavy, that wake when you come near
+  stone_puppet: {
+    name: '石傀', el: '土', hp: 1.3, atk: 1.1, loot: [[0.3, 'star_stone', 1]],
+    rt: {
+      share: 1.25, tier: 2, speed: 104, walk: 0, sight: 170, lose: 380, loseT: 1.4, leash: 440, body: 14, bulk: 0.9, tall: 36,
+      notice: 0.9, moves: ['stonefist', 'stomp', 'bearcharge'], poise: 2.2, pack: true, tokens: 2, ring: 90,
+      warn: '路邊的石像，好像轉了一下頭。', cry: '石像從底座上走了下來，石頭磨著石頭，咯咯作響！',
+      scared: ['那尊石像退回了底座上，一動不動。', '那些石像退回了底座上，一動不動。'],
+    },
+  },
+  // 星門: the stone 翁仲 that guards the way down under the 觀星台 — its halberd swept wide, starlight
+  // from its eyes; worn down, the ground split where you stand, and the stone guards called up
+  stone_general: {
+    name: '石翁仲', el: '土', hp: 1.9, atk: 1.25, boss: true, loot: [[1, 'star_stone', 2]],
+    rt: {
+      tier: 2, speed: 110, walk: 0, sight: 280, lose: 600, loseT: 2, leash: 520, body: 20, bulk: 0.9, tall: 64,
+      notice: 0.9, moves: ['halberd', 'stomp', 'starbeam'],
+      phases: [
+        { at: 0.6, moves: ['halberd', 'smash', 'starbeam', 'stonecall'], line: '石翁仲的眼裡亮起兩點星光，手裡的石戟嗡嗡作響！' },
+        { at: 0.28, enrage: true, line: '石翁仲身上的石皮一片一片剝落，露出底下發光的星紋——它發狂了！' },
+      ],
+      cry: '星門前的石翁仲，眼裡亮起了光。',
+    },
+  },
 };

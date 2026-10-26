@@ -49,6 +49,8 @@ export const BUFFS = {
   epiphany: { name: '頓悟餘韻', mult: 1.4 },
   // 避瘴丹 (南嶺): the miasma does not touch you while it lasts (it does nothing for cultivation)
   bizhang: { name: '避瘴', mult: 1 },
+  // 冰心丹 (西漠): the noon sun does not touch you while it lasts
+  bingxin: { name: '冰心', mult: 1 },
 };
 
 export function realmOf(s) {

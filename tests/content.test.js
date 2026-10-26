@@ -6,11 +6,15 @@ import { TECHS } from '../src/content/techniques.js';
 import { NODES } from '../src/world/map.js';
 import { CROSSINGS } from '../src/world/atlas.js';
 import { NAMED } from '../src/world/npcs.js';
-import { POI_BY_ID, BEASTS } from '../src/world/places.js';
+import { POI_BY_ID, DONGHUANG_PLACES } from '../src/world/places.js';
+import { LANDS } from '../src/world/maps/index.js';
 import { FOES } from '../src/content/foes.js';
 import { BEAST_MOVES } from '../src/content/moves.js';
 
-const TRIGGERS = new Set(['intro', 'explore', 'arrive', 'travel', 'inquire', 'visit', 'scheduled', 'fallback']);
+/** What roams every map (東荒's, and each other map's own). */
+const BEASTS = [...DONGHUANG_PLACES.BEASTS, ...LANDS.flatMap((m) => m.places.BEASTS)];
+
+const TRIGGERS = new Set(['intro', 'explore', 'arrive', 'travel', 'inquire', 'visit', 'scheduled', 'fallback', 'sky']);
 
 function stepsOf(ev) {
   return ev.steps || { start: { text: ev.text, choices: ev.choices, effects: ev.effects } };

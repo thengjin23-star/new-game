@@ -97,6 +97,34 @@ export const ITEMS = {
     name: '蠱母甲', kind: 'material', sell: 120,
     desc: '蠱母背上的一片甲，金黃泛銅色，刀砍上去只留一道白印，百毒不侵。阿蘿說，這東西能做一件好甲。',
   },
+  // 西漠 (0.22)
+  shaji: {
+    name: '沙棘果', kind: 'herb', sell: 3,
+    desc: '沙地上一叢一叢的刺棵子結的小果，橙黃橙黃的，酸得掉牙。駝夫們走沙海，嘴裡總嚼著一把：生津，解渴。',
+    use: { text: '酸得你眼淚都出來了。嘴裡生了津，喉嚨不那麼乾了。', effects: [['hp', 0.12], ['shade', 0.5]] },
+  },
+  suoyang: {
+    name: '鎖陽', kind: 'herb', sell: 14,
+    desc: '戈壁上的怪草，沒有葉子，一根紫紅的肉莖從石縫裡頂出來。冬天地凍三尺，它四周的雪也是化的。補精血，壯筋骨。',
+    use: { text: '鎖陽又澀又甜。嚼下去，一股熱從腰眼升起來，渾身的筋骨都暖了。', effects: [['xw', 60], ['hp', 0.25]] },
+  },
+  congrong: {
+    name: '肉蓯蓉', kind: 'herb', sell: 45,
+    desc: '寄生在梭梭根上的「沙漠人參」，黃褐色，一節一節像鱗片。駝隊的人說，一根百年的蓯蓉，抵得上一株紫雲芝。',
+    use: { text: '蓯蓉的藥力綿長，一點一點地沉進經脈，像沙子吸水。', effects: [['xw', 160], ['healdays', 10]] },
+  },
+  scorpion_tail: {
+    name: '沙蠍尾針', kind: 'material', sell: 14,
+    desc: '沙蠍尾巴上的毒鉤，一截琥珀色，裡頭的毒還沒乾。藥鋪收它入藥：以毒攻毒。',
+  },
+  jiao_scale: {
+    name: '沙蛟鱗', kind: 'material', sell: 110,
+    desc: '沙蛟身上的鱗，金褐色，巴掌大，邊緣磨得像刀。沙子打在上面，一點痕跡也不留；摸上去，總是涼的。',
+  },
+  star_stone: {
+    name: '星紋石', kind: 'material', sell: 60,
+    desc: '石傀身上剝下來的一塊石頭，裡頭有銀藍色的紋，夜裡一閃一閃，像把星星封在了石頭裡。',
+  },
 
   // ── 丹藥 ──
   juqi_pill: {
@@ -117,6 +145,16 @@ export const ITEMS = {
     name: '避瘴丹', kind: 'pill', price: 30, sell: 12,
     desc: '南嶺人自己配的丹：瘴靈芝為主，蟾酥為引。服下之後三天之內，瘴氣近不了身。',
     use: { text: '丹藥入口，又苦又辣，一股辛氣從鼻子裡直衝出來。之後的每一口呼吸，都帶著一點清涼。', effects: [['buff', 'bizhang', 3]] },
+  },
+  bingxin_pill: {
+    name: '冰心丹', kind: 'pill', price: 35, sell: 14,
+    desc: '月泉驛賣的丹，雪白，含在嘴裡冰涼。服下之後三天之內，正午的毒日頭曬不倒你。',
+    use: { text: '丹藥入口，一股涼氣從舌根一直沉到丹田。日頭底下，你也覺得像站在樹蔭裡。', effects: [['buff', 'bingxin', 3], ['shade']] },
+  },
+  water_skin: {
+    name: '水囊', kind: 'food', price: 4, sell: 1,
+    desc: '羊皮縫的水囊，灌滿了月泉的水。走沙海的人，身上沒有水囊，就是不要命。日頭底下喝幾口，人就緩過來了。',
+    use: { text: '你仰頭灌了幾大口。水是溫的，帶著羊皮的膻味，可這是你這輩子喝過最好喝的水。', effects: [['hp', 0.1], ['shade']] },
   },
   qingxin_pill: {
     name: '清心丹', kind: 'pill', price: 40, sell: 16,
@@ -265,6 +303,10 @@ export const ITEMS = {
     name: '赤炎虎皮袍', kind: 'gear', slot: 'robe', sell: 160, stats: { hp: 0.2, def: 0.08, fire: 0.5 }, craft: { ls: 200, items: { fire_tiger_pelt: 1 } },
     desc: '赤炎妖虎的皮做的袍子，終年溫熱，火燒不透。',
   },
+  jiao_armor: {
+    name: '蛟鱗甲', kind: 'gear', slot: 'robe', sell: 200, stats: { hp: 0.14, def: 0.16, cool: 1 }, craft: { ls: 220, items: { jiao_scale: 3 } },
+    desc: '沙蛟鱗一片壓一片綴成的甲，金褐色，摸上去總是涼的。刀砍不進，正午的日頭也曬不透。',
+  },
   peace_buckle: {
     name: '平安扣', kind: 'gear', slot: 'charm', price: 40, sell: 15, stats: { def: 0.04, regen: 0.3 },
     desc: '青玉磨成的平安扣，說是開過光。受的傷輕一點，好得也快一點。',
@@ -280,6 +322,18 @@ export const ITEMS = {
   crane_plume: {
     name: '金羽鶴翎', kind: 'gear', slot: 'charm', sell: 0, keep: true, stats: { speed: 0.06, regen: 0.25 },
     desc: '孤鶴峰上，金頸白鶴送你的一根翎羽。羽根是金的，摸上去暖暖的。戴著它，腳下輕快了些，傷也好得快些。',
+  },
+  hanyu_pendant: {
+    name: '寒玉佩', kind: 'gear', slot: 'charm', price: 320, sell: 120, stats: { cool: 1, mpRegen: 0.3 },
+    desc: '從更西邊運來的白玉，冰一樣涼，烈日底下摸著也不燙手。戴著它，正午的毒日頭曬不倒你。',
+  },
+  sarira: {
+    name: '枯禪舍利', kind: 'gear', slot: 'charm', sell: 0, keep: true, stats: { mp: 25, mpRegen: 0.8, def: 0.03 },
+    desc: '枯禪坐化六十年，留下的一顆舍利，金黃，溫的。握在手裡，心就靜了，靈力也像泉水一樣慢慢湧上來。',
+  },
+  dingfeng_pearl: {
+    name: '定風珠', kind: 'gear', slot: 'relic', sell: 0, keep: true, stats: { wind: 1, def: 0.03 },
+    desc: '沙蛟頷下的一顆珠子，渾圓，灰白，裡面像有風在轉。戴著它，沙暴到了身邊也會繞開：沙暴裡照樣走得動、看得清，也飛得起來。',
   },
   zhaoyao_mirror: {
     name: '照妖鏡', kind: 'gear', slot: 'relic', price: 280, sell: 110, stats: { sense: 0.5 }, move: 'mirror',
@@ -331,7 +385,7 @@ export const ITEMS = {
   },
   return_talisman: {
     name: '歸元符', kind: 'talisman', price: 40, sell: 12,
-    desc: '燒了，一陣風把你送回這一帶最近去過的城鎮（東荒：青石鎮、落霞坊市或清虛觀；南嶺：青竹寨）。路上要過一個時辰。',
+    desc: '燒了，一陣風把你送回這一帶最近去過的城鎮（東荒：青石鎮、落霞坊市或清虛觀；南嶺：青竹寨；西漠：月泉）。路上要過一個時辰。',
   },
   xuesha_token: {
     name: '血煞令', kind: 'token', sell: 0,
@@ -411,5 +465,21 @@ export const SHOPS = {
     refine: false,
     made: '{keeper}收下東西，進了竹樓後頭，關上門。大半天之後她出來，把一件{item}交到你手上，手指上全是細細的口子。',
     share: (s) => (s.flags.gu_cleared ? 0.8 : s.flags.zhai_trust ? 0.9 : 1),
+  },
+  // 西漠・月泉: 月娘's 驛站 has what you need to go out on the sand
+  yuequan: {
+    name: '月泉驛',
+    keeper: '月娘',
+    stock: ['water_skin', 'bingxin_pill', 'heal_pill', 'detox_pill', 'juqi_pill', 'return_talisman'],
+  },
+  // 康駝頭's caravan: what comes from further west; and an old saddler who works scale for whoever brings it
+  caravan: {
+    name: '康家駝隊',
+    keeper: '康駝頭',
+    stock: ['hanyu_pendant', 'jade_pendant', 'qingxin_pill', 'wind_talisman', 'water_skin', 'mystery'],
+    recipes: ['jiao_armor'],
+    refine: false,
+    made: '{keeper}把東西交給駝隊裡的老皮匠。老人一聲不吭地忙了一整天，傍晚把一件{item}遞給你，又低下頭去補他的鞍子。',
+    share: (s) => (s.flags.vulture_done ? 0.85 : 1),
   },
 };

@@ -7,7 +7,7 @@ import { sysGain, trySubstitute } from '../world/system.js';
 import { reveal, unseenSpot } from '../world/fog.js';
 import { addXiuwei, stageReq, INJURY } from './cultivation.js';
 import { restore, unwearGone, pools } from './body.js';
-import { advance } from './time.js';
+import { advance, spendHours } from './time.js';
 import { schedule, unschedule } from './schedule.js';
 import { rand, randInt, pickWeighted } from './rng.js';
 import { addRep } from '../world/factions.js';
@@ -251,6 +251,16 @@ export function applyEffects(s, effects, ctx, report) {
         if (n > 0) chip(report, `氣血 +${n}`, 'good');
         break;
       }
+      case 'wound': {
+        // blood lost (the sun, the sand, a fall): a share of all you can hold, never the last of it
+        const V = pools(s);
+        const n = Math.min(Math.round(V.cap * a), Math.floor(p.hp) - 1);
+        if (n > 0) {
+          p.hp -= n;
+          chip(report, `氣血 -${n}`, 'bad');
+        }
+        break;
+      }
       case 'mp': {
         // 靈力: a share of what you hold back (or, as a whole number, that much spent)
         if (a <= -1) {
@@ -284,6 +294,17 @@ export function applyEffects(s, effects, ctx, report) {
       case 'days':
         advance(s, a, 'active', report);
         chip(report, `耗時 ${a} 天`, 'neutral');
+        break;
+      case 'hours':
+        // some hours of the day gone (waiting out a sandstorm, lying up out of the sun)
+        if (a > 0) {
+          spendHours(s, a, report);
+          chip(report, `耗時 ${a >= 2 ? `${Math.round(a / 2)} 個時辰` : '半個時辰'}`, 'neutral');
+        }
+        break;
+      case 'shade':
+        // a drink, a rest in the shade: what the sun (or the sand) had worn on you, eased (a share; all of it, if not said)
+        if (s.world?.exposed) s.world.exposed = Math.round(s.world.exposed * (1 - (a ?? 1)));
         break;
       case 'discover':
         discover(s, a, report);
