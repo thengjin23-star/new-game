@@ -11,6 +11,7 @@ const kills = (s) => Object.values(s.vars.kills || {}).reduce((a, b) => a + b, 0
 const visited = (s) => Object.entries(s.nodes || {}).filter(([id, n]) => n.visited && NODES[id]).length;
 const ALL_PLACES = Object.keys(NODES).filter((id) => NODES[id].at && id !== 'hidden_cave' && NODES[id].kind !== 'river' && mapOf(id) === 'donghuang');
 const NANLING_PLACES = Object.keys(NODES).filter((id) => NODES[id].at && mapOf(id) === 'nanling');
+const XIMO_PLACES = Object.keys(NODES).filter((id) => NODES[id].at && mapOf(id) === 'ximo');
 
 /** The marks: name, what it took, and the test. */
 export const FEATS = [
@@ -29,6 +30,14 @@ export const FEATS = [
   { id: 'nanling', name: '過嶺', desc: '翻過山隘，到了南嶺。', test: (s) => !!s.flags.nanling_crossed },
   { id: 'gu_mother', name: '除蠱', desc: '打倒萬蠱谷的蠱母。', test: (s) => s.vars.kills?.gu_mother > 0 },
   { id: 'nanling_all', name: '踏遍南嶺', desc: '南嶺的每個地方都去過（瀑布後面的也算）。', test: (s) => NANLING_PLACES.every((id) => s.nodes[id]?.visited) },
+  // 西漠 (0.22)
+  { id: 'ximo', name: '西出', desc: '出了西風口，到了西漠。', test: (s) => !!s.flags.ximo_crossed },
+  { id: 'vulture', name: '駝道太平', desc: '了結禿鷲寨的事。', test: (s) => !!s.flags.vulture_done },
+  { id: 'shatuo', name: '沙陀', desc: '讓沙陀寺的僧人安息。', test: (s) => !!s.flags.shatuo_rest },
+  { id: 'jiao', name: '伏蛟', desc: '打倒流沙裡的沙蛟。', test: (s) => s.vars.kills?.sand_jiao > 0 },
+  { id: 'steles', name: '讀碑', desc: '讀完沉沙古城的五塊石碑。', test: (s) => !!s.flags.steles_read },
+  { id: 'jietian', name: '接天', desc: '打開星門，走進接天城的地宮。', test: (s) => !!s.flags.palace_seen },
+  { id: 'ximo_all', name: '踏遍西漠', desc: '西漠的每個地方都去過（地宮和望河臺也算）。', test: (s) => XIMO_PLACES.every((id) => s.nodes[id]?.visited) },
   { id: 'walk', name: '雲遊', desc: '走滿一百里路。', test: (s) => (s.world?.walked || 0) >= 100000 },
   { id: 'fly', name: '御風而行', desc: '第一次飛上天。', test: (s) => Object.keys(s.vars.flownBy || {}).length > 0 },
   { id: 'sword', name: '御劍', desc: '御劍飛行。', test: (s) => !!s.vars.flownBy?.sword },

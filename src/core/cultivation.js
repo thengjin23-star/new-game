@@ -220,6 +220,11 @@ export function breakthroughInfo(s, { pills = 0 } = {}) {
         chance += 0.1;
       }
     }
+    // 西漠 (0.22): the star official's notes, at the gate of 金丹
+    if (p.realm === 2 && p.items.xingguan_notes) {
+      parts.push(['星官手記', 0.08]);
+      chance += 0.08;
+    }
   }
   if (p.realm > 0) {
     const ins = Math.min(20, p.insight) * 0.01;

@@ -67,6 +67,16 @@ export const TECHS = {
     mindGuard: 0.1,
     desc: '刻在南嶺水簾洞石壁上的土屬性功法，不知是哪一代先人留下的。厚德載物：進境不快不慢，根基卻打得極穩。身具土靈根者修習，事半功倍。學會之後，也使得出「地刺」。',
   },
+  dari: {
+    name: '大日心經',
+    kind: 'cultivate',
+    grade: '玄品下',
+    mult: 1.65,
+    element: '火',
+    elemBonus: 0.3,
+    mindGuard: 0.3,
+    desc: '沙陀寺藏經窟裡的佛門心法，枯禪一脈的根本。心如大日，照破長夜：進境快，心魔也難近身。身具火靈根者修習，事半功倍。學會之後，也使得出「大日輪」。',
+  },
   qingyuan_sword: {
     name: '青元劍訣',
     kind: 'combat',

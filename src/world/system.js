@@ -99,6 +99,12 @@ export const DEDUCE = [
     effects: [],
   },
   {
+    id: 'frag_sand',
+    cond: (s) => s.sys.lv >= 5 && !hasFrag(s, 'frag_sand') && !!s.flags.ximo_crossed,
+    text: '西漠的沙海深處，埋著一座城。城中央的高台底下，有一頁殘頁在等你——等了很久了。',
+    effects: [['discover', 'lost_city']],
+  },
+  {
     id: 'valley',
     cond: (s) => !s.nodes.lingxi_valley.known,
     text: '西北三日路程，有一處靈氣匯聚之地，被一道陰冷的氣息盤踞。',
@@ -139,6 +145,12 @@ export const DEDUCE = [
     cond: (s) => s.npcs.song_he.alive && s.npcs.song_he.met && s.day > 900 && !s.flags.songhe_saved,
     text: '清虛觀的老道士，命火將熄。凡藥無用，唯壽元果可續。',
     effects: [['flag', 'songhe_foreseen']],
+  },
+  {
+    id: 'west',
+    cond: (s) => !s.nodes.west_pass.known && s.player.realm >= 2,
+    text: '古戰場以西，兩山之間有一道口子，風從那裡灌進來，帶著沙。風那頭，是另一片天地。',
+    effects: [['discover', 'west_pass']],
   },
   {
     id: 'ferry',

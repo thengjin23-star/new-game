@@ -2290,7 +2290,7 @@ function release(s, C, a, io) {
     startDash(s, C, a.ux, a.uy, { ...k, boost });
   } else if (k.aim === 'around') {
     // a sweep all round you (or a bell rung): whoever is in it is caught, and reels
-    C.fx.push({ kind: k.fx === 'bell' ? 'bell' : 'sweep', x: w.x, y: w.y, r: k.radius, t0: C.t, dur: k.fx === 'bell' ? 0.6 : 0.4 });
+    C.fx.push({ kind: k.fx === 'bell' || k.fx === 'sun' ? k.fx : 'sweep', x: w.x, y: w.y, r: k.radius, t0: C.t, dur: k.fx === 'bell' ? 0.6 : k.fx === 'sun' ? 0.7 : 0.4 });
     for (const b of beastsOf(s, C)) {
       const d = Math.hypot(b.x - w.x, b.y - w.y) || 1;
       if (!alive(b) || !foe(b) || !present(s, b) || d > k.radius + b.R.body) continue;

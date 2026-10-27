@@ -242,6 +242,12 @@ export let POIS = [
     id: 'west_pass_gate', region: 'west_pass', x: 60, y: 560, name: '山口', verb: '出西風口',
     text: '山口那頭，是西漠。',
   },
+  // its beacon, dead forty years (light it at night: content/events/pass.js); a milestone fallen by the old road
+  { id: 'wp_beacon', region: 'west_pass', x: 430, y: 505, name: '烽燧', verb: '查看', text: '烽燧塌了一角，頂上空空的。站在燧下往西看，只看得見山。' },
+  {
+    id: 'find_milestone', region: 'ancient_ruins', x: 1890, y: 630, name: '里程石', verb: '查看', hidden: { r: 100 },
+    treasure: { text: '古道邊倒著一塊里程石，風沙磨得只剩幾個字：「西去接天城……」後面的字，被人用刀刮掉了。\n\n接天城？你沒聽過這個名字。往西，是西風口。', effects: [['flag', 'heard_jietian'], ['discover', 'west_pass'], ['sysexp', 5]] },
+  },
   { id: 'sword_cleft', region: 'sword_peak', x: 3656, y: 400, name: '劍痕', verb: '參悟', sprite: 'sword_scar', text: '一道把峰頂整個劈開的裂口，深不見底。風從裡面吹出來，冷得像刀。' },
 ];
 

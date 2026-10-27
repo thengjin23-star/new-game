@@ -39,7 +39,7 @@ const ICE_DEEP = [70, 130, 190];
 const BOLT = [214, 228, 255];
 const BOLT_DEEP = [86, 118, 210];
 /** The light a move gathers into as you cast it. */
-const GLOW = { fire: FIRE, shield: [120, 170, 230], foeqi: FOE_QI, foxfire: FOX, mend: LEAF, iron: GOLD, sweep: GOLD, charge: GOLD, bloodqi: BLOOD, bloodring: BLOOD, blink: FOX, mirror: [246, 232, 170], bell: GOLD, feijian: QI, jianzhen: QI, vine: LEAF, frost: ICE, thunder: BOLT_DEEP, spikes: DUST, sandring: [196, 164, 110] };
+const GLOW = { fire: FIRE, shield: [120, 170, 230], foeqi: FOE_QI, foxfire: FOX, mend: LEAF, iron: GOLD, sweep: GOLD, charge: GOLD, bloodqi: BLOOD, bloodring: BLOOD, blink: FOX, mirror: [246, 232, 170], bell: GOLD, feijian: QI, jianzhen: QI, vine: LEAF, frost: ICE, thunder: BOLT_DEEP, spikes: DUST, sandring: [196, 164, 110], sun: [250, 200, 90] };
 /** 西漠's: sand flung and whirled; the gold of a dead abbot's palm and beads; starlight from a stone guard's eyes. */
 const SAND = [196, 164, 110];
 const STAR = [196, 214, 255];
@@ -653,6 +653,25 @@ export function drawGroundMarks(g, s, C, kit, u = 1) {
       g.strokeStyle = rgba(FIRE, 0.8 * (1 - p));
       g.lineWidth = lw(2.5);
       ring(g, f.x, f.y, f.r * (0.5 + p * 0.6));
+      g.stroke();
+    } else if (f.kind === 'sun') {
+      // 大日輪: a wheel of gold light opening out from you over the ground, its spokes turning
+      const q = Math.min(1, p * 1.8);
+      g.fillStyle = rgba([250, 206, 110], 0.22 * (1 - p));
+      ring(g, f.x, f.y, f.r * q);
+      g.fill();
+      g.strokeStyle = rgba([250, 214, 120], 0.85 * (1 - p));
+      g.lineWidth = lw(3);
+      ring(g, f.x, f.y, f.r * q);
+      g.stroke();
+      g.strokeStyle = rgba(GOLD, 0.6 * (1 - p));
+      g.lineWidth = lw(1.6);
+      g.beginPath();
+      for (let n = 0; n < 12; n++) {
+        const a = (n / 12) * Math.PI * 2 + p * 0.8;
+        g.moveTo(f.x + Math.cos(a) * f.r * q * 0.35, f.y + Math.sin(a) * f.r * q * 0.35);
+        g.lineTo(f.x + Math.cos(a) * f.r * q, f.y + Math.sin(a) * f.r * q);
+      }
       g.stroke();
     } else if (f.kind === 'sweep') {
       // the sweep of a leg, all the way round
@@ -2041,6 +2060,20 @@ function drawFx(ctx, proj, px, f, now) {
         ctx.lineWidth = 0.8 * px;
         ctx.stroke();
       }
+      break;
+    }
+    case 'sun': {
+      // 大日輪: the sun risen behind you, blazing a moment
+      const [x, y] = proj(f.x, f.y, 26 + p * 10);
+      const r = (14 + p * 10) * k;
+      const g = ctx.createRadialGradient(x, y, 0, x, y, r * 2);
+      g.addColorStop(0, `rgba(255,248,214,${0.9 * (1 - p)})`);
+      g.addColorStop(0.4, rgba([250, 200, 90], 0.7 * (1 - p)));
+      g.addColorStop(1, rgba([250, 200, 90], 0));
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.arc(x, y, r * 2, 0, Math.PI * 2);
+      ctx.fill();
       break;
     }
     case 'sting': {

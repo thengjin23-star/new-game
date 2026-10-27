@@ -242,6 +242,11 @@ export const ITEMS = {
     desc: '青雲宗內門的御劍法門。使用後習得：煉氣七層以上，手上有劍就能御劍飛行。',
     use: { text: '你照著訣中的法門，把一縷靈力送進劍身。劍嗡的一聲，從你手裡浮了起來，懸在半空，等你踏上去。', effects: [['tech', 'yujian']] },
   },
+  xingguan_notes: {
+    name: '《星官手記》', kind: 'book', sell: 0, keep: true,
+    desc: '接天城最後一位星官留在地宮裡的手記：他看了十九年的天河，星在哪裡，河往哪裡流，還有天河斷掉的那一夜。持有時，衝擊金丹成功率 +8%。',
+    use: { text: '你翻開手記。字跡清秀，越往後越潦草。最後一頁只有一行：「門在天河的那一頭。河斷了，門還在。」', effects: [['flag', 'notes_read']] },
+  },
   book_songhe: {
     name: '《松鶴手札》', kind: 'book', sell: 0, keep: true,
     desc: '松鶴道人一生的修行心得，記著他當年築基失敗的每一個細節。持有時，突破築基成功率 +10%。翻閱可習得松鶴吐納術。',
@@ -390,6 +395,10 @@ export const ITEMS = {
   xuesha_token: {
     name: '血煞令', kind: 'token', sell: 0,
     desc: '刻著血色骷髏的鐵牌，摸上去是溫的。',
+  },
+  qin_token: {
+    name: '落日關銅牌', kind: 'token', sell: 0, keep: true,
+    desc: '一塊磨得發亮的銅牌，刻著「落日關　戍卒秦」。老秦守了四十年的關，就剩這個了。',
   },
   han_pack: {
     name: '韓三的包袱', kind: 'token', sell: 0,

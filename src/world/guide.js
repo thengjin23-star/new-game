@@ -49,6 +49,28 @@ function nanlingGoal(s) {
   return null;
 }
 
+/** The five steles of 沉沙古城 (content/events/ximo.js). */
+const STELES = ['stele_city', 'stele_ferry', 'stele_star', 'stele_break', 'stele_farewell'];
+
+/** 西漠 (0.22): where its stories stand — 禿鷲寨 for 康駝頭, 了空's master in 沙陀寺, the steles of the old city and the gate under its tower. */
+function ximoGoal(s) {
+  const f = s.flags;
+  const kills = s.vars.kills || {};
+  if (f.kang_asked && !f.vulture_done) return { key: 'xm:vulture', text: '黑戈壁：禿鷲寨', why: '康駝頭請你去禿鷲寨，跟禿鷲討個說法。禿鷲是築基中期的刀客；寨子在黑戈壁北邊的土堡裡，路上的沙盜會先攔你。' };
+  if (f.vulture_done && f.kang_asked && !f.kang_paid) return { key: 'xm:kang', text: '回月泉見康駝頭', why: '禿鷲寨的事了了。回月泉告訴康駝頭。' };
+  if ((kills.kuchan || 0) > 0 && !f.shatuo_rest) return { key: 'xm:hall', text: '沙陀寺：再進一次大殿', why: '枯禪倒下了。回大殿看看。' };
+  if (f.shatuo_task && !(kills.kuchan > 0)) return { key: 'xm:kuchan', text: '沙陀寺：夜裡的大殿', why: '了空請你替他看一眼師父。沙陀寺的乾屍夜裡才走動，大殿前坐著的就是枯禪。陰屍怕火、怕符，刀劍傷它們不深。' };
+  if (f.shatuo_rest && !f.liaokong_told) return { key: 'xm:liao', text: '回月泉見了空', why: '沙陀寺的僧人都安息了。告訴老胡楊底下的了空。' };
+  if (f.shatuo_key && !f.dari_read) return { key: 'xm:caves', text: '沙陀寺：藏經窟', why: '枯禪留下一把銅鑰匙，開的是千佛窟最裡頭的藏經窟。' };
+  const read = STELES.filter((id) => f[`read_${id}`]).length;
+  if (f.palace_open && !f.palace_seen) return { key: 'xm:palace', text: '沉沙古城：地宮', why: '星門開了。走下台階，去地宮裡看看。' };
+  if (f.steles_read && !f.palace_open) return { key: 'xm:gate', text: '沉沙古城：星門', why: '五塊碑都讀完了。觀星台背後的星門，該開了——守門的石翁仲很強，準備好再去。' };
+  if (read > 0) return { key: 'xm:steles', text: `沉沙古城：讀碑（${read}/5）`, why: '古城裡還有沒讀過的石碑：南門一塊，西邊的舊碼頭一塊，觀星台附近三塊。' };
+  if (s.nodes.lost_city?.visited && !read) return { key: 'xm:read', text: '沉沙古城：讀碑', why: '古城裡立著幾塊石碑，刻滿了沒人認得的字。走近看看。' };
+  if (s.nodes.yuequan?.visited && !f.kang_asked && !f.vulture_done) return { key: 'xm:caravan', text: '月泉：康家駝隊', why: '月泉東邊紮著一支駝隊，駝隊的頭康駝頭好像有事發愁。' };
+  return null;
+}
+
 /**
  * What you could do next: { key, text, why } (or null while the opening
  * still leads you by the hand). The first that applies, from what cannot
@@ -87,9 +109,9 @@ export function nextGoal(s) {
     if (h.name === '青雲宗開山收徒' && now && !s.flags.sect_member && !s.flags.recruit_declined) return { key: 'recruit', text: '開山收徒：去青雲宗', why: '十年一回。到青雲宗山門前測靈根，就能入門。也可以繼續做散修。' };
     if (h.name === '青雲宗大比' && now && s.flags.sect_member) return { key: 'tourney', text: '宗門大比：到任務堂', why: '每年六月初一到初十，在任務堂前開擂。連勝三場就是魁首。' };
   }
-  // where 南嶺's stories stand
+  // where the stories of the land you are in stand
   if (away) {
-    const g = nanlingGoal(s);
+    const g = s.world.map === 'ximo' ? ximoGoal(s) : nanlingGoal(s);
     if (g) return g;
   }
   // the work you took
@@ -106,6 +128,8 @@ export function nextGoal(s) {
   }
   // 築基: the chapter's end is across the river
   if (p.realm >= 2 && !s.flags.chapter1_done && !away) return { key: 'ferry', text: '白鶴渡：渡江', why: '築基了，白鶴渡的老船夫肯載你過江了——那是第一章的終點。走之前，想見的人先見一見；渡過江，還可以回到東荒繼續走。' };
+  // (0.22) 老秦 has waited forty years for the beacon at 西風口 to answer his
+  if (s.flags.laoqin_promise && !s.flags.west_beacon_lit && !away) return { key: 'xm:beacon', text: '西風口：點烽燧', why: '落日關的老秦，四十年沒等到東邊的烽燧亮。到西風口的烽燧下，等天黑了，點一把火。' };
   // the cave you found, not yet made your own
   if (s.flags.cave_found && !s.flags.home_claimed && !away) return { key: 'home', text: '收拾山腹洞府', why: '青石山腹那處洞府，收拾一下就是你的了：能閉關、煉丹、畫符，還能布聚靈陣，讓靈氣更濃。走到石縫前查看。' };
   // somewhere you have heard of

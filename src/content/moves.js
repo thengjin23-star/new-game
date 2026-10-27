@@ -118,6 +118,12 @@ export const MOVES = {
     mastery: [[4, { radius: 60 }], [5, { stun: 1.2 }]],
     desc: '一掌按地，指定的地方石刺破土而出：一圈之內的敵人一起受傷、踉蹌片刻。屬土，剋水；接在火系招式之後是相生。',
   },
+  sunwheel: {
+    name: '大日輪', school: '法修', el: '火', aim: 'around', mp: 14, cd: 9, cast: 0.3, radius: 92, mult: 1.25, stun: 0.6, push: 30, holy: true, fx: 'sun',
+    learn: ['dari'],
+    mastery: [[4, { radius: 104 }], [5, { stun: 1 }]],
+    desc: '身後升起一輪金色的大日，光往四面八方照出去：一圈之內的敵人一起受傷、踉蹌；陰屍鬼物被照中，傷得最重。屬火。',
+  },
   sweep: {
     name: '掃腿', school: '體修', el: '土', aim: 'around', mp: 0, cd: 5, cast: 0.16, radius: 58, mult: 0.6, stun: 0.9, fx: 'sweep', realm: 0,
     learn: ['wild_boxing'], gengu: 6,
