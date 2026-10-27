@@ -589,7 +589,7 @@ const moods = {
   quicksand: { tint: [0.94, 0.84, 0.64], amount: 0.3, dim: 1.03, motes: null },
   shatuo_temple: { tint: [0.82, 0.74, 0.64], amount: 0.34, dim: 0.9, motes: 'ash' },
   lost_city: { tint: [0.9, 0.82, 0.68], amount: 0.3, dim: 0.97, motes: 'ash' },
-  underpalace: { tint: [0.46, 0.5, 0.62], amount: 0.5, dim: 0.72, motes: 'mote' },
+  underpalace: { tint: [0.24, 0.28, 0.44], amount: 0.7, dim: 0.5, sun: 0.3, motes: 'mote' },
   wanghe_terrace: { tint: [0.92, 0.88, 0.8], amount: 0.2, dim: 1.04, motes: null },
   ximo_wilds: { tint: [0.95, 0.86, 0.66], amount: 0.26, dim: 1.04, motes: null },
 };

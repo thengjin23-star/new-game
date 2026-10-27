@@ -15,11 +15,11 @@ import { fresh, resolvePending, waitUntil, goToPoi, pickText } from './helpers.j
 
 const ORIGINS = ['farmer', 'hunter', 'scholar', 'apprentice', 'orphan'];
 
-function soak(seed, steps, cultivated, south = false) {
+function soak(seed, steps, cultivated, away = null) {
   let r = seed * 7919;
   const rnd = () => (r = (r * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff;
   let s = fresh(seed, ORIGINS[seed % ORIGINS.length]);
-  if (south) {
+  if (away === 'nanling') {
     // (0.21) over the pass: the whole of it played on 南嶺
     Object.assign(s.player, { realm: 1, stage: 6 });
     goToPoi(s, 'south_pass_gate', -40);
@@ -30,6 +30,19 @@ function soak(seed, steps, cultivated, south = false) {
     E.step(s, 0.05, null);
     resolvePending(s);
     assert.equal(s.world.map, 'nanling');
+  }
+  if (away === 'ximo') {
+    // (0.22) out through 西風口, under the desert's own sky (its noon sun, its sandstorms)
+    Object.assign(s.player, { realm: 2, stage: 0 });
+    goToPoi(s, 'west_pass_gate', 0);
+    resolvePending(s);
+    E.interact(s, { kind: 'poi', id: 'west_pass_gate' });
+    pickText(s, '出關');
+    resolvePending(s);
+    E.step(s, 0.05, null);
+    resolvePending(s);
+    assert.equal(s.world.map, 'ximo');
+    delete s.vars.sky;
   }
   if (cultivated) {
     // a 築基 cultivator with a sword, a few arts and things to burn: every kind of move gets thrown
@@ -124,7 +137,15 @@ test('長玩：隨機走動、趕路、互動、閉關、戰鬥、推演與存�
 
 test('長玩・南嶺：翻過山隘之後的隨機遊玩（瘴氣、毒蛛、蠱蟲、存讀檔），不出任何例外', () => {
   for (const seed of [24, 25]) {
-    const run = soak(seed, 110, true, true);
+    const run = soak(seed, 110, true, 'nanling');
+    assert.equal(run.error, null, run.error || '');
+    assert.equal(mapOf(run.s.player.loc), run.s.world.map, 'where you are is on the map you are on');
+  }
+});
+
+test('長玩・西漠：出了西風口之後的隨機遊玩（烈日、沙暴、流沙、沙蠍、乾屍、存讀檔），不出任何例外', () => {
+  for (const seed of [26, 27]) {
+    const run = soak(seed, 110, true, 'ximo');
     assert.equal(run.error, null, run.error || '');
     assert.equal(mapOf(run.s.player.loc), run.s.world.map, 'where you are is on the map you are on');
   }

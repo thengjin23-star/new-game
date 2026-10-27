@@ -81,7 +81,7 @@ export function createWorld3D(canvas, { onFrame, idle, quality = 'high', onSlow 
   scene.add(cards.mesh, cards.ghost);
   const glows = createGlows();
   scene.add(glows.lights.mesh, glows.mists.mesh, glows.shadows.mesh);
-  const mood = { tint: [0, 0, 0], amount: 0, dim: 1 };
+  const mood = { tint: [0, 0, 0], amount: 0, dim: 1, sun: 1 };
 
   // when the phone takes the GPU away and gives it back, the cards are painted again
   canvas.addEventListener('webglcontextrestored', () => cards.reset());
@@ -533,7 +533,10 @@ export function createWorld3D(canvas, { onFrame, idle, quality = 'high', onSlow 
     M.end();
   }
 
-  /** Each region has its own air: the valley breathes spirit, the forest broods, the ruins are dusty. */
+  /**
+   * Each region has its own air: the valley breathes spirit, the forest broods, the ruins are dusty.
+   * sun: how much of the sun gets in (under the ground, little: 西漠's 地宮).
+   */
   const MOODS = {
     lingxi_valley: { tint: [0.8, 0.93, 0.9], amount: 0.38, dim: 1, motes: 'mote' },
     black_forest: { tint: [0.5, 0.58, 0.52], amount: 0.42, dim: 0.86, motes: 'darkleaf' },
@@ -552,6 +555,8 @@ export function createWorld3D(canvas, { onFrame, idle, quality = 'high', onSlow 
     for (let i = 0; i < 3; i++) mood.tint[i] += ((m.amount ? m.tint[i] : mood.tint[i]) - mood.tint[i]) * k;
     mood.amount += (m.amount - mood.amount) * k;
     mood.dim += (m.dim - mood.dim) * k;
+    mood.sun += ((m.sun ?? 1) - mood.sun) * k;
+    env.u.uSunColor.value.multiplyScalar(mood.sun);
     const hz = env.u.uHaze.value;
     hz.setRGB(hz.r + (mood.tint[0] - hz.r) * mood.amount, hz.g + (mood.tint[1] - hz.g) * mood.amount, hz.b + (mood.tint[2] - hz.b) * mood.amount);
     env.u.uAmbient.value.multiplyScalar(mood.dim);
