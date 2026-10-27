@@ -10,7 +10,7 @@ import { WORLD_W, WORLD_H, CELL, COLS } from '../world/geo.js';
 import { world, hash2 } from '../world/terrain.js';
 import { POIS, STRUCTURES } from '../world/places.js';
 import { VALLEY, LAKES } from '../world/geo.js';
-import { NODES } from '../world/map.js';
+import { NODES, mapOf } from '../world/map.js';
 import { heightAt, waterAt } from '../world/height.js';
 import { landTable } from '../world/maps/index.js';
 import { fogOf } from '../world/fog.js';
@@ -794,14 +794,14 @@ export function createWorld3D(canvas, { onFrame, idle, quality = 'high', onSlow 
     }
   }
 
-  /** Names of places you have heard of but not been to, written over the clouds. */
+  /** Names of places you have heard of but not been to (on this map), written over the clouds. */
   function drawPlaceNames() {
     const f = fogOf(s);
     octx.font = `700 ${Math.round(16 + 6 * zoom)}px ${FONT}`;
     octx.textAlign = 'center';
     octx.textBaseline = 'middle';
     for (const [id, n] of Object.entries(NODES)) {
-      if (!s.nodes[id]?.known || s.nodes[id]?.visited) continue;
+      if (!s.nodes[id]?.known || s.nodes[id]?.visited || mapOf(id) !== s.world.map) continue;
       const [lx, ly] = n.label || n.at || [];
       if (lx === undefined) continue;
       const i = Math.floor(lx / CELL);

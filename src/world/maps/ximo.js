@@ -149,9 +149,10 @@ const ground = {
   shatuo_temple: (x, y) => (fbm(x / 110, y / 110, 706) > 0.6 ? T.DUNE : T.WASTE),
   underpalace: () => T.WASTE,
   wanghe_terrace: () => T.WASTE,
+  // (between the dunes, flats of harder sand: not the 戈壁's dark gravel, which out here reads as a stain)
   ximo_wilds: (x, y) => {
     const n = fbm(x / 260, y / 260, 707);
-    if (n < 0.3) return T.WASTE;
+    if (n < 0.3) return T.SAND;
     return T.DUNE;
   },
 };
@@ -300,7 +301,8 @@ const STRUCTURES = [
 const lit = (s) => s.tod >= 19 || s.tod < 5;
 
 /** Quicksand: walk into one and you sink (content/events/ximo.js). */
-const QUICK_POIS = QUICKSAND.map(([x, y, r], k) => ({ id: `qs_${'abcdefgh'[k]}`, region: 'quicksand', x, y, name: '流沙', zone: r, auto: r }));
+// (auto: it takes you as you walk in; no `zone`, which is for miasma and would hang a purple mist over the sand)
+const QUICK_POIS = QUICKSAND.map(([x, y, r], k) => ({ id: `qs_${'abcdefgh'[k]}`, region: 'quicksand', x, y, name: '流沙', auto: r }));
 
 /** Places you can walk up to (places.js POIS, for this map). */
 const POIS = [

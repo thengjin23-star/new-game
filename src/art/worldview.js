@@ -5,7 +5,7 @@
 import { WORLD_W, WORLD_H, CELL, COLS, ROWS, T, AIRY, WALL_LOOK } from '../world/geo.js';
 import { world, idxOf, cellX, cellY, hash2, REGION_IDS, colOf, rowOf } from '../world/terrain.js';
 import { STRUCTURES, POIS } from '../world/places.js';
-import { NODES } from '../world/map.js';
+import { NODES, mapOf } from '../world/map.js';
 import { fogOf } from '../world/fog.js';
 import * as E from '../world/explore.js';
 import { decorSprite, mountainSprite, structureSprite, wallSprite, propSprite } from './sprites.js';
@@ -1371,13 +1371,13 @@ export function createWorldView(canvas, { onFrame, idle } = {}) {
       else drawSprite(mountainSprite(m.kind, m.v, season), m.x, m.y, m.w, m.h);
     }
     ctx.globalAlpha = 1;
-    // names of places you have heard of, written over the clouds
+    // names of places you have heard of (on this map), written over the clouds
     const f = fogOf(s);
     ctx.font = `700 ${Math.round(18 / Math.max(0.6, zoom))}px ${FONT}`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     for (const [id, n] of Object.entries(NODES)) {
-      if (!s.nodes[id]?.known || s.nodes[id]?.visited) continue;
+      if (!s.nodes[id]?.known || s.nodes[id]?.visited || mapOf(id) !== s.world.map) continue;
       const [lx, ly] = n.label || n.at || [];
       if (lx === undefined || lx < x0 - 200 || lx > x1 + 200 || ly < y0 - 100 || ly > y1 + 100) continue;
       if (f.bits[idxOf(colOf(lx), rowOf(ly))]) continue;
