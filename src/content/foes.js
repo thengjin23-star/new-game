@@ -426,4 +426,114 @@ export const FOES = {
       cry: '星門前的石翁仲，眼裡亮起了光。',
     },
   },
+  // ── 0.23 北原 (二階, a match for 築基後期: stronger than the desert's) ──
+  // 冰原、北原雪野: wolves white as the snow, three together, worst by night; a bite that leaves the cold in you
+  ice_wolf: {
+    name: '冰原狼', el: '水', hp: 0.95, atk: 1.05, loot: [[0.6, 'bailang_pelt', 1]],
+    rt: {
+      share: 1.3, tier: 2, speed: 186, walk: 56, sight: 240, lose: 470, loseT: 1.4, leash: 840, body: 12, bulk: 1.25, tall: 20,
+      notice: 0.45, moves: ['nip', 'lunge', 'frostbite'], hop: 0.4, night: 1.35, pack: true, mourn: true, tokens: 2, ring: 100,
+      warn: '雪地上一串一串的爪印，還是新的。', cry: '雪坡上冒出幾個白影子——冰原狼！',
+      scared: ['那頭冰原狼夾著尾巴跑了。', '冰原狼們夾著尾巴，消失在雪坡後面。'], broke: '剩下的冰原狼消失在雪坡後面。',
+    },
+  },
+  // 雪山、斷雲崖: a cat as white as the snow it lies in, that you do not see till it leaps
+  snow_leopard: {
+    name: '雪豹', el: '金', hp: 1, atk: 1.2, loot: [[0.4, 'beast_core', 1]],
+    rt: {
+      share: 1.45, tier: 2, speed: 204, walk: 0, sight: 150, lose: 420, loseT: 1.4, leash: 700, body: 12, bulk: 0.9, tall: 18,
+      notice: 0, moves: ['rake', 'snowpounce'], ambush: true, hop: 0.5, tokens: 1, ring: 96, poise: 1.3,
+      warn: '雪地上一點聲音也沒有，靜得不對勁。', cry: '雪堆一炸——一頭雪豹從雪底下撲了出來！',
+      scared: ['雪豹躍上岩石，一閃就不見了。', '雪豹躍上岩石，一閃就不見了。'],
+    },
+  },
+  // 寒鐵礦: grubs as long as your arm, white as frost, that spit a silk that freezes where it lands
+  ice_silkworm: {
+    name: '冰蠶', el: '水', hp: 0.9, atk: 0.95, loot: [[0.5, 'bingcan_silk', 1]],
+    rt: {
+      share: 1.25, tier: 2, speed: 118, walk: 20, sight: 190, lose: 380, loseT: 1.4, leash: 520, body: 11, bulk: 0.7, tall: 12,
+      notice: 0.6, moves: ['silkbite', 'frostsilk'], pack: true, tokens: 2, ring: 90,
+      warn: '石壁上掛著一縷一縷白絲，結著霜。', cry: '巷道的石縫裡爬出幾條雪白的蟲子，昂起了頭！',
+      scared: ['那條冰蠶縮回了石縫裡。', '冰蠶們縮回了石縫裡。'], broke: '剩下的冰蠶縮回了石縫裡。',
+    },
+  },
+  // 雪山: apes taller than a man, white-furred, that heave ice at you and beat the ground
+  snow_ape: {
+    name: '雪猿', el: '土', hp: 1.3, atk: 1.2, loot: [[0.3, 'beast_core', 1]],
+    rt: {
+      share: 1.3, tier: 2, speed: 152, walk: 40, sight: 230, lose: 460, loseT: 1.5, leash: 700, body: 15, bulk: 0.9, tall: 34,
+      notice: 0.5, moves: ['apeslam', 'iceboulder', 'stomp'], poise: 2, pack: true, tokens: 2, ring: 96,
+      low: { at: 0.3, mode: 'rage', line: '雪猿捶著胸口狂吼，撲了上來！' },
+      warn: '山坡上的雪被什麼東西踩得亂七八糟，到處是大腳印。', cry: '一頭雪白的大猿從岩石後面站了起來，比人還高！',
+      scared: ['雪猿怪叫一聲，翻過山坡跑了。', '雪猿們怪叫著，翻過山坡跑了。'], broke: '剩下的雪猿翻過山坡跑了。',
+    },
+  },
+  // 北冥, by night: the drowned, gone pale in the ice, that rise out of it in the dark (the cold of the dead; gone, and behind you)
+  snow_wraith: {
+    name: '雪魄', el: '水', hp: 0.95, atk: 1.1, spirit: true,
+    rt: {
+      share: 1.25, tier: 2, speed: 140, walk: 30, sight: 200, lose: 420, loseT: 1.6, leash: 600, body: 10, bulk: 0.6, tall: 34,
+      notice: 0.6, moves: ['chilltouch', 'wraithblink'], night: 1.3, day: 0.5, tokens: 2, ring: 90, dodge: 0.3,
+      warn: '冰面底下，好像有一張臉，貼著冰往上看。', cry: '冰面上浮起一個白影子，長頭髮，沒有腳。',
+      scared: ['那個白影子沉回了冰裡。', '那些白影子沉回了冰裡。'],
+    },
+  },
+  // 冰原's wolf king: white as a calf, a scar over one eye; his howl brings the pack, his roar freezes the air
+  bailang_king: {
+    name: '白狼王', el: '水', hp: 1.8, atk: 1.2, boss: true, loot: [[1, 'bailang_king_pelt', 1], [1, 'beast_core', 2]],
+    rt: {
+      tier: 2, speed: 192, walk: 50, sight: 280, lose: 520, loseT: 1.8, leash: 900, body: 16, bulk: 1.1, tall: 30,
+      notice: 0.4, moves: ['lunge', 'frostbite', 'nip'],
+      phases: [
+        { at: 0.62, moves: ['lunge', 'frostbite', 'wolfcall', 'frostroar'], line: '白狼王退開兩步，仰起頭——一聲長嘯，冰原上的風都停了！' },
+        { at: 0.3, enrage: true, line: '白狼王的眼睛紅了，背上的毛根根豎起——牠發狂了！' },
+      ],
+      warn: '雪地上一行爪印，比碗口還大。', cry: '一頭小牛那麼大的白狼，從雪坡後面慢慢走了出來。牠的左眼上，有一道疤。',
+      scared: ['白狼王轉身沒入了風雪裡。', '白狼王轉身沒入了風雪裡。'],
+    },
+  },
+  // 寒鐵礦's deepest gallery: the mother of the silkworms, as thick as a water jar, whose call sounds like
+  // a woman singing; frost sprayed, ice spread underfoot, her brood called out of the rock
+  silk_queen: {
+    name: '冰蠶母', el: '水', hp: 2, atk: 1.15, boss: true, loot: [[1, 'bingcan_silk', 4], [1, 'beast_core', 2]],
+    rt: {
+      tier: 2, speed: 100, walk: 0, sight: 220, lose: 520, loseT: 1.8, leash: 400, body: 22, bulk: 0.6, tall: 30,
+      notice: 0.8, moves: ['silkbite', 'frostspray', 'frostsilk'],
+      phases: [
+        { at: 0.62, moves: ['silkbite', 'frostspray', 'icepool', 'broodsilk', 'frostsilk'], line: '冰蠶母的身子鼓了起來，背上的冰刺一根一根豎起，石縫裡沙沙作響！' },
+        { at: 0.3, enrage: true, line: '冰蠶母發出一聲尖細的長鳴——像一個女人在唱歌——牠發狂了！' },
+      ],
+      warn: '巷道深處傳來細細的歌聲，一句一句，聽不清唱的是什麼。', cry: '巷道盡頭，一條水缸那麼粗的白蟲抬起了頭。',
+      scared: ['冰蠶母縮進了石縫深處。', '冰蠶母縮進了石縫深處。'],
+    },
+  },
+  // 雪山's master: an ape king with a grey mane, who brings the snow down off the slope on you
+  ape_king: {
+    name: '雪猿王', el: '土', hp: 1.8, atk: 1.25, boss: true, loot: [[1, 'beast_core', 3], [1, 'xuelian', 2]],
+    rt: {
+      tier: 2, speed: 160, walk: 30, sight: 260, lose: 520, loseT: 1.8, leash: 700, body: 20, bulk: 0.8, tall: 50,
+      notice: 0.6, moves: ['apeslam', 'iceboulder', 'stomp'],
+      phases: [
+        { at: 0.62, moves: ['apeslam', 'iceboulder', 'avalanche', 'apecall', 'beatchest'], line: '雪猿王捶著胸膛狂吼，山坡上的積雪轟隆隆地塌了下來！' },
+        { at: 0.3, enrage: true, line: '雪猿王把一塊冰石砸得粉碎，滿嘴是血地吼——牠發狂了！' },
+      ],
+      warn: '雪坡上散著幾具雪猿的骨頭，啃得乾乾淨淨。', cry: '一頭比熊還大的雪猿從山洞裡鑽了出來，頸上的毛是灰的。',
+      scared: ['雪猿王退回了山洞裡。', '雪猿王退回了山洞裡。'],
+    },
+  },
+  // 靈脈裂谷: the qilin of ice that lies on the knot of the veins and drinks what overflows from them;
+  // its horn, ice breathed, spikes of ice out of the ground, a charge, a ring of frost
+  ice_qilin: {
+    name: '冰麟', el: '水', hp: 2, atk: 1.3, boss: true, loot: [[1, 'qilin_horn', 1], [1, 'lingsui', 2], [1, 'bingpo_pearl', 1]],
+    rt: {
+      tier: 2, speed: 172, walk: 0, sight: 260, lose: 560, loseT: 2, leash: 520, body: 20, bulk: 0.7, tall: 44,
+      notice: 0.9, moves: ['qilinhorn', 'icebreath', 'qilincharge'],
+      phases: [
+        { at: 0.65, moves: ['qilinhorn', 'icespikes', 'icebreath', 'qilincharge', 'frostnova'], line: '冰麟昂起頭，身上的鱗片一片一片亮起藍光——靈脈的光！' },
+        { at: 0.3, enrage: true, line: '冰麟發出一聲像玉磬一樣的長鳴，四周的空氣都凍住了——牠發狂了！' },
+      ],
+      warn: '靈脈的藍光裡，伏著一團白色的東西，一起一伏，在呼吸。', cry: '那團白色的東西站了起來：鹿的身子，龍的鱗，額上一隻冰做的角。',
+      scared: ['冰麟退回了靈脈的光裡。', '冰麟退回了靈脈的光裡。'],
+    },
+  },
 };

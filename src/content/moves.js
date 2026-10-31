@@ -336,4 +336,37 @@ export const BEAST_MOVES = {
   halberd: { shape: 'fan', reach: 84, arc: 2.4, windup: 0.7, recover: 0.9, cd: 3.6, mult: 1.6, lunge: 8, fx: 'cut' },
   starbeam: { shape: 'shot', min: 60, max: 340, range: 380, windup: 0.9, speed: 720, width: 26, recover: 0.6, cd: 5, mult: 1.45, fx: 'star' },
   stonecall: { shape: 'call', windup: 1.1, recover: 0.7, cd: 22, first: 6, fx: 'howl', call: { kind: 'stone_puppet', n: 2, max: 2, share: 0.3, line: '石翁仲把戟往地上一頓。兩旁的石傀，眼裡亮起了光。' } },
+  // ── 0.23 北原 ──
+  // 冰原狼: a bite that leaves the cold in you (slow: for a moment your legs will not answer)
+  frostbite: { shape: 'fan', reach: 52, arc: 1.4, windup: 0.42, recover: 0.5, cd: 3.4, mult: 1.05, lunge: 14, fx: 'frost', slow: 1 },
+  // 雪豹: a long leap at you out of the snow; the claws raked across you, twice
+  snowpounce: { shape: 'leap', min: 80, max: 250, windup: 0.5, speed: 760, width: 28, overshoot: 26, recover: 0.6, cd: 5, mult: 1.35 },
+  rake: { shape: 'fan', reach: 50, arc: 1.5, windup: 0.36, recover: 0.5, cd: 2.2, mult: 0.8, lunge: 10, fx: 'claw', combo: 2, again: 0.22 },
+  // 冰蠶: its jaws; frozen silk spat where you stand, that holds you fast (step aside to tear free)
+  silkbite: { shape: 'fan', reach: 46, arc: 1.2, windup: 0.45, recover: 0.5, cd: 1.6, mult: 0.9, lunge: 8, fx: 'bite' },
+  frostsilk: { shape: 'zone', min: 40, max: 220, radius: 36, windup: 0.8, recover: 0.6, cd: 6.5, mult: 0.4, fx: 'icesilk', hold: [1.2, 0.25] },
+  // 雪猿: both fists brought down; a lump of ice heaved at you from afar (and the ground beaten: stomp)
+  apeslam: { shape: 'fan', reach: 62, arc: 1.5, windup: 0.6, recover: 0.7, cd: 2.2, mult: 1.45, lunge: 12, fx: 'punch' },
+  iceboulder: { shape: 'shot', min: 90, max: 320, range: 360, windup: 0.85, speed: 460, width: 30, recover: 0.6, cd: 5.5, mult: 1.4, fx: 'snowball' },
+  // 雪魄: the touch of a drowned thing's cold (it slows); gone, and behind you
+  chilltouch: { shape: 'fan', reach: 56, arc: 1.2, windup: 0.55, recover: 0.6, cd: 2.2, mult: 1.0, lunge: 12, fx: 'frost', slow: 1.2 },
+  wraithblink: { shape: 'blink', near: 70, windup: 0.4, recover: 0.4, cd: 7, fx: 'blink' },
+  // 白狼王: the howl that brings the pack; a roar that freezes the air about it (you go slow)
+  wolfcall: { shape: 'call', windup: 1, recover: 0.6, cd: 18, first: 5, fx: 'howl', call: { kind: 'ice_wolf', n: 2, max: 2, share: 0.3, line: '白狼王仰天長嘯。冰原那頭，兩頭冰原狼應聲奔來。' } },
+  frostroar: { shape: 'ring', radius: 120, windup: 0.85, recover: 0.8, cd: 9, mult: 0.9, push: 90, fx: 'frostring', slow: 1.4 },
+  // 冰蠶母: frost sprayed out in front of her; ice spread where you stand (it drags at your feet); her brood called out of the rock
+  frostspray: { shape: 'fan', reach: 120, arc: 0.8, windup: 0.75, recover: 0.7, cd: 5, mult: 1.1, lunge: 0, fx: 'frostbreath', slow: 1.2 },
+  icepool: { shape: 'zone', min: 0, max: 280, radius: 46, windup: 0.95, recover: 0.7, cd: 8, mult: 0.6, count: 3, spread: 90, fx: 'icespike', pool: { secs: 5, r: 46, dps: 0.12, kind: 'ice' } },
+  broodsilk: { shape: 'call', windup: 1, recover: 0.6, cd: 20, first: 5, fx: 'howl', call: { kind: 'ice_silkworm', n: 2, max: 3, share: 0.28, line: '冰蠶母的身子一陣抽搐，石縫裡爬出了兩條冰蠶。' } },
+  // 雪猿王: the snow brought down off the slope where you stand; a roar and a beating of its chest that throws you back
+  avalanche: { shape: 'zone', min: 0, max: 300, radius: 54, windup: 1.1, recover: 0.8, cd: 7, mult: 1.5, count: 3, spread: 100, fx: 'snowfall' },
+  beatchest: { shape: 'ring', radius: 130, windup: 0.9, recover: 0.8, cd: 10, mult: 0.9, push: 120, fx: 'roar' },
+  apecall: { shape: 'call', windup: 1, recover: 0.6, cd: 22, first: 6, fx: 'howl', call: { kind: 'snow_ape', n: 2, max: 2, share: 0.3, line: '雪猿王捶著胸膛嚎叫。山坡上，兩頭雪猿跳了下來。' } },
+  // 冰麟: its horn; ice breathed in a long cone (you go slow); spikes of ice up out of the ground where
+  // you stand; a charge; a ring of frost bursting out of it
+  qilinhorn: { shape: 'fan', reach: 72, arc: 1.2, windup: 0.5, recover: 0.6, cd: 2, mult: 1.4, lunge: 16, fx: 'cut' },
+  icebreath: { shape: 'fan', reach: 150, arc: 0.7, windup: 0.85, recover: 0.8, cd: 6, mult: 1.3, lunge: 0, fx: 'frostbreath', slow: 1.4 },
+  icespikes: { shape: 'zone', min: 0, max: 320, radius: 44, windup: 1, recover: 0.7, cd: 5.5, mult: 1.5, count: 4, spread: 80, fx: 'icespike' },
+  qilincharge: { shape: 'leap', min: 90, max: 300, windup: 0.6, speed: 760, width: 36, overshoot: 30, recover: 0.8, cd: 7, mult: 1.6 },
+  frostnova: { shape: 'ring', radius: 140, windup: 1, recover: 0.8, cd: 10, mult: 1.2, push: 80, fx: 'frostring', slow: 1.6 },
 };

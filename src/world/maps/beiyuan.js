@@ -341,8 +341,34 @@ const POIS = [
   { id: 'bw_post', region: 'beiyuan_wilds', x: 2640, y: 2540, name: '路標', verb: '查看', text: '一根木杆，杆上釘著三塊木牌：西，北冥；北，雪山；東，白狼部。牌子底下還有一行小字：「莫夜行」。' },
 ];
 
-/** What roams (places.js BEASTS, for this map). */
-const BEASTS = [];
+const dark = (s) => s.tod >= 19.5 || s.tod < 5;
+const killed = (s, kind) => (s.vars.kills?.[kind] || 0) > 0;
+
+/**
+ * What roams (places.js BEASTS, for this map): stronger than the desert's, a match for 築基後期 and
+ * 金丹. Nothing near the way down or the town; wolves out on the ice, their king out where the ice runs
+ * east; cats lying up in the mountains and on the highland, apes among the peaks and their king in his
+ * cave up near the ridge; the silkworms in the mine's gallery, their mother behind the boards of its
+ * deepest way (once they are down); the drowned on the frozen sea by night; the 冰麟 on the knot of the
+ * veins in the rift (till the knot is open).
+ */
+const BEASTS = [
+  { id: 'ice_wolves_a', kind: 'ice_wolf', n: 3, title: '冰原狼', x: 3600, y: 3420, r: 160, respawn: 30, power: 400 },
+  { id: 'ice_wolves_b', kind: 'ice_wolf', n: 3, title: '冰原狼', x: 4560, y: 2300, r: 160, respawn: 30, power: 420 },
+  { id: 'ice_wolves_c', kind: 'ice_wolf', n: 2, title: '冰原狼', x: 3750, y: 2000, r: 140, respawn: 30, power: 380 },
+  { id: 'bailang_king_a', kind: 'bailang_king', title: '白狼王', x: 4800, y: 2550, r: 140, respawn: 999, power: 700, cond: (s) => !killed(s, 'bailang_king') },
+  { id: 'snow_leopard_a', kind: 'snow_leopard', n: 1, title: '雪豹', x: 2950, y: 1300, r: 120, respawn: 30, power: 420 },
+  { id: 'snow_leopard_b', kind: 'snow_leopard', n: 1, title: '雪豹', x: 700, y: 900, r: 120, respawn: 30, power: 420 },
+  { id: 'snow_leopard_c', kind: 'snow_leopard', n: 1, title: '雪豹', x: 1500, y: 600, r: 120, respawn: 30, power: 440 },
+  { id: 'snow_apes_a', kind: 'snow_ape', n: 2, title: '雪猿', x: 2200, y: 900, r: 150, respawn: 30, power: 460 },
+  { id: 'snow_apes_b', kind: 'snow_ape', n: 2, title: '雪猿', x: 3200, y: 800, r: 150, respawn: 30, power: 460 },
+  { id: 'ape_king_a', kind: 'ape_king', title: '雪猿王', x: 2350, y: 380, r: 130, respawn: 999, power: 760, cond: (s) => !killed(s, 'ape_king') },
+  { id: 'ice_silkworms_a', kind: 'ice_silkworm', n: 3, title: '冰蠶', x: 1800, y: 3420, r: 100, respawn: 20, power: 340 },
+  { id: 'silk_queen_a', kind: 'silk_queen', title: '冰蠶母', x: 1680, y: 3480, r: 90, respawn: 999, power: 640, cond: (s) => !!s.flags.mine_deep_open && !killed(s, 'silk_queen') },
+  { id: 'snow_wraiths_a', kind: 'snow_wraith', n: 2, title: '雪魄', x: 950, y: 2050, r: 150, respawn: 5, power: 400, cond: dark },
+  { id: 'snow_wraiths_b', kind: 'snow_wraith', n: 2, title: '雪魄', x: 1550, y: 2350, r: 150, respawn: 5, power: 400, cond: dark },
+  { id: 'ice_qilin_a', kind: 'ice_qilin', title: '冰麟', x: 4120, y: 880, r: 110, respawn: 999, power: 900, cond: (s) => !s.flags.node_open && !killed(s, 'ice_qilin') },
+];
 
 export const BEIYUAN_PLACES = { STRUCTURES, POIS, BEASTS };
 

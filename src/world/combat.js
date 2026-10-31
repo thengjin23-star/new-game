@@ -78,6 +78,9 @@ const HUNTING = new Set(['chase', 'windup', 'leap', 'recover', 'hop', 'howl', 'r
  */
 const DOWN = new Set(['dead', 'gone', 'vanish', 'flee', 'yield', 'leave', 'down']);
 
+/** The cold's moves: what they slow, they freeze stiff (北原). */
+const FROSTY = new Set(['frost', 'frostring', 'frostbreath', 'icesilk', 'icespike']);
+
 const FALL_TEXT = {
   demon_wolf: '妖狼把你撲倒在地。牠的牙擦過你的喉嚨，眼前一黑——\n\n醒來時，天色已經變了。那頭狼不見了，大概是嫌你不好吃。你身上多了好幾道血口。',
   fire_tiger: '赤炎妖虎把你撲倒在地，一股熱浪燎得你睜不開眼——\n\n醒來時，你躺在焦土邊上，衣衫燒得破破爛爛，渾身是傷。那頭大虎早已不見蹤影。',
@@ -90,6 +93,14 @@ const FALL_TEXT = {
   kuchan: '一記金色的掌印印在你的胸口，耳邊轟的一聲，像有人撞響了一口大鐘——\n\n醒來時，你躺在峽谷口的沙地上，不知道是怎麼出來的。寺裡的唸經聲，還在一遍一遍地響。',
   sand_jiao: '沙蛟把你拖進了流沙，沙子灌進你的口鼻——\n\n醒來時，你趴在流沙邊上的硬地上，不知道是怎麼爬出來的。身後的沙地平得像什麼也沒發生過。',
   stone_general: '石戟掃中了你，你飛出去，撞在殘牆上——\n\n醒來時，天已經黑了。星門前的石翁仲又站回了原處，一動不動，好像從來沒有動過。',
+  ice_wolf: '冰原狼把你撲倒在雪裡，一口咬住了你的肩——\n\n醒來時，你半個身子埋在雪堆裡，凍得嘴唇發紫。狼走了，雪地上只剩一攤凍住的血。',
+  snow_leopard: '雪豹從背後撲上來，你連牠的影子都沒看清——\n\n醒來時，你倒在岩石底下，背上三道爪痕，血已經凍住了。',
+  snow_ape: '雪猿的拳頭像一塊冰石，砸在你胸口——\n\n醒來時，你躺在雪坡底下，肋骨疼得喘不過氣。山坡上傳來雪猿的怪叫，越來越遠。',
+  bailang_king: '白狼王一口咬住你，把你甩了出去——\n\n醒來時，風雪已經停了。你躺在冰原上，身邊一圈狼的爪印，牠們圍著你轉了很久，最後走了。',
+  silk_queen: '冰蠶絲把你從頭到腳裹了起來，冷得像沉進了冰河——\n\n醒來時，你躺在巷道口，渾身的霜慢慢化成了水。你不知道是誰把你拖出來的。',
+  ape_king: '雪猿王把你舉過頭頂，往雪坡下一扔——\n\n醒來時，你被埋在一堆雪裡，只露出一張臉。費了好大的勁，才把自己挖了出來。',
+  ice_qilin: '冰麟的角挑中了你，寒氣順著傷口一直灌進心口——\n\n醒來時，你躺在裂谷口外的雪地上。冰麟沒有追出來；牠只是把你扔出了牠的地方。',
+  snow_wraith: '那個白影子貼上你的背，你只覺得一陣徹骨的冷——\n\n醒來時，你趴在冰面上，嘴裡全是冰碴子，天已經亮了。',
   beast: '你倒下了，眼前一黑——\n\n醒來時，天色已經變了。四下無人，只剩一身的傷。',
 };
 
@@ -790,7 +801,7 @@ function hurtMe(s, C, b, mult, io, push = null, M = null) {
     }
     // sand in your eyes: you stumble a moment
     if (M?.slow) {
-      if (!(me.slow > 0)) pop(C, w.x + 12, w.y, M.fx === 'sand' ? '迷眼' : '遲滯', 'status', 52);
+      if (!(me.slow > 0)) pop(C, w.x + 12, w.y, M.fx === 'sand' ? '迷眼' : FROSTY.has(M.fx) ? '凍僵' : '遲滯', 'status', 52);
       me.slow = Math.max(me.slow || 0, M.slow);
     }
   }
@@ -1442,7 +1453,7 @@ function think(s, C, b, dt, io) {
         // the ground bursts where it marked (where you stood)
         spent(b, M);
         for (const [zx, zy] of b.zones || []) {
-          C.fx.push({ kind: M.fx || 'quake', x: zx, y: zy, r: M.radius, t0: C.t, dur: M.hold ? M.hold[0] : 0.6 });
+          C.fx.push({ kind: M.fx || 'quake', x: zx, y: zy, r: M.radius, t0: C.t, dur: M.hold ? M.hold[0] : M.fx === 'snowfall' ? 0.9 : 0.6 });
           const took = strikeAround(s, C, b, M, zx, zy, M.radius, io);
           if (s.pending || s.dead) return;
           // roots up out of the ground: held fast where you stand
@@ -1897,13 +1908,14 @@ function strikeLine(s, C, b, M, x0, y0, io) {
 /** Coiled about you: you cannot go anywhere, and it squeezes — until you step aside out of it. */
 function hold(C, b, M, root = false) {
   const web = M.fx === 'web';
-  C.me.held = { left: M.hold[0], tick: 0.5, mult: M.hold[1], by: b, root, web };
+  const ice = M.fx === 'icesilk';
+  C.me.held = { left: M.hold[0], tick: 0.5, mult: M.hold[1], by: b, root, web, ice };
   C.me.kb = null;
   if (!root) {
     b.holding = true;
     b.went = b.len;
   }
-  say(C, 'bad', web ? '蛛網兜頭罩下，黏住了你！快閃避掙脫！' : root ? '藤蔓從地下鑽出來，纏住了你的腳！快閃避掙脫！' : `${b.name}纏住了你！快閃避掙脫！`);
+  say(C, 'bad', web ? '蛛網兜頭罩下，黏住了你！快閃避掙脫！' : ice ? '冰絲罩下來，連腳帶腿凍在地上！快閃避掙脫！' : root ? '藤蔓從地下鑽出來，纏住了你的腳！快閃避掙脫！' : `${b.name}纏住了你！快閃避掙脫！`);
 }
 
 /** Everyone against it within r of (x, y) is caught (and you thrown out from there by push). */
@@ -1950,7 +1962,7 @@ function poolsTick(s, C, dt, io) {
     }
     if (!C.on || me.dash || me.inv > 0 || Math.hypot(w.x - p.x, w.y - p.y) > p.r + PLAYER_R * 0.5) continue;
     // (a whirlpool, quicksand: dragged at)
-    if (p.kind === 'water' || p.kind === 'sand') me.slow = Math.max(me.slow || 0, 0.7);
+    if (p.kind === 'water' || p.kind === 'sand' || p.kind === 'ice') me.slow = Math.max(me.slow || 0, 0.7);
     hurtMe(s, C, p.by, p.mult, io, null, p.kind === 'fire' ? { fire: true } : p.kind === 'venom' ? { venom: true, poison: p.poison } : p.poison ? { poison: p.poison } : null);
     if (s.pending || s.dead) return;
   }

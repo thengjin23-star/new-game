@@ -1,0 +1,18 @@
+<!doctype html><meta charset="utf-8"><body style="margin:0;background:#e9e4d8">
+<canvas id="c" width="1500" height="700"></canvas>
+<script type="module">
+import { drawBigBeast } from '../src/art/scenery.js';
+const c = document.getElementById('c'); const ctx = c.getContext('2d');
+const kinds = ['ice_wolf','bailang_king','snow_leopard','ice_silkworm','silk_queen','snow_ape','ape_king','snow_wraith','ice_qilin'];
+kinds.forEach((k, i) => {
+  for (const [row, moving, t] of [[0, false, 0.3], [1, true, 0.55]]) {
+    ctx.save();
+    ctx.translate(90 + i * 160, 250 + row * 330);
+    ctx.scale(2.6, 2.6);
+    drawBigBeast(ctx, k, { t, face: 1, moving });
+    ctx.restore();
+  }
+  ctx.fillStyle = '#333'; ctx.font = '16px sans-serif'; ctx.fillText(k, 40 + i * 160, 290);
+});
+window.done = true;
+</script>

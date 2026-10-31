@@ -407,6 +407,10 @@ export const ITEMS = {
     name: '寒鐵甲', kind: 'gear', slot: 'robe', sell: 240, stats: { def: 0.22, hp: 0.1, speed: -0.06 }, craft: { ls: 240, items: { hantie_ore: 6 } },
     desc: '寒鐵打的鱗甲，刀砍不進，箭射不穿，就是重：穿上它走路，慢上一截。也擋不住冷。',
   },
+  bingpo_pearl: {
+    name: '冰魄珠', kind: 'gear', slot: 'relic', sell: 0, keep: true, stats: { warm: 1, cool: 1, mp: 30, mpRegen: 0.5 },
+    desc: '冰麟額下的一顆珠子，裡面封著一片永不融化的寒氣。戴著它，寒暑都近不了身：北原的冷、西漠的烈日，都繞著你走。',
+  },
   zhaoyao_mirror: {
     name: '照妖鏡', kind: 'gear', slot: 'relic', price: 280, sell: 110, stats: { sense: 0.5 }, move: 'mirror',
     desc: '巴掌大的銅鏡，背面刻著八卦。鏡光照處，妖邪現形。戴著它，可以帶「照妖」上陣，神識也看得更遠。',

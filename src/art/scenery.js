@@ -1253,9 +1253,443 @@ function stoneGuard(ctx, t, moving, general = false) {
 }
 
 /** The big ones: a demon wolf, the wolf king, the python, the iron-backed bear, the skeleton general. */
+// ── 北原 ──
+
+/** A tongue of frost at (x, y), streaming back (the 冰麟's mane and tail): white at the root, blue at the tip. */
+function frostTongue(ctx, x, y, r, t, k, back = -1) {
+  const f = 1 + Math.sin(t * 7 + k * 1.7) * 0.15;
+  const h = r * 2.4 * f;
+  const g = ctx.createLinearGradient(x, y, x + back * h * 0.6, y - h);
+  g.addColorStop(0, 'rgba(246,252,255,0.95)');
+  g.addColorStop(0.55, 'rgba(176,220,248,0.8)');
+  g.addColorStop(1, 'rgba(120,180,240,0)');
+  ctx.fillStyle = g;
+  ctx.beginPath();
+  ctx.moveTo(x - r * 0.7, y);
+  ctx.quadraticCurveTo(x + back * h * 0.2, y - h * 0.5, x + back * h * 0.6 + Math.sin(t * 5 + k) * r * 0.3, y - h);
+  ctx.quadraticCurveTo(x + back * h * 0.1 + r * 0.6, y - h * 0.4, x + r * 0.7, y);
+  ctx.closePath();
+  ctx.fill();
+}
+
+/** 雪豹: a long low cat as white as the snow it lies in, grey rosettes, a tail as long and thick as itself. */
+function snowLeopard(ctx, t, moving) {
+  const ph = moving ? Math.sin(t * 12) * 2.2 : 0;
+  const coat = 'rgba(228,228,222,1)';
+  const shade = 'rgba(176,176,172,1)';
+  const spot = 'rgba(96,96,104,0.85)';
+  ctx.lineCap = 'round';
+  ctx.strokeStyle = shade;
+  ctx.lineWidth = 2.2;
+  ctx.beginPath();
+  for (const x of [-9, -4, 6, 11]) {
+    const sx = ph * (x > 0 ? 1 : -1);
+    ctx.moveTo(x, -8);
+    ctx.lineTo(x + sx * 0.5 + (x > 0 ? 0.9 : -0.9), -4.5);
+    ctx.lineTo(x + sx, -0.5);
+  }
+  ctx.stroke();
+  // the tail: long, thick, curling up at the end, ringed
+  const sw = Math.sin(t * 2.4) * 2;
+  const tail = [[-12, -11], [-24, -8 + sw * 0.3], [-27, -15 + sw]];
+  for (const [wd, col] of [[5.4, rgba(INK, 0.7)], [3.8, coat]]) {
+    ctx.strokeStyle = col;
+    ctx.lineWidth = wd;
+    ctx.beginPath();
+    ctx.moveTo(tail[0][0], tail[0][1]);
+    ctx.quadraticCurveTo(tail[1][0], tail[1][1], tail[2][0], tail[2][1]);
+    ctx.stroke();
+  }
+  ctx.strokeStyle = spot;
+  ctx.lineWidth = 0.9;
+  for (const q of [0.4, 0.65, 0.88]) {
+    const x = (1 - q) * (1 - q) * tail[0][0] + 2 * (1 - q) * q * tail[1][0] + q * q * tail[2][0];
+    const y = (1 - q) * (1 - q) * tail[0][1] + 2 * (1 - q) * q * tail[1][1] + q * q * tail[2][1];
+    ctx.beginPath();
+    ctx.moveTo(x - 1.2, y - 1.8);
+    ctx.lineTo(x + 1.2, y + 1.8);
+    ctx.stroke();
+  }
+  ctx.fillStyle = coat;
+  ctx.beginPath();
+  ctx.ellipse(0, -11, 13, 5.2, -0.03, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = rgba(INK, 0.75);
+  ctx.lineWidth = 0.8;
+  ctx.stroke();
+  ctx.strokeStyle = spot;
+  ctx.lineWidth = 0.8;
+  for (const [x, y] of [[-8, -12], [-3, -14], [2, -12], [7, -13.5], [-5, -9.2], [4, -9.4], [-10.5, -9.5]]) {
+    ctx.beginPath();
+    ctx.arc(x, y, 1.3, 0.4, Math.PI * 2 - 0.4);
+    ctx.stroke();
+  }
+  // the head: small, round, carried low
+  ctx.fillStyle = coat;
+  ctx.beginPath();
+  ctx.moveTo(11.5, -17.2);
+  ctx.lineTo(12.4, -20);
+  ctx.lineTo(14, -18);
+  ctx.moveTo(14.8, -18.3);
+  ctx.lineTo(16.4, -20.3);
+  ctx.lineTo(17, -17.3);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(14, -14, 4.6, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = rgba(INK, 0.8);
+  ctx.lineWidth = 0.8;
+  ctx.stroke();
+  ctx.fillStyle = 'rgba(246,244,238,1)';
+  ctx.beginPath();
+  ctx.ellipse(17.4, -12.6, 2.4, 1.8, 0.2, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = 'rgba(160,214,150,1)';
+  ctx.fillRect(15.5, -15.6, 1.6, 1.1);
+  ctx.fillStyle = 'rgba(30,26,24,1)';
+  ctx.fillRect(16.2, -15.5, 0.5, 0.9);
+  ctx.fillStyle = 'rgba(150,100,100,1)';
+  ctx.fillRect(19.2, -13.4, 1, 0.9);
+}
+
+/**
+ * 冰蠶: a grub as long as your arm, frost-white, ringed in blue, humping along.
+ * The mother: as thick as a water jar, her front reared up, a crown of ice along her back, eyes that glow.
+ */
+function silkworm(ctx, t, moving, queen = false) {
+  const n = 7;
+  const wave = moving ? t * 8 : t * 2;
+  const coat = 'rgba(232,240,246,1)';
+  const ring = 'rgba(130,166,200,0.9)';
+  for (let i = 0; i < n; i++) {
+    const q = i / (n - 1);
+    const x = -14 + q * 26;
+    const hump = Math.max(0, Math.sin(wave - q * 5)) * (moving ? 3 : 1);
+    const rear = queen ? Math.max(0, q - 0.5) / 0.5 : 0;
+    const y = -4.5 - hump - rear * rear * 10 + (queen ? Math.sin(t * 2.2) * rear * 1.2 : 0);
+    const r = 4.2 + Math.sin(q * Math.PI) * 1.2 - (i === n - 1 ? 0.6 : 0);
+    // the stubby legs under it
+    if (i > 0 && i < n - 1 && rear < 0.3) {
+      ctx.strokeStyle = ring;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(x, y + r * 0.7);
+      ctx.lineTo(x + 0.8, -0.4);
+      ctx.stroke();
+    }
+    ctx.fillStyle = coat;
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = ring;
+    ctx.lineWidth = 0.9;
+    ctx.stroke();
+    if (queen && i > 0 && i < n - 1) {
+      // ice spikes along the back
+      ctx.fillStyle = 'rgba(170,215,245,0.95)';
+      ctx.beginPath();
+      ctx.moveTo(x - 1.6, y - r + 0.6);
+      ctx.lineTo(x + 0.4, y - r - 4.5 - (i % 2) * 2);
+      ctx.lineTo(x + 1.8, y - r + 0.6);
+      ctx.closePath();
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(250,253,255,0.8)';
+      ctx.lineWidth = 0.5;
+      ctx.stroke();
+    }
+    if (i === n - 1) {
+      // the head: dark jaws, small eyes (the mother's glow blue)
+      ctx.strokeStyle = 'rgba(50,56,66,1)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(x + r * 0.6, y + 0.8);
+      ctx.quadraticCurveTo(x + r + 2, y + 1.4, x + r + 1.6, y + 3);
+      ctx.moveTo(x + r * 0.6, y + 1.8);
+      ctx.quadraticCurveTo(x + r + 1, y + 3.4, x + r - 0.2, y + 4.2);
+      ctx.stroke();
+      ctx.fillStyle = queen ? 'rgba(90,190,255,1)' : 'rgba(30,32,38,1)';
+      ctx.beginPath();
+      ctx.arc(x + r * 0.35, y - r * 0.35, queen ? 1 : 0.8, 0, Math.PI * 2);
+      ctx.fill();
+      if (queen) {
+        const g = ctx.createRadialGradient(x + r * 0.35, y - r * 0.35, 0, x + r * 0.35, y - r * 0.35, 4);
+        g.addColorStop(0, `rgba(120,200,255,${0.5 + 0.2 * Math.sin(t * 3)})`);
+        g.addColorStop(1, 'rgba(120,200,255,0)');
+        ctx.fillStyle = g;
+        ctx.beginPath();
+        ctx.arc(x + r * 0.35, y - r * 0.35, 4, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+  }
+}
+
+/** 雪猿: an ape taller than a man, a barrel of white fur, a dark face, red eyes, arms to the ground. The king: bigger, a grey mane, ice in his fur. */
+function snowApe(ctx, t, moving, king = false) {
+  const ph = moving ? Math.sin(t * 9) * 2 : 0;
+  const bob = moving ? Math.abs(Math.sin(t * 9)) * 1.2 : Math.sin(t * 1.8) * 0.4;
+  const fur = 'rgba(232,234,236,1)';
+  const shade = 'rgba(184,190,198,1)';
+  const skin = king ? 'rgba(80,86,98,1)' : 'rgba(100,104,114,1)';
+  ctx.lineCap = 'round';
+  ctx.strokeStyle = shade;
+  ctx.lineWidth = 5;
+  ctx.beginPath();
+  ctx.moveTo(-5, -12);
+  ctx.lineTo(-6 - ph * 0.6, -1.5);
+  ctx.moveTo(5, -12);
+  ctx.lineTo(6 + ph * 0.6, -1.5);
+  ctx.stroke();
+  // the far arm, behind
+  ctx.lineWidth = 4.4;
+  ctx.beginPath();
+  ctx.moveTo(-4, -27 - bob);
+  ctx.quadraticCurveTo(-13, -18, -10 + ph, -5);
+  ctx.stroke();
+  ctx.fillStyle = fur;
+  ctx.beginPath();
+  ctx.ellipse(0, -20 - bob, 10, 12, 0.12, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = rgba(INK, 0.75);
+  ctx.lineWidth = 0.9;
+  ctx.stroke();
+  // shag along its flank
+  ctx.strokeStyle = 'rgba(160,168,178,0.85)';
+  ctx.lineWidth = 0.7;
+  ctx.beginPath();
+  for (let k = 0; k < 5; k++) {
+    const y = -26 + k * 4 - bob;
+    ctx.moveTo(-7 + k * 0.4, y);
+    ctx.lineTo(-9.5 + k * 0.4, y + 2.4);
+  }
+  ctx.stroke();
+  if (king) {
+    ctx.fillStyle = 'rgba(150,154,162,1)';
+    ctx.beginPath();
+    ctx.ellipse(2, -29 - bob, 9, 5.5, 0.15, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = rgba(INK, 0.7);
+    ctx.lineWidth = 0.8;
+    ctx.stroke();
+    ctx.strokeStyle = 'rgba(110,114,122,0.9)';
+    ctx.lineWidth = 0.6;
+    ctx.beginPath();
+    for (let k = 0; k < 5; k++) {
+      ctx.moveTo(-5 + k * 3, -27 - bob);
+      ctx.lineTo(-6 + k * 3, -24 - bob);
+    }
+    ctx.stroke();
+  }
+  // the head: small for the bulk of it, thrust forward; a heavy brow, red eyes, fangs
+  ctx.fillStyle = fur;
+  ctx.beginPath();
+  ctx.arc(7, -33 - bob, 5.4, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = rgba(INK, 0.8);
+  ctx.lineWidth = 0.8;
+  ctx.stroke();
+  ctx.fillStyle = skin;
+  ctx.beginPath();
+  ctx.ellipse(9.6, -32.4 - bob, 3.2, 3.8, 0.1, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = 'rgba(214,60,50,1)';
+  ctx.fillRect(9.6, -34.4 - bob, 1.4, 1.1);
+  ctx.fillStyle = 'rgba(250,248,240,1)';
+  ctx.beginPath();
+  ctx.moveTo(10.4, -30.2 - bob);
+  ctx.lineTo(11, -28.6 - bob);
+  ctx.lineTo(11.6, -30.2 - bob);
+  ctx.fill();
+  // the near arm, long, the fist near the ground
+  for (const [wd, col] of [[6.4, rgba(INK, 0.7)], [4.8, fur]]) {
+    ctx.strokeStyle = col;
+    ctx.lineWidth = wd;
+    ctx.beginPath();
+    ctx.moveTo(5, -27 - bob);
+    ctx.quadraticCurveTo(14, -18, 11 - ph, -5);
+    ctx.stroke();
+  }
+  ctx.fillStyle = skin;
+  ctx.beginPath();
+  ctx.arc(11 - ph, -4.5, 2.8, 0, Math.PI * 2);
+  ctx.fill();
+  if (king) {
+    // icicles hanging in the fur of its arms
+    ctx.fillStyle = 'rgba(190,226,248,0.95)';
+    for (const [x, y] of [[10.5, -17], [12.5, -12], [-11.5, -14]]) {
+      ctx.beginPath();
+      ctx.moveTo(x - 1, y);
+      ctx.lineTo(x, y + 4);
+      ctx.lineTo(x + 1, y);
+      ctx.fill();
+    }
+  }
+}
+
+/** 雪魄: one drowned under the ice and risen pale — a woman's shape in a white shroud that trails to nothing, black hair down over the face, hands held out. */
+function snowWraith(ctx, t) {
+  const fl = Math.sin(t * 1.8) * 2;
+  ctx.save();
+  ctx.globalAlpha *= 0.82;
+  ctx.translate(0, -4 + fl);
+  const g = ctx.createLinearGradient(0, -30, 0, 6);
+  g.addColorStop(0, 'rgba(226,236,246,0.95)');
+  g.addColorStop(0.7, 'rgba(190,212,232,0.55)');
+  g.addColorStop(1, 'rgba(190,212,232,0)');
+  ctx.fillStyle = g;
+  ctx.beginPath();
+  ctx.moveTo(-4.5, -26);
+  ctx.quadraticCurveTo(-9, -10, -7 + Math.sin(t * 3) * 2.5, 6);
+  ctx.quadraticCurveTo(-2, 0, Math.sin(t * 2.6) * 1.5, 6);
+  ctx.quadraticCurveTo(3, 0, 7 + Math.cos(t * 3) * 2.5, 6);
+  ctx.quadraticCurveTo(9, -10, 4.5, -26);
+  ctx.closePath();
+  ctx.fill();
+  const edge = ctx.createLinearGradient(0, -30, 0, 6);
+  edge.addColorStop(0, 'rgba(110,140,180,0.7)');
+  edge.addColorStop(1, 'rgba(110,140,180,0)');
+  ctx.strokeStyle = edge;
+  ctx.lineWidth = 0.8;
+  ctx.stroke();
+  // the arms held out before it
+  ctx.strokeStyle = 'rgba(214,228,242,0.9)';
+  ctx.lineWidth = 2.2;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(2, -21);
+  ctx.quadraticCurveTo(7, -19.5, 10 + Math.sin(t * 2) * 0.6, -18);
+  ctx.stroke();
+  ctx.fillStyle = 'rgba(236,244,250,0.95)';
+  ctx.beginPath();
+  ctx.arc(10.5, -18, 1.3, 0, Math.PI * 2);
+  ctx.fill();
+  // the head, and the long black hair down over the face and the back, stirring
+  ctx.fillStyle = 'rgba(236,242,248,0.95)';
+  ctx.beginPath();
+  ctx.arc(1, -29, 3.8, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = 'rgba(22,24,30,0.95)';
+  ctx.beginPath();
+  ctx.moveTo(-3.6, -31);
+  ctx.quadraticCurveTo(1, -35.5, 5, -31);
+  ctx.lineTo(4.6 + Math.sin(t * 2.2) * 0.8, -21);
+  ctx.lineTo(2.6, -24);
+  ctx.lineTo(1, -20 + Math.sin(t * 2.5) * 0.6);
+  ctx.lineTo(-1.4, -23.5);
+  ctx.lineTo(-5 + Math.sin(t * 1.9), -15);
+  ctx.closePath();
+  ctx.fill();
+  // one eye, through the hair
+  ctx.fillStyle = 'rgba(150,210,255,0.95)';
+  ctx.fillRect(3, -29, 1.2, 0.9);
+  ctx.restore();
+}
+
+/** 冰麟: a deer's legs and body, a dragon's scales and muzzle, a mane and tail of frost that stream like flame, one horn of ice; the veins' blue light about it. */
+function iceQilin(ctx, t, moving) {
+  const ph = moving ? Math.sin(t * 10) * 2.4 : 0;
+  const coat = 'rgba(214,230,242,1)';
+  const dark = 'rgba(120,150,180,1)';
+  const gl = ctx.createRadialGradient(2, -24, 0, 2, -24, 32);
+  gl.addColorStop(0, `rgba(150,210,250,${0.22 + 0.06 * Math.sin(t * 2)})`);
+  gl.addColorStop(1, 'rgba(150,210,250,0)');
+  ctx.fillStyle = gl;
+  ctx.beginPath();
+  ctx.arc(2, -24, 32, 0, Math.PI * 2);
+  ctx.fill();
+  // slender legs, cloven hooves
+  ctx.lineCap = 'round';
+  ctx.strokeStyle = dark;
+  ctx.lineWidth = 2.6;
+  ctx.beginPath();
+  for (const x of [-12, -7, 8, 13]) {
+    const sx = ph * (x > 0 ? 1 : -1);
+    ctx.moveTo(x, -17);
+    ctx.lineTo(x + sx * 0.6 + (x > 0 ? 0.8 : -0.8), -9);
+    ctx.lineTo(x + sx, -1.5);
+  }
+  ctx.stroke();
+  ctx.fillStyle = 'rgba(60,80,104,1)';
+  for (const x of [-12, -7, 8, 13]) ctx.fillRect(x + ph * (x > 0 ? 1 : -1) - 1.4, -2.2, 2.8, 2.2);
+  // the tail: a plume of frost
+  const sw = Math.sin(t * 2.6) * 2;
+  ctx.strokeStyle = coat;
+  ctx.lineWidth = 2.4;
+  ctx.beginPath();
+  ctx.moveTo(-16, -22);
+  ctx.quadraticCurveTo(-22, -22, -24, -25 + sw * 0.5);
+  ctx.stroke();
+  for (let k = 0; k < 3; k++) frostTongue(ctx, -24 + k * 1.5, -24 + sw * 0.5 + k, 2.6 + k * 0.4, t, k + 7);
+  ctx.fillStyle = coat;
+  ctx.beginPath();
+  ctx.ellipse(0, -20, 17, 7, -0.05, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = rgba(INK, 0.75);
+  ctx.lineWidth = 0.9;
+  ctx.stroke();
+  // scales, row on row, catching the light
+  ctx.strokeStyle = 'rgba(110,150,196,0.75)';
+  ctx.lineWidth = 0.6;
+  for (let row = 0; row < 3; row++) {
+    for (let i = 0; i < 7 - row; i++) {
+      ctx.beginPath();
+      ctx.arc(-12 + i * 4 + row * 2, -24 + row * 3, 1.6, 0.2, Math.PI - 0.2);
+      ctx.stroke();
+    }
+  }
+  // the neck, rising
+  ctx.fillStyle = coat;
+  ctx.beginPath();
+  ctx.moveTo(9, -25);
+  ctx.quadraticCurveTo(14, -32, 17, -38);
+  ctx.lineTo(22, -36);
+  ctx.quadraticCurveTo(19, -28, 15, -17);
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = rgba(INK, 0.7);
+  ctx.lineWidth = 0.8;
+  ctx.stroke();
+  // the mane of frost, streaming back off the neck
+  for (let k = 0; k < 5; k++) {
+    const q = k / 4;
+    frostTongue(ctx, 11 + q * 6, -26 - q * 11, 3 + (k % 2), t, k);
+  }
+  // the head: a long dragon's muzzle
+  ctx.fillStyle = coat;
+  ctx.beginPath();
+  ctx.ellipse(22.5, -38, 5.6, 3.6, 0.25, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = rgba(INK, 0.8);
+  ctx.lineWidth = 0.8;
+  ctx.stroke();
+  // the horn of ice, sweeping back over the head
+  ctx.fillStyle = 'rgba(176,218,246,1)';
+  ctx.beginPath();
+  ctx.moveTo(19.6, -41);
+  ctx.quadraticCurveTo(18, -47, 14.5, -50);
+  ctx.quadraticCurveTo(19.5, -47.5, 22.4, -41.4);
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(250,253,255,0.9)';
+  ctx.lineWidth = 0.6;
+  ctx.stroke();
+  ctx.fillStyle = 'rgba(70,170,250,1)';
+  ctx.beginPath();
+  ctx.arc(23, -39.3, 1, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = 'rgba(60,80,104,1)';
+  ctx.fillRect(27, -37.4, 0.8, 0.8);
+  ctx.strokeStyle = 'rgba(236,246,255,0.9)';
+  ctx.lineWidth = 0.6;
+  ctx.beginPath();
+  ctx.moveTo(26.5, -36.4);
+  ctx.quadraticCurveTo(30, -35.5 + Math.sin(t * 3), 31, -32.5);
+  ctx.stroke();
+}
+
 export function drawBigBeast(ctx, kind, { t = 0, face = 1, moving = false } = {}) {
   ctx.save();
-  groundShadow(ctx, 0, 0, { demon_wolf: 15, wolf_king: 22, python: 24, bear: 22, skeleton: 12, fire_tiger: 25, shanxiao: 12, mumei: 12, xuan_turtle: 27, spider: 14, toad: 16, toad_king: 25, swarm: 12, gu_mother: 30, scorpion: 15, sand_wolf: 16, mummy: 8, kuchan: 13, sand_jiao: 30, stone_puppet: 11, stone_general: 19 }[kind] || 14, 3);
+  groundShadow(ctx, 0, 0, { demon_wolf: 15, wolf_king: 22, python: 24, bear: 22, skeleton: 12, fire_tiger: 25, shanxiao: 12, mumei: 12, xuan_turtle: 27, spider: 14, toad: 16, toad_king: 25, swarm: 12, gu_mother: 30, scorpion: 15, sand_wolf: 16, mummy: 8, kuchan: 13, sand_jiao: 30, stone_puppet: 11, stone_general: 19, ice_wolf: 16, bailang_king: 25, snow_leopard: 16, ice_silkworm: 13, silk_queen: 26, snow_ape: 15, ape_king: 21, snow_wraith: 8, ice_qilin: 24 }[kind] || 14, 3);
   ctx.scale(face, 1);
   switch (kind) {
     case 'demon_wolf':
@@ -1332,13 +1766,44 @@ export function drawBigBeast(ctx, kind, { t = 0, face = 1, moving = false } = {}
       ctx.scale(1.6, 1.6);
       stoneGuard(ctx, t, moving, true);
       break;
+    case 'ice_wolf':
+      ctx.scale(1.3, 1.3);
+      wolfShape(ctx, t, moving, { body: 'rgba(226,232,238,1)', dark: 'rgba(150,162,176,1)', eye: 'rgba(110,196,255,1)' });
+      break;
+    case 'bailang_king':
+      ctx.scale(2.05, 2.05);
+      wolfShape(ctx, t, moving, { body: 'rgba(242,245,248,1)', dark: 'rgba(160,170,184,1)', eye: 'rgba(130,206,255,1)', mane: true, scar: true });
+      break;
+    case 'snow_leopard':
+      snowLeopard(ctx, t, moving);
+      break;
+    case 'ice_silkworm':
+      silkworm(ctx, t, moving);
+      break;
+    case 'silk_queen':
+      ctx.scale(1.6, 1.6);
+      silkworm(ctx, t, moving, true);
+      break;
+    case 'snow_ape':
+      snowApe(ctx, t, moving);
+      break;
+    case 'ape_king':
+      ctx.scale(1.35, 1.35);
+      snowApe(ctx, t, moving, true);
+      break;
+    case 'snow_wraith':
+      snowWraith(ctx, t);
+      break;
+    case 'ice_qilin':
+      iceQilin(ctx, t, moving);
+      break;
     default:
       break;
   }
   ctx.restore();
 }
 
-export const BIG_BEASTS = new Set(['demon_wolf', 'wolf_king', 'python', 'bear', 'skeleton', 'fire_tiger', 'shanxiao', 'mumei', 'xuan_turtle', 'spider', 'toad', 'toad_king', 'swarm', 'gu_mother', 'scorpion', 'sand_wolf', 'mummy', 'kuchan', 'sand_jiao', 'stone_puppet', 'stone_general']);
+export const BIG_BEASTS = new Set(['demon_wolf', 'wolf_king', 'python', 'bear', 'skeleton', 'fire_tiger', 'shanxiao', 'mumei', 'xuan_turtle', 'spider', 'toad', 'toad_king', 'swarm', 'gu_mother', 'scorpion', 'sand_wolf', 'mummy', 'kuchan', 'sand_jiao', 'stone_puppet', 'stone_general', 'ice_wolf', 'bailang_king', 'snow_leopard', 'ice_silkworm', 'silk_queen', 'snow_ape', 'ape_king', 'snow_wraith', 'ice_qilin']);
 
 /** Props that flicker or sway (repainted as they go); the rest are still. */
 export const LIVE_PROPS = new Set(['campfire', 'ginseng', 'wisp']);

@@ -43,6 +43,8 @@ const GLOW = { fire: FIRE, shield: [120, 170, 230], foeqi: FOE_QI, foxfire: FOX,
 /** 西漠's: sand flung and whirled; the gold of a dead abbot's palm and beads; starlight from a stone guard's eyes. */
 const SAND = [196, 164, 110];
 const STAR = [196, 214, 255];
+/** 北原's: snow, and the white-blue of ice through it. */
+const SNOW = [238, 244, 250];
 
 // ── figures ──
 
@@ -454,7 +456,7 @@ export function drawGroundMarks(g, s, C, kit, u = 1) {
   // ground that hurts: venom spat, fire, blood (fading in, and out as it ends)
   for (const pl of C.pools || []) {
     const a = Math.min(1, (now - pl.t0) / 0.25) * Math.max(0, Math.min(1, (pl.until - now) / 0.6));
-    const col = pl.kind === 'venom' ? VENOM : pl.kind === 'blood' ? BLOOD : pl.kind === 'water' ? WATER : pl.kind === 'sand' ? SAND : FIRE;
+    const col = pl.kind === 'venom' ? VENOM : pl.kind === 'blood' ? BLOOD : pl.kind === 'water' ? WATER : pl.kind === 'sand' ? SAND : pl.kind === 'ice' ? ICE : FIRE;
     const fl = pl.kind === 'fire' ? 0.06 * Math.sin(now * 13 + pl.x * 0.3) : 0.03 * Math.sin(now * 4 + pl.y);
     g.fillStyle = rgba(col, (pl.kind === 'fire' ? 0.3 : 0.34) * a);
     ring(g, pl.x, pl.y, pl.r * (1 + fl));
@@ -463,6 +465,28 @@ export function drawGroundMarks(g, s, C, kit, u = 1) {
     g.lineWidth = lw(1.4);
     ring(g, pl.x, pl.y, pl.r * (0.94 + fl));
     g.stroke();
+    // ice spread over the ground: cracks run straight across it, and a glint now and then off the face of it
+    if (pl.kind === 'ice') {
+      g.strokeStyle = rgba([236, 248, 255], 0.75 * a);
+      g.lineWidth = lw(1.1);
+      g.beginPath();
+      for (let n = 0; n < 5; n++) {
+        const an = n * 1.26 + pl.x * 0.017;
+        const r0 = pl.r * 0.12;
+        const r1 = pl.r * (0.62 + ((n * 37) % 10) / 30);
+        g.moveTo(pl.x + Math.cos(an) * r0, pl.y + Math.sin(an) * r0);
+        g.lineTo(pl.x + Math.cos(an + 0.18) * r1 * 0.55, pl.y + Math.sin(an + 0.18) * r1 * 0.55);
+        g.lineTo(pl.x + Math.cos(an - 0.05) * r1, pl.y + Math.sin(an - 0.05) * r1);
+      }
+      g.stroke();
+      const gl = (now * 0.7 + pl.x * 0.013) % 1;
+      if (gl < 0.3) {
+        const an = pl.y * 0.03 + Math.floor(now * 0.7) * 2.1;
+        g.fillStyle = rgba([255, 255, 255], 0.85 * a * Math.sin((gl / 0.3) * Math.PI));
+        ring(g, pl.x + Math.cos(an) * pl.r * 0.5, pl.y + Math.sin(an) * pl.r * 0.5, 2.4);
+        g.fill();
+      }
+    }
     // a whirlpool: arms of it turning in toward the heart (quicksand: slower, the sand dark where it sinks)
     if (pl.kind === 'water' || pl.kind === 'sand') {
       const sand = pl.kind === 'sand';
@@ -698,9 +722,9 @@ export function drawGroundMarks(g, s, C, kit, u = 1) {
       g.lineWidth = lw(2);
       ring(g, f.x, f.y, 14 + p * 26);
       g.stroke();
-    } else if ((f.kind === 'ring' || f.kind === 'roar' || f.kind === 'bloodring' || f.kind === 'bell' || f.kind === 'croak' || f.kind === 'sandring') && f.r) {
-      // a shockwave running out to where it reached (a bell's, gold; a toad's croak, the green of its venom; a whirl of sand)
-      const col = f.kind === 'bloodring' ? BLOOD : f.kind === 'roar' ? FIRE : f.kind === 'bell' ? GOLD : f.kind === 'croak' ? VENOM : f.kind === 'sandring' ? SAND : DUST;
+    } else if ((f.kind === 'ring' || f.kind === 'roar' || f.kind === 'bloodring' || f.kind === 'bell' || f.kind === 'croak' || f.kind === 'sandring' || f.kind === 'frostring') && f.r) {
+      // a shockwave running out to where it reached (a bell's, gold; a toad's croak, the green of its venom; a whirl of sand; frost)
+      const col = f.kind === 'bloodring' ? BLOOD : f.kind === 'roar' ? FIRE : f.kind === 'bell' ? GOLD : f.kind === 'croak' ? VENOM : f.kind === 'sandring' ? SAND : f.kind === 'frostring' ? ICE : DUST;
       const r = f.r || 70;
       g.fillStyle = rgba(col, 0.14 * (1 - p));
       ring(g, f.x, f.y, r);
@@ -746,6 +770,32 @@ export function drawGroundMarks(g, s, C, kit, u = 1) {
       g.lineWidth = lw(3);
       ring(g, f.x, f.y, f.r * (0.5 + p * 0.6));
       g.stroke();
+    } else if (f.kind === 'icespike') {
+      // the ground frozen where the ice came up: a white-blue crust, cracks run out across it
+      g.fillStyle = rgba(ICE, 0.32 * (1 - p));
+      ring(g, f.x, f.y, f.r * Math.min(1, 0.5 + p * 2));
+      g.fill();
+      g.strokeStyle = rgba([236, 248, 255], 0.8 * (1 - p));
+      g.lineWidth = lw(1.4);
+      g.beginPath();
+      for (let n = 0; n < 6; n++) {
+        const a = n * 1.047 + f.x * 0.013;
+        const r = f.r * (0.7 + 0.3 * ((n * 37) % 10) / 10);
+        g.moveTo(f.x, f.y);
+        g.lineTo(f.x + Math.cos(a) * r * 0.5 + Math.cos(a + 1.3) * 4, f.y + Math.sin(a) * r * 0.5 + Math.sin(a + 1.3) * 4);
+        g.lineTo(f.x + Math.cos(a) * r, f.y + Math.sin(a) * r);
+      }
+      g.stroke();
+    } else if (f.kind === 'snowfall') {
+      // the snow come down off the slope: a heap of it where it landed, the powder of it thrown wide
+      const land = Math.max(0, Math.min(1, (p - 0.25) / 0.2));
+      g.fillStyle = rgba(SNOW, 0.6 * land * (1 - p * 0.6));
+      ring(g, f.x, f.y, f.r * (0.55 + land * 0.35));
+      g.fill();
+      g.strokeStyle = rgba([150, 170, 190], 0.6 * land * (1 - p));
+      g.lineWidth = lw(1.6);
+      ring(g, f.x, f.y, f.r * (0.6 + land * 0.5));
+      g.stroke();
     } else if (f.kind === 'sandspout') {
       // the sand heaving up from under where it burst: a mound of it, the hollow it leaves
       g.fillStyle = rgba(SAND, 0.4 * (1 - p));
@@ -763,16 +813,21 @@ export function drawGroundMarks(g, s, C, kit, u = 1) {
         ring(g, f.x + Math.cos(a) * f.r * 0.6 * (0.4 + p), f.y + Math.sin(a) * f.r * 0.6 * (0.4 + p), 5 * (1 - p) + 2);
         g.fill();
       }
-    } else if (f.kind === 'breath' || f.kind === 'spray' || f.kind === 'sand' || f.kind === 'zen') {
-      // a sheet of fire (or venom, or flung sand, or the gold of a palm) over the ground in front of it
-      g.fillStyle = rgba(f.kind === 'spray' ? VENOM : f.kind === 'sand' ? SAND : f.kind === 'zen' ? GOLD : FIRE, (f.kind === 'zen' ? 0.3 : 0.42) * (1 - p));
+    } else if (f.kind === 'breath' || f.kind === 'spray' || f.kind === 'sand' || f.kind === 'zen' || f.kind === 'frostbreath') {
+      // a sheet of fire (or venom, or flung sand, or the gold of a palm, or frost) over the ground in front of it
+      g.fillStyle = rgba(f.kind === 'spray' ? VENOM : f.kind === 'sand' ? SAND : f.kind === 'zen' ? GOLD : f.kind === 'frostbreath' ? ICE : FIRE, (f.kind === 'zen' ? 0.3 : 0.42) * (1 - p));
       fan(g, f.x, f.y, f.dir, f.reach * Math.min(1, 0.4 + p * 2), f.arc);
       g.fill();
-    } else if (f.kind === 'web') {
-      // a web flung over the ground: threads out from the heart of it, and rings across them
+    } else if (f.kind === 'web' || f.kind === 'icesilk') {
+      // a web flung over the ground: threads out from the heart of it, and rings across them (an ice silkworm's: frozen, white-blue)
       const q = Math.min(1, p * 6);
       const fade = p > 0.75 ? (1 - p) / 0.25 : 1;
-      g.strokeStyle = `rgba(236,234,226,${0.75 * fade})`;
+      if (f.kind === 'icesilk') {
+        g.fillStyle = rgba(ICE, 0.22 * fade);
+        ring(g, f.x, f.y, f.r * q);
+        g.fill();
+      }
+      g.strokeStyle = f.kind === 'icesilk' ? `rgba(214,238,255,${0.85 * fade})` : `rgba(236,234,226,${0.75 * fade})`;
       g.lineWidth = lw(1.2);
       g.beginPath();
       for (let n = 0; n < 8; n++) {
@@ -792,6 +847,11 @@ export function drawGroundMarks(g, s, C, kit, u = 1) {
         }
         g.stroke();
       }
+    } else if (f.kind === 'frost') {
+      // the cold of the bite, breathed over the ground in front of it
+      g.fillStyle = rgba(ICE, 0.26 * (1 - p));
+      fan(g, f.x, f.y, f.dir, f.reach + 4, f.arc);
+      g.fill();
     } else if (f.kind === 'slash' || f.kind === 'punch' || f.kind === 'cut') {
       // the sweep of the blow, along the ground
       g.fillStyle = f.foe ? rgba(RED, 0.2 * (1 - p)) : `rgba(250,246,236,${0.22 * (1 - p)})`;
@@ -1058,8 +1118,55 @@ export function drawCombatOverlay(ctx, proj, px, s, C, look, t, font) {
     }
   }
   // coiled about you: loops of the snake's body, tightening (or vines, out of the ground, round your
-  // legs; or a spider's web, pale and sticky, round the whole of you)
-  if (me?.held) {
+  // legs; or a spider's web, pale and sticky, round the whole of you; or an ice silkworm's frozen silk)
+  if (me?.held?.ice) {
+    // frozen silk from the ground to your knees: a crust of ice, white-blue, glinting, cracking as you pull
+    const k = unitAt(proj, w.x, w.y);
+    const H = me.held;
+    const u = k * Math.max(1, px * 2);
+    for (let n = 0; n < 7; n++) {
+      const an = n * 0.9 + 0.3;
+      const tall = 9 + (n % 3) * 4;
+      const [bx, by] = proj(w.x + Math.cos(an) * 9, w.y + Math.sin(an) * 5, 0);
+      const [tx, ty] = proj(w.x + Math.cos(an) * 4, w.y + Math.sin(an) * 2, tall);
+      ctx.fillStyle = rgba(n % 2 ? ICE : [214, 238, 255], 0.82);
+      ctx.beginPath();
+      ctx.moveTo(bx - 3.2 * u, by);
+      ctx.lineTo(tx, ty);
+      ctx.lineTo(bx + 3.2 * u, by);
+      ctx.closePath();
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(250,253,255,0.8)';
+      ctx.lineWidth = 0.7 * u;
+      ctx.stroke();
+    }
+    for (const up of [4, 10]) {
+      const [cx, cy] = proj(w.x, w.y, up);
+      ctx.strokeStyle = 'rgba(226,244,255,0.9)';
+      ctx.lineWidth = 1.4 * u;
+      ctx.beginPath();
+      ctx.ellipse(cx, cy, 10 * k, 3.6 * k, up * 0.04, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+    // a glint running over it, and (as it lets go) cracks
+    const gl = (now * 1.6) % 1;
+    const [gx, gy] = proj(w.x - 6 + gl * 12, w.y, 6 + gl * 6);
+    ctx.fillStyle = `rgba(255,255,255,${0.9 * Math.sin(gl * Math.PI)})`;
+    ctx.beginPath();
+    ctx.arc(gx, gy, 1.6 * u, 0, Math.PI * 2);
+    ctx.fill();
+    if (H.left < 0.5) {
+      ctx.strokeStyle = 'rgba(60,90,120,0.7)';
+      ctx.lineWidth = 0.8 * u;
+      const [cx, cy] = proj(w.x, w.y, 8);
+      ctx.beginPath();
+      ctx.moveTo(cx - 6 * k, cy - 3 * k);
+      ctx.lineTo(cx - 1 * k, cy + 1 * k);
+      ctx.lineTo(cx + 2 * k, cy - 2 * k);
+      ctx.lineTo(cx + 7 * k, cy + 2 * k);
+      ctx.stroke();
+    }
+  } else if (me?.held) {
     const k = unitAt(proj, w.x, w.y);
     const sq = 1 - 0.08 * Math.sin(now * 9);
     const H = me.held;
@@ -1309,6 +1416,44 @@ function drawShot(ctx, proj, px, sh, now) {
     ctx.closePath();
     ctx.fill();
     ctx.stroke();
+    ctx.restore();
+    return;
+  }
+  if (sh.kind === 'snowball') {
+    // a lump of ice and packed snow heaved by a snow ape, as big as a man's head, tumbling, powder shed behind it
+    for (let n = 5; n >= 1; n--) {
+      const [tx, ty] = proj(sh.x - sh.ux * n * 9 + Math.sin(n * 2.1) * 3, sh.y - sh.uy * n * 9, 15 + Math.cos(now * 7 + n) * 2);
+      ctx.fillStyle = rgba(SNOW, 0.5 - n * 0.08);
+      ctx.beginPath();
+      ctx.arc(tx, ty, (7 - n) * k, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.save();
+    ctx.translate(x, y - 6 * k);
+    ctx.rotate(now * 6 + sh.x * 0.05);
+    const r = 10 * k;
+    ctx.fillStyle = 'rgba(232,240,248,1)';
+    ctx.strokeStyle = 'rgba(120,140,160,0.9)';
+    ctx.lineWidth = 0.9 * px;
+    ctx.beginPath();
+    ctx.moveTo(-r, -r * 0.2);
+    ctx.lineTo(-r * 0.5, -r * 0.9);
+    ctx.lineTo(r * 0.4, -r);
+    ctx.lineTo(r, -r * 0.3);
+    ctx.lineTo(r * 0.8, r * 0.6);
+    ctx.lineTo(0, r);
+    ctx.lineTo(-r * 0.8, r * 0.6);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+    // the ice in it, a blue facet
+    ctx.fillStyle = rgba(ICE_DEEP, 0.55);
+    ctx.beginPath();
+    ctx.moveTo(-r * 0.2, -r * 0.5);
+    ctx.lineTo(r * 0.5, -r * 0.2);
+    ctx.lineTo(r * 0.1, r * 0.4);
+    ctx.closePath();
+    ctx.fill();
     ctx.restore();
     return;
   }
@@ -2161,6 +2306,194 @@ function drawFx(ctx, proj, px, f, now) {
       ctx.fillStyle = g;
       ctx.beginPath();
       ctx.arc(bx, by, r, 0, Math.PI * 2);
+      ctx.fill();
+      break;
+    }
+    case 'frost': {
+      // fangs snapping shut, and the cold breathed off them: motes of frost thrown out in front
+      const [x, y] = proj(f.x + f.dir[0] * 20, f.y + f.dir[1] * 20, 12);
+      const shut = Math.min(1, p * 3);
+      ctx.strokeStyle = `rgba(232,246,255,${0.95 * (1 - p)})`;
+      ctx.lineWidth = 2.2 * px;
+      const r = 9 * k;
+      ctx.beginPath();
+      ctx.arc(x, y - r * (1 - shut) * 0.6, r, 0.3, Math.PI - 0.3);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(x, y + r * (1 - shut) * 0.6, r, Math.PI + 0.3, Math.PI * 2 - 0.3);
+      ctx.stroke();
+      for (let n = 0; n < 8; n++) {
+        const q = (n / 8 + p * 0.7) % 1;
+        const side = Math.sin(n * 2.3) * f.arc * 0.4;
+        const a = Math.atan2(f.dir[1], f.dir[0]) + side;
+        const [mx, my] = proj(f.x + Math.cos(a) * f.reach * q, f.y + Math.sin(a) * f.reach * q, 14 - q * 6);
+        ctx.fillStyle = rgba(n % 2 ? ICE : SNOW, 0.85 * (1 - p));
+        ctx.beginPath();
+        ctx.arc(mx, my, (1.6 + q) * k * Math.max(1, px * 2), 0, Math.PI * 2);
+        ctx.fill();
+      }
+      break;
+    }
+    case 'frostbreath': {
+      // cold breathed out over the ground in front: a white mist rolling out, glints of ice in it
+      for (let n = 0; n < 12; n++) {
+        const q = (n / 12 + p * 0.8) % 1;
+        const side = Math.sin(n * 2.3) * f.arc * 0.42;
+        const a = Math.atan2(f.dir[1], f.dir[0]) + side;
+        const [x, y] = proj(f.x + Math.cos(a) * f.reach * q, f.y + Math.sin(a) * f.reach * q, 12 + q * 5);
+        const r = (4 + q * 10) * k * (1 - p * 0.5);
+        const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+        g.addColorStop(0, `rgba(248,252,255,${0.85 * (1 - p)})`);
+        g.addColorStop(0.55, rgba(ICE, 0.55 * (1 - p)));
+        g.addColorStop(1, rgba(ICE, 0));
+        ctx.fillStyle = g;
+        ctx.beginPath();
+        ctx.arc(x, y, r, 0, Math.PI * 2);
+        ctx.fill();
+        if (n % 3 === 0) {
+          ctx.fillStyle = `rgba(255,255,255,${0.95 * (1 - p)})`;
+          ctx.beginPath();
+          ctx.arc(x + r * 0.3, y - r * 0.2, 1.3 * k * Math.max(1, px * 2), 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+      break;
+    }
+    case 'frostring': {
+      // the air about it frozen at a roar: shards of ice thrown out all round, a white breath of frost behind them
+      const out = Math.min(1, p * 1.6);
+      for (let n = 0; n < 16; n++) {
+        const an = n * 0.3927 + f.x * 0.01;
+        const rr = (f.r || 100) * out * (0.8 + ((n * 37) % 10) / 40);
+        const [x0, y0] = proj(f.x + Math.cos(an) * rr, f.y + Math.sin(an) * rr * 0.8, 8 + (n % 4) * 5);
+        const [x1, y1] = proj(f.x + Math.cos(an) * (rr - 10), f.y + Math.sin(an) * (rr - 10) * 0.8, 9 + (n % 4) * 5);
+        ctx.strokeStyle = rgba(n % 2 ? ICE : [236, 248, 255], 0.9 * (1 - p));
+        ctx.lineWidth = 1.8 * px * Math.max(1, k);
+        ctx.beginPath();
+        ctx.moveTo(x0, y0);
+        ctx.lineTo(x1, y1);
+        ctx.stroke();
+      }
+      const [hx, hy] = proj(f.x, f.y, 16);
+      const r = (f.r || 100) * 0.5 * k * (0.4 + out * 0.6);
+      const g = ctx.createRadialGradient(hx, hy, 0, hx, hy, r);
+      g.addColorStop(0, rgba(SNOW, 0.4 * (1 - p)));
+      g.addColorStop(1, rgba(SNOW, 0));
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.arc(hx, hy, r, 0, Math.PI * 2);
+      ctx.fill();
+      break;
+    }
+    case 'icespike': {
+      // spikes of ice up out of the ground where it marked, clear and white-blue, then shattering
+      const up = p < 0.15 ? p / 0.15 : p > 0.7 ? (1 - p) / 0.3 : 1;
+      for (let n = 0; n < 7; n++) {
+        const an = n * 2.399 + f.x * 0.01;
+        const rr = f.r * (0.12 + ((n * 37) % 10) / 13);
+        const gx = f.x + Math.cos(an) * rr;
+        const gy = f.y + Math.sin(an) * rr * 0.7;
+        const tall = (18 + (n % 3) * 9) * up;
+        const [bx, by] = proj(gx, gy, 0);
+        const [tx, ty] = proj(gx + 2, gy, tall);
+        const wd = 4 * k * Math.max(1, px * 2);
+        ctx.fillStyle = rgba(n % 3 ? ICE : [206, 232, 250], 0.88);
+        ctx.beginPath();
+        ctx.moveTo(bx - wd, by);
+        ctx.lineTo(tx, ty);
+        ctx.lineTo(bx + wd, by);
+        ctx.closePath();
+        ctx.fill();
+        // the face that takes the light
+        ctx.fillStyle = 'rgba(250,253,255,0.7)';
+        ctx.beginPath();
+        ctx.moveTo(bx - wd * 0.2, by);
+        ctx.lineTo(tx, ty);
+        ctx.lineTo(bx + wd * 0.6, by);
+        ctx.closePath();
+        ctx.fill();
+        ctx.strokeStyle = rgba(ICE_DEEP, 0.7);
+        ctx.lineWidth = 0.7 * px;
+        ctx.beginPath();
+        ctx.moveTo(bx - wd, by);
+        ctx.lineTo(tx, ty);
+        ctx.lineTo(bx + wd, by);
+        ctx.stroke();
+      }
+      // shattering: splinters thrown off as they go
+      if (p > 0.7) {
+        const q = (p - 0.7) / 0.3;
+        for (let n = 0; n < 8; n++) {
+          const an = n * 0.785 + f.y * 0.01;
+          const [x, y] = proj(f.x + Math.cos(an) * f.r * 0.6 * (0.5 + q), f.y + Math.sin(an) * f.r * 0.4 * (0.5 + q), 10 + Math.sin(q * Math.PI) * 10);
+          ctx.fillStyle = `rgba(236,248,255,${0.9 * (1 - q)})`;
+          ctx.fillRect(x - k, y - k, 2.2 * k * Math.max(1, px * 2), 2.2 * k * Math.max(1, px * 2));
+        }
+      }
+      break;
+    }
+    case 'snowfall': {
+      // the snow brought down off the slope: lumps of it falling out of the sky onto the spot, then the powder of it bursting up and drifting
+      const fall = Math.min(1, p / 0.25);
+      if (p < 0.3) {
+        for (let n = 0; n < 7; n++) {
+          const an = n * 2.399 + f.x * 0.01;
+          const rr = f.r * 0.6 * (((n * 37) % 10) / 10);
+          const hgt = (1 - fall) * (130 + (n % 3) * 30);
+          const [x, y] = proj(f.x + Math.cos(an) * rr, f.y + Math.sin(an) * rr * 0.7, hgt + 4);
+          ctx.fillStyle = rgba(SNOW, 0.95);
+          ctx.strokeStyle = 'rgba(140,160,180,0.8)';
+          ctx.lineWidth = 0.8 * px;
+          ctx.beginPath();
+          ctx.arc(x, y, (5 + (n % 3) * 2) * k, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.stroke();
+        }
+      }
+      if (p >= 0.22) {
+        const q = (p - 0.22) / 0.78;
+        for (let n = 0; n < 16; n++) {
+          const an = n * 2.399 + f.x * 0.01;
+          const rr = f.r * (0.3 + 0.9 * q) * (0.5 + ((n * 37) % 10) / 20);
+          const hgt = Math.sin(Math.min(1, q * 1.6) * Math.PI * 0.8) * (16 + (n % 4) * 7);
+          const [x, y] = proj(f.x + Math.cos(an) * rr, f.y + Math.sin(an) * rr * 0.7, hgt);
+          ctx.fillStyle = rgba(SNOW, 0.85 * (1 - q));
+          ctx.beginPath();
+          ctx.arc(x, y, (2.6 + (n % 3) * 0.8) * k * Math.max(1, px * 2), 0, Math.PI * 2);
+          ctx.fill();
+        }
+        const [bx, by] = proj(f.x, f.y, 10);
+        const r = f.r * k * (0.6 + q * 0.6);
+        const g = ctx.createRadialGradient(bx, by, 0, bx, by, r);
+        g.addColorStop(0, rgba(SNOW, 0.55 * (1 - q)));
+        g.addColorStop(1, rgba(SNOW, 0));
+        ctx.fillStyle = g;
+        ctx.beginPath();
+        ctx.arc(bx, by, r, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      break;
+    }
+    case 'icesilk': {
+      // threads of frozen silk up out of the ground round whoever stands in it, stiff and glinting (they do not sag; they snap)
+      const fade = p > 0.8 ? (1 - p) / 0.2 : 1;
+      ctx.strokeStyle = `rgba(214,238,255,${0.9 * fade})`;
+      ctx.lineWidth = 1.3 * px * Math.max(1, k);
+      for (let n = 0; n < 8; n++) {
+        const an = n * 0.785 + f.x * 0.01;
+        const [x0, y0] = proj(f.x + Math.cos(an) * f.r * 0.85, f.y + Math.sin(an) * f.r * 0.6, 0);
+        const [x1, y1] = proj(f.x + Math.cos(an + 2.4) * 5, f.y + Math.sin(an + 2.4) * 3, 10 + (n % 3) * 6);
+        ctx.beginPath();
+        ctx.moveTo(x0, y0);
+        ctx.lineTo(x1, y1);
+        ctx.stroke();
+      }
+      const gl = (p * 3) % 1;
+      const an = Math.floor(p * 3) * 2.1;
+      const [gx, gy] = proj(f.x + Math.cos(an) * f.r * 0.4, f.y + Math.sin(an) * f.r * 0.3, 6);
+      ctx.fillStyle = `rgba(255,255,255,${0.9 * Math.sin(gl * Math.PI) * fade})`;
+      ctx.beginPath();
+      ctx.arc(gx, gy, 2 * k * Math.max(1, px * 2), 0, Math.PI * 2);
       ctx.fill();
       break;
     }
