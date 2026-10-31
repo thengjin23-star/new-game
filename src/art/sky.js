@@ -1,7 +1,8 @@
 // The sky over the picture, for both the 3D and the flat view: what falls
-// (rain, snow, blown sand, or the season's petals and leaves), the grey of a
-// wet day, the white of a fog, the brown of a sandstorm, a desert noon's
-// glare, a blood moon's red, and the flash of lightning.
+// (rain, snow, blown sand, a blizzard's snow, or the season's petals and
+// leaves), the grey of a wet day, the white of a fog or a blizzard, the brown
+// of a sandstorm, a desert noon's glare, a blood moon's red, and the flash of
+// lightning.
 
 import { weatherNow, moonTonight, arid } from '../world/weather.js';
 import { flashOf, liveOf } from '../world/explore.js';
@@ -13,6 +14,7 @@ export function fallOf(s, season) {
   const w = weatherNow(s);
   if (w.id === 'rain') return ['rain', 80];
   if (w.id === 'storm') return ['storm', 150];
+  if (w.blizzard) return ['blizzard', 210];
   if (w.id === 'snow') return ['snow', 70];
   if (w.id === 'fog') return [null, 0];
   if (w.sand) return ['sand', 150];
@@ -28,6 +30,8 @@ export function skyLight(s) {
   const blood = moonTonight(s, 'bloodmoon');
   // blown sand: a brown dusk at noon, and nothing far off; a burning noon: white light, the distance shimmering
   if (w.sand) return { amb: 0.92, sun: 0.55, haze: [0.8, 0.66, 0.46], lean: 0.66, reach: 0.4 };
+  // a blizzard: white on white, the sun a smudge, nothing far off
+  if (w.blizzard) return { amb: 0.96, sun: 0.45, haze: [0.86, 0.9, 0.95], lean: 0.72, reach: 0.36 };
   if (w.heat) return { amb: 1.06, sun: 1.12, haze: [0.98, 0.92, 0.78], lean: 0.2, reach: 0.85 };
   return {
     amb: 1 - 0.3 * w.dim,
@@ -55,6 +59,15 @@ export function drawSkyVeil(ctx, s, W, H, t) {
     g.addColorStop(0, `rgba(176,140,90,${0.32 + pulse})`);
     g.addColorStop(0.6, `rgba(190,150,96,${0.42 + pulse})`);
     g.addColorStop(1, `rgba(170,128,80,${0.5 + pulse})`);
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, W, H);
+  } else if (w.blizzard) {
+    // a blizzard: a white veil, thickest low down, rolling
+    const g = ctx.createLinearGradient(0, 0, 0, H);
+    const pulse = 0.05 * Math.sin(t * 0.0017);
+    g.addColorStop(0, `rgba(226,234,242,${0.34 + pulse})`);
+    g.addColorStop(0.6, `rgba(234,240,246,${0.46 + pulse})`);
+    g.addColorStop(1, `rgba(240,244,248,${0.56 + pulse})`);
     ctx.fillStyle = g;
     ctx.fillRect(0, 0, W, H);
   } else if (w.heat) {

@@ -26,6 +26,8 @@ export const CROSSINGS = {
   ling_pass: { to: 'donghuang', at: [2610, 4400], hours: 6 },
   west_pass: { to: 'ximo', at: [5080, 1650], hours: 10 },
   luori_pass: { to: 'donghuang', at: [120, 560], hours: 10 },
+  yanhui_pass: { to: 'beiyuan', at: [2600, 4500], hours: 12 },
+  xueling_kou: { to: 'donghuang', at: [3070, 60], hours: 12 },
 };
 
 let current = 'donghuang';
@@ -34,6 +36,11 @@ const hooks = [];
 /** The map you are on (the one loaded). */
 export function mapId() {
   return current;
+}
+
+/** The season the map you are on looks like (the north is winter to look at, whatever the month). */
+export function seasonLook(season) {
+  return MAPS[current]?.winter ? 'winter' : season;
 }
 
 /** Call fn(id) whenever another map is put in place (to drop what was built for the last one). */

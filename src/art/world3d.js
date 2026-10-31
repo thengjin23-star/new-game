@@ -13,6 +13,7 @@ import { VALLEY, LAKES } from '../world/geo.js';
 import { NODES, mapOf } from '../world/map.js';
 import { heightAt, waterAt } from '../world/height.js';
 import { landTable } from '../world/maps/index.js';
+import { seasonLook } from '../world/atlas.js';
 import { fogOf } from '../world/fog.js';
 import * as E from '../world/explore.js';
 import { createEnv } from './gl/env.js';
@@ -432,7 +433,7 @@ export function createWorld3D(canvas, { onFrame, idle, quality = 'high', onSlow 
   // ── light after dark, and the mists ──
 
   /** Doors whose lamps are lit at night: how many lights, by kind of building. */
-  const LIT = { mansion: 2, teahouse: 2, auction: 3, shop: 1, house: 1, farmhouse: 1, hall: 1, bighall: 2, tower: 1, teashed: 1, hut: 1, pavilion: 1 };
+  const LIT = { mansion: 2, teahouse: 2, auction: 3, shop: 1, house: 1, farmhouse: 1, hall: 1, bighall: 2, tower: 1, teashed: 1, hut: 1, pavilion: 1, cabin: 1, smithy: 2, yurt: 1 };
 
   function lightsAndMists() {
     const dark = E.darkness(s.tod);
@@ -683,7 +684,7 @@ export function createWorld3D(canvas, { onFrame, idle, quality = 'high', onSlow 
     const fireflies = dark > 0.6 && (season === 'summer' || season === 'spring') && !['qingshi_town', 'luoxia_market', 'qingyun_sect'].includes(s.player.loc) && !arid(s.player.loc);
     // what falls: rain or snow when the weather brings it; else the region's own motes, fireflies, the season's petals and leaves
     const [fall, count] = fallOf(s, season);
-    const wet = fall === 'rain' || fall === 'storm' || fall === 'snow' || fall === 'sand';
+    const wet = fall === 'rain' || fall === 'storm' || fall === 'snow' || fall === 'sand' || fall === 'blizzard';
     const kind = wet ? fall : motes || (fireflies ? 'firefly' : fall);
     if (!reduce && kind) {
       if (particleKind !== kind) {
@@ -819,7 +820,7 @@ export function createWorld3D(canvas, { onFrame, idle, quality = 'high', onSlow 
   // ── each frame ──
 
   function draw(dt, snap = false) {
-    const nowSeason = seasonOf(s.day);
+    const nowSeason = seasonLook(seasonOf(s.day));
     if (nowSeason !== season) season = nowSeason;
     env.u.uTime.value = t;
     env.setLight(s.tod, E.darkness(s.tod), season);

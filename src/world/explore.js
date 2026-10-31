@@ -19,7 +19,8 @@ import { ITEMS, displayItem } from '../content/items.js';
 import { pickEvent, startEvent, takeDue, notice } from '../core/events.js';
 import { updateCombat, beastTargets, strikeAt, FIGHT_HOURS, combatOf, inCombat, leaveMap } from './combat.js';
 import { bodyArt, leapLanding, leapTo, leapShape, leapRules, FLIGHT, flyMeans, flyBlocked, landingNear, flyCost } from './air.js';
-import { weatherNow } from './weather.js';
+import { weatherNow, frigid } from './weather.js';
+import { TECHS } from '../content/techniques.js';
 import { inquire, visit } from '../core/actions.js';
 import { spendHours, newReport } from '../core/time.js';
 import { applyEffects, logLife } from '../core/effects.js';
@@ -165,36 +166,64 @@ function revealRadius(s) {
   return (base + 20 * Math.min(4, s.player.realm)) * up * (windproof(s) ? Math.max(0.8, weatherNow(s).see) : weatherNow(s).see);
 }
 
-/** A sandstorm, and what you carry turns its wind aside (a 定風珠): it slows you no more, and hides little. */
-export function windproof(s) {
-  return !!weatherNow(s).sand && gearStats(s).wind >= 1;
+/** A hard wind: a sandstorm, a blizzard (it slows you, hides the way, beats down whatever flies). */
+export function gale(wx) {
+  return !!(wx.sand || wx.blizzard);
 }
 
-/** The noon sun cannot touch you: what you wear keeps you cool (寒玉佩, 蛟鱗甲), or a 冰心丹 is still working. */
+/** A gale, and what you carry turns its wind aside (a 定風珠): it slows you no more, and hides little. */
+export function windproof(s) {
+  return gale(weatherNow(s)) && gearStats(s).wind >= 1;
+}
+
+/** The noon sun cannot touch you: what you wear keeps you cool (寒玉佩, 蛟鱗甲), a 冰心丹 is still working, or you are past heat and cold (金丹). */
 export function sunproof(s) {
-  return gearStats(s).cool >= 1 || (s.player.buffs?.bingxin || 0) > 0;
+  return s.player.realm >= 3 || gearStats(s).cool >= 1 || (s.player.buffs?.bingxin || 0) > 0;
 }
 
 /**
- * Out on the open sand (西漠, 0.22) the noon sun and a sandstorm wear on you as you go: so far,
- * and you are warned; as far again, and something comes of it (a 'sky' event, content/events/ximo.js).
- * Not where there is shade (a town, a fort, a canyon: the land's 'shade' table), not with what keeps
- * it off; there, and once it lets up, it wears off again.
+ * How fast the cold of the north gets into you (0: it does not): more by night and in a blizzard;
+ * nothing past 金丹 (寒暑不侵) or while a 暖身丹 is working; fur or a warm charm keeps it off but for a
+ * blizzard's (half); a cultivator of fire feels it less; one not yet past 築基 feels it more.
+ */
+export function coldRate(s, wx = weatherNow(s)) {
+  const p = s.player;
+  if (p.realm >= 3 || (p.buffs?.nuanshen || 0) > 0) return 0;
+  let r = wx.blizzard ? 2.4 : wx.snow ? 1.3 : 1;
+  if (isNight(s)) r *= 1.5;
+  if (gearStats(s).warm >= 1) r *= wx.blizzard ? 0.5 : 0;
+  if (TECHS[p.tech]?.element === '火') r *= 0.6;
+  if (p.realm < 2) r *= 1.6;
+  return r;
+}
+
+/**
+ * Out on the open sand (西漠, 0.22) the noon sun and a sandstorm wear on you as you go, and out in
+ * the north (北原, 0.23) the cold does, whatever the weather: so far, and you are warned; further,
+ * and something comes of it (a 'sky' event, content/events/ximo.js, beiyuan.js). Not where there is
+ * shade or shelter (a town, a fort, a canyon, a fire, under the ground: the land's 'shade' and
+ * 'shelter' tables), not with what keeps it off; there, and once it lets up, it wears off again.
  */
 const EXPOSED = { heat: 1400, sandstorm: 700 };
-const SHADE = landTable('shade');
+const COLD_NEED = 1500;
+const SHELTER = { ...landTable('shade'), ...landTable('shelter') };
 function exposure(s, L, moved) {
   const w = s.world;
   const sky = weatherNow(s);
-  const need = EXPOSED[sky.id];
-  if (!need || SHADE[w.region] || (sky.heat ? sunproof(s) : windproof(s))) {
+  const cold = frigid(w.region);
+  const need = cold ? COLD_NEED : EXPOSED[sky.id];
+  const rate = !need || SHELTER[w.region] ? 0 : cold ? coldRate(s, sky) : (sky.heat ? sunproof(s) : windproof(s)) ? 0 : 1;
+  if (!rate) {
     if (w.exposed) w.exposed = Math.max(0, w.exposed - moved * 2);
     return false;
   }
   const was = w.exposed || 0;
-  w.exposed = was + moved;
+  w.exposed = was + moved * rate;
   if (was < need * 0.6 && w.exposed >= need * 0.6) {
-    L.feed.push({ kind: 'bad', text: sky.heat ? '日頭毒得像火，你的嘴唇乾裂了，頭一陣一陣地發暈。該找個陰涼地方，或者喝口水了。' : '沙子打在臉上生疼，眼睛睜不開，腳下的路也快看不清了。' });
+    const warn = cold
+      ? sky.blizzard ? '雪片打在臉上像刀子，眼前白茫茫的一片，寒氣一直往骨頭縫裡鑽。' : '寒氣一陣一陣地往骨頭裡鑽，手指頭已經沒有知覺了。該找個地方烤烤火了。'
+      : sky.heat ? '日頭毒得像火，你的嘴唇乾裂了，頭一陣一陣地發暈。該找個陰涼地方，或者喝口水了。' : '沙子打在臉上生疼，眼睛睜不開，腳下的路也快看不清了。';
+    L.feed.push({ kind: 'bad', text: warn });
   }
   if (w.exposed < need) return false;
   w.exposed = 0;
@@ -430,8 +459,8 @@ export function takeOff(s, by = flyMeans(s).by) {
     L.feed.push({ kind: 'bad', text: '靈力不足，飛不起來。' });
     return false;
   }
-  if (weatherNow(s).sand && !windproof(s)) {
-    L.feed.push({ kind: 'bad', text: '沙暴裡睜不開眼，風一陣一陣地把你往地上按——飛不起來。' });
+  if (gale(weatherNow(s)) && !windproof(s)) {
+    L.feed.push({ kind: 'bad', text: weatherNow(s).blizzard ? '暴風雪裡什麼也看不見，風一陣一陣地把你往地上按——飛不起來。' : '沙暴裡睜不開眼，風一陣一陣地把你往地上按——飛不起來。' });
     return false;
   }
   stopWalking(L);
@@ -587,11 +616,12 @@ function flyStep(s, L, dt, input) {
   if (w.fly && F.state === 'down' && F.z - ground < 2.5) touchDown(s, L);
 }
 
-/** A sandstorm comes up while you are in the air: it beats you down (unless the wind turns aside from you). */
+/** A sandstorm or a blizzard comes up while you are in the air: it beats you down (unless the wind turns aside from you). */
 function sandWatch(s, L) {
   const w = s.world;
-  if (w.fly.state === 'down' || w.fly.forced || !weatherNow(s).sand || windproof(s)) return;
-  L.feed.push({ kind: 'bad', text: '沙暴撲過來，風裡全是沙子，打得你睜不開眼。你被風壓了下去。' });
+  const wx = weatherNow(s);
+  if (w.fly.state === 'down' || w.fly.forced || !gale(wx) || windproof(s)) return;
+  L.feed.push({ kind: 'bad', text: wx.blizzard ? '暴風雪撲過來，雪片打得你睜不開眼，連天和地都分不清了。你被風壓了下去。' : '沙暴撲過來，風裡全是沙子，打得你睜不開眼。你被風壓了下去。' });
   comeDown(s, L, true);
 }
 

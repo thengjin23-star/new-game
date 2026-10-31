@@ -102,7 +102,7 @@ function smooth(a, b, x) {
 /** The regions of the map you are on (the grid keeps each cell's as an index into this). */
 export let REGION_IDS = REGION_SHAPES.map((r) => r.id);
 let RIDX = Object.fromEntries(REGION_IDS.map((id, k) => [id, k]));
-const NATURAL = new Set([T.GRASS, T.TALLGRASS, T.HILL, T.FOREST, T.DEEP, T.FARM, T.WASTE, T.SAND, T.DUNE]);
+const NATURAL = new Set([T.GRASS, T.TALLGRASS, T.HILL, T.FOREST, T.DEEP, T.FARM, T.WASTE, T.SAND, T.DUNE, T.SNOW]);
 
 export const idxOf = (i, j) => j * COLS + i;
 export const cellX = (i) => (i + 0.5) * CELL;
@@ -121,6 +121,12 @@ const BASE = {
   west_pass: (x, y) => {
     const n = fbm(x / 130, y / 130, 16);
     return n > 0.6 ? T.HILL : n < 0.4 ? T.WASTE : T.GRASS;
+  },
+  // up toward the ridge the grass gives out to stone, and near the top the snow lies all year
+  yanhui_pass: (x, y) => {
+    const n = fbm(x / 120, y / 120, 17);
+    if (y < 130 + n * 60) return T.SNOW;
+    return n > 0.58 ? T.HILL : n < 0.38 ? T.WASTE : T.GRASS;
   },
   farmland: () => T.FARM,
   lingxi_valley: (x, y) => (fbm(x / 140, y / 140, 6) > 0.58 ? T.FOREST : T.GRASS),
@@ -791,6 +797,7 @@ const TREE_MIX = {
   river_isle: [['willow', 100]],
   south_pass: [['pine', 70], ['leaf', 30]],
   west_pass: [['pine', 45], ['dead', 55]],
+  yanhui_pass: [['pine', 70], ['dead', 30]],
   // the other maps' regions
   ...landTable('trees'),
 };
@@ -906,6 +913,12 @@ function makeDecor(g) {
         case T.QUICK:
           if (r0 < 0.02) place('bones', 1, 255);
           break;
+        // the north: a tree standing alone in the snow, a stone the drifts have not covered; on the ice, nothing
+        case T.SNOW:
+          if (r0 < (GROVE[region] || 0.03)) place(pickMix(mix, hash2(i, j, 260)), 1, 261);
+          else if (r0 < 0.06) place('rock', 1, 262, 0.85);
+          else if (r0 < 0.09) place('tuft', 1, 263, 0.8);
+          break;
         case T.FARM:
           if (r0 < 0.008) place('scarecrow', 1, 210);
           else if (r0 < 0.02) place('willow', 1, 211);
@@ -1011,7 +1024,7 @@ function makeMountains(g) {
 
 function makeHerbs(g) {
   const clear = clearings();
-  const GOOD = new Set([T.GRASS, T.HILL, T.FOREST, T.DEEP, T.TALLGRASS, T.SAND, T.FARM, T.DUNE, T.WASTE]);
+  const GOOD = new Set([T.GRASS, T.HILL, T.FOREST, T.DEEP, T.TALLGRASS, T.SAND, T.FARM, T.DUNE, T.WASTE, T.SNOW]);
   const out = [];
   for (const [region, conf] of Object.entries(GATHER)) {
     const cand = [];
@@ -1046,6 +1059,7 @@ export function asciiMap() {
     [T.VOID]: ' ', [T.GRASS]: '.', [T.ROAD]: '=', [T.FARM]: '"', [T.FOREST]: 'f', [T.DEEP]: 'F', [T.HILL]: ',',
     [T.PEAK]: '^', [T.CLIFF]: '#', [T.WATER]: '~', [T.SAND]: ':', [T.WASTE]: '_', [T.PAVED]: '+', [T.BRIDGE]: 'H',
     [T.WALL]: '|', [T.GATE]: 'G', [T.TRAIL]: '-', [T.TALLGRASS]: ';', [T.DUNE]: 'd', [T.QUICK]: 'q',
+    [T.SNOW]: '*', [T.ICE]: 'o',
   };
   const lines = [];
   for (let j = 0; j < ROWS; j++) {

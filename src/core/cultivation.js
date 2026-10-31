@@ -51,6 +51,8 @@ export const BUFFS = {
   bizhang: { name: '避瘴', mult: 1 },
   // 冰心丹 (西漠): the noon sun does not touch you while it lasts
   bingxin: { name: '冰心', mult: 1 },
+  // 暖身丹 (北原): the cold does not touch you while it lasts
+  nuanshen: { name: '暖身', mult: 1 },
 };
 
 export function realmOf(s) {

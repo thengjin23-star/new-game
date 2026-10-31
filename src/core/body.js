@@ -32,6 +32,8 @@ export const STAT_WORD = {
   // (西漠) the sun cannot burn you; the sandstorm's wind turns aside
   cool: () => '不畏烈日',
   wind: () => '定風',
+  // (北原) the cold does not get in
+  warm: () => '禦寒',
 };
 
 /** What you have on, place by place (the weapon in your hand counts). */
@@ -49,7 +51,7 @@ export function gearOf(s) {
  * cool (西漠's noon sun cannot burn you), wind (a sandstorm's wind turns aside from you).
  */
 export function gearStats(s) {
-  const out = { hp: 0, mp: 0, def: 0, regen: 0, mpRegen: 0, crit: 0, speed: 0, sense: 0, fire: 0, venom: 0, cool: 0, wind: 0 };
+  const out = { hp: 0, mp: 0, def: 0, regen: 0, mpRegen: 0, crit: 0, speed: 0, sense: 0, fire: 0, venom: 0, cool: 0, wind: 0, warm: 0 };
   for (const id of Object.values(gearOf(s))) {
     const st = id && ITEMS[id]?.stats;
     if (!st) continue;

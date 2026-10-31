@@ -870,7 +870,7 @@ export function makeParticles(kind, rnd, W, H, count) {
     x: rnd() * W,
     y: rnd() * H,
     v: 0.2 + rnd() * 0.6,
-    r: kind === 'snow' ? 1 + rnd() * 1.8 : 2 + rnd() * 2.5,
+    r: kind === 'snow' || kind === 'blizzard' ? 1 + rnd() * 1.8 : 2 + rnd() * 2.5,
     ph: rnd() * Math.PI * 2,
     rot: rnd() * Math.PI,
   }));
@@ -899,6 +899,29 @@ export function drawParticles(ctx, kind, list, W, H, dt, t, still) {
       ctx.lineTo(p.x - len, p.y - len * 0.08);
     }
     ctx.stroke();
+    return;
+  }
+  if (kind === 'blizzard') {
+    // a blizzard: snow driven almost level across the picture, each flake a short white smear
+    ctx.lineCap = 'round';
+    ctx.strokeStyle = 'rgba(255,255,255,0.9)';
+    for (const p of list) {
+      if (!still) {
+        p.x += (1.6 + p.v * 1.8) * dt * 0.9;
+        p.y += (0.2 + p.v * 0.3) * dt * 0.12 + Math.sin(t / 300 + p.ph) * 0.8;
+        if (p.x > W + 30) {
+          p.x = -30;
+          p.y = Math.random() * H;
+        }
+        if (p.y > H + 10) p.y = -10;
+      }
+      ctx.lineWidth = p.r * 1.3;
+      ctx.beginPath();
+      ctx.moveTo(p.x, p.y);
+      ctx.lineTo(p.x - 3 - p.r * 3, p.y - 1);
+      ctx.stroke();
+    }
+    ctx.lineCap = 'butt';
     return;
   }
   if (kind === 'rain' || kind === 'storm') {

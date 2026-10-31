@@ -33,6 +33,8 @@ export const T = {
   TALLGRASS: 17,
   DUNE: 18,
   QUICK: 19,
+  SNOW: 20,
+  ICE: 21,
 };
 
 export const TERRAIN = {
@@ -57,6 +59,9 @@ export const TERRAIN = {
   // the desert's (西漠, 0.22): dunes the wind shapes, and sand that swallows what stands on it
   [T.DUNE]: { name: '沙丘', pass: true, speed: 0.8 },
   [T.QUICK]: { name: '流沙', pass: true, speed: 0.55 },
+  // the north's (北原, 0.23): snow lying deep, and the ice of a lake frozen to the bottom
+  [T.SNOW]: { name: '雪地', pass: true, speed: 0.78 },
+  [T.ICE]: { name: '冰面', pass: true, speed: 1.05 },
 };
 
 /**
@@ -80,6 +85,8 @@ export let REGION_SHAPES = [
   { id: 'south_pass', poly: [[2440, 4180], [2800, 4180], [2820, 4600], [2420, 4600]] },
   // the gap in the western mountains, past 古戰場: to 西漠
   { id: 'west_pass', poly: [[0, 380], [420, 380], [440, 760], [0, 760]] },
+  // the ridge in the northern mountains, past 斷石門 and under 斷劍峰: to 北原
+  { id: 'yanhui_pass', poly: [[2860, 0], [3280, 0], [3270, 330], [2870, 330]] },
   { id: 'farmland', poly: [[1650, 3420], [2880, 3400], [2880, 3990], [1700, 4000]] },
   { id: 'lingxi_valley', ellipse: [600, 1820, 420, 460] },
   { id: 'qingyun_sect', poly: [[3780, 560], [4720, 600], [4740, 1760], [3820, 1790]] },
@@ -179,6 +186,8 @@ export let ROADS = [
   { kind: 'trail', width: 30, pts: [[2250, 3920], [2390, 4060], [2550, 4230], [2600, 4400], [2614, 4570]] },
   // 西陲古道: on west from 古戰場, half buried, to the gap in the mountains (and 西漠 beyond)
   { kind: 'trail', width: 28, pts: [[2600, 700], [2250, 640], [1900, 600], [1560, 500], [1100, 470], [650, 520], [300, 560], [20, 560]] },
+  // 北嶺古道: on north from 斷石門, up over the ridge (and 北原 beyond)
+  { kind: 'trail', width: 28, pts: [[2600, 700], [2760, 560], [2920, 400], [3040, 240], [3070, 20]] },
   { kind: 'trail', width: 26, pts: [[1760, 3800], [2860, 3790]] },
   { kind: 'trail', width: 24, pts: [[1400, 3220], [1450, 2980], [1700, 2780]] },
   { kind: 'trail', width: 24, pts: [[1060, 3240], [1060, 3120]] },
@@ -203,7 +212,7 @@ export let WALL_LOOK = { mud: false, name: '落霞坊' };
  */
 export let BORDER = {
   north: 170, west: 150, south: 4370, eastRiver: 'great',
-  gaps: [{ side: 'south', at: 2610, half: 170, depth: 360 }, { side: 'west', at: 560, half: 170, depth: 360 }],
+  gaps: [{ side: 'south', at: 2610, half: 170, depth: 360 }, { side: 'west', at: 560, half: 170, depth: 360 }, { side: 'north', at: 3070, half: 170, depth: 360 }],
 };
 
 /** The river whose far bank is the edge of the world (beyond it only mist and water), and its region. */
@@ -220,6 +229,8 @@ export let REACH_FROM = [1060, 3205];
 export let UPLAND = [
   // the north-west uplands and the old battlefield
   [700, 600, 205, 450], [1500, 550, 195, 400], [2600, 650, 170, 450], [3500, 700, 160, 350], [4150, 350, 140, 300], [4550, 350, 30, 220],
+  // the ridge over to 北原 climbs out of the battlefield
+  [3060, 60, 236, 330],
   // 黑風林
   [1250, 1500, 150, 350], [2300, 1550, 125, 380], [3200, 1600, 95, 350],
   // 靈溪谷 and the high side of 青石山

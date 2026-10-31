@@ -76,6 +76,10 @@ export const NODES = {
     name: '西風口', kind: 'pass', qi: 0.6, danger: 2, at: [330, 560], label: [330, 430],
     desc: '古戰場往西，一條埋了一半的古道鑽進山裡。山口的風一年到頭往東吹，帶著沙。翻過去，就是西漠。',
   },
+  yanhui_pass: {
+    name: '雁回嶺', kind: 'pass', qi: 0.7, danger: 2, at: [3040, 250], label: [3060, 330],
+    desc: '斷石門往北，古道貼著斷劍峰的腳下爬上山脊。嶺上的雪終年不化；秋天南飛的雁群飛到這裡，就折回頭去。翻過去，就是北原。',
+  },
   // up where no road goes (air: you get there by flying, or leaping)
   crane_peak: {
     name: '孤鶴峰', kind: 'peak', air: true, qi: 1.2, danger: 0, at: [1620, 2212],

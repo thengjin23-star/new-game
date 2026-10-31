@@ -17,7 +17,7 @@ import * as CB from '../world/combat.js';
 import { paintBeast, paintHero, drawGroundMarks, drawCombatOverlay } from './combatfx.js';
 import { seasonOf } from '../core/calendar.js';
 import { stream } from '../core/rng.js';
-import { onMapChange, MAPS, mapId } from '../world/atlas.js';
+import { onMapChange, MAPS, mapId, seasonLook } from '../world/atlas.js';
 import { landTable } from '../world/maps/index.js';
 
 const CH = 640; // chunk size in world units
@@ -40,6 +40,9 @@ const GROUND = {
   // the desert's (西漠): dunes the colour of millet, and the darker, smoother sand that swallows
   [T.DUNE]: { spring: [224, 198, 146], summer: [228, 198, 140], autumn: [222, 192, 138], winter: [226, 210, 180] },
   [T.QUICK]: { all: [192, 166, 120] },
+  // the north's (北原): snow, and a lake frozen to the bottom
+  [T.SNOW]: { all: [238, 241, 244] },
+  [T.ICE]: { all: [196, 214, 226] },
   [T.PAVED]: { all: [198, 192, 180] },
   [T.WALL]: { all: [198, 192, 180] },
   [T.GATE]: { all: [190, 176, 140] },
@@ -321,6 +324,45 @@ function groundMarks(ctx, rnd, t, x, y, season, region) {
       if (r > 0.93) {
         ctx.fillStyle = rgba(INK, 0.14);
         for (let k = 0; k < 3; k++) ctx.fillRect(x + (rnd() - 0.5) * CELL, y + (rnd() - 0.5) * CELL, 1.2, 1.2);
+      }
+      break;
+    }
+    case T.SNOW: {
+      // the wind's ridges in the snow: a short curve here and there, blue-grey
+      if (r < 0.45) {
+        ctx.strokeStyle = rgba([140, 158, 182], 0.26);
+        ctx.lineWidth = 0.7;
+        ctx.beginPath();
+        const n = 1 + Math.floor(r * 4);
+        for (let k = 0; k < n; k++) {
+          const sx = x + (rnd() - 0.5) * CELL;
+          const sy = y + (rnd() - 0.5) * CELL;
+          const len = 6 + rnd() * 8;
+          ctx.moveTo(sx - len, sy);
+          ctx.quadraticCurveTo(sx, sy - 2.5, sx + len, sy + 0.5);
+        }
+        ctx.stroke();
+      }
+      break;
+    }
+    case T.ICE: {
+      // cracks running through the ice, and a glint where it is clear
+      if (r < 0.5) {
+        ctx.strokeStyle = rgba([104, 138, 168], 0.34);
+        ctx.lineWidth = 0.6;
+        ctx.beginPath();
+        let cx = x + (rnd() - 0.5) * CELL;
+        let cy = y + (rnd() - 0.5) * CELL;
+        ctx.moveTo(cx, cy);
+        for (let k = 0; k < 4; k++) {
+          cx += (rnd() - 0.5) * 18;
+          cy += (rnd() - 0.5) * 10;
+          ctx.lineTo(cx, cy);
+        }
+        ctx.stroke();
+      } else if (r > 0.9) {
+        ctx.fillStyle = 'rgba(255,255,255,0.55)';
+        ctx.fillRect(x + (rnd() - 0.5) * CELL, y + (rnd() - 0.5) * CELL, 5, 1.2);
       }
       break;
     }
@@ -782,7 +824,7 @@ export function createWorldView(canvas, { onFrame, idle } = {}) {
   }
 
   function draw(dt, snap = false) {
-    const nowSeason = seasonOf(s.day);
+    const nowSeason = seasonLook(seasonOf(s.day));
     if (nowSeason !== season) {
       season = nowSeason;
       chunks.clear();

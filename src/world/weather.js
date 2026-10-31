@@ -23,6 +23,8 @@ export const WEATHER = {
   // dry country's (西漠, 0.22): a noon sun that burns, a wind that is all sand (nothing flies in it)
   heat: { name: '烈日', walk: 0.94, see: 0.94, dim: 0, heat: true },
   sandstorm: { name: '沙暴', walk: 0.7, see: 0.4, dim: 0.36, sand: true },
+  // the frozen country's (北原, 0.23): a wind full of snow, where you cannot see your hand or keep to the air
+  blizzard: { name: '暴風雪', walk: 0.66, see: 0.38, dim: 0.34, snow: true, blizzard: true },
 };
 
 /** Signs in the sky. */
@@ -60,6 +62,13 @@ const MISTY = { lingxi_valley: 0.12, mirror_lake: 0.1, black_forest: 0.05, river
 
 /** Dry country (another map's, world/maps/): no rain and no mist there. */
 const ARID = landTable('arid');
+/** Frozen country (another map's): no rain there, only snow, and in a hard wind a blizzard. */
+const FRIGID = landTable('frigid');
+
+/** Is this frozen country (it is cold there whatever the weather)? */
+export function frigid(region) {
+  return !!FRIGID[region];
+}
 
 /** Is this dry country (no petals drift there, no leaves: only sand)? */
 export function arid(region) {
@@ -83,6 +92,7 @@ export function weatherAt(s, region = s.player?.loc, hour = hourOf(s)) {
   if (NODES[region]?.kind === 'peak') return 'clear';
   const wet = noise1(seed, hour / 14) * 0.7 + noise1(seed + 7, hour / 5) * 0.3 + L.wet;
   if (ARID[region]) return dryWeather(seed, hour, wet, season);
+  if (FRIGID[region]) return frozenWeather(seed, hour, wet, season);
   if (wet > 0.66) {
     if (season === 'winter') return 'snow';
     return wet > 0.72 && noise1(seed + 29, hour / 6) < L.storm ? 'storm' : 'rain';
@@ -105,6 +115,18 @@ function dryWeather(seed, hour, wet, season) {
   if (wet > 0.72 || noise1(seed + 13, hour / 20) > 0.8) return 'cloudy';
   const tod = ((hour % 24) + 24) % 24;
   if (tod >= 11 && tod < 16 && season !== 'winter') return 'heat';
+  return 'clear';
+}
+
+/**
+ * Over frozen country the same front brings snow instead of rain, and where
+ * it would storm the wind gets up into a blizzard (more often in winter);
+ * between fronts the sky is hard and clear.
+ */
+function frozenWeather(seed, hour, wet, season) {
+  if (wet > (season === 'winter' ? 0.74 : 0.8)) return 'blizzard';
+  if (wet > 0.6) return 'snow';
+  if (noise1(seed + 13, hour / 20) > 0.74 || wet > 0.55) return 'cloudy';
   return 'clear';
 }
 

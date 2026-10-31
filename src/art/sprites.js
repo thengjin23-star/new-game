@@ -22,6 +22,9 @@ const SNOW = [250, 250, 252];
 const MUD = [192, 160, 116];
 const MUD_DARK = [150, 120, 84];
 const SAND = [226, 200, 150];
+// the north's (北原): logs gone grey with weather, felt
+const LOG = [150, 118, 84];
+const FELT = [222, 216, 202];
 
 const LEAF = {
   spring: [[118, 156, 96], [140, 172, 108]],
@@ -965,8 +968,8 @@ function stoneBase(ctx, x0, x1, base, h) {
 function buildingSprite(key, st, season) {
   const { w, h: d, sprite } = st;
   const snow = season === 'winter';
-  const tall = { teahouse: 2, auction: 3, tower: 2, bighall: 2, pagoda: 1, beacon: 3, fort: 3, observatory: 2 }[sprite] || 1;
-  const wallH = { mansion: 24, house: 17, shop: 20, teahouse: 18, auction: 18, hall: 26, bighall: 28, farmhouse: 15, shrine_small: 11, shrine: 18, hut: 14, tower: 18, teashed: 16, adobe: 18, beacon: 22, fort: 26, ruinwall: 24, observatory: 22 }[sprite] || 16;
+  const tall = { teahouse: 2, auction: 3, tower: 2, bighall: 2, pagoda: 1, beacon: 3, fort: 3, observatory: 2, cairn: 2, minegate: 2, skygate: 3 }[sprite] || 1;
+  const wallH = { mansion: 24, house: 17, shop: 20, teahouse: 18, auction: 18, hall: 26, bighall: 28, farmhouse: 15, shrine_small: 11, shrine: 18, hut: 14, tower: 18, teashed: 16, adobe: 18, beacon: 22, fort: 26, ruinwall: 24, observatory: 22, cabin: 15, smithy: 15, yurt: 14, cairn: 18, minegate: 22, skygate: 24 }[sprite] || 16;
   const great = sprite === 'bigtree' || sprite === 'bigpoplar';
   const extraTop = sprite === 'pagoda' ? 150 : great ? 130 : 0;
   const W = great ? 130 : w * 1.4 + 24;
@@ -1475,6 +1478,163 @@ const BUILD = {
       ctx.fillStyle = rgba(SNOW, 0.85);
       ctx.fillRect(b.x0, top - b.d * 0.5, b.w, b.d * 0.3);
     }
+  },
+  // ── 北原 (0.23) ──
+  /** 木屋: walls of logs laid one on another, a steep roof of planks under a load of snow, a chimney smoking. */
+  cabin(ctx, rnd, b) {
+    shadow(ctx, b.fx, b.base + 1, b.w * 0.62, 7, 0.22);
+    const top = b.base - b.wallH;
+    wall(ctx, b.x0 + 2, b.x1 - 2, top, b.base, LOG);
+    // the logs: a dark line between each, their round ends at the corners
+    ctx.strokeStyle = rgba(INK, 0.45);
+    ctx.lineWidth = 0.6;
+    ctx.beginPath();
+    for (let y = top + 3; y < b.base; y += 3) {
+      ctx.moveTo(b.x0 + 2, y);
+      ctx.lineTo(b.x1 - 2, y);
+    }
+    ctx.stroke();
+    for (let y = top + 1.5; y < b.base; y += 3) for (const x of [b.x0 + 2, b.x1 - 2]) dab(ctx, x, y, 1.5, [124, 94, 64], 1, 1);
+    door(ctx, b.fx - b.w * 0.18, b.base, 8, b.wallH * 0.8, [70, 50, 36]);
+    // a small window, warm inside
+    ctx.fillStyle = rgba([238, 184, 96], 0.9);
+    ctx.fillRect(b.fx + b.w * 0.12, top + b.wallH * 0.3, 7, 5);
+    ctx.strokeStyle = rgba(INK, 0.8);
+    ctx.strokeRect(b.fx + b.w * 0.12, top + b.wallH * 0.3, 7, 5);
+    roofShape(ctx, b.x0 - 3, b.x1 + 3, top, b.d * 0.95, [86, 70, 56], { snow: b.snow, lift: 1, inset: b.w * 0.04 });
+    // the chimney, and its smoke
+    const cx = b.fx + b.w * 0.24;
+    ctx.fillStyle = rgba(STONE, 1);
+    ctx.fillRect(cx - 3, top - b.d * 0.62, 6, 10);
+    ctx.strokeStyle = rgba(INK, 0.7);
+    ctx.strokeRect(cx - 3, top - b.d * 0.62, 6, 10);
+    for (let k = 0; k < 3; k++) dab(ctx, cx + k * 3, top - b.d * 0.62 - 4 - k * 6, 3 + k, [214, 214, 214], 0.5 - k * 0.12, 1);
+    // a stack of firewood by the wall
+    for (let k = 0; k < 4; k++) dab(ctx, b.x0 - 5, b.base - 2 - k * 2.4, 2.2, [130, 96, 62], 1, 0.7);
+  },
+  /** 鐵匠鋪: a log shop open at the front, the forge glowing in the dark of it, an anvil before the door. */
+  smithy(ctx, rnd, b) {
+    BUILD.cabin(ctx, rnd, b);
+    const top = b.base - b.wallH;
+    // the open front: dark, the forge's fire at the back
+    ctx.fillStyle = rgba([40, 32, 28], 0.95);
+    ctx.fillRect(b.fx - b.w * 0.3, top + 3, b.w * 0.36, b.wallH - 3);
+    dab(ctx, b.fx - b.w * 0.12, b.base - 4, 4.5, [250, 140, 50], 0.95, 0.7);
+    dab(ctx, b.fx - b.w * 0.12, b.base - 5, 2.4, [255, 220, 140], 1, 0.7);
+    // the anvil
+    ctx.fillStyle = rgba([60, 62, 66], 1);
+    ctx.fillRect(b.fx + b.w * 0.18, b.base - 1, 9, 3.5);
+    ctx.fillRect(b.fx + b.w * 0.18 + 2.5, b.base + 2.5, 4, 3);
+    // sparks
+    for (let k = 0; k < 6; k++) dab(ctx, b.fx - b.w * 0.12 + (rnd() - 0.5) * 10, b.base - 8 - rnd() * 10, 0.7, [255, 200, 90], 0.9, 1);
+  },
+  /** 氈帳: a round tent of felt bound with ropes, a coloured door-flap, smoke from the hole in its crown. */
+  yurt(ctx, rnd, b) {
+    shadow(ctx, b.fx, b.base + 1, b.w * 0.6, 6, 0.22);
+    const r = b.w * 0.46;
+    const top = b.base - b.wallH;
+    // the wall: a drum of felt
+    ctx.fillStyle = rgba(FELT, 1);
+    ctx.beginPath();
+    ctx.moveTo(b.fx - r, b.base);
+    ctx.lineTo(b.fx - r, top);
+    ctx.quadraticCurveTo(b.fx, top - 4, b.fx + r, top);
+    ctx.lineTo(b.fx + r, b.base);
+    ctx.quadraticCurveTo(b.fx, b.base + 4, b.fx - r, b.base);
+    ctx.fill();
+    ctx.strokeStyle = rgba(INK, 0.75);
+    ctx.lineWidth = 0.9;
+    ctx.stroke();
+    // the roof: a low dome
+    ctx.fillStyle = rgba([214, 208, 196], 1);
+    ctx.beginPath();
+    ctx.moveTo(b.fx - r - 1, top);
+    ctx.quadraticCurveTo(b.fx - r * 0.5, top - b.d * 0.45, b.fx - 4, top - b.d * 0.52);
+    ctx.lineTo(b.fx + 4, top - b.d * 0.52);
+    ctx.quadraticCurveTo(b.fx + r * 0.5, top - b.d * 0.45, b.fx + r + 1, top);
+    ctx.quadraticCurveTo(b.fx, top - 4, b.fx - r - 1, top);
+    ctx.fill();
+    ctx.stroke();
+    if (b.snow) dab(ctx, b.fx, top - b.d * 0.36, r * 0.8, SNOW, 0.85, 0.32);
+    // the ropes round it
+    line(ctx, [[b.fx - r, top + b.wallH * 0.35], [b.fx + r, top + b.wallH * 0.35]], 0.8, rgba([120, 90, 60], 0.9));
+    line(ctx, [[b.fx - r, top + b.wallH * 0.7], [b.fx + r, top + b.wallH * 0.7]], 0.8, rgba([120, 90, 60], 0.9));
+    // the door-flap
+    const flap = [[150, 52, 40], [60, 92, 120], [176, 132, 52]][Math.floor(rnd() * 3)];
+    ctx.fillStyle = rgba(flap, 1);
+    ctx.fillRect(b.fx - 4, b.base - b.wallH * 0.82, 8, b.wallH * 0.82);
+    ctx.strokeStyle = rgba(INK, 0.8);
+    ctx.strokeRect(b.fx - 4, b.base - b.wallH * 0.82, 8, b.wallH * 0.82);
+    // smoke from the crown
+    for (let k = 0; k < 3; k++) dab(ctx, b.fx + k * 2, top - b.d * 0.56 - 4 - k * 6, 2.6 + k, [214, 214, 214], 0.45 - k * 0.1, 1);
+  },
+  /** 石堆: stones piled higher than a man, a pole in the top hung with strips of cloth the weather has bleached. */
+  cairn(ctx, rnd, b) {
+    shadow(ctx, b.fx, b.base, b.w * 0.6, 5, 0.22);
+    for (let row = 0; row < 6; row++) {
+      const hw = b.w * 0.48 * (1 - row / 7);
+      for (let k = 0; k < 4 - Math.floor(row / 2); k++) {
+        const x = b.fx - hw + (k + 0.5) * ((hw * 2) / (4 - Math.floor(row / 2)));
+        dab(ctx, x + (rnd() - 0.5) * 2, b.base - 3 - row * 5, 3.6, rnd() < 0.5 ? STONE : [132, 128, 120], 1, 0.75);
+      }
+    }
+    const top = b.base - 34;
+    line(ctx, [[b.fx, top + 6], [b.fx, top - 22]], 1.3, rgba(WOOD, 1));
+    // strings of cloth from the pole down to the stones
+    const cloths = [[176, 64, 52], [70, 110, 150], [226, 222, 210], [190, 160, 70], [80, 130, 90]];
+    for (const s of [-1, 1]) {
+      for (let k = 0; k < 5; k++) {
+        const t = (k + 1) / 6;
+        const x = b.fx + s * t * b.w * 0.55;
+        const y = top - 20 + t * 26;
+        ctx.fillStyle = rgba(cloths[(k + (s > 0 ? 2 : 0)) % 5], 0.85);
+        ctx.fillRect(x - 1.5, y, 3, 5);
+      }
+      line(ctx, [[b.fx, top - 20], [b.fx + s * b.w * 0.55, top + 8]], 0.4, rgba(INK, 0.5));
+    }
+    if (b.snow) dab(ctx, b.fx, b.base - 26, 6, SNOW, 0.85, 0.4);
+  },
+  /** 礦口: a frame of rough timber over the way into the mountain, a lantern hung on it, the dark beyond. */
+  minegate(ctx, rnd, b) {
+    const top = b.base - b.wallH * 1.4;
+    // the dark of the tunnel
+    ctx.fillStyle = rgba([24, 22, 22], 0.92);
+    ctx.beginPath();
+    ctx.moveTo(b.x0 + 3, b.base);
+    ctx.lineTo(b.x0 + 3, top + 4);
+    ctx.lineTo(b.x1 - 3, top + 4);
+    ctx.lineTo(b.x1 - 3, b.base);
+    ctx.fill();
+    for (const x of [b.x0 + 2, b.x1 - 2]) line(ctx, [[x, b.base], [x, top]], 3, rgba([110, 82, 56], 1));
+    line(ctx, [[b.x0 - 2, top + 1], [b.x1 + 2, top + 1]], 3.4, rgba([110, 82, 56], 1));
+    for (const x of [b.x0 + 2, b.x1 - 2]) line(ctx, [[x, top + 8], [x + (x < b.fx ? 7 : -7), top + 1]], 1.6, rgba([110, 82, 56], 1));
+    lantern(ctx, b.x1 - 6, top + 8);
+    if (b.snow) dab(ctx, b.fx, top - 1, b.w * 0.5, SNOW, 0.85, 0.25);
+  },
+  /** 天門: two pillars of black stone and a lintel, alone on the broken top of the pillar; through it, a shimmer, not the snow beyond. */
+  skygate(ctx, rnd, b) {
+    shadow(ctx, b.fx, b.base, b.w * 0.6, 5, 0.25);
+    const top = b.base - b.wallH * 2.6;
+    const pw = 9;
+    // the shimmer in the gate
+    const g = ctx.createLinearGradient(0, top, 0, b.base);
+    g.addColorStop(0, 'rgba(170,200,240,0.55)');
+    g.addColorStop(1, 'rgba(220,230,250,0.2)');
+    ctx.fillStyle = g;
+    ctx.fillRect(b.x0 + pw, top + 8, b.w - pw * 2, b.base - top - 8);
+    for (const x0 of [b.x0, b.x1 - pw]) {
+      ctx.fillStyle = rgba([46, 46, 54], 1);
+      ctx.fillRect(x0, top + 4, pw, b.base - top - 4);
+      ctx.strokeStyle = rgba(INK, 0.9);
+      ctx.lineWidth = 0.9;
+      ctx.strokeRect(x0, top + 4, pw, b.base - top - 4);
+      line(ctx, [[x0 + 2, top + 10], [x0 + 2, b.base - 4]], 0.6, rgba([110, 110, 124], 0.5));
+    }
+    ctx.fillStyle = rgba([40, 40, 48], 1);
+    ctx.fillRect(b.x0 - 5, top - 2, b.w + 10, 8);
+    ctx.strokeStyle = rgba(INK, 0.9);
+    ctx.strokeRect(b.x0 - 5, top - 2, b.w + 10, 8);
+    if (b.snow) dab(ctx, b.fx, top - 2, b.w * 0.55, SNOW, 0.8, 0.22);
   },
   /** 關城: a gate of rammed earth with crenellations, an arch through it, and a tiled gate-tower up on top. */
   fort(ctx, rnd, b) {

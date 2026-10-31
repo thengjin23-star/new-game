@@ -1,7 +1,8 @@
 // The ways out of 東荒: the pass over the southern hills (南嶺 on the other
-// side), and the gap in the western mountains past 古戰場 (西漠). Each way
-// takes most of a day or more; on the far side the map is another (a 'cross'
-// effect: world/atlas.js CROSSINGS, world/explore.js crossTo).
+// side), the gap in the western mountains past 古戰場 (西漠), and the ridge
+// north under 斷劍峰 (北原). Each way takes most of a day or more; on the far
+// side the map is another (a 'cross' effect: world/atlas.js CROSSINGS,
+// world/explore.js crossTo).
 import { flag } from '../helpers.js';
 
 export default [
@@ -144,6 +145,86 @@ export default [
     title: '西漠',
     text: '山路的盡頭，是一座土城。\n\n城牆是土夯的，被風削得圓了邊角，城樓上的瓦掉了一半。城門朝西開著，門外就是沙——一道一道的沙丘，金黃的，一直排到天邊，排到落日底下。\n\n城門洞裡坐著一個老兵，抱著一桿生了鏽的長槍，抬頭看了你一眼。\n\n叮——檢測到新地圖：西漠。\n\n……\n\n叮——本系統……好像，來過這裡。',
     choices: [{ text: '走過去。', out: { effects: [['sysexp', 10]] } }],
+  },
+
+  // ── 雁回嶺: up over the ridge to the north (0.23) ──
+  {
+    id: 'yanhui_pass_arrive',
+    trigger: 'arrive',
+    nodes: ['yanhui_pass'],
+    once: true,
+    title: '雁回嶺',
+    text: '古道從斷石門往北，貼著斷劍峰的腳下往上爬。越往上，風越硬，草越矮，最後連草也沒了，只剩石頭和一層薄薄的雪。\n\n嶺上立著一塊碑，碑上三個字：雁回嶺。碑腳下散著幾根灰白的雁翎。\n\n往北看，山脊那頭白茫茫一片，分不清是雲，還是雪。',
+    choices: [{ text: '撿起一根雁翎。', out: { effects: [['sysexp', 5]] } }],
+  },
+
+  {
+    id: 'pass_to_beiyuan',
+    trigger: 'explore',
+    poi: 'yanhui_gate',
+    nodes: ['yanhui_pass'],
+    priority: 10,
+    title: '翻過雁回嶺',
+    text: (s) =>
+      flag(s, 'beiyuan_crossed')
+        ? '嶺口那頭，是北原。翻過去，要走一整天的雪路。'
+        : `嶺口那頭，就是北原了。\n\n古戰場上的老散修說，雁回嶺以北，一年裡有十個月是冬天。雪地裡走一天，凡人的手腳就凍掉了；煉氣的修士，也得運功護著心脈。只有築基以上的人，扛得住北原的冷。\n\n那邊有一座挖寒鐵的石堡，有凍到底的湖，有雪山；再往北，就沒人說得清了。${
+            s.player.realm < 2 ? '\n\n叮——本系統提醒：宿主境界不足，北原的寒氣對宿主的傷害加倍。建議築基之後再來。' : ''
+          }`,
+    choices: [
+      {
+        text: '翻過去。',
+        show: (s) => s.player.realm >= 2,
+        out: {
+          text: (s) =>
+            flag(s, 'beiyuan_crossed')
+              ? '你又一次翻過了雁回嶺。'
+              : '你翻過雁回嶺，一路往北。\n\n山脊那頭的風，像從冰窖裡吹出來的。雪越來越深，從腳踝深到膝蓋。走了一整天，天快黑的時候，眼前忽然低了下去：\n\n山腳下，是一片看不到邊的白。',
+          effects: (s) => [['cross', 'yanhui_pass'], ...(flag(s, 'beiyuan_crossed') ? [] : [['flag', 'beiyuan_crossed'], ['sysexp', 25], ['log', '翻過雁回嶺，到了北原']])],
+        },
+      },
+      {
+        text: '還是要過去（凍傷是免不了的）。',
+        show: (s) => s.player.realm < 2,
+        out: {
+          text: (s) =>
+            `你咬著牙翻過雁回嶺。\n\n山脊那頭的風一吹，你就知道老散修沒有騙你：寒氣從腳底一直鑽到心口，你運起全身的靈力也只護得住心脈。${
+              s.player.realm === 0 ? '走到半路，你的兩隻腳已經沒有知覺了。' : '走到半路，你的手指頭已經沒有知覺了。'
+            }\n\n天黑的時候，你總算連滾帶爬地下了山。`,
+          effects: (s) => [
+            ['cross', 'yanhui_pass'],
+            ['wound', s.player.realm === 0 ? 0.35 : 0.15],
+            ...(s.player.realm === 0 ? [['hurt', 1, '凍死在雁回嶺上']] : []),
+            ...(flag(s, 'beiyuan_crossed') ? [] : [['flag', 'beiyuan_crossed'], ['sysexp', 25], ['log', '翻過雁回嶺，到了北原（凍得半死）']]),
+          ],
+        },
+      },
+      { text: '改天吧。', out: {} },
+    ],
+  },
+
+  {
+    id: 'pass_to_donghuang_n',
+    trigger: 'explore',
+    poi: 'xueling_gate',
+    nodes: ['xueling_kou'],
+    priority: 10,
+    title: '山口',
+    text: '山口那頭，是雁回嶺；翻過去，是東荒：斷劍峰、古戰場、青石鎮，你熟悉的一切。翻回去，要走一整天的雪路。',
+    choices: [
+      { text: '回東荒。', out: { text: '你翻過雁回嶺，一路往南。風一點一點小了，雪一點一點薄了，草從雪底下鑽出來的時候，你才覺得自己的手腳是自己的。', effects: [['cross', 'xueling_kou']] } },
+      { text: '再待一陣。', out: {} },
+    ],
+  },
+
+  {
+    id: 'beiyuan_arrive',
+    trigger: 'arrive',
+    nodes: ['xueling_kou'],
+    once: true,
+    title: '北原',
+    text: '山口下壘著一堆石頭，比人還高。石頭縫裡插著木杆，杆上繫滿了布條，紅的、藍的、白的，全褪成了一個顏色，在風裡嘩嘩地響。\n\n石堆那頭，是北原：雪一直鋪到天邊，天和地一樣白。遠處有一座黑沉沉的山，山腳下冒著幾縷煙——有人住。\n\n叮——檢測到新地圖：北原。\n\n叮——本系統……覺得冷。這很奇怪：本系統不應該覺得冷。',
+    choices: [{ text: '往有煙的地方走。', out: { effects: [['sysexp', 10]] } }],
   },
 
   {

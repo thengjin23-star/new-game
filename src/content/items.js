@@ -125,6 +125,42 @@ export const ITEMS = {
     name: '星紋石', kind: 'material', sell: 60,
     desc: '石傀身上剝下來的一塊石頭，裡頭有銀藍色的紋，夜裡一閃一閃，像把星星封在了石頭裡。',
   },
+  // 北原 (0.23)
+  xueshen: {
+    name: '雪參', kind: 'herb', sell: 12,
+    desc: '長在雪底下的參，根白得像雪，掰開來卻是紅心的。北原的人進山，懷裡總揣著一截：嚼一口，渾身就熱了。',
+    use: { text: '雪參又苦又甜。嚼下去，一股熱從肚子裡升起來，一直暖到指尖。', effects: [['xw', 60], ['hp', 0.15], ['shade', 0.4]] },
+  },
+  xuelian: {
+    name: '雪蓮', kind: 'herb', sell: 90,
+    desc: '開在雪峰頂上、崖縫裡的花，花瓣雪白，花心淡黃，摘下來三年不謝。傳說能續斷骨、補元氣，是結丹的人求之不得的靈藥。',
+    use: { text: '雪蓮的藥力清清涼涼的，一路沉到丹田，在那裡慢慢化開。身上的舊傷，好像也輕了一些。', effects: [['xw', 240], ['heal', 1]] },
+  },
+  lingsui: {
+    name: '靈髓', kind: 'herb', sell: 160,
+    desc: '靈脈交匯的地方凝出來的一滴東西，藍得透亮，捧在手心像一顆會呼吸的露珠。直接服下是暴殄天物；寒衣說，它是凝金丹的主藥。',
+    use: { text: '你把靈髓含在舌下。一股浩浩蕩蕩的靈力衝進經脈，衝得你眼前一黑——等你醒過來，丹田裡多了一大截修為。', effects: [['xw', 600]] },
+  },
+  hantie_ore: {
+    name: '寒鐵礦', kind: 'material', sell: 20,
+    desc: '鐵山裡挖出來的礦石，黑青色，冷得燙手。煉出來的鐵叫寒鐵，打成刀劍，比尋常的鐵利三分。',
+  },
+  bailang_pelt: {
+    name: '白狼皮', kind: 'material', sell: 34,
+    desc: '冰原狼的皮，毛又長又密，白得發藍。北原的人說，一件狼皮裘，抵得上一座火爐。',
+  },
+  bailang_king_pelt: {
+    name: '白狼王皮', kind: 'material', sell: 260,
+    desc: '白狼王的皮，比牛皮還大，毛根是銀的。白狼部的規矩：誰剝下白狼王的皮，誰就是部裡的英雄。',
+  },
+  bingcan_silk: {
+    name: '冰蠶絲', kind: 'material', sell: 42,
+    desc: '冰蠶吐的絲，細得看不見，卻扯不斷，摸上去冰涼——織成衣裳，卻是暖的。',
+  },
+  qilin_horn: {
+    name: '冰麟角', kind: 'material', sell: 400,
+    desc: '冰麟頭上的獨角，像一截透明的冰，裡頭封著一縷藍光。',
+  },
 
   // ── 丹藥 ──
   juqi_pill: {
@@ -150,6 +186,20 @@ export const ITEMS = {
     name: '冰心丹', kind: 'pill', price: 35, sell: 14,
     desc: '月泉驛賣的丹，雪白，含在嘴裡冰涼。服下之後三天之內，正午的毒日頭曬不倒你。',
     use: { text: '丹藥入口，一股涼氣從舌根一直沉到丹田。日頭底下，你也覺得像站在樹蔭裡。', effects: [['buff', 'bingxin', 3], ['shade']] },
+  },
+  nuanshen_pill: {
+    name: '暖身丹', kind: 'pill', price: 40, sell: 16,
+    desc: '寒鐵堡的郎中配的丹，火紅色，吞下去像吞了一塊炭。服下之後三天之內，北原的寒氣近不了身。',
+    use: { text: '丹藥一下肚，一團火就在丹田裡燒起來，熱氣順著經脈一直走到手指頭、腳趾頭。你身上冒起了白氣。', effects: [['buff', 'nuanshen', 3], ['shade']] },
+  },
+  ningjin_pill: {
+    name: '凝金丹', kind: 'pill', sell: 0, keep: true,
+    desc: '以靈髓為主藥、雪蓮為引煉成的丹，金色，圓得像一顆小小的太陽。衝擊金丹時服下，助你把一身真元凝成一顆金丹（每顆加成功率一成五，最多兩顆）。',
+  },
+  shaodaozi: {
+    name: '燒刀子', kind: 'food', price: 6, sell: 2,
+    desc: '寒鐵堡的烈酒，喝下去像吞了一把刀子，從喉嚨一路燒到肚子。北原的人說：雪地裡迷了路，一口燒刀子能多撐半夜。',
+    use: { text: '你仰頭灌了一大口。酒像一道火線，從喉嚨一路燒到肚子，燒得你眼淚都出來了——可是身上，熱了。', effects: [['hp', 0.08], ['shade']] },
   },
   water_skin: {
     name: '水囊', kind: 'food', price: 4, sell: 1,
@@ -340,6 +390,23 @@ export const ITEMS = {
     name: '定風珠', kind: 'gear', slot: 'relic', sell: 0, keep: true, stats: { wind: 1, def: 0.03 },
     desc: '沙蛟頷下的一顆珠子，渾圓，灰白，裡面像有風在轉。戴著它，沙暴到了身邊也會繞開：沙暴裡照樣走得動、看得清，也飛得起來。',
   },
+  // 北原 (0.23): fur and silk against the cold; iron against everything else
+  langqiu: {
+    name: '狼皮裘', kind: 'gear', slot: 'robe', price: 280, sell: 110, stats: { warm: 1, def: 0.08, hp: 0.05 }, craft: { ls: 120, items: { bailang_pelt: 3 } },
+    desc: '三張白狼皮縫的皮裘，毛朝裡穿。北原的冷，穿上它就擋在了外頭（暴風雪裡也只擋得一半）。',
+  },
+  bailang_qiu: {
+    name: '白狼王裘', kind: 'gear', slot: 'robe', sell: 300, stats: { warm: 1, def: 0.14, hp: 0.12, speed: 0.04 }, craft: { ls: 260, items: { bailang_king_pelt: 1, bailang_pelt: 2 } },
+    desc: '白狼王的皮做的裘，披在身上，風雪都繞著走。白狼部的人看見它，會對你行禮。',
+  },
+  bingcan_robe: {
+    name: '冰蠶衣', kind: 'gear', slot: 'robe', sell: 280, stats: { warm: 1, def: 0.12, fire: 0.3, mpRegen: 0.2 }, craft: { ls: 300, items: { bingcan_silk: 5 } },
+    desc: '冰蠶絲織的衣裳，薄得像一層霧，穿在身上卻冬暖夏涼，水火都不大傷得了。',
+  },
+  hantie_armor: {
+    name: '寒鐵甲', kind: 'gear', slot: 'robe', sell: 240, stats: { def: 0.22, hp: 0.1, speed: -0.06 }, craft: { ls: 240, items: { hantie_ore: 6 } },
+    desc: '寒鐵打的鱗甲，刀砍不進，箭射不穿，就是重：穿上它走路，慢上一截。也擋不住冷。',
+  },
   zhaoyao_mirror: {
     name: '照妖鏡', kind: 'gear', slot: 'relic', price: 280, sell: 110, stats: { sense: 0.5 }, move: 'mirror',
     desc: '巴掌大的銅鏡，背面刻著八卦。鏡光照處，妖邪現形。戴著它，可以帶「照妖」上陣，神識也看得更遠。',
@@ -490,5 +557,19 @@ export const SHOPS = {
     refine: false,
     made: '{keeper}把東西交給駝隊裡的老皮匠。老人一聲不吭地忙了一整天，傍晚把一件{item}遞給你，又低下頭去補他的鞍子。',
     share: (s) => (s.flags.vulture_done ? 0.85 : 1),
+  },
+  // 北原・寒鐵堡: the store has what keeps the cold out; the smith works iron, fur and silk
+  hantie: {
+    name: '寒鐵堡雜貨',
+    keeper: '掌櫃的',
+    stock: ['shaodaozi', 'nuanshen_pill', 'langqiu', 'heal_pill', 'detox_pill', 'juqi_pill', 'fire_talisman', 'return_talisman'],
+  },
+  hantie_smith: {
+    name: '鐵匠鋪',
+    keeper: '鐵匠',
+    stock: ['hantie_sword', 'iron_saber'],
+    recipes: ['langqiu', 'bailang_qiu', 'bingcan_robe', 'hantie_armor'],
+    made: '{keeper}把東西接過去，一聲不吭地幹了一整天。叮叮噹噹的聲音一直響到天黑，他才把一件{item}遞給你，手上全是燙出來的泡。',
+    share: (s) => (s.flags.mine_cleared ? 0.85 : 1),
   },
 };

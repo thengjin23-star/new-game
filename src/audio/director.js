@@ -11,6 +11,7 @@ import { T } from '../world/geo.js';
 import { weatherNow, skySigns } from '../world/weather.js';
 import { seasonOf } from '../core/calendar.js';
 import { landTable } from '../world/maps/index.js';
+import { seasonLook } from '../world/atlas.js';
 import { ctx, unlockOn, onReady, duck, muffle, setLight } from './engine.js';
 import { setCue, setFight, wake } from './music.js';
 import { setBeds, happen } from './ambience.js';
@@ -38,6 +39,7 @@ export const PLACE = {
   sword_peak: 'peak',
   south_pass: 'hill',
   west_pass: 'hill',
+  yanhui_pass: 'snowpass',
   // the other maps' regions
   ...landTable('sound'),
 };
@@ -73,6 +75,17 @@ const SOUNDS = {
   lostcity: { beds: { wind: 0.8, sand: 0.2, drone: 0.35 }, day: {}, night: { howl: 0.004 } },
   deadtemple: { beds: { wind: 0.6, drone: 0.25 }, day: { chimes: 0.015 }, night: { chimes: 0.02, bell: 0.004 } },
   tomb: { beds: { drone: 0.4 }, day: { drip: 0.08 }, night: { drip: 0.08 } },
+  // 北原: the wind, and under it the snow's hiss; the town's hammers and talk; the mine's drip; wolves far off on the ice
+  snowpass: { beds: { wind: 1, sand: 0.15 }, day: {}, night: { howl: 0.006 } },
+  minetown: { beds: { wind: 0.45, crowd: 0.55 }, day: { bell: 0.004 }, night: { howl: 0.004 } },
+  mine: { beds: { drone: 0.45 }, day: { drip: 0.25 }, night: { drip: 0.25 } },
+  icesea: { beds: { wind: 0.75, drone: 0.18 }, day: {}, night: { howl: 0.005 } },
+  tundra: { beds: { wind: 0.95, sand: 0.18 }, day: {}, night: { howl: 0.012 } },
+  camp: { beds: { wind: 0.5, crowd: 0.35 }, day: {}, night: { howl: 0.008 } },
+  rift: { beds: { wind: 0.3, drone: 0.3, stream: 0.2 }, day: { chimes: 0.01 }, night: { chimes: 0.012 } },
+  highland: { beds: { wind: 1.1 }, day: {}, night: { howl: 0.004 } },
+  snowpeak: { beds: { wind: 1.15, sand: 0.12 }, day: {}, night: { howl: 0.006 } },
+  pillar: { beds: { wind: 1, drone: 0.4 }, day: {}, night: {} },
 };
 
 /**
@@ -104,10 +117,10 @@ export function soundScene(s, view = {}) {
   const ev = { ...(night ? S.night : S.day) };
   if (night) {
     if (beds.crowd) beds.crowd *= 0.2;
-    if (season !== 'winter' && place !== 'peak' && place !== 'cave' && place !== 'ruins') beds.insects = season === 'spring' ? 0.4 : 0.8;
+    if (seasonLook(season) !== 'winter' && place !== 'peak' && place !== 'cave' && place !== 'ruins') beds.insects = season === 'spring' ? 0.4 : 0.8;
     delete ev.birds;
   }
-  if (season === 'winter') {
+  if (seasonLook(season) === 'winter') {
     delete ev.birds;
     delete ev.frogs;
     if (beds.leaves) beds.leaves *= 0.4;
@@ -128,8 +141,8 @@ export function soundScene(s, view = {}) {
     cut = Math.min(cut, 4500);
     if (beds.wind) beds.wind *= 0.6;
   }
-  // a sandstorm roars and hisses and drowns the rest; a burning noon is very still
-  if (wx.sand) {
+  // a sandstorm, a blizzard, roars and hisses and drowns the rest; a burning noon is very still
+  if (wx.sand || wx.blizzard) {
     beds.wind = 1.25;
     beds.sand = 1;
     delete ev.birds;
@@ -273,8 +286,8 @@ function groundAt(s, x, y) {
   const t = terrainAt(x, y);
   if (t === T.WATER) return 'water';
   if (t === T.BRIDGE) return 'wood';
-  if (t === T.PAVED || t === T.WALL || t === T.GATE) return 'stone';
-  if (seasonOf(s.day) === 'winter') return 'snow';
+  if (t === T.PAVED || t === T.WALL || t === T.GATE || t === T.ICE) return 'stone';
+  if (t === T.SNOW || seasonLook(seasonOf(s.day)) === 'winter') return 'snow';
   if (t === T.HILL || t === T.PEAK || t === T.CLIFF) return 'stone';
   if (t === T.FOREST || t === T.DEEP) return 'leaves';
   if (t === T.SAND || t === T.DUNE || t === T.QUICK) return 'sand';

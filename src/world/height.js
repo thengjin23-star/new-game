@@ -30,7 +30,7 @@ const SETTLED = {
 };
 
 /** How much wild ground rolls, by region. */
-const ROLL = { south_pass: 20, west_pass: 22, wilds: 18, black_forest: 20, qingshi_hill: 22, ancient_ruins: 14, lingxi_valley: 4, qingyun_sect: 10, hidden_cave: 8, ...landTable('roll') };
+const ROLL = { south_pass: 20, west_pass: 22, yanhui_pass: 24, wilds: 18, black_forest: 20, qingshi_hill: 22, ancient_ruins: 14, lingxi_valley: 4, qingyun_sect: 10, hidden_cave: 8, ...landTable('roll') };
 
 /** How high the dunes stand on a region's ground (a desert's: world/maps/), by region. */
 const DUNES = landTable('dunes');

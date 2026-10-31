@@ -54,6 +54,8 @@ export let STRUCTURES = [
   // 西風口: a beacon tower nobody lights, a stone at the top of the gap
   { x: 470, y: 470, w: 40, h: 40, sprite: 'beacon', landmark: true },
   { x: 210, y: 618, w: 18, h: 8, sprite: 'stele', block: false, name: '西風口' },
+  // 雁回嶺: a stone where the old road starts up the ridge
+  { x: 2990, y: 300, w: 18, h: 8, sprite: 'stele', block: false, name: '雁回嶺' },
   // 落霞坊市
   { x: 3820, y: 2470, w: 100, h: 56, sprite: 'shop' },
   { x: 3690, y: 2420, w: 90, h: 56, sprite: 'teahouse' },
@@ -247,6 +249,11 @@ export let POIS = [
   {
     id: 'find_milestone', region: 'ancient_ruins', x: 1890, y: 630, name: '里程石', verb: '查看', hidden: { r: 100 },
     treasure: { text: '古道邊倒著一塊里程石，風沙磨得只剩幾個字：「西去接天城……」後面的字，被人用刀刮掉了。\n\n接天城？你沒聽過這個名字。往西，是西風口。', effects: [['flag', 'heard_jietian'], ['discover', 'west_pass'], ['sysexp', 5]] },
+  },
+  // the ridge to 北原 (0.23)
+  {
+    id: 'yanhui_gate', region: 'yanhui_pass', x: 3060, y: 70, name: '嶺口', verb: '翻過雁回嶺',
+    text: '嶺口那頭，是北原。',
   },
   { id: 'sword_cleft', region: 'sword_peak', x: 3656, y: 400, name: '劍痕', verb: '參悟', sprite: 'sword_scar', text: '一道把峰頂整個劈開的裂口，深不見底。風從裡面吹出來，冷得像刀。' },
 ];

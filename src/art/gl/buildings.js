@@ -35,6 +35,16 @@ const COL = {
   canvas: C(156, 126, 90),
   ink: C(46, 42, 38),
   water: C(30, 34, 40),
+  // the north's (北原): logs gone grey, planks, felt, rope, mine timber, iron, the black stone of 不周山
+  log: C(150, 118, 84),
+  logDark: C(118, 90, 62),
+  plank: C(92, 76, 62),
+  felt: C(222, 216, 202),
+  feltRoof: C(206, 200, 188),
+  rope: C(126, 96, 64),
+  timber: C(112, 84, 58),
+  iron: C(66, 68, 72),
+  blackstone: C(50, 50, 58),
 };
 
 const VERT = /* glsl */ `
@@ -496,6 +506,71 @@ export const BUILD = {
     const rug = [C(150, 52, 40), C(60, 92, 120), C(176, 132, 52)][Math.floor(rnd() * 3)];
     kit.box(0, 0, d / 2 + 0.6, 9, 14, 0.8, rug, K.CLOTH, { hull: false });
     if (w > 40) kit.decal(dc.window(5, 5), -w * 0.28, 10, d / 2 + 0.25, 5, 5, 1);
+  },
+  // ── 北原 (0.23) ──
+  /** 木屋: walls of logs laid crosswise at the corners, a steep plank roof (the snow lies on it), a stone chimney, firewood by the wall. */
+  cabin(kit, dc, st) {
+    const w = st.w - 4;
+    const d = st.h - 4;
+    const H = 15.6;
+    for (let y = 0, k = 0; y < H; y += 2.6, k++) kit.box(0, y, 0, w + (k % 2 ? 2.4 : 0), 2.5, d + (k % 2 ? 0 : 2.4), k % 2 ? COL.log : COL.logDark, K.WOOD, { hull: k === 0 });
+    kit.decal(dc.door(8, 12, [70, 50, 36]), -w * 0.18, 0, d / 2 + 1.35, 8, 12);
+    kit.decal(dc.window(6, 5), w * 0.2, 7, d / 2 + 1.35, 6, 5, 1);
+    roofAt(kit, 0, 0, { w: w + 5, d: d + 3, y: H, rise: d * 0.68, over: 6, col: COL.plank, kind: K.WOOD, gable: true, lift: 0 });
+    kit.box(w * 0.26, H, -d * 0.12, 6, d * 0.68 + 6, 6, COL.stone, K.STONE);
+    for (let k = 0; k < 4; k++) kit.box(-w / 2 - 6, k * 2.2, 0, 4, 2, 11, COL.logDark, K.WOOD, { hull: false });
+  },
+  /** 鐵匠鋪: a log shop with its front opened on the forge (lit at night), an anvil before it. */
+  smithy(kit, dc, st) {
+    BUILD.cabin(kit, dc, st);
+    const w = st.w - 4;
+    const d = st.h - 4;
+    kit.decal(dc.window(14, 9), -w * 0.06, 2, d / 2 + 1.4, 14, 9, 1);
+    kit.box(w * 0.22, 0, d / 2 + 8, 4, 4.4, 4, COL.iron, K.STONE);
+    kit.box(w * 0.22, 4.4, d / 2 + 8, 9, 2.4, 4.4, COL.iron, K.STONE);
+  },
+  /** 氈帳: a drum of felt, a low dome on it, ropes round it, a coloured door-flap, the crown ring of wood. */
+  yurt(kit, dc, st, rnd) {
+    const r = st.w * 0.46;
+    kit.cylinder(0, 0, 0, r, 13, COL.felt, K.CLOTH, 14);
+    for (let k = 0; k < 4; k++) kit.cylinder(0, 13 + k * 2.4, 0, r * (1 - k * 0.22) + 1, 2.4, COL.feltRoof, K.CLOTH, 14, k === 0);
+    kit.cylinder(0, 22.6, 0, r * 0.2, 2, COL.wood, K.WOOD, 8, false);
+    for (const y of [4.5, 9]) kit.cylinder(0, y, 0, r + 0.3, 0.7, COL.rope, K.PLAIN, 14, false);
+    const flap = [C(150, 52, 40), C(60, 92, 120), C(176, 132, 52)][Math.floor(rnd() * 3)];
+    kit.box(0, 0, r - 0.3, 8, 11, 1.4, flap, K.CLOTH, { hull: false });
+  },
+  /** 石堆: stones heaped round a pole, lines of cloth strips running from its top down to the ground. */
+  cairn(kit, dc, st, rnd) {
+    for (let k = 0; k < 5; k++) kit.cylinder(0, k * 4, 0, st.w * 0.44 * (1 - k * 0.17), 4.2, k % 2 ? COL.stone : COL.stoneDark, K.STONE, 9, k === 0);
+    kit.beam([0, 18, 0], [0, 48, 0], 1.3, COL.wood);
+    const cloth = [C(176, 64, 52), C(70, 110, 150), C(226, 222, 210), C(190, 160, 70), C(80, 130, 90)];
+    for (let a = 0; a < 4; a++) {
+      const an = (a / 4) * Math.PI * 2 + 0.4 + rnd() * 0.3;
+      const ex = Math.cos(an) * st.w * 0.62;
+      const ez = Math.sin(an) * st.w * 0.62;
+      kit.beam([0, 46, 0], [ex, 4, ez], 0.25, COL.ink, K.PLAIN);
+      for (let k = 1; k < 6; k++) {
+        const f = k / 6;
+        kit.box(ex * f, 46 - 42 * f - 3, ez * f, 2.2, 3.2, 0.5, cloth[(a + k) % 5], K.CLOTH, { hull: false });
+      }
+    }
+  },
+  /** 礦口: a frame of rough timber at the way into the mountain, braced, a lantern hung on it. */
+  minegate(kit, dc, st) {
+    const w = st.w;
+    for (const s of [-1, 1]) kit.box(s * (w / 2 - 2), 0, 0, 4, 26, 4, COL.timber, K.WOOD);
+    kit.box(0, 26, 0, w + 4, 4, 5, COL.timber, K.WOOD);
+    for (const s of [-1, 1]) kit.beam([s * (w / 2 - 2), 18, 0], [s * (w / 2 - 10), 26, 0], 1.4, COL.timber);
+    kit.beam([w / 2 - 6, 26, 2], [w / 2 - 6, 21, 2], 0.3, COL.ink, K.PLAIN);
+    kit.box(w / 2 - 6, 18, 2, 2.8, 3.4, 2.8, COL.red, K.PLAIN, { hull: false });
+  },
+  /** 天門: two pillars of black stone and a lintel standing alone; between them a pale shimmer, not the snow behind. */
+  skygate(kit, dc, st) {
+    const w = st.w;
+    for (const s of [-1, 1]) kit.box(s * (w / 2 - 5), 0, 0, 10, 58, 10, COL.blackstone, K.STONE);
+    kit.box(0, 58, 0, w + 14, 8, 12, COL.blackstone, K.STONE);
+    kit.box(0, 66, 0, w * 0.62, 4, 9, COL.blackstone, K.STONE);
+    kit.box(0, 0, 0, w - 20, 57, 0.4, C(200, 214, 240), K.PLAIN, { hull: false });
   },
   /** 關城: a gate of rammed earth with crenellations and an arch, a tiled gate-tower on top. */
   fort(kit, dc, st) {
