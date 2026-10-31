@@ -43,6 +43,7 @@ const GROUND = {
   // the north's (北原): snow, and a lake frozen to the bottom
   [T.SNOW]: { all: [238, 241, 244] },
   [T.ICE]: { all: [196, 214, 226] },
+  [T.THIN]: { all: [146, 172, 194] },
   [T.PAVED]: { all: [198, 192, 180] },
   [T.WALL]: { all: [198, 192, 180] },
   [T.GATE]: { all: [190, 176, 140] },
@@ -343,6 +344,28 @@ function groundMarks(ctx, rnd, t, x, y, season, region) {
         }
         ctx.stroke();
       }
+      break;
+    }
+    case T.THIN: {
+      // the ice gone thin: the dark of the water showing through it, white cracks across
+      if (r < 0.55) {
+        ctx.fillStyle = rgba([64, 92, 120], 0.28);
+        ctx.beginPath();
+        ctx.ellipse(x + (rnd() - 0.5) * CELL * 0.6, y + (rnd() - 0.5) * CELL * 0.6, 5 + rnd() * 6, 2.5 + rnd() * 3, rnd() * 3, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.strokeStyle = 'rgba(236,246,255,0.55)';
+      ctx.lineWidth = 0.7;
+      ctx.beginPath();
+      let tx = x + (rnd() - 0.5) * CELL;
+      let ty = y + (rnd() - 0.5) * CELL;
+      ctx.moveTo(tx, ty);
+      for (let k = 0; k < 3; k++) {
+        tx += (rnd() - 0.5) * 14;
+        ty += (rnd() - 0.5) * 8;
+        ctx.lineTo(tx, ty);
+      }
+      ctx.stroke();
       break;
     }
     case T.ICE: {

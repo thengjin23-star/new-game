@@ -35,6 +35,7 @@ export const T = {
   QUICK: 19,
   SNOW: 20,
   ICE: 21,
+  THIN: 22,
 };
 
 export const TERRAIN = {
@@ -62,6 +63,8 @@ export const TERRAIN = {
   // the north's (北原, 0.23): snow lying deep, and the ice of a lake frozen to the bottom
   [T.SNOW]: { name: '雪地', pass: true, speed: 0.78 },
   [T.ICE]: { name: '冰面', pass: true, speed: 1.05 },
+  // (北冥) ice gone thin and dark over moving water: you can walk on it — till it gives
+  [T.THIN]: { name: '薄冰', pass: true, speed: 0.95 },
 };
 
 /**

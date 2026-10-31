@@ -286,7 +286,7 @@ function groundAt(s, x, y) {
   const t = terrainAt(x, y);
   if (t === T.WATER) return 'water';
   if (t === T.BRIDGE) return 'wood';
-  if (t === T.PAVED || t === T.WALL || t === T.GATE || t === T.ICE) return 'stone';
+  if (t === T.PAVED || t === T.WALL || t === T.GATE || t === T.ICE || t === T.THIN) return 'stone';
   if (t === T.SNOW || seasonLook(seasonOf(s.day)) === 'winter') return 'snow';
   if (t === T.HILL || t === T.PEAK || t === T.CLIFF) return 'stone';
   if (t === T.FOREST || t === T.DEEP) return 'leaves';

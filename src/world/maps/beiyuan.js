@@ -119,6 +119,10 @@ export const BEIYUAN_GEO = {
   EDGE_RIVER: null, RIVER_REGION: null, HOME_REGION: 'beiyuan_wilds', REACH_FROM: [2600, 3460], UPLAND,
 };
 
+/** Where 北冥's ice is thin (dark; it gives under you: content/events/beiyuan.js by_thin_ice). [x, y, r] */
+const THIN_ICE = [[820, 2050, 70], [1010, 2420, 60], [1480, 1960, 70], [1640, 2240, 60], [1150, 1840, 55], [880, 2280, 50]];
+const inThin = (x, y) => THIN_ICE.some(([cx, cy, r]) => Math.hypot(x - cx, y - cy) < r * (0.85 + 0.25 * fbm(x / 40, y / 40, 812)));
+
 const inSea = (x, y, k = 1) => Math.hypot((x - SEA[0]) / SEA[2], (y - SEA[1]) / SEA[3]) < k * (0.92 + 0.12 * fbm(x / 90, y / 90, 811));
 
 // ── what lies on it, and how (by region; merged into the tables kept elsewhere) ──
@@ -130,7 +134,7 @@ const ground = {
   hantie_fort: (x, y) => (x > 2360 && x < 2840 && y > 3240 && y < 3680 ? T.WASTE : fbm(x / 100, y / 100, 802) > 0.66 ? T.HILL : T.SNOW),
   iron_mine: () => T.WASTE,
   // the sea frozen to the bottom; snow along its shores
-  beiming: (x, y) => (inSea(x, y, 0.86) ? T.ICE : T.SNOW),
+  beiming: (x, y) => (inSea(x, y, 0.86) ? (inThin(x, y) ? T.THIN : T.ICE) : T.SNOW),
   bingyuan: (x, y) => {
     const n = fbm(x / 220, y / 220, 803);
     if (n < 0.27) return T.ICE;
@@ -211,6 +215,7 @@ export const BEIYUAN_LAND_BASE = { ground, trees, settled, roll, dunes, under, f
 export const BEIYUAN_PALETTE = {
   [T.SNOW]: { all: [238, 241, 244] },
   [T.ICE]: { all: [196, 214, 226] },
+  [T.THIN]: { all: [146, 172, 194] },
   [T.HILL]: { all: [194, 196, 196] },
   [T.WASTE]: { all: [170, 170, 166] },
   [T.GRASS]: { all: [214, 216, 214] },
@@ -323,6 +328,7 @@ const POIS = [
   // 北冥
   { id: 'bm_hut', region: 'beiming', x: 1300, y: 2700, name: '漁屋', verb: '查看', text: '岸邊一間小木屋，屋簷下掛著一串凍得硬邦邦的魚。門口立著一根比人還長的魚叉。' },
   { id: 'bm_hole', region: 'beiming', x: 1260, y: 2640, name: '冰洞', verb: '查看', text: '冰面上鑿開的一個洞，洞口結著薄薄的一層新冰。從洞口往下看，水黑得像墨。' },
+  ...THIN_ICE.map(([x, y, r], k) => ({ id: `ti_${'abcdef'[k]}`, region: 'beiming', x, y, name: '薄冰', auto: Math.round(r * 0.8) })),
   { id: 'bm_middle', region: 'beiming', x: 1220, y: 2150, name: '冰心', verb: '查看', text: '北冥的正中。腳下的冰透明得像琉璃，底下黑沉沉的，什麼也看不見。' },
   // 白狼部
   { id: 'bl_fire', region: 'bailang_camp', x: 4180, y: 2975, name: '營火', verb: '烤火', rest: true, glow: () => true, text: '營火燒的是牛糞和松枝，火苗不高，熱氣卻一直透到骨頭裡。' },

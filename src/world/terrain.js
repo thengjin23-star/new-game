@@ -1059,7 +1059,7 @@ export function asciiMap() {
     [T.VOID]: ' ', [T.GRASS]: '.', [T.ROAD]: '=', [T.FARM]: '"', [T.FOREST]: 'f', [T.DEEP]: 'F', [T.HILL]: ',',
     [T.PEAK]: '^', [T.CLIFF]: '#', [T.WATER]: '~', [T.SAND]: ':', [T.WASTE]: '_', [T.PAVED]: '+', [T.BRIDGE]: 'H',
     [T.WALL]: '|', [T.GATE]: 'G', [T.TRAIL]: '-', [T.TALLGRASS]: ';', [T.DUNE]: 'd', [T.QUICK]: 'q',
-    [T.SNOW]: '*', [T.ICE]: 'o',
+    [T.SNOW]: '*', [T.ICE]: 'o', [T.THIN]: 'O',
   };
   const lines = [];
   for (let j = 0; j < ROWS; j++) {
