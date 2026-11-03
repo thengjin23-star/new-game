@@ -372,7 +372,7 @@ const BEASTS = [
   { id: 'ice_wolves_a', kind: 'ice_wolf', n: 3, title: '冰原狼', x: 3600, y: 3420, r: 160, respawn: 30, power: 400 },
   { id: 'ice_wolves_b', kind: 'ice_wolf', n: 3, title: '冰原狼', x: 4560, y: 2300, r: 160, respawn: 30, power: 420 },
   { id: 'ice_wolves_c', kind: 'ice_wolf', n: 2, title: '冰原狼', x: 3750, y: 2000, r: 140, respawn: 30, power: 380 },
-  { id: 'bailang_king_a', kind: 'bailang_king', title: '白狼王', x: 4800, y: 2550, r: 140, respawn: 999, power: 700, cond: (s) => !killed(s, 'bailang_king') },
+  { id: 'bailang_king_a', kind: 'bailang_king', title: '白狼王', x: 4800, y: 2550, r: 140, respawn: 999, power: 620, cond: (s) => !killed(s, 'bailang_king') },
   { id: 'snow_leopard_a', kind: 'snow_leopard', n: 1, title: '雪豹', x: 2950, y: 1300, r: 120, respawn: 30, power: 420 },
   { id: 'snow_leopard_b', kind: 'snow_leopard', n: 1, title: '雪豹', x: 700, y: 900, r: 120, respawn: 30, power: 420 },
   { id: 'snow_leopard_c', kind: 'snow_leopard', n: 1, title: '雪豹', x: 1500, y: 600, r: 120, respawn: 30, power: 440 },
@@ -380,11 +380,11 @@ const BEASTS = [
   { id: 'snow_apes_b', kind: 'snow_ape', n: 2, title: '雪猿', x: 3200, y: 800, r: 150, respawn: 30, power: 460 },
   { id: 'ape_king_a', kind: 'ape_king', title: '雪猿王', x: 2350, y: 380, r: 130, respawn: 999, power: 760, cond: (s) => !killed(s, 'ape_king') },
   { id: 'ice_silkworms_a', kind: 'ice_silkworm', n: 3, title: '冰蠶', x: 1800, y: 3420, r: 100, respawn: 20, power: 340 },
-  { id: 'silk_queen_a', kind: 'silk_queen', title: '冰蠶母', x: 1680, y: 3480, r: 90, respawn: 999, power: 640, cond: (s) => !!s.flags.mine_deep_open && !killed(s, 'silk_queen') },
+  { id: 'silk_queen_a', kind: 'silk_queen', title: '冰蠶母', x: 1680, y: 3480, r: 90, respawn: 999, power: 600, cond: (s) => !!s.flags.mine_deep_open && !killed(s, 'silk_queen') },
   { id: 'snow_wraiths_a', kind: 'snow_wraith', n: 2, title: '雪魄', x: 950, y: 2050, r: 150, respawn: 5, power: 400, cond: dark },
   { id: 'snow_wraiths_b', kind: 'snow_wraith', n: 2, title: '雪魄', x: 1550, y: 2350, r: 150, respawn: 5, power: 400, cond: dark },
   // (it comes to look at you before anything: content/events/beiyuan.js lm_qilin — feed it, fight it, or back away)
-  { id: 'ice_qilin_a', kind: 'ice_qilin', title: '冰麟', x: 4120, y: 880, r: 110, event: 'lm_qilin', respawn: 999, power: 900 },
+  { id: 'ice_qilin_a', kind: 'ice_qilin', title: '冰麟', x: 4120, y: 880, r: 110, event: 'lm_qilin', respawn: 999, power: 840 },
 ];
 
 export const BEIYUAN_PLACES = { STRUCTURES, POIS, BEASTS };

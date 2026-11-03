@@ -83,7 +83,8 @@ function beiyuanGoal(s) {
   if (f.mine_deep_open && !(kills.silk_queen > 0)) return { key: 'by:queen', text: '寒鐵礦：深巷裡的冰蠶母', why: '冰蠶母在深巷盡頭：噴霜、在你腳下鋪冰、吐絲把你的腳凍在地上（凍住了就閃避掙脫），還會叫冰蠶出來。牠屬水，土的招式剋牠。' };
   if (f.mine_asked && !f.mine_deep_open) return { key: 'by:deep', text: '寒鐵礦：深巷', why: '霍堡主請你下深巷看看。礦口在堡西門外；最深的那條巷道，口上釘著木板。夜裡去，聽得見歌聲。' };
   // the rift
-  if ((f.qilin_fed || kills.ice_qilin > 0) && !f.hanyi_taught) return { key: 'by:hanyi', text: '回石洞見寒衣', why: '靈脈結露出來了。去崖腳下的石洞告訴寒衣。' };
+  if (kills.ice_qilin > 0 && !f.node_open) return { key: 'by:node', text: '靈脈裂谷：靈脈結', why: '冰麟倒下了。到裂谷正中的靈脈結看看。' };
+  if ((f.qilin_fed || f.qilin_slain || kills.ice_qilin > 0) && !f.hanyi_taught) return { key: 'by:hanyi', text: '回石洞見寒衣', why: '靈脈結露出來了。去崖腳下的石洞告訴寒衣。' };
   if (f.hanyi_met && !f.node_open) {
     const lotus = it.xuelian || 0;
     if (lotus >= 3) return { key: 'by:feed', text: '靈脈裂谷：把雪蓮給冰麟', why: '三朵雪蓮夠了。走近靈脈結，冰麟會過來看你。' };

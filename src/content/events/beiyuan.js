@@ -534,7 +534,7 @@ export default [
     title: '寒衣',
     text: (s) => {
       if (flag(s, 'qilin_fed')) return '寒衣坐在石洞口，膝上橫著一柄拂塵，看著崖腳下伏在雪裡的冰麟。看見你，她笑了一下——你頭一回看見她笑。';
-      if (killed(s, 'ice_qilin')) return '寒衣站在石洞口，望著空蕩蕩的靈脈結，臉上什麼表情也沒有。';
+      if (killed(s, 'ice_qilin') || flag(s, 'qilin_slain')) return '寒衣站在石洞口，望著空蕩蕩的靈脈結，臉上什麼表情也沒有。';
       if (flag(s, 'hanyi_met')) return '寒衣坐在石洞口，閉著眼，像一尊雪做的像。';
       return '石洞口掛著一張獸皮。你還沒走近，簾子就掀開了：一個道姑站在洞口，頭髮全白了，臉卻像四十來歲，眼睛冷得像北冥的冰。\n\n「又一個來借靈脈的。」她說。';
     },
@@ -557,7 +557,7 @@ export default [
       },
       {
         text: '「冰麟死了。」',
-        show: (s) => killed(s, 'ice_qilin') && !flag(s, 'hanyi_taught'),
+        show: (s) => (killed(s, 'ice_qilin') || flag(s, 'qilin_slain')) && !flag(s, 'hanyi_taught'),
         out: {
           text: '「我知道。」寒衣說，「整個裂谷都聽見了。」\n\n她看著靈脈結，看了很久：「牠在這裡伏了三百年。」\n\n她從袖子裡摸出一張紙，遞給你，沒有看你：「凝金丹的丹方。靈髓為主藥，雪蓮為引。你要結丹，就拿去吧——牠的命換的。」\n\n簾子落下來了。',
           effects: [['flag', 'hanyi_taught'], ['flag', 'recipe_ningjin'], ['favor', 'han_yi', -10], ['log', '寒衣給了你凝金丹方']],
@@ -621,6 +621,18 @@ export default [
         ],
       },
     },
+  },
+  {
+    // (killed out in the world, not through its story: the knot is open all the same)
+    id: 'lm_node_open',
+    trigger: 'explore',
+    poi: 'lm_vein',
+    nodes: RIFT,
+    priority: 6,
+    cond: (s) => killed(s, 'ice_qilin') && !flag(s, 'node_open'),
+    title: '靈脈結',
+    text: '冰麟倒在靈脈結上，額上的冰角斷成了兩截。\n\n裂谷裡靜極了。靈脈結的藍光從牠身下湧上來，湧過牠的鱗，像水漫過一塊石頭。',
+    choices: [{ text: '走上靈脈結。', out: { effects: [['flag', 'node_open'], ['flag', 'qilin_slain'], ['discover', 'lingmai_node'], ['sysexp', 10], ['log', '打倒了靈脈裂谷的冰麟：靈脈結開了']] } }],
   },
   {
     id: 'lm_node_gift',

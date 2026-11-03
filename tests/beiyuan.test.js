@@ -16,12 +16,19 @@ import { useMap } from '../src/world/atlas.js';
 import { regionAt, collides, isReachable } from '../src/world/terrain.js';
 import { wear, pools } from '../src/core/body.js';
 import { startEvent } from '../src/core/events.js';
+import * as A from '../src/core/actions.js';
+import * as CB from '../src/world/combat.js';
+import * as SK from '../src/world/skills.js';
+import { nextGoal } from '../src/world/guide.js';
+import { checkFeats } from '../src/world/feats.js';
+import { recipesKnown } from '../src/world/crafts.js';
+import { FRAGMENTS } from '../src/content/fragments.js';
 import { fresh, resolvePending, goToPoi, pickText } from './helpers.js';
 
 const NEW = ['ice_wolf', 'snow_leopard', 'ice_silkworm', 'snow_ape', 'snow_wraith', 'bailang_king', 'silk_queen', 'ape_king', 'ice_qilin'];
 
 /** Over 雁回嶺 into 北原 at the realm given, standing below the cairn of 雪嶺口 (the first sights said). */
-function over(seed, realm = 2, stage = 5) {
+function over(seed, realm = 2, stage = 2) {
   const s = fresh(seed);
   Object.assign(s.player, { realm, stage });
   goToPoi(s, 'yanhui_gate', 0);
@@ -55,6 +62,32 @@ function walkOnto(s, id) {
   resolvePending(s);
   for (let k = 0; k < 120 && !s.pending; k++) E.step(s, 0.05, { x: 1, y: 0 });
   return s.pending?.id;
+}
+
+/** Walk up to a place and see to it (whatever it starts, played out with the choice named). */
+function at(s, id, pick = null) {
+  goToPoi(s, id);
+  resolvePending(s);
+  E.step(s, 0.05, { x: 1, y: 0 });
+  if (!s.pending) E.step(s, 0.05, { x: -1, y: 0 });
+  resolvePending(s);
+  E.interact(s, { kind: 'poi', id });
+  if (pick) pickText(s, pick);
+  resolvePending(s);
+}
+
+/** Call on someone and take the choice named. */
+function call(s, npc, pick) {
+  A.visit(s, npc, { near: true });
+  assert.ok(s.pending, `${npc} has something to say`);
+  pickText(s, pick);
+  resolvePending(s);
+}
+
+/** Is one of these out in the world now (after a breath of it)? */
+function about(s, kind) {
+  E.step(s, 0.05, null);
+  return CB.beastsInWorld(s, 99999).some((b) => b.kind === kind);
 }
 
 /** Out on open snow, nothing laired near (between the ways to the camp and to the rift). */
@@ -191,4 +224,167 @@ test('雪山: the snow comes down off the slope — run across its way, or get b
   pickText(s, '御劍飛起來');
   resolvePending(s);
   assert.equal(s.player.injury, injury);
+});
+
+test('寒鐵礦: 霍堡主 asks; the boards come off the deepest way and the 冰蠶母 is there; one of the three in her cocoons still breathes; the mine opens, the smith is cheaper, and 顧遠 can go home with his iron', () => {
+  const s = over(71);
+  E.placeAt(s, ...NODES.hantie_fort.at);
+  resolvePending(s);
+  assert.equal(nextGoal(s)?.key, 'by:fort', 'the line at the top: the master of the fort');
+  call(s, 'gu_yuan', '怎麼跑到北原');
+  assert.ok(s.flags.guyuan_met);
+  call(s, 'huo_bao', '出了什麼事');
+  assert.ok(s.flags.mine_asked);
+  assert.equal(nextGoal(s)?.key, 'by:deep');
+  useMap('beiyuan');
+  assert.ok(!about(s, 'silk_queen'), 'not while the boards are up');
+  at(s, 'mine_deep', '撬開木板');
+  assert.ok(s.flags.mine_deep_open);
+  assert.ok(about(s, 'silk_queen'), 'and there she is');
+  assert.equal(nextGoal(s)?.key, 'by:queen');
+  // she falls
+  s.vars.kills = { ...(s.vars.kills || {}), silk_queen: 1 };
+  assert.equal(nextGoal(s)?.key, 'by:cocoons');
+  const silk = s.player.items.bingcan_silk || 0;
+  at(s, 'mine_deep', '剖開');
+  assert.ok(s.flags.miner_saved && s.player.items.bingcan_silk === silk + 2, 'one of them still breathes');
+  assert.equal(nextGoal(s)?.key, 'by:huo');
+  const price = A.priceOf(s, 'hantie_sword');
+  const ls = s.player.ls;
+  call(s, 'huo_bao', '死了');
+  assert.ok(s.flags.mine_cleared && s.player.ls === ls + 300 && s.player.items.hantie_ore >= 3);
+  goToPoi(s, 'ht_smithy');
+  resolvePending(s);
+  assert.ok(A.priceOf(s, 'hantie_sword') < price || price === A.priceOf(s, 'hantie_sword'), 'the smith asks no more of you');
+  assert.equal(nextGoal(s)?.key, 'by:guyuan');
+  call(s, 'gu_yuan', '回家去吧');
+  assert.ok(s.flags.guyuan_done);
+  assert.equal(s.npcs.gu_yuan.loc, 'qingyun_sect', 'home to 青雲宗');
+  checkFeats(s);
+  assert.ok(s.vars.feats.beiyuan !== undefined && s.vars.feats.mine !== undefined, '北上 and 寒鐵 earned');
+  useMap('donghuang');
+});
+
+test('北冥: 冰叟 has waited all his life to see what sleeps under the ice; by day the ice is only dark — 神識 (or the night) shows it; told, he gives you the feather', () => {
+  const s = over(72);
+  E.placeAt(s, ...NODES.beiming.at);
+  resolvePending(s);
+  call(s, 'bing_sou', '釣了多少年');
+  assert.ok(s.flags.bingsou_met);
+  assert.equal(nextGoal(s)?.key, 'by:kun');
+  s.tod = 11;
+  at(s, 'bm_middle', '趴在冰上');
+  assert.ok(!s.flags.kun_seen, 'by day, only the dark');
+  s.day += 1;
+  at(s, 'bm_middle', '放出神識');
+  assert.ok(s.flags.kun_seen, 'and something vast turns to look at you');
+  assert.equal(nextGoal(s)?.key, 'by:bingsou');
+  call(s, 'bing_sou', '我看見了');
+  assert.ok(s.flags.bingsou_told && s.player.items.peng_feather === 1, 'the feather');
+  checkFeats(s);
+  assert.ok(s.vars.feats.kun !== undefined);
+});
+
+test('靈脈裂谷, the flower: 寒衣 says the 冰麟 likes snow lotus; three of them, and it gives up the knot — 寒魄訣 and its 冰魄寒獄, the 凝金丹 recipe, her promise; a drop of 靈髓 from it now and then', () => {
+  const s = over(73);
+  E.placeAt(s, ...NODES.lingmai_rift.at);
+  resolvePending(s);
+  useMap('beiyuan');
+  assert.ok(about(s, 'ice_qilin'), 'it lies on the knot');
+  call(s, 'han_yi', '一個人住在這裡');
+  assert.ok(s.flags.hanyi_met && s.nodes.tianjing_peak.known);
+  assert.equal(nextGoal(s)?.key, 'by:lotus');
+  s.player.items.xuelian = 3;
+  assert.equal(nextGoal(s)?.key, 'by:feed');
+  startEvent(s, 'lm_qilin');
+  assert.ok(s.pending.choices.some((c) => c.text.includes('雪蓮')) && s.pending.choices.some((c) => c.text.includes('拔劍')), 'a flower, or a sword');
+  pickText(s, '雪蓮');
+  resolvePending(s);
+  assert.ok(s.flags.qilin_fed && s.flags.node_open && !(s.player.items.xuelian > 0));
+  assert.ok(!about(s, 'ice_qilin'), 'it lies at the foot of the cliff now, not on the knot');
+  assert.equal(regionAt(s, 4120, 900), 'lingmai_node', 'the knot is open');
+  assert.equal(nextGoal(s)?.key, 'by:hanyi');
+  assert.ok(SK.lockOf(s, SK.moveOf(s, 'hanyu')), '冰魄寒獄 not yet');
+  call(s, 'han_yi', '冰麟讓開了');
+  assert.ok(s.player.techs.includes('hanpo'), '寒魄訣 learned');
+  assert.equal(SK.lockOf(s, SK.moveOf(s, 'hanyu')), null, '冰魄寒獄 is yours');
+  assert.ok(s.flags.recipe_ningjin && recipesKnown(s).includes('ningjin_pill'), 'the 凝金丹 recipe');
+  assert.ok(s.flags.hanyi_guard, 'and she will stand by you when you form your 金丹');
+  at(s, 'lm_vein', '撿起靈髓');
+  assert.equal(s.player.items.lingsui, 1, 'a drop of 靈髓');
+  // one of 寒魄訣 feels the cold far less
+  s.vars.sky = 'clear';
+  s.player.tech = 'qingmu';
+  const was = E.coldRate(s);
+  s.player.tech = 'hanpo';
+  assert.ok(E.coldRate(s) < was * 0.5);
+  checkFeats(s);
+  assert.ok(s.vars.feats.qilin !== undefined && s.vars.feats.qilin_fed !== undefined);
+  useMap('donghuang');
+});
+
+test('靈脈裂谷, the sword: fought and beaten, the knot is open all the same; 寒衣 gives the recipe and no more — and killed out in the world, the knot opens at the vein', () => {
+  const s = over(74, 2, 3);
+  E.placeAt(s, ...NODES.lingmai_rift.at);
+  resolvePending(s);
+  call(s, 'han_yi', '一個人住在這裡');
+  startEvent(s, 'lm_qilin');
+  pickText(s, '拔劍');
+  resolvePending(s);
+  assert.ok(s.flags.node_open && s.flags.qilin_slain && !s.flags.qilin_fed);
+  call(s, 'han_yi', '冰麟死了');
+  assert.ok(s.flags.recipe_ningjin && !s.player.techs.includes('hanpo') && !s.flags.hanyi_guard, 'the recipe, and no more');
+  // killed in the world, not through its story
+  const t = over(75, 2, 3);
+  t.vars.kills = { ...(t.vars.kills || {}), ice_qilin: 1 };
+  E.placeAt(t, ...NODES.lingmai_rift.at);
+  resolvePending(t);
+  assert.equal(nextGoal(t)?.key, 'by:node');
+  at(t, 'lm_vein', '走上靈脈結');
+  assert.ok(t.flags.node_open);
+});
+
+test('白狼部: 阿蘭\'s father went east after the 白狼王 three years ago; under a mound of snow out east, his bones and his knife; she has his coat for you', () => {
+  const s = over(76);
+  E.placeAt(s, ...NODES.bailang_camp.at);
+  resolvePending(s);
+  assert.equal(nextGoal(s)?.key, 'by:camp');
+  call(s, 'a_lan', '這張弓');
+  assert.ok(s.flags.alan_asked);
+  assert.equal(nextGoal(s)?.key, 'by:remains');
+  // (the king of the wolves keeps out of the way, this once)
+  s.world.mobs = { ...(s.world.mobs || {}), bailang_king_a: s.day + 999, ice_wolves_b: s.day + 999 };
+  at(s, 'bl_remains', '獵刀');
+  assert.equal(s.player.items.alan_knife, 1);
+  assert.equal(nextGoal(s)?.key, 'by:alan');
+  E.placeAt(s, ...NODES.bailang_camp.at);
+  resolvePending(s);
+  const coats = s.player.items.langqiu || 0;
+  call(s, 'a_lan', '獵刀給她');
+  assert.ok(s.flags.alan_closure && !(s.player.items.alan_knife > 0) && s.player.items.langqiu === coats + 1);
+});
+
+test('不周山: up on the broken pillar (only the flying come), the gate — and under its threshold, a page of 玄微\'s; the system says where it lies, at its fifth level', () => {
+  const s = over(77);
+  s.sys.lv = 5;
+  s.sys.frags = s.sys.frags || [];
+  assert.ok(s.sys.frags.length < 9);
+  at(s, 'bz_gate', '取出來');
+  assert.ok(s.sys.frags.includes('frag_snow') && FRAGMENTS.frag_snow.text.includes('天柱'));
+  checkFeats(s);
+  assert.ok(s.vars.feats.tianmen !== undefined);
+});
+
+test('寒鐵堡\'s tavern: ask after the places of the north, and you know where they are; a dead man out on the snow has a letter for 青石鎮', () => {
+  const s = over(78);
+  E.placeAt(s, ...NODES.hantie_fort.at);
+  resolvePending(s);
+  startEvent(s, 'ht_inquire');
+  pickText(s, '打聽裂谷');
+  resolvePending(s);
+  assert.ok(s.nodes.lingmai_rift.known);
+  startEvent(s, 'by_frozen_miner');
+  pickText(s, '取出那封信');
+  resolvePending(s);
+  assert.equal(s.player.items.frozen_letter, 1);
 });
