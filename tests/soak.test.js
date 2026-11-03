@@ -44,9 +44,22 @@ function soak(seed, steps, cultivated, away = null) {
     assert.equal(s.world.map, 'ximo');
     delete s.vars.sky;
   }
+  if (away === 'beiyuan') {
+    // (0.23) over 雁回嶺, into the north's own cold (its blizzards, its thin ice, its snow off the slopes)
+    Object.assign(s.player, { realm: 2, stage: 2 });
+    goToPoi(s, 'yanhui_gate', 0);
+    resolvePending(s);
+    E.interact(s, { kind: 'poi', id: 'yanhui_gate' });
+    pickText(s, '翻過去');
+    resolvePending(s);
+    E.step(s, 0.05, null);
+    resolvePending(s);
+    assert.equal(s.world.map, 'beiyuan');
+    delete s.vars.sky;
+  }
   if (cultivated) {
     // a 築基 cultivator with a sword, a few arts and things to burn: every kind of move gets thrown
-    Object.assign(s.player, { realm: 2, stage: 1, weapon: 'qinggang_sword' });
+    Object.assign(s.player, { realm: 2, stage: away === 'beiyuan' ? 2 : 1, weapon: 'qinggang_sword' });
     s.player.items.qinggang_sword = 1;
     s.player.items.fire_talisman = 5;
     s.player.items.huichun_pill = 3;
@@ -146,6 +159,14 @@ test('長玩・南嶺：翻過山隘之後的隨機遊玩（瘴氣、毒蛛、�
 test('長玩・西漠：出了西風口之後的隨機遊玩（烈日、沙暴、流沙、沙蠍、乾屍、存讀檔），不出任何例外', () => {
   for (const seed of [26, 27]) {
     const run = soak(seed, 110, true, 'ximo');
+    assert.equal(run.error, null, run.error || '');
+    assert.equal(mapOf(run.s.player.loc), run.s.world.map, 'where you are is on the map you are on');
+  }
+});
+
+test('長玩・北原：翻過雁回嶺之後的隨機遊玩（嚴寒、暴風雪、薄冰、雪崩、冰原狼、雪猿、存讀檔），不出任何例外', () => {
+  for (const seed of [28, 29]) {
+    const run = soak(seed, 110, true, 'beiyuan');
     assert.equal(run.error, null, run.error || '');
     assert.equal(mapOf(run.s.player.loc), run.s.world.map, 'where you are is on the map you are on');
   }

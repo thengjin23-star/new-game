@@ -440,3 +440,20 @@ test('secluded on the knot of the veins before 築基, the 靈氣 comes in faste
   advance(t, 120, 'seclusion', r2);
   assert.ok(!r2.toasts.some((x) => x.includes('經脈受損')), 'a 築基 takes it');
 });
+
+test('a save in 北原 keeps its people and your doings (and where 顧遠 went); an old save gains the people of 北原, not met', async () => {
+  const { serialize, parseSave } = await import('../src/core/save.js');
+  const s = over(84);
+  E.placeAt(s, ...NODES.hantie_fort.at);
+  resolvePending(s);
+  call(s, 'huo_bao', '出了什麼事');
+  s.npcs.gu_yuan.loc = 'qingyun_sect';
+  const t = parseSave(serialize(s));
+  assert.ok(t.flags.mine_asked && t.npcs.gu_yuan.loc === 'qingyun_sect', 'what you asked of them, and where they went');
+  assert.equal(t.world.map, 'beiyuan', 'still in the north');
+  const old = JSON.parse(serialize(fresh(85)));
+  const PEOPLE = ['huo_bao', 'a_lan', 'bing_sou', 'han_yi', 'gu_yuan'];
+  for (const id of PEOPLE) delete old.npcs[id];
+  const u = parseSave(JSON.stringify(old));
+  for (const id of PEOPLE) assert.ok(u.npcs[id] && !u.npcs[id].met, `${id} is there to meet`);
+});
