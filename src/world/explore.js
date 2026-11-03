@@ -213,7 +213,7 @@ function exposure(s, L, moved) {
   const sky = weatherNow(s);
   const cold = frigid(w.region);
   const need = cold ? COLD_NEED : EXPOSED[sky.id];
-  const rate = !need || SHELTER[w.region] ? 0 : cold ? coldRate(s, sky) : (sky.heat ? sunproof(s) : windproof(s)) ? 0 : 1;
+  const rate = !need || SHELTER[w.region] ? 0 : cold ? coldRate(s, sky) : (sky.heat ? sunproof(s) : windproof(s)) ? 0 : s.player.realm < 2 ? 1.6 : 1;
   if (!rate) {
     if (w.exposed) w.exposed = Math.max(0, w.exposed - moved * 2);
     return false;

@@ -2,13 +2,16 @@
 // (a hint, never an order — the world is open), and the first-time pointers
 // at the buttons (each shown once on this device).
 
-import { atBottleneck } from '../core/cultivation.js';
+import { atBottleneck, REALMS } from '../core/cultivation.js';
 import { pools } from '../core/body.js';
 import { NODES, mapOf } from './map.js';
 import { happenings, tideTonight } from './happenings.js';
 import { realmOpen, realmDone, SECRET_REALMS } from './realms.js';
 import * as Q from './quests.js';
 import * as SECT from './sect.js';
+
+/** At the last layer of a realm (the next step is a realm of its own). */
+const atGateOf = (p) => p.stage === REALMS[p.realm].stages.length - 1;
 
 /** The place you know of but have not been to, nearest to where you are (on the map you are on). */
 function nearestUnseen(s) {
@@ -121,7 +124,9 @@ export function nextGoal(s) {
   if (atBottleneck(s)) {
     return p.realm === 0
       ? { key: 'qi', text: '引氣入體', why: '修為夠了。打開右上的「修煉」，按「引氣入體」，就是煉氣一層的修士了。' }
-      : { key: 'bt', text: '衝擊瓶頸', why: '修為已經圓滿。到「修煉」頁衝擊瓶頸；築基可以服築基丹提高成功率，失敗會受傷、掉修為。' };
+      : p.realm === 2 && atGateOf(p)
+        ? { key: 'bt', text: '結丹', why: `修為已經圓滿，可以衝擊金丹了（「修煉」頁）。凝金丹每顆加一成五（最多兩顆，丹方在北原的寒衣那裡）；在北原的靈脈結上衝擊再加一成${s.flags.hanyi_guard ? '，寒衣會替你護法' : ''}。失敗會受傷、掉修為。` }
+        : { key: 'bt', text: '衝擊瓶頸', why: '修為已經圓滿。到「修煉」頁衝擊瓶頸；築基可以服築基丹提高成功率，失敗會受傷、掉修為。' };
   }
   if (p.realm === 0) return { key: 'secl0', text: '閉關，攢夠修為', why: '在清虛觀這種靈氣好的地方按「坐」→「閉關」。閉關要真實時間（遊戲一天約三秒），關掉遊戲也會繼續。修為攢夠就能引氣入體。' };
   // a wound, or low blood

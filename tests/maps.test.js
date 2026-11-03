@@ -31,12 +31,14 @@ test('a mortal cannot cross into 南嶺; a cultivator can, and comes out on its 
   assert.equal(s.world.map, 'donghuang');
   assert.equal(mapOf('qingshi_town'), 'donghuang');
   assert.equal(mapOf('qingzhu_village'), 'nanling');
-  // a mortal: the way is barred
+  // a mortal: warned, and the easy way is not his — but nothing stops him going (0.23)
   goToPoi(s, 'south_pass_gate', -40);
   resolvePending(s);
   E.interact(s, { kind: 'poi', id: 'south_pass_gate' });
-  const go = s.pending.choices.find((c) => c.text.includes('翻過去'));
-  assert.ok(go.disabled, 'a mortal is turned back');
+  assert.ok(s.pending.text.includes('本系統提醒'), 'warned');
+  const go = s.pending.choices.find((c) => c.text === '翻過去。');
+  assert.ok(go.disabled, 'not the easy way');
+  assert.ok(s.pending.choices.some((c) => c.text.includes('還是要過去') && !c.disabled), 'but he may go');
   pickText(s, '改天');
   resolvePending(s);
   // a cultivator goes over

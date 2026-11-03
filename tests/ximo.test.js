@@ -111,15 +111,22 @@ test('the beasts of 西漠 are whole: an element (or a man), a page in the 圖�
   }
 });
 
-test('西風口 lets only a 築基 through; past it, 月泉 and its people, and two shops of its own', () => {
+test('西風口: a 築基 goes out as he likes; one below it is warned, and may go all the same (at a cost); past it, 月泉 and its people, and two shops of its own', () => {
   const s = fresh(51);
   Object.assign(s.player, { realm: 1, stage: 8 });
   goToPoi(s, 'west_pass_gate', 0);
   resolvePending(s);
   E.interact(s, { kind: 'poi', id: 'west_pass_gate' });
   assert.equal(s.pending?.id, 'pass_to_ximo');
-  assert.ok(s.pending.choices.find((c) => c.text.includes('出關')).disabled, '煉氣 cannot cross the sand');
-  resolvePending(s, (o) => o.find((c) => c.text.includes('改天')));
+  assert.ok(s.pending.text.includes('本系統提醒'), 'warned');
+  assert.ok(s.pending.choices.find((c) => c.text === '出關。').disabled, 'not the easy way');
+  const hp = s.player.hp;
+  pickText(s, '還是要出關');
+  resolvePending(s);
+  E.step(s, 0.05, null);
+  resolvePending(s);
+  assert.equal(s.world.map, 'ximo', 'he may go');
+  assert.ok(!(s.player.hp >= hp), 'and it cost him');
   const t = out(52);
   assert.ok(t.flags.ximo_crossed && t.seen.ximo_arrive && t.seen.yq_arrive, 'out, and the first sights said');
   for (let k = 0; k < 10; k++) E.step(t, 0.1, null);

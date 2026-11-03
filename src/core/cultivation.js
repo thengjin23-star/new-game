@@ -85,6 +85,19 @@ export function techOf(s) {
   return TECHS[s.player.tech] || null;
 }
 
+/**
+ * (0.23) 地利: each land beyond 東荒 is of one of the 五行 — 南嶺's green 木, 西漠's sun 火, 北原's ice
+ * 水. Cultivating there with a 功法 of the same element goes faster; with a 靈根 of it, a little.
+ */
+export const LAND_EL = { nanling: '木', ximo: '火', beiyuan: '水' };
+export function landBonus(s) {
+  const el = LAND_EL[s.world?.map];
+  if (!el) return 1;
+  const t = techOf(s);
+  if (t?.element === el) return 1.15;
+  return (s.player.root?.els || []).includes(el) ? 1.05 : 1;
+}
+
 export function rateParts(s, nodeId = s.player.loc) {
   const p = s.player;
   const r = REALMS[p.realm];
@@ -100,8 +113,9 @@ export function rateParts(s, nodeId = s.player.loc) {
   // the sky: a 靈潮 (half as fast again), the full moon's light (a little)
   const signs = skySigns(s);
   const sky = (signs.includes('tide') ? 1.5 : 1) * (signs.includes('fullmoon') || signs.includes('bloodmoon') ? 1.15 : 1);
-  const total = r.base * root * tech * qi * mind * injury * buff * sky;
-  return { base: r.base, root, tech, qi, mind, injury, buff, sky, total };
+  const land = landBonus(s);
+  const total = r.base * root * tech * qi * mind * injury * buff * sky * land;
+  return { base: r.base, root, tech, qi, mind, injury, buff, sky, land, total };
 }
 
 export function dailyRate(s, nodeId) {
@@ -226,6 +240,22 @@ export function breakthroughInfo(s, { pills = 0 } = {}) {
     if (p.realm === 2 && p.items.xingguan_notes) {
       parts.push(['星官手記', 0.08]);
       chance += 0.08;
+    }
+    // 北原 (0.23): 凝金丹 (寒衣's recipe), the knot of the veins, and 寒衣 standing by you there
+    if (p.realm === 2) {
+      const usable = Math.min(2, pills, p.items.ningjin_pill || 0);
+      if (usable > 0) {
+        parts.push([`凝金丹 ×${usable}`, usable * 0.15]);
+        chance += usable * 0.15;
+      }
+      if (p.loc === 'lingmai_node') {
+        parts.push(['靈脈結', 0.1]);
+        chance += 0.1;
+        if (s.flags.hanyi_guard) {
+          parts.push(['寒衣護法', 0.05]);
+          chance += 0.05;
+        }
+      }
     }
   }
   if (p.realm > 0) {

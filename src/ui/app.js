@@ -18,7 +18,7 @@ import { happenings, whenWord } from '../world/happenings.js';
 import * as CB from '../world/combat.js';
 import * as AR from '../world/arts.js';
 import * as SK from '../world/skills.js';
-import { ROOTS, INJURY, BUFFS, realmLabel, stageReq, age, lifespan, rateParts, breakthroughInfo, power, atBottleneck, techOf } from '../core/cultivation.js';
+import { ROOTS, INJURY, BUFFS, REALMS, realmLabel, stageReq, age, lifespan, rateParts, breakthroughInfo, power, atBottleneck, techOf } from '../core/cultivation.js';
 import { SLOTS, STAT_WORD, gearOf, slotOf } from '../core/body.js';
 import { fmtDate, fmtDuration, seasonOf, SEASON_NAME } from '../core/calendar.js';
 import { NODES, canSecludeAt, nodeQi, mapOf } from '../world/map.js';
@@ -2257,7 +2257,7 @@ export function startApp(root, { speed = 1, view = null } = {}) {
         h('p.muted', `${ROOTS[p.root.type].name}（${p.root.els.join('、')}）・${tech ? tech.name : '未習功法'}・戰力 ${power(s)}`),
         bar(p.xw, stageReq(s), atBottleneck(s) ? 'full' : ''),
         h('p.rate', `閉關時每日修為 +${rp.total.toFixed(2)}`),
-        h('p.breakdown', `基礎 ${rp.base} × 靈根 ${rp.root} × 功法 ${rp.tech.toFixed(2)} × 靈氣 ${rp.qi} × 心境 ${rp.mind.toFixed(2)}${rp.injury < 1 ? ` × 傷勢 ${rp.injury}` : ''}${rp.buff > 1 ? ` × 增益 ${rp.buff.toFixed(2)}` : ''}${rp.sky > 1 ? ` × 天時 ${rp.sky.toFixed(2)}` : ''}`),
+        h('p.breakdown', `基礎 ${rp.base} × 靈根 ${rp.root} × 功法 ${rp.tech.toFixed(2)} × 靈氣 ${rp.qi} × 心境 ${rp.mind.toFixed(2)}${rp.injury < 1 ? ` × 傷勢 ${rp.injury}` : ''}${rp.buff > 1 ? ` × 增益 ${rp.buff.toFixed(2)}` : ''}${rp.sky > 1 ? ` × 天時 ${rp.sky.toFixed(2)}` : ''}${rp.land > 1 ? ` × 地利 ${rp.land.toFixed(2)}` : ''}`),
       ),
       h('section.card',
         h('div.row-between', h('span', '壽元'), h('span', `${Math.floor(age(s))} / ${lifespan(s)} 歲`)),
@@ -2304,8 +2304,11 @@ export function startApp(root, { speed = 1, view = null } = {}) {
   function breakthroughCard() {
     const s = ui.s;
     const p = s.player;
-    const pillsOwned = (p.items.zhuji_pill || 0) + (p.items.fake_zhuji || 0);
-    const canPill = p.realm === 1 && pillsOwned > 0;
+    // 築基丹 at the gate of 築基; 凝金丹 at the gate of 金丹
+    const pillName = p.realm === 2 ? '凝金丹' : '築基丹';
+    const pillsOwned = p.realm === 2 ? p.items.ningjin_pill || 0 : (p.items.zhuji_pill || 0) + (p.items.fake_zhuji || 0);
+    const atGate = p.stage === REALMS[p.realm].stages.length - 1;
+    const canPill = (p.realm === 1 || (p.realm === 2 && atGate)) && pillsOwned > 0;
     ui.pills = Math.min(ui.pills, canPill ? Math.min(2, pillsOwned) : 0);
     const info = breakthroughInfo(s, { pills: ui.pills });
     return h('section.card.bt',
@@ -2313,7 +2316,7 @@ export function startApp(root, { speed = 1, view = null } = {}) {
       h('div.chance', h('b', Math.round(info.chance * 100) + '%'), h('span', info.kind === 'major' ? '大境界' : '小境界')),
       h('ul.parts', info.parts.map(([label, v]) => h('li', h('span', label), h('span', (v >= 0 ? '+' : '') + Math.round(v * 100) + '%')))),
       canPill
-        ? h('div.pills', h('span', '服用築基丹：'), [0, 1, 2].filter((n) => n <= Math.min(2, pillsOwned)).map((n) =>
+        ? h('div.pills', h('span', `服用${pillName}：`), [0, 1, 2].filter((n) => n <= Math.min(2, pillsOwned)).map((n) =>
             h('button.btn.small' + (ui.pills === n ? '.on' : ''), { onclick: () => { ui.pills = n; renderLayer(); } }, n === 0 ? '不用' : `${n} 顆`)))
         : null,
       info.kind === 'major' && p.realm >= 1 ? h('p.muted.small', '失敗會損失修為、受傷、心境下降；用掉的丹藥不會回來。') : null,
@@ -3100,6 +3103,7 @@ export function startApp(root, { speed = 1, view = null } = {}) {
       h('div.map-body',
         box,
         h('div.map-side',
+          MAPS[w.map].realm ? h('p.small.map-realm', `此地適合：${MAPS[w.map].realm}`) : null,
           h('div.map-zoom',
             h('button.btn.small', { onclick: () => { m.scale = Math.min(0.5, m.scale * 1.4); draw(); } }, '＋'),
             h('button.btn.small', { onclick: () => { m.scale = Math.max(0.06, m.scale / 1.4); draw(); } }, '－'),
@@ -3114,7 +3118,7 @@ export function startApp(root, { speed = 1, view = null } = {}) {
           ways.length
             ? h('div.map-places.map-ways',
                 h('h3', '往別處去'),
-                ways.map(([from, way]) => h('p.small', `往${MAPS[way.to].name}：從${NODES[from].name}翻過去，約 ${way.hours / 2} 個時辰。`)))
+                ways.map(([from, way]) => h('p.small', `往${MAPS[way.to].name}（適合${MAPS[way.to].realm || '任何人'}）：從${NODES[from].name}翻過去，約 ${way.hours / 2} 個時辰。`)))
             : null,
         ),
       ),

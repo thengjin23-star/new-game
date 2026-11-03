@@ -227,6 +227,10 @@ export function attemptBreakthrough(s, pills = 0) {
   const report = newReport();
   // pills: real ones first; a fake one does nothing (and you find out the hard way)
   let usedFake = 0;
+  if (p.realm === 2 && info.kind === 'major' && pills > 0) {
+    const n = Math.min(2, pills, p.items.ningjin_pill || 0);
+    if (n) applyEffects(s, [['item', 'ningjin_pill', -n]], {}, report);
+  }
   if (p.realm === 1 && info.kind === 'major' && pills > 0) {
     const usable = Math.min(2, pills, (p.items.zhuji_pill || 0) + (p.items.fake_zhuji || 0));
     const real = Math.min(usable, p.items.zhuji_pill || 0);

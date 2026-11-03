@@ -10,9 +10,12 @@ import { DONGHUANG_GEO, setGeo } from './geo.js';
 import { DONGHUANG_PLACES, setPlaces } from './places.js';
 import { LANDS } from './maps/index.js';
 
-/** Every map. home: where you are put down if nowhere else will do (and where a 歸元符 takes you, failing a town). */
+/**
+ * Every map. home: where you are put down if nowhere else will do (and where a 歸元符 takes you, failing a
+ * town); realm: what it is a match for (the map page says so; nothing stops you going sooner).
+ */
 export const MAPS = {
-  donghuang: { id: 'donghuang', name: '東荒', title: '東荒・青石一帶', geo: DONGHUANG_GEO, places: DONGHUANG_PLACES, home: 'qingxu_temple' },
+  donghuang: { id: 'donghuang', name: '東荒', title: '東荒・青石一帶', realm: '凡人～築基', geo: DONGHUANG_GEO, places: DONGHUANG_PLACES, home: 'qingxu_temple' },
   ...Object.fromEntries(LANDS.map((m) => [m.id, m])),
 };
 

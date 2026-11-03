@@ -23,6 +23,9 @@ import { nextGoal } from '../src/world/guide.js';
 import { checkFeats } from '../src/world/feats.js';
 import { recipesKnown } from '../src/world/crafts.js';
 import { FRAGMENTS } from '../src/content/fragments.js';
+import { MAPS } from '../src/world/atlas.js';
+import { rateParts, breakthroughInfo } from '../src/core/cultivation.js';
+import { advance, newReport } from '../src/core/time.js';
 import { fresh, resolvePending, goToPoi, pickText } from './helpers.js';
 
 const NEW = ['ice_wolf', 'snow_leopard', 'ice_silkworm', 'snow_ape', 'snow_wraith', 'bailang_king', 'silk_queen', 'ape_king', 'ice_qilin'];
@@ -387,4 +390,53 @@ test('寒鐵堡\'s tavern: ask after the places of the north, and you know where
   pickText(s, '取出那封信');
   resolvePending(s);
   assert.equal(s.player.items.frozen_letter, 1);
+});
+
+test('the lands and the road of a cultivator: each says what it is a match for; 地利 where your 功法 is of the land\'s element; 金丹 is easier with 凝金丹, on the knot of the veins, with 寒衣 standing by', () => {
+  for (const [id, M] of Object.entries(MAPS)) assert.ok(M.realm, `${id} says what it is a match for`);
+  // 地利: 北原 is of 水
+  const s = over(81, 2, 3);
+  s.player.techs = [...new Set([...(s.player.techs || []), 'xuanshui', 'qingmu'])];
+  s.player.root = { ...s.player.root, els: ['金'] };
+  s.player.tech = 'xuanshui';
+  assert.equal(rateParts(s).land, 1.15, '玄水真經 in the north');
+  s.player.tech = 'qingmu';
+  assert.equal(rateParts(s).land, 1, '青木訣 is not of the north');
+  s.player.root = { ...s.player.root, els: ['水'] };
+  assert.equal(rateParts(s).land, 1.05, 'a 水 root, a little');
+  // 金丹: 凝金丹 (each a share, two at most), the knot, 寒衣
+  s.player.xw = 1e9;
+  s.player.items.ningjin_pill = 3;
+  const bare = breakthroughInfo(s).chance;
+  const two = breakthroughInfo(s, { pills: 3 });
+  assert.ok(two.parts.some(([k, v]) => k === '凝金丹 ×2' && Math.abs(v - 0.3) < 1e-9), 'two pills at most, 一成五 each');
+  assert.ok(two.chance > bare);
+  s.flags.node_open = true;
+  E.placeAt(s, 4120, 900);
+  resolvePending(s);
+  assert.equal(s.player.loc, 'lingmai_node');
+  s.flags.hanyi_guard = true;
+  const parts = breakthroughInfo(s).parts.map(([k]) => k);
+  assert.ok(parts.includes('靈脈結') && parts.includes('寒衣護法'));
+  A.attemptBreakthrough(s, 2);
+  resolvePending(s);
+  assert.equal(s.player.items.ningjin_pill, 1, 'two taken, whatever came of it');
+});
+
+test('secluded on the knot of the veins before 築基, the 靈氣 comes in faster than the meridians can take it — a wound now and then; past 築基, none', () => {
+  const s = over(82, 1, 8);
+  s.flags.node_open = true;
+  E.placeAt(s, 4120, 900);
+  s.player.loc = 'lingmai_node';
+  s.player.injury = 0;
+  const r = newReport();
+  advance(s, 120, 'seclusion', r);
+  assert.ok(r.toasts.some((t) => t.includes('經脈受損')), 'the meridians torn');
+  const t = over(83, 2, 0);
+  t.flags.node_open = true;
+  t.player.loc = 'lingmai_node';
+  t.player.injury = 0;
+  const r2 = newReport();
+  advance(t, 120, 'seclusion', r2);
+  assert.ok(!r2.toasts.some((x) => x.includes('經脈受損')), 'a 築基 takes it');
 });

@@ -1,5 +1,7 @@
 import { DAYS_PER_MONTH } from './calendar.js';
 import { addXiuwei, dailyRate, age, lifespan, INJURY } from './cultivation.js';
+import { nodeQi } from '../world/map.js';
+import { rand } from './rng.js';
 import { runArcs, recurring } from '../world/arcs.js';
 import { simulateNpcs, pruneNpcs } from '../world/npcs.js';
 import { ambientRumor, rumor } from '../world/rumors.js';
@@ -23,6 +25,14 @@ export function advance(s, days, mode, report) {
     const gain = dailyRate(s) * factor;
     addXiuwei(s, gain, report);
     report.xw += gain;
+    // (0.23) secluded where the 靈氣 is too thick for you (北原's 靈脈結, before 築基): now and then it
+    // rushes in faster than your meridians can take it — a wound, and a word from the system
+    if (mode === 'seclusion' && p.realm < 2 && nodeQi(s, p.loc) >= 2 && p.injury < 2 && rand(s) < 1 / 30) {
+      p.injury += 1;
+      p.injuryDays = INJURY[p.injury].days;
+      report.toasts.push('叮——靈氣入體過猛，宿主經脈受損。境界尚淺，不宜在此久坐。');
+      report.logs.push('在靈脈結上閉關，靈氣入體過猛，傷了經脈');
+    }
     s.day += 1;
     report.days += 1;
     // injuries heal one level at a time
