@@ -314,12 +314,17 @@ export function setTech(s, id) {
 /** A shop within a few steps, if there is one. */
 export function shopHere(s) {
   if (!s.world) return null;
+  // the nearest within reach (寒鐵堡's smithy and store stand side by side)
+  let best = null;
+  let bd = 160;
   for (const p of POIS) {
     if (p.action !== 'shop') continue;
-    if (Math.hypot(p.x - s.world.x, p.y - s.world.y) > 160) continue;
-    return SHOPS[p.shop || NODES[p.region]?.shop] || null;
+    const d = Math.hypot(p.x - s.world.x, p.y - s.world.y);
+    if (d > bd) continue;
+    bd = d;
+    best = p;
   }
-  return null;
+  return best ? SHOPS[best.shop || NODES[best.region]?.shop] || null : null;
 }
 
 /** What a shop asks of you for it (the 坊市 prices by your standing there). */

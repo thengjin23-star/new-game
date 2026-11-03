@@ -258,7 +258,12 @@ test('寒鐵礦: 霍堡主 asks; the boards come off the deepest way and the 冰
   assert.ok(s.flags.mine_cleared && s.player.ls === ls + 300 && s.player.items.hantie_ore >= 3);
   goToPoi(s, 'ht_smithy');
   resolvePending(s);
-  assert.ok(A.priceOf(s, 'hantie_sword') < price || price === A.priceOf(s, 'hantie_sword'), 'the smith asks no more of you');
+  assert.ok(A.priceOf(s, 'hantie_sword') <= price, 'the smith asks no more of you');
+  // the smithy and the store stand side by side: each is its own shop
+  assert.equal(A.shopHere(s)?.name, '鐵匠鋪');
+  goToPoi(s, 'ht_store');
+  resolvePending(s);
+  assert.ok(A.shopHere(s)?.stock.includes('shaodaozi'), 'at the store, the store');
   assert.equal(nextGoal(s)?.key, 'by:guyuan');
   call(s, 'gu_yuan', '回家去吧');
   assert.ok(s.flags.guyuan_done);

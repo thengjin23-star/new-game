@@ -268,7 +268,7 @@ export const BEIYUAN_NODES = {
     desc: '冰原北邊，大地裂開了一道谷。谷底的雪是化的，石縫裡透出幽幽的藍光，地是溫的——那是大地的靈脈，在這裡露出了地面。',
   },
   lingmai_node: {
-    name: '靈脈節點', kind: 'valley', qi: 2.4, danger: 0, at: [4120, 900],
+    name: '靈脈結', kind: 'valley', qi: 2.4, danger: 0, at: [4120, 900],
     desc: '裂谷正中，幾條靈脈交匯的地方。藍光從地底湧上來，像泉水一樣。在這裡打坐一天，抵得上在外頭打坐十天——只要你的經脈承受得住。',
   },
   buzhou: {

@@ -6,11 +6,17 @@
 
 import { weatherNow, moonTonight, arid } from '../world/weather.js';
 import { flashOf, liveOf } from '../world/explore.js';
+import { landTable } from '../world/maps/index.js';
+
+/** Under the ground (a region whose air lets in little of the sun: 西漠's 地宮, 北原's mine): no sky over you, nothing falls. */
+const UNDER = new Set(Object.entries(landTable('moods')).filter(([, m]) => (m.sun ?? 1) < 0.5).map(([id]) => id));
+const underground = (s) => UNDER.has(s.player?.loc);
 
 const SEASON_FALL = { spring: 'petal', summer: 'seed', autumn: 'leaf', winter: null };
 
 /** What falls now (a particle kind; null: nothing), and how many of them on the screen. */
 export function fallOf(s, season) {
+  if (underground(s)) return [null, 0];
   const w = weatherNow(s);
   if (w.id === 'rain') return ['rain', 80];
   if (w.id === 'storm') return ['storm', 150];
@@ -44,6 +50,7 @@ export function skyLight(s) {
 
 /** Over the whole picture: a grey wash in the rain, a white veil in fog, red under a blood moon, white when the lightning strikes. t: seconds. */
 export function drawSkyVeil(ctx, s, W, H, t) {
+  if (underground(s)) return;
   const w = weatherNow(s);
   if (w.fog) {
     const g = ctx.createLinearGradient(0, 0, 0, H);
