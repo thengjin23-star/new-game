@@ -184,7 +184,7 @@ export function sunproof(s) {
 /**
  * How fast the cold of the north gets into you (0: it does not): more by night and in a blizzard;
  * nothing past 金丹 (寒暑不侵) or while a 暖身丹 is working; fur or a warm charm keeps it off but for a
- * blizzard's (half); a cultivator of fire feels it less; one not yet past 築基 feels it more.
+ * blizzard's (half); a cultivator of fire feels it less, one of 寒魄訣 far less; one not yet past 築基 feels it more.
  */
 export function coldRate(s, wx = weatherNow(s)) {
   const p = s.player;
@@ -193,6 +193,7 @@ export function coldRate(s, wx = weatherNow(s)) {
   if (isNight(s)) r *= 1.5;
   if (gearStats(s).warm >= 1) r *= wx.blizzard ? 0.5 : 0;
   if (TECHS[p.tech]?.element === '火') r *= 0.6;
+  if (p.tech === 'hanpo') r *= 0.3;
   if (p.realm < 2) r *= 1.6;
   return r;
 }

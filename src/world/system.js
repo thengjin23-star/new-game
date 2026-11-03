@@ -105,6 +105,24 @@ export const DEDUCE = [
     effects: [['discover', 'lost_city']],
   },
   {
+    id: 'frag_snow',
+    cond: (s) => s.sys.lv >= 5 && !hasFrag(s, 'frag_snow') && !!s.flags.beiyuan_crossed,
+    text: '北原的斷雲崖上，立著一根斷了的天柱。柱頂的門檻底下，凍著一頁殘頁——只有會飛的，才上得去。',
+    effects: [['discover', 'buzhou']],
+  },
+  {
+    id: 'kun',
+    cond: (s) => !!s.flags.beiyuan_crossed && !s.flags.kun_seen && !s.nodes.beiming?.known,
+    text: '北原西邊，有一片凍到底的水。水底下，有一個很大很大的東西，在睡覺。',
+    effects: [['discover', 'beiming']],
+  },
+  {
+    id: 'lingmai',
+    cond: (s) => !!s.flags.beiyuan_crossed && !s.nodes.lingmai_rift?.known,
+    text: '北原東北，冰裂開的地方，地底的靈脈露了出來。將要結丹的人，該去那裡看一看。',
+    effects: [['discover', 'lingmai_rift']],
+  },
+  {
     id: 'valley',
     cond: (s) => !s.nodes.lingxi_valley.known,
     text: '西北三日路程，有一處靈氣匯聚之地，被一道陰冷的氣息盤踞。',

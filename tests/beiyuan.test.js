@@ -37,11 +37,11 @@ function over(seed, realm = 2, stage = 5) {
 }
 
 /** Walk to and fro over open snow until something comes of it (or not): what comes, and what was said on the way. */
-function walkOut(s, steps = 600) {
+function walkOut(s, steps = 600, swing = 50) {
   const said = [];
   s.world.enc = -1e9;
   for (let k = 0; k < steps; k++) {
-    E.step(s, 0.1, { x: k % 100 < 50 ? 1 : -1, y: 0 });
+    E.step(s, 0.1, { x: k % (swing * 2) < swing ? 1 : -1, y: 0 });
     said.push(...(E.takeFeed(s) || []).map((f) => f.text));
     if (s.pending) return { id: s.pending.id, said };
   }
@@ -124,7 +124,7 @@ test('the cold gets into you out on the snow: a warning, then it takes you — n
   s.day += 1;
   s.world.exposed = 0;
   s.tod = 11;
-  assert.equal(walkOut(s, 200).id, null);
+  assert.equal(walkOut(s, 200, 12).id, null);
   assert.equal(s.world.exposed || 0, 0, 'no cold by the fire');
   // a coat of white wolf's fur: the cold stays out (a blizzard's only halfway)
   s.player.items.langqiu = 1;

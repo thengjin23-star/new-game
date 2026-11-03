@@ -12,6 +12,7 @@ const visited = (s) => Object.entries(s.nodes || {}).filter(([id, n]) => n.visit
 const ALL_PLACES = Object.keys(NODES).filter((id) => NODES[id].at && id !== 'hidden_cave' && NODES[id].kind !== 'river' && mapOf(id) === 'donghuang');
 const NANLING_PLACES = Object.keys(NODES).filter((id) => NODES[id].at && mapOf(id) === 'nanling');
 const XIMO_PLACES = Object.keys(NODES).filter((id) => NODES[id].at && mapOf(id) === 'ximo');
+const BEIYUAN_PLACES = Object.keys(NODES).filter((id) => NODES[id].at && mapOf(id) === 'beiyuan');
 
 /** The marks: name, what it took, and the test. */
 export const FEATS = [
@@ -38,6 +39,16 @@ export const FEATS = [
   { id: 'steles', name: '讀碑', desc: '讀完沉沙古城的五塊石碑。', test: (s) => !!s.flags.steles_read },
   { id: 'jietian', name: '接天', desc: '打開星門，走進接天城的地宮。', test: (s) => !!s.flags.palace_seen },
   { id: 'ximo_all', name: '踏遍西漠', desc: '西漠的每個地方都去過（地宮和望河臺也算）。', test: (s) => XIMO_PLACES.every((id) => s.nodes[id]?.visited) },
+  // 北原 (0.23)
+  { id: 'beiyuan', name: '北上', desc: '翻過雁回嶺，到了北原。', test: (s) => !!s.flags.beiyuan_crossed },
+  { id: 'mine', name: '寒鐵', desc: '除了寒鐵礦深巷裡的冰蠶母。', test: (s) => s.vars.kills?.silk_queen > 0 },
+  { id: 'kun', name: '北冥有魚', desc: '看見北冥冰底下的那條魚。', test: (s) => !!s.flags.kun_seen },
+  { id: 'qilin', name: '靈脈結', desc: '讓靈脈裂谷的靈脈結露出來（餵也好，打也好）。', test: (s) => !!s.flags.node_open },
+  { id: 'qilin_fed', name: '麟趾', desc: '用三朵雪蓮，請冰麟讓開了靈脈結。', test: (s) => !!s.flags.qilin_fed },
+  { id: 'bailang', name: '天狼', desc: '打倒冰原上的白狼王。', test: (s) => s.vars.kills?.bailang_king > 0 },
+  { id: 'ape_king', name: '雪猿王', desc: '打倒雪山的雪猿王。', test: (s) => s.vars.kills?.ape_king > 0 },
+  { id: 'tianmen', name: '天門', desc: '在不周山的天門底下，找到一頁天機殘頁。', test: (s) => (s.sys.frags || []).includes('frag_snow') },
+  { id: 'beiyuan_all', name: '踏遍北原', desc: '北原的每個地方都去過（靈脈結、天鏡峰、不周山也算）。', test: (s) => BEIYUAN_PLACES.every((id) => s.nodes[id]?.visited) },
   { id: 'walk', name: '雲遊', desc: '走滿一百里路。', test: (s) => (s.world?.walked || 0) >= 100000 },
   { id: 'fly', name: '御風而行', desc: '第一次飛上天。', test: (s) => Object.keys(s.vars.flownBy || {}).length > 0 },
   { id: 'sword', name: '御劍', desc: '御劍飛行。', test: (s) => !!s.vars.flownBy?.sword },

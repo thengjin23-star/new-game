@@ -56,6 +56,12 @@ export const PASSIVES = {
     needs: { learn: ['houtu'] },
     stats: { def: 0.06, dmg: { el: { 土: 0.12 } } },
   },
+  hanpo: {
+    name: '寒魄', school: '法修',
+    desc: '寒魄訣的根底：水系招式傷害 +15%，冷卻 −10%。',
+    needs: { learn: ['hanpo'] },
+    stats: { dmg: { el: { 水: 0.15 } }, cd: { el: { 水: -0.1 } } },
+  },
   tongpi: {
     name: '銅皮鐵骨', school: '體修',
     desc: '筋骨打熬過：受到的傷害減少 8%。',

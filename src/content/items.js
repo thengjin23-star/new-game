@@ -407,6 +407,10 @@ export const ITEMS = {
     name: '寒鐵甲', kind: 'gear', slot: 'robe', sell: 240, stats: { def: 0.22, hp: 0.1, speed: -0.06 }, craft: { ls: 240, items: { hantie_ore: 6 } },
     desc: '寒鐵打的鱗甲，刀砍不進，箭射不穿，就是重：穿上它走路，慢上一截。也擋不住冷。',
   },
+  peng_feather: {
+    name: '鵬羽', kind: 'gear', slot: 'charm', sell: 0, keep: true, stats: { speed: 0.06, sense: 0.2, mpRegen: 0.3 },
+    desc: '六十年前落在北冥冰上的一根羽毛，比人還長，白中帶青。冰叟說，那是鯤化成鵬飛走的時候落下的。握著它，身子輕了，心也遠了。',
+  },
   bingpo_pearl: {
     name: '冰魄珠', kind: 'gear', slot: 'relic', sell: 0, keep: true, stats: { warm: 1, cool: 1, mp: 30, mpRegen: 0.5 },
     desc: '冰麟額下的一顆珠子，裡面封著一片永不融化的寒氣。戴著它，寒暑都近不了身：北原的冷、西漠的烈日，都繞著你走。',
@@ -470,6 +474,14 @@ export const ITEMS = {
   qin_token: {
     name: '落日關銅牌', kind: 'token', sell: 0, keep: true,
     desc: '一塊磨得發亮的銅牌，刻著「落日關　戍卒秦」。老秦守了四十年的關，就剩這個了。',
+  },
+  alan_knife: {
+    name: '紅繩獵刀', kind: 'token', sell: 0,
+    desc: '一把白狼部的獵刀，刀柄上纏著紅繩，刀刃上結著三年的霜。冰原東邊雪丘底下找到的。',
+  },
+  frozen_letter: {
+    name: '凍住的信', kind: 'token', sell: 0,
+    desc: '從冰原上一個凍死的礦工懷裡找到的信，信封上寫著：「青石鎮北，陳家小石收」。信封凍得發硬，沒有拆過。',
   },
   han_pack: {
     name: '韓三的包袱', kind: 'token', sell: 0,

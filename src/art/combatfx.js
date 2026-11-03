@@ -39,7 +39,7 @@ const ICE_DEEP = [70, 130, 190];
 const BOLT = [214, 228, 255];
 const BOLT_DEEP = [86, 118, 210];
 /** The light a move gathers into as you cast it. */
-const GLOW = { fire: FIRE, shield: [120, 170, 230], foeqi: FOE_QI, foxfire: FOX, mend: LEAF, iron: GOLD, sweep: GOLD, charge: GOLD, bloodqi: BLOOD, bloodring: BLOOD, blink: FOX, mirror: [246, 232, 170], bell: GOLD, feijian: QI, jianzhen: QI, vine: LEAF, frost: ICE, thunder: BOLT_DEEP, spikes: DUST, sandring: [196, 164, 110], sun: [250, 200, 90] };
+const GLOW = { fire: FIRE, shield: [120, 170, 230], foeqi: FOE_QI, foxfire: FOX, mend: LEAF, iron: GOLD, sweep: GOLD, charge: GOLD, bloodqi: BLOOD, bloodring: BLOOD, blink: FOX, mirror: [246, 232, 170], bell: GOLD, feijian: QI, jianzhen: QI, vine: LEAF, frost: ICE, thunder: BOLT_DEEP, spikes: DUST, sandring: [196, 164, 110], sun: [250, 200, 90], icespike: ICE };
 /** 西漠's: sand flung and whirled; the gold of a dead abbot's palm and beads; starlight from a stone guard's eyes. */
 const SAND = [196, 164, 110];
 const STAR = [196, 214, 255];

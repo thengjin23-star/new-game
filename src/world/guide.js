@@ -71,6 +71,40 @@ function ximoGoal(s) {
   return null;
 }
 
+/** 北原 (0.23): where its stories stand — the mine for 霍堡主, the 冰麟 on the knot of the veins, what sleeps under 北冥, 阿蘭's father, 顧遠's iron. */
+function beiyuanGoal(s) {
+  const f = s.flags;
+  const it = s.player.items;
+  const kills = s.vars.kills || {};
+  const n = s.nodes;
+  // the mine
+  if (kills.silk_queen > 0 && !f.cocoons_cut) return { key: 'by:cocoons', text: '寒鐵礦：深巷盡頭', why: '冰蠶母死了。巷道盡頭的石頂上，還吊著三個白色的繭。' };
+  if (kills.silk_queen > 0 && !f.mine_cleared) return { key: 'by:huo', text: '回寒鐵堡見霍堡主', why: '深巷裡的東西死了。回堡主府告訴霍堡主。' };
+  if (f.mine_deep_open && !(kills.silk_queen > 0)) return { key: 'by:queen', text: '寒鐵礦：深巷裡的冰蠶母', why: '冰蠶母在深巷盡頭：噴霜、在你腳下鋪冰、吐絲把你的腳凍在地上（凍住了就閃避掙脫），還會叫冰蠶出來。牠屬水，土的招式剋牠。' };
+  if (f.mine_asked && !f.mine_deep_open) return { key: 'by:deep', text: '寒鐵礦：深巷', why: '霍堡主請你下深巷看看。礦口在堡西門外；最深的那條巷道，口上釘著木板。夜裡去，聽得見歌聲。' };
+  // the rift
+  if ((f.qilin_fed || kills.ice_qilin > 0) && !f.hanyi_taught) return { key: 'by:hanyi', text: '回石洞見寒衣', why: '靈脈結露出來了。去崖腳下的石洞告訴寒衣。' };
+  if (f.hanyi_met && !f.node_open) {
+    const lotus = it.xuelian || 0;
+    if (lotus >= 3) return { key: 'by:feed', text: '靈脈裂谷：把雪蓮給冰麟', why: '三朵雪蓮夠了。走近靈脈結，冰麟會過來看你。' };
+    return { key: 'by:lotus', text: `採雪蓮（${lotus}/3）`, why: '寒衣說，冰麟喜歡雪蓮，三朵。天鏡峰頂的冰鏡縫裡最多（只有會飛的上得去）；雪山、斷雲崖上偶爾也採得到。或者，拔劍——牠是北原最強的妖獸。' };
+  }
+  // 北冥
+  if (f.kun_seen && !f.bingsou_told) return { key: 'by:bingsou', text: '北冥：回漁屋見冰叟', why: '你看見了冰底下的那條魚。告訴冰叟。' };
+  if (f.bingsou_met && !f.kun_seen) return { key: 'by:kun', text: '北冥：冰心', why: '冰叟說北冥底下睡著一條魚。到北冥正中的冰心看看——夜裡去，或者放出神識往下探（築基）。冰面上顏色發黑的地方是薄冰；夜裡，冰上有雪魄。' };
+  // 阿蘭's father
+  if (it.alan_knife > 0 && !f.alan_closure) return { key: 'by:alan', text: '白狼部：把獵刀還給阿蘭', why: '那把纏紅繩的獵刀，是阿蘭阿爹的。' };
+  if (f.alan_asked && !f.alan_closure) return { key: 'by:remains', text: '冰原東邊：找阿蘭的阿爹', why: '阿蘭的阿爹三年前往冰原東邊追白狼王，再也沒回來。白狼王就在那一帶，小牛那麼大，會叫狼群——小心。' };
+  // 顧遠's iron
+  if (f.mine_cleared && f.guyuan_met && !f.guyuan_done) return { key: 'by:guyuan', text: '寒鐵堡：顧遠', why: '礦開了。酒館裡的顧遠，可以買鐵回青雲宗了。' };
+  // where they start
+  if (n.hantie_fort?.visited && !f.mine_asked && !f.mine_cleared) return { key: 'by:fort', text: '寒鐵堡：堡主府', why: '寒鐵堡的礦停了一半，堡主霍堡主好像有事發愁。' };
+  if (n.lingmai_rift?.visited && !f.hanyi_met) return { key: 'by:cave', text: '靈脈裂谷：石洞', why: '裂谷崖腳下有一個石洞，洞口掛著獸皮，透出火光。' };
+  if (n.bailang_camp?.visited && !f.alan_asked && !f.alan_closure) return { key: 'by:camp', text: '白狼部：阿蘭', why: '營火邊削箭桿的姑娘，身邊立著一張比她還高的弓。' };
+  if (n.beiming?.visited && !f.bingsou_met) return { key: 'by:hut', text: '北冥：冰叟', why: '北冥岸邊的冰洞旁，坐著一個釣魚的老人。' };
+  return null;
+}
+
 /**
  * What you could do next: { key, text, why } (or null while the opening
  * still leads you by the hand). The first that applies, from what cannot
@@ -111,7 +145,7 @@ export function nextGoal(s) {
   }
   // where the stories of the land you are in stand
   if (away) {
-    const g = s.world.map === 'ximo' ? ximoGoal(s) : nanlingGoal(s);
+    const g = (s.world.map === 'ximo' ? ximoGoal : s.world.map === 'beiyuan' ? beiyuanGoal : nanlingGoal)(s);
     if (g) return g;
   }
   // the work you took

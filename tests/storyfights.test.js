@@ -66,8 +66,9 @@ test('every fight in the stories is fought where you stand: those in it exist an
     }
   }
   // (23 from the story; 3 more, the rounds of the sect's 大比; 3 in each 秘境; a 獸潮 and a treasure out of the sky;
-  // 南嶺's: 阿水 in the 白絲洞; and 西漠's: 沙盜 on the caravan road, 禿鷲 in his fort, the 石翁仲 at the 星門)
-  assert.equal(n, 38);
+  // 南嶺's: 阿水 in the 白絲洞; 西漠's: 沙盜 on the caravan road, 禿鷲 in his fort, the 石翁仲 at the 星門;
+  // and 北原's: the 冰麟 on the knot of the veins)
+  assert.equal(n, 39);
   for (const f of Object.values(FOES)) for (const [, item] of f.loot || []) assert.ok(ITEMS[item], `loot ${item}`);
 });
 

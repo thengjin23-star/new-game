@@ -18,6 +18,8 @@ export const RECIPES = {
   zhuji_pill: { in: { ziyun_zhi: 2, blood_ginseng: 2, beast_core: 3, lake_pearl: 1 }, out: 1, mp: 30, zone: 0.14, known: 'recipe_zhuji', min: 2 },
   // 南嶺: 阿蘿's way with the miasma
   bizhang_pill: { in: { zhangling_zhi: 2, toad_venom: 1 }, out: 2, mp: 10, zone: 0.22, known: 'recipe_bizhang' },
+  // 北原: 寒衣's, for one about to form 金丹
+  ningjin_pill: { in: { lingsui: 1, xuelian: 2, beast_core: 2 }, out: 1, mp: 40, zone: 0.12, known: 'recipe_ningjin', min: 2 },
 };
 
 /**

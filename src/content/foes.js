@@ -527,7 +527,7 @@ export const FOES = {
     name: '冰麟', el: '水', hp: 2, atk: 1.3, boss: true, loot: [[1, 'qilin_horn', 1], [1, 'lingsui', 2], [1, 'bingpo_pearl', 1]],
     rt: {
       tier: 2, speed: 172, walk: 0, sight: 260, lose: 560, loseT: 2, leash: 520, body: 20, bulk: 0.7, tall: 44,
-      notice: 0.9, moves: ['qilinhorn', 'icebreath', 'qilincharge'],
+      notice: 0.9, moves: ['qilinhorn', 'icebreath', 'qilincharge'], talk: 150,
       phases: [
         { at: 0.65, moves: ['qilinhorn', 'icespikes', 'icebreath', 'qilincharge', 'frostnova'], line: '冰麟昂起頭，身上的鱗片一片一片亮起藍光——靈脈的光！' },
         { at: 0.3, enrage: true, line: '冰麟發出一聲像玉磬一樣的長鳴，四周的空氣都凍住了——牠發狂了！' },

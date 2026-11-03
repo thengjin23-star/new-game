@@ -124,6 +124,12 @@ export const MOVES = {
     mastery: [[4, { radius: 104 }], [5, { stun: 1 }]],
     desc: '身後升起一輪金色的大日，光往四面八方照出去：一圈之內的敵人一起受傷、踉蹌；陰屍鬼物被照中，傷得最重。屬火。',
   },
+  hanyu: {
+    name: '冰魄寒獄', school: '法修', el: '水', aim: 'bolt', mp: 12, cd: 8, cast: 0.35, range: 260, radius: 56, mult: 1.35, stun: 0.3, chill: [3.5, 0.5], fx: 'icespike',
+    learn: ['hanpo'],
+    mastery: [[4, { radius: 66 }], [5, { chill: [4.5, 0.45] }]],
+    desc: '一掌按地，指定的地方冰刺破土而出：一圈之內的敵人一起受傷，凍得手腳發僵，三息多之內，走、撲、出招都慢上一半。屬水。',
+  },
   sweep: {
     name: '掃腿', school: '體修', el: '土', aim: 'around', mp: 0, cd: 5, cast: 0.16, radius: 58, mult: 0.6, stun: 0.9, fx: 'sweep', realm: 0,
     learn: ['wild_boxing'], gengu: 6,

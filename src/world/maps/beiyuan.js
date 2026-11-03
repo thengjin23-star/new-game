@@ -332,6 +332,8 @@ const POIS = [
   { id: 'bm_middle', region: 'beiming', x: 1220, y: 2150, name: '冰心', verb: '查看', text: '北冥的正中。腳下的冰透明得像琉璃，底下黑沉沉的，什麼也看不見。' },
   // 白狼部
   { id: 'bl_fire', region: 'bailang_camp', x: 4180, y: 2975, name: '營火', verb: '烤火', rest: true, glow: () => true, text: '營火燒的是牛糞和松枝，火苗不高，熱氣卻一直透到骨頭裡。' },
+  // 冰原: a mound of snow out east, where the 白狼王 runs (what is under it: content/events/beiyuan.js bl_remains)
+  { id: 'bl_remains', region: 'bingyuan', x: 4880, y: 2380, name: '雪丘', verb: '查看', text: '一個小小的雪丘，雪底下露出一截白骨，和一張斷了的弓。' },
   // 斷雲崖
   { id: 'dy_icefall', region: 'duanyun_cliffs', x: 700, y: 1240, name: '冰瀑', verb: '查看', text: '崖口掛著一道凍住的瀑布，一丈多寬，十幾丈高，冰柱一根挨著一根，像一面倒掛的琴。' },
   // 雪山
@@ -340,7 +342,15 @@ const POIS = [
   { id: 'tj_mirror', region: 'tianjing_peak', x: 2620, y: 770, name: '冰鏡', verb: '查看', text: '峰頂是一整塊平滑的冰，亮得照得見人影。冰縫裡開著雪白的花，一朵一朵，像落在冰上的月光。' },
   // 靈脈裂谷
   { id: 'lm_cave', region: 'lingmai_rift', x: 3880, y: 1000, name: '石洞', verb: '查看', sprite: 'cave', text: '崖腳下一個石洞，洞口掛著一張獸皮當門簾，簾子底下透出火光。' },
-  { id: 'lm_vein', region: 'lingmai_rift', x: 4120, y: 1010, name: '靈脈', verb: '查看', text: '石縫裡湧出藍光，一縷一縷，像水裡的煙。光的盡頭，裂谷的正中，伏著一團白色的東西。' },
+  {
+    id: 'lm_vein', region: 'lingmai_rift', x: 4120, y: 1010, name: '靈脈', verb: '查看',
+    text: (s) =>
+      s.flags.node_open
+        ? s.flags.qilin_fed
+          ? '藍光從裂谷正中的靈脈結裡湧出來。崖腳下，冰麟伏在雪裡，半閉著眼，看你一眼，又閉上了。'
+          : '藍光從裂谷正中的靈脈結裡湧出來，一縷一縷，像水裡的煙。結上空蕩蕩的。'
+        : '石縫裡湧出藍光，一縷一縷，像水裡的煙。光的盡頭，裂谷的正中，伏著一團白色的東西。',
+  },
   // 不周山
   { id: 'bz_gate', region: 'buzhou', x: 900, y: 480, name: '天門', verb: '查看', text: '一道石門，孤零零地立在斷口上。門的這一邊是雪，那一邊也是雪。可是門裡，看不見那一邊。' },
   // 北原雪野
@@ -373,7 +383,8 @@ const BEASTS = [
   { id: 'silk_queen_a', kind: 'silk_queen', title: '冰蠶母', x: 1680, y: 3480, r: 90, respawn: 999, power: 640, cond: (s) => !!s.flags.mine_deep_open && !killed(s, 'silk_queen') },
   { id: 'snow_wraiths_a', kind: 'snow_wraith', n: 2, title: '雪魄', x: 950, y: 2050, r: 150, respawn: 5, power: 400, cond: dark },
   { id: 'snow_wraiths_b', kind: 'snow_wraith', n: 2, title: '雪魄', x: 1550, y: 2350, r: 150, respawn: 5, power: 400, cond: dark },
-  { id: 'ice_qilin_a', kind: 'ice_qilin', title: '冰麟', x: 4120, y: 880, r: 110, respawn: 999, power: 900, cond: (s) => !s.flags.node_open && !killed(s, 'ice_qilin') },
+  // (it comes to look at you before anything: content/events/beiyuan.js lm_qilin — feed it, fight it, or back away)
+  { id: 'ice_qilin_a', kind: 'ice_qilin', title: '冰麟', x: 4120, y: 880, r: 110, event: 'lm_qilin', respawn: 999, power: 900 },
 ];
 
 export const BEIYUAN_PLACES = { STRUCTURES, POIS, BEASTS };

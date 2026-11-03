@@ -77,6 +77,16 @@ export const TECHS = {
     mindGuard: 0.3,
     desc: '沙陀寺藏經窟裡的佛門心法，枯禪一脈的根本。心如大日，照破長夜：進境快，心魔也難近身。身具火靈根者修習，事半功倍。學會之後，也使得出「大日輪」。',
   },
+  hanpo: {
+    name: '寒魄訣',
+    kind: 'cultivate',
+    grade: '玄品下',
+    mult: 1.65,
+    element: '水',
+    elemBonus: 0.3,
+    mindGuard: 0.2,
+    desc: '靈脈裂谷的寒衣，在冰下坐了四十年悟出的心法：心如寒潭，萬念沉底。進境快，練成了，北原的寒氣也近不了你幾分。身具水靈根者修習，事半功倍。學會之後，也使得出「冰魄寒獄」。',
+  },
   qingyuan_sword: {
     name: '青元劍訣',
     kind: 'combat',

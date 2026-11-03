@@ -2326,6 +2326,8 @@ function release(s, C, a, io) {
       hurtBeast(s, C, b, me.atk * k.mult * boost, io, { kind: k.fx === 'thunder' ? 'spirit' : 'phys', el, of: k.fx });
       if (s.pending || s.dead) return;
       if (alive(b)) stagger(b, k.stun || 0, [(b.x - px) / d, (b.y - py) / d, k.push ?? 8]);
+      // (冰魄寒獄) frozen where it stood: slow a while
+      if (k.chill && alive(b)) chill(C, b, k.chill);
     }
   } else if (k.aim === 'seek') {
     // flames fanning out, each finding its own way
