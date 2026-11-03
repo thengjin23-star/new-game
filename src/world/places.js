@@ -99,6 +99,8 @@ export let STRUCTURES = [
   // 野地裡的路邊建築
   { x: 3430, y: 2945, w: 60, h: 36, sprite: 'teashed' },
   { x: 2840, y: 2268, w: 44, h: 36, sprite: 'shrine_small' },
+  // (0.23) 鎮南田野: the 陳 family's farmhouse, out among the fields
+  { x: 2050, y: 3540, w: 66, h: 42, sprite: 'farmhouse' },
   // the boundary stone at the top of the pass to 南嶺
   { x: 2672, y: 4436, w: 30, h: 22, sprite: 'stele', block: false },
 ];
@@ -215,6 +217,15 @@ export let POIS = [
   { id: 'find_lookout', region: 'qingshi_hill', x: 2070, y: 2430, name: '觀景石', verb: '查看', hidden: { r: 90 }, treasure: { text: '你爬上一塊突出的巨石。往南看，青石鎮的炊煙像幾根細線；往北看，黑風林像一團化不開的墨。\n\n你在石頭上坐到日落。', effects: [['insight', 1], ['mind', 2]] } },
   { id: 'find_quiver', region: 'wilds', x: 620, y: 3320, name: '遺落的箭袋', verb: '查看', hidden: { r: 90 }, treasure: { text: '草叢裡躺著一個破舊的箭袋，箭早就沒了，夾層裡還塞著幾塊靈石。', effects: [['ls', 8]] } },
   { id: 'find_jar', region: 'farmland', x: 2760, y: 3880, name: '田埂下的瓦罐', verb: '查看', hidden: { r: 80 }, treasure: { text: '田埂塌了一角，露出一個瓦罐。罐子裡有一小包用油紙包著的東西。', effects: [['ls', 15]] } },
+  // (0.23) the fields and the wilds, filled in: the 陳 family (a father gone north to the mines), a land
+  // god's shrine in the dykes, an old 散修's hut, a sword's grave with no name on it
+  {
+    id: 'chen_house', region: 'farmland', x: 2050, y: 3600, name: '陳家', verb: '查看',
+    text: (s) => (s.flags.chen_letter ? '陳家的柴門開著。院子裡曬著衣裳，小石在餵雞，看見你，朝你揮了揮手。' : '一間孤零零的農舍，柴門半掩。門口的石墩上，坐著一個十來歲的孩子，望著北邊。'),
+  },
+  { id: 'find_landgod', region: 'farmland', x: 1750, y: 3700, name: '田埂邊的土地廟', verb: '查看', hidden: { r: 90 }, treasure: { text: '田埂邊有一座小小的土地廟，只比膝蓋高一點。廟裡的土地公缺了一隻耳朵，笑瞇瞇的；供桌上擺著一碗冷飯，飯上插著三根燒完的香。\n\n你蹲下來，把歪了的香爐扶正。一陣風吹過稻田，沙沙地響，像是有人在笑。', effects: [['mind', 3], ['insight', 1]] } },
+  { id: 'wd_hut', region: 'wilds', x: 3000, y: 2750, name: '草屋', verb: '拜訪', hidden: { r: 110 } },
+  { id: 'find_grave', region: 'wilds', x: 1700, y: 4150, name: '無名劍冢', verb: '查看', hidden: { r: 90 }, treasure: { text: '荒草裡一個小小的土丘，土丘上插著一把劍，鏽得只剩一個劍的樣子。沒有碑，也沒有名字。\n\n你對著它站了一會兒。劍身上的鏽裡，隱隱還有一道劍意，冷冷的，不肯散。', effects: [['insight', 2], ['mind', 2]] } },
   { id: 'find_niche', region: 'black_forest', x: 3100, y: 1300, name: '林中石龕', verb: '查看', hidden: { r: 90 }, treasure: { text: '一座長滿青苔的小石龕，裡面供著一個小瓷瓶。瓶上沒有字。', effects: [['item', 'juqi_pill', 1]] } },
   { id: 'find_bones', region: 'ancient_ruins', x: 3300, y: 950, name: '盤坐的骸骨', verb: '查看', hidden: { r: 90 }, treasure: { text: '一具骸骨盤坐在斷牆下，像是在等什麼人。骨頭邊上放著一個布包。\n\n你向它拜了拜，拿走了布包。', effects: [['item', 'mystery', 1], ['mind', -1]] } },
   { id: 'find_riverstone', region: 'wilds', x: 4480, y: 2300, name: '江邊的釣魚石', verb: '查看', hidden: { r: 90 }, treasure: { text: '江邊有一塊被磨得光滑的大石頭，上面刻著一行小字：「釣不到魚，也是好的。」\n\n你在石頭上坐了一下午。江水很寬，寬得看不見對岸。', effects: [['mind', 4]] } },

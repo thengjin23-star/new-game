@@ -353,6 +353,8 @@ const POIS = [
   },
   // 不周山
   { id: 'bz_gate', region: 'buzhou', x: 900, y: 480, name: '天門', verb: '查看', text: '一道石門，孤零零地立在斷口上。門的這一邊是雪，那一邊也是雪。可是門裡，看不見那一邊。' },
+  // 北原雪野: by the road from the pass to the fort, a man sitting against a rock (content/events/beiyuan.js by_frozen_miner)
+  { id: 'frozen_man', region: 'beiyuan_wilds', x: 2760, y: 3960, name: '大石頭', verb: '查看', hidden: { r: 140 }, text: '路邊一塊大石頭，背風的那一面，雪壘得高高的。' },
   // 北原雪野
   { id: 'bw_post', region: 'beiyuan_wilds', x: 2640, y: 2540, name: '路標', verb: '查看', text: '一根木杆，杆上釘著三塊木牌：西，北冥；北，雪山；東，白狼部。牌子底下還有一行小字：「莫夜行」。' },
 ];

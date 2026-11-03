@@ -101,6 +101,11 @@ function beiyuanGoal(s) {
   if (f.alan_asked && !f.alan_closure) return { key: 'by:remains', text: '冰原東邊：找阿蘭的阿爹', why: '阿蘭的阿爹三年前往冰原東邊追白狼王，再也沒回來。白狼王就在那一帶，小牛那麼大，會叫狼群——小心。' };
   // 顧遠's iron
   if (f.mine_cleared && f.guyuan_met && !f.guyuan_done) return { key: 'by:guyuan', text: '寒鐵堡：顧遠', why: '礦開了。酒館裡的顧遠，可以買鐵回青雲宗了。' };
+  // 小石's father (東荒's 陳家)
+  if (f.chen_met && !f.frozen_found && !f.chen_letter)
+    return f.huo_chen
+      ? { key: 'by:chen', text: '雪嶺口到寒鐵堡的路邊', why: '霍堡主說，老陳一個多月前冒著大雪翻嶺回家。下嶺那條路，留意路邊。' }
+      : { key: 'by:chen', text: '寒鐵堡：問問老陳', why: '鎮南陳家的男人三年前來寒鐵堡挖礦，好幾個月沒有信了。問問霍堡主。' };
   // where they start
   if (n.hantie_fort?.visited && !f.mine_asked && !f.mine_cleared) return { key: 'by:fort', text: '寒鐵堡：堡主府', why: '寒鐵堡的礦停了一半，堡主霍堡主好像有事發愁。' };
   if (n.lingmai_rift?.visited && !f.hanyi_met) return { key: 'by:cave', text: '靈脈裂谷：石洞', why: '裂谷崖腳下有一個石洞，洞口掛著獸皮，透出火光。' };
@@ -166,6 +171,8 @@ export function nextGoal(s) {
     const w = taken[0];
     return { key: `work:${w.key}`, text: `差事：${w.title}（${w.have}/${w.need}）`, why: Q.askOf(w) };
   }
+  // (0.23) a dead man's letter, carried home from the north
+  if (s.player.items.frozen_letter > 0 && !away) return { key: 'chen', text: '鎮南田野：陳家', why: '那封凍住的信，寫著「青石鎮南，陳家小石收」。' };
   // 築基: the chapter's end is across the river
   if (p.realm >= 2 && !s.flags.chapter1_done && !away) return { key: 'ferry', text: '白鶴渡：渡江', why: '築基了，白鶴渡的老船夫肯載你過江了——那是第一章的終點。走之前，想見的人先見一見；渡過江，還可以回到東荒繼續走。' };
   // (0.22) 老秦 has waited forty years for the beacon at 西風口 to answer his

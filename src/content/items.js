@@ -481,7 +481,7 @@ export const ITEMS = {
   },
   frozen_letter: {
     name: '凍住的信', kind: 'token', sell: 0,
-    desc: '從冰原上一個凍死的礦工懷裡找到的信，信封上寫著：「青石鎮北，陳家小石收」。信封凍得發硬，沒有拆過。',
+    desc: '從北原雪地裡一個凍死的礦工懷裡找到的信，信封上寫著：「青石鎮南，陳家小石收」。信封凍得發硬，沒有拆過。',
   },
   han_pack: {
     name: '韓三的包袱', kind: 'token', sell: 0,
