@@ -35,6 +35,8 @@ const FRAG = /* glsl */ `
 ${GLSL_LIGHT}
 uniform sampler2D uAtlas;
 uniform float uGhost;
+uniform float uRim;
+uniform vec2 uTexel;
 varying vec2 vUv;
 varying float vAlpha;
 varying vec3 vWorld;
@@ -52,10 +54,20 @@ void main() {
   // fading out (vAlpha) fades, not breaks up
   // (eased inward only: nothing shows that a hard cut-off hid — a faint shadow painted under a tree stays unseen)
   float w = clamp(fwidth(c.a), 0.03, 0.12);
-  float edge = smoothstep(0.42, 0.42 + 1.5 * w, c.a) * vAlpha;
-  if (edge < 0.03 || vSeen < 0.3) discard;
+  float body = smoothstep(0.42, 0.42 + 1.5 * w, c.a);
+  float edge = body * vAlpha;
+  // (0.24) on snow, an ink rim just outside each figure, so a white wolf is not lost on white ground
+  float rim = 0.0;
+  if (uRim > 0.0) {
+    vec2 o = uTexel * 1.6;
+    float nb = max(max(texture2D(uAtlas, vUv + vec2(o.x, 0.0)).a, texture2D(uAtlas, vUv - vec2(o.x, 0.0)).a), max(texture2D(uAtlas, vUv + vec2(0.0, o.y)).a, texture2D(uAtlas, vUv - vec2(0.0, o.y)).a));
+    rim = smoothstep(0.35, 0.7, nb) * (1.0 - body) * vAlpha * uRim;
+  }
+  float cover = edge + rim * (1.0 - edge);
+  if (cover < 0.03 || vSeen < 0.3) discard;
   vec3 col = c.rgb * (uAmbient + uSunColor * 0.9);
-  gl_FragColor = vec4(haze(col, vWorld), edge);
+  col = (col * edge + vec3(0.17, 0.16, 0.16) * rim * (1.0 - edge)) / cover;
+  gl_FragColor = vec4(haze(col, vWorld), cover);
 }
 `;
 
@@ -101,7 +113,7 @@ export function createCards(env, renderer, { size = 1024, rows = 0, slot = 128, 
   const material = new THREE.ShaderMaterial({
     vertexShader: VERT,
     fragmentShader: FRAG,
-    uniforms: { ...env.u, uAtlas: { value: tex }, uGhost: { value: 0 } },
+    uniforms: { ...env.u, uAtlas: { value: tex }, uGhost: { value: 0 }, uTexel: { value: new THREE.Vector2(1 / size, 1 / height) } },
     side: THREE.DoubleSide,
     transparent: true,
     depthWrite: true,
@@ -114,7 +126,7 @@ export function createCards(env, renderer, { size = 1024, rows = 0, slot = 128, 
   const ghostMat = new THREE.ShaderMaterial({
     vertexShader: VERT,
     fragmentShader: FRAG,
-    uniforms: { ...env.u, uAtlas: material.uniforms.uAtlas, uGhost: { value: 1 } },
+    uniforms: { ...env.u, uAtlas: material.uniforms.uAtlas, uGhost: { value: 1 }, uTexel: material.uniforms.uTexel },
     side: THREE.DoubleSide,
     transparent: true,
     depthTest: false,

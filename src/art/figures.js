@@ -53,7 +53,8 @@ export function groundShadow(ctx, x, y, rx, ry, a = 0.22) {
 }
 
 /**
- * A person. opts: { t (seconds), moving, face (-1|1), sit, alpha, scale }.
+ * A person. opts: { t (seconds), moving, face (-1|1), sit, alpha, scale, hurt (0..1: (0.24) struck — thrown back
+ * from the feet up, the sleeves flung out) }.
  */
 export function drawPerson(ctx, x, y, look, opts = {}) {
   const { t = 0, moving = false, face = 1, sit = false, alpha = 1 } = opts;
@@ -67,6 +68,8 @@ export function drawPerson(ctx, x, y, look, opts = {}) {
   groundShadow(ctx, 0, 0, sit ? 10 : 7.5, 2.6);
   if (sit) return seated(ctx, look, t), ctx.restore();
   ctx.translate(0, -bob);
+  const hurt = opts.hurt || 0;
+  if (hurt) ctx.rotate(-face * 0.34 * hurt);
   // legs
   ctx.strokeStyle = rgba(INK, 0.9);
   ctx.lineWidth = 1.8;
@@ -125,7 +128,7 @@ export function drawPerson(ctx, x, y, look, opts = {}) {
   for (const s of [-1, 1]) {
     ctx.save();
     ctx.translate(s * 4.5, -23);
-    ctx.rotate(s * 0.15 + (moving ? -s * ph * 0.35 : 0));
+    ctx.rotate(s * 0.15 + (moving ? -s * ph * 0.35 : 0) - s * 1.25 * hurt);
     ctx.beginPath();
     ctx.ellipse(0, 6, 2.6, 6.5, 0, 0, Math.PI * 2);
     ctx.fill();

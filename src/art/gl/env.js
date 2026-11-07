@@ -100,6 +100,8 @@ export function createEnv() {
     uCot: { value: 0.8 },
     // (0.24) where you stand (x, z, on): crowns between you and the eye thin out so you can be seen
     uMe: { value: new THREE.Vector3(0, 0, 0) },
+    // (0.24) how dark a rim to ink round the figures (on snow: so the white ones stand out)
+    uRim: { value: 0 },
     // marks painted on the ground near you (a beast's coming blow, where your spell will go):
     // the picture, and where it lies (x0, z0, span, on)
     uMarks: { value: null },

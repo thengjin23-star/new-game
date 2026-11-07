@@ -121,7 +121,8 @@ export function paintBeast(ctx, b, t, now, { tint = true, pic = null } = {}) {
   const struck = b.hitT !== undefined ? 1 - (now - b.hitT) / 0.14 : 0;
   if (struck > 0 && st !== 'dead') {
     ctx.translate(-b.face * 3.5 * struck, 0);
-    ctx.scale(1 - 0.06 * struck, 1 + 0.04 * struck);
+    // (a person is drawn thrown back instead: see personOf)
+    if (!person) ctx.scale(1 - 0.06 * struck, 1 + 0.04 * struck);
   }
   // about to be somewhere else: fading as it gathers itself
   if (st === 'windup' && M?.shape === 'blink') ctx.globalAlpha *= 1 - 0.75 * p;
@@ -187,7 +188,10 @@ function personOf(ctx, b, t, now, p) {
     return;
   }
   if (st === 'dead') return drawPose(ctx, P.look, 'lie', { t, face });
-  drawPerson(ctx, 0, 0, P.look, { t, moving: b.moving || st === 'leap', face });
+  // (0.24) a blow landing throws him back from the feet up, his sleeves flung out
+  const struck = b.hitT !== undefined ? Math.max(0, 1 - (now - b.hitT) / 0.24) : 0;
+  const reel = st === 'flinch' ? Math.max(0, 1 - b.st / 0.3) : 0;
+  drawPerson(ctx, 0, 0, P.look, { t, moving: b.moving || st === 'leap', face, hurt: Math.max(struck, reel) });
   const k = P.look.big ? 1.15 : 1;
   ctx.save();
   ctx.scale(k, k);
@@ -226,7 +230,9 @@ export function paintHero(ctx, look, h, t, now, { tint = true } = {}) {
   const a = h.act;
   ctx.save();
   if (h.dash) ctx.rotate(face * 0.24);
-  drawPerson(ctx, 0, 0, look, { t, moving: h.moving || !!h.dash, face });
+  // (0.24) hit: thrown back a moment
+  const hurt = h.flashT !== undefined && !a ? Math.max(0, 1 - (now - h.flashT) / 0.26) : 0;
+  drawPerson(ctx, 0, 0, look, { t, moving: h.moving || !!h.dash, face, hurt });
   if (a) {
     const p = a.at > 0 ? Math.min(1, a.t / a.at) : 1;
     const after = Math.max(0, (a.t - a.at) / Math.max(0.05, a.dur - a.at));
