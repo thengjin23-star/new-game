@@ -48,9 +48,14 @@ void main() {
     gl_FragColor = vec4(mix(c.rgb, vec3(0.16, 0.15, 0.14), 0.55), 0.42 * vAlpha);
     return;
   }
-  if (a < 0.42 || vSeen < 0.3) discard;
+  // (0.24) the edge eased over about a pixel of the screen, not cut (no staircase round a figure); a card
+  // fading out (vAlpha) fades, not breaks up
+  // (eased inward only: nothing shows that a hard cut-off hid — a faint shadow painted under a tree stays unseen)
+  float w = clamp(fwidth(c.a), 0.03, 0.12);
+  float edge = smoothstep(0.42, 0.42 + 1.5 * w, c.a) * vAlpha;
+  if (edge < 0.03 || vSeen < 0.3) discard;
   vec3 col = c.rgb * (uAmbient + uSunColor * 0.9);
-  gl_FragColor = vec4(haze(col, vWorld), 1.0);
+  gl_FragColor = vec4(haze(col, vWorld), edge);
 }
 `;
 
@@ -98,6 +103,8 @@ export function createCards(env, renderer, { size = 1024, rows = 0, slot = 128, 
     fragmentShader: FRAG,
     uniforms: { ...env.u, uAtlas: { value: tex }, uGhost: { value: 0 } },
     side: THREE.DoubleSide,
+    transparent: true,
+    depthWrite: true,
   });
   const mesh = new THREE.Mesh(quad, material);
   mesh.frustumCulled = false;
@@ -113,9 +120,19 @@ export function createCards(env, renderer, { size = 1024, rows = 0, slot = 128, 
     depthTest: false,
     depthWrite: false,
   });
+  // (its own copy of the see-through few: the main draw goes far to near, whoever they are)
   const ghostGeo = new THREE.InstancedBufferGeometry();
   ghostGeo.index = quad.index;
-  for (const name of ['position', 'aPos', 'aSize', 'aRect', 'aAlpha']) ghostGeo.setAttribute(name, quad.getAttribute(name));
+  ghostGeo.setAttribute('position', quad.getAttribute('position'));
+  const gPos = new THREE.InstancedBufferAttribute(new Float32Array(max * 3), 3);
+  const gSize = new THREE.InstancedBufferAttribute(new Float32Array(max * 4), 4);
+  const gRect = new THREE.InstancedBufferAttribute(new Float32Array(max * 4), 4);
+  const gAlpha = new THREE.InstancedBufferAttribute(new Float32Array(max), 1);
+  for (const a of [gPos, gSize, gRect, gAlpha]) a.setUsage(THREE.DynamicDrawUsage);
+  ghostGeo.setAttribute('aPos', gPos);
+  ghostGeo.setAttribute('aSize', gSize);
+  ghostGeo.setAttribute('aRect', gRect);
+  ghostGeo.setAttribute('aAlpha', gAlpha);
   ghostGeo.instanceCount = 0;
   const ghost = new THREE.Mesh(ghostGeo, ghostMat);
   ghost.frustumCulled = false;
@@ -208,21 +225,36 @@ export function createCards(env, renderer, { size = 1024, rows = 0, slot = 128, 
       if (!ready && renderer.properties.get(tex).__webglTexture && !tex.needsUpdate) ready = true;
       pending.length = 0;
       const n = Math.min(max, items.length);
-      // see-through cards go first so the ghost pass can draw just those
-      items.sort((a, b) => b.seeThrough - a.seeThrough);
+      // far ones first (the camera looks north): a soft edge falls on what stands behind it
+      // (more than the layer holds: the see-through ones — you, those beside you — are kept)
+      if (items.length > max) {
+        items.sort((a, b) => b.seeThrough - a.seeThrough);
+        items.length = max;
+      }
+      items.sort((a, b) => a.y - b.y);
       let ghosts = 0;
       for (let k = 0; k < n; k++) {
         const it = items[k];
-        if (it.seeThrough) ghosts++;
         const sx = (it.sl.n % per) * slot;
         const sy = Math.floor(it.sl.n / per) * slot;
+        const r0 = sx / size;
+        const r1 = 1 - (sy + slot) / height;
+        const r2 = (sx + slot) / size;
+        const r3 = 1 - sy / height;
         aPos.setXYZ(k, it.x, it.ground, it.y);
         // the whole slot is the card; its foot is footPad up from the bottom middle
         aSize.setXYZW(k, unit, unit, 0.5, it.footPad / unit);
-        aRect.setXYZW(k, sx / size, 1 - (sy + slot) / height, (sx + slot) / size, 1 - sy / height);
+        aRect.setXYZW(k, r0, r1, r2, r3);
         aAlpha.setX(k, it.alpha);
+        if (it.seeThrough) {
+          gPos.setXYZ(ghosts, it.x, it.ground, it.y);
+          gSize.setXYZW(ghosts, unit, unit, 0.5, it.footPad / unit);
+          gRect.setXYZW(ghosts, r0, r1, r2, r3);
+          gAlpha.setX(ghosts, it.alpha);
+          ghosts++;
+        }
       }
-      for (const a of [aPos, aSize, aRect, aAlpha]) a.needsUpdate = true;
+      for (const a of [aPos, aSize, aRect, aAlpha, gPos, gSize, gRect, gAlpha]) a.needsUpdate = true;
       quad.instanceCount = n;
       ghostGeo.instanceCount = ghosts;
     },

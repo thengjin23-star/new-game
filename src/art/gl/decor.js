@@ -56,11 +56,15 @@ varying float vShade;
 varying float vClear;
 void main() {
   vec4 c = texture2D(uAtlas, vUv);
-  if (c.a < 0.45 || vSeen < 0.25) discard;
+  // (0.24) the edge eased over about a pixel of the screen, not cut: no staircase round a leaf or a trunk
+  // (eased inward only: nothing shows that a hard cut-off hid — a faint shadow painted under a tree stays unseen)
+  float w = clamp(fwidth(c.a), 0.03, 0.12);
+  float edge = smoothstep(0.45, 0.45 + 1.5 * w, c.a);
+  if (edge < 0.03 || vSeen < 0.25) discard;
   // on a fight's ground, only a ghost of the tree stays
   if (vClear > 0.5 && mod(floor(gl_FragCoord.x) + floor(gl_FragCoord.y) * 2.0, 4.0) > 0.5) discard;
   vec3 col = c.rgb * (uAmbient + uSunColor * 0.9) * vShade;
-  gl_FragColor = vec4(haze(col, vWorld), 1.0);
+  gl_FragColor = vec4(haze(col, vWorld), edge);
 }
 `;
 
@@ -89,6 +93,8 @@ export function createDecor(env) {
   const g = world();
   // the trees of the wild, and the great trees that stand as landmarks
   const items = [...g.decor, ...STRUCTURES.map((st, i) => ({ st, i })).filter(({ st }) => GREAT_TREES.has(st.sprite)).map(({ st, i }) => ({ kind: 'big', v: i, st, x: st.x, y: st.y + st.h / 2, s: 1 }))];
+  // far ones first (the camera looks north): a soft edge then falls on what stands behind it
+  items.sort((a, b) => a.y - b.y);
   const kinds = [...new Set(items.map((d) => `${d.kind}:${d.v}`))];
   const index = new Map(kinds.map((k, n) => [k, n]));
 
@@ -121,6 +127,8 @@ export function createDecor(env) {
     fragmentShader: FRAG,
     uniforms: { ...env.u, uAtlas: { value: tex } },
     side: THREE.DoubleSide,
+    transparent: true,
+    depthWrite: true,
   });
   const mesh = new THREE.Mesh(quad, material);
   mesh.frustumCulled = false;
