@@ -49,6 +49,85 @@ export const NAMED = {
   ...Object.assign({}, ...LANDS.map((m) => m.people || {})),
 };
 
+// ── (0.25) what you have come to know of them ──
+
+const heard = (s, piece) => (s.rumors || []).some((r) => r.text.includes(piece));
+const f = (k) => (s) => !!s.flags[k];
+
+/**
+ * What you know of each of 東荒's people beyond their first look: [known?, line], in the order of
+ * their lives. A line shows once you have seen it, or heard it told.
+ */
+const PAST = {
+  lin_chen: [
+    [(s) => !!s.flags.lin_breakup_seen || heard(s, '被沈家當眾退婚'), '天元三千零一十二年二月，被沈家當眾退婚。'],
+    [(s) => !!s.flags.lin_test_seen || heard(s, '一掌打下擂台'), '林家族比，被堂兄林浩一掌打下擂台，吐了三口血。全鎮都在笑，只有他自己沒笑。'],
+    [f('lin_saved'), '有一回昏倒在崖下，是你把他背回鎮上的。他說：「我欠你一次。」'],
+    [f('ring_touched'), '他手上那枚黑戒指裡，住著一個蒼老的聲音。'],
+    [(s) => heard(s, '雷靈根'), '青雲宗收徒大典上，測出萬中無一的雷靈根，被大長老收為親傳。'],
+    [(s) => !!s.flags.pact_seen || heard(s, '三年之約'), '三年之約，一劍敗了沈清歌：「三年前你撕的婚書，今天我還給你。」'],
+    [(s) => heard(s, '林塵離開東荒'), '離開東荒，去了中州。走之前，在林家祠堂跪了一夜。'],
+  ],
+  shen_qingge: [
+    [(s) => !!s.flags.lin_breakup_seen || heard(s, '被沈家當眾退婚'), '親手撕了和林塵的婚書。'],
+    [f('shen_talked'), '婚書是她自己要撕的：她不想等一個廢人等一輩子，想修仙。「恨，總比被人可憐好。」'],
+    [f('shen_own_path'), '她說：「我不做誰的墊腳石。」'],
+    [f('shen_knows'), '你告訴過她命簿的事。她說：「那我就自己寫。」'],
+    [f('shen_zhuji'), '一年後，她在青雲宗外門閉關築基，沒有回沈家報喜。'],
+  ],
+  song_he: [
+    [f('songhe_story'), '六十年前衝擊築基，最後一刻想起一個答應過要回去娶的人，分了心。後來回去，她已經嫁人了。'],
+    [f('songhe_saved'), '吃了你送的壽元果，那晚觀裡的老松樹抽出了一枝新芽。'],
+    [f('songhe_zhuji'), '六十年後，又衝了一次築基——這一回，成了。'],
+    [f('songhe_dead'), '坐化了。'],
+  ],
+  wang_er: [
+    [(s) => !!s.flags.wanger_married, '娶了隔壁村的翠花。'],
+    [(s) => heard(s, '取名王小石'), '有了兒子，取名王小石。'],
+    [(s) => heard(s, '王二的背'), '兒子王小石也成親了。他的背，有點駝了。'],
+    [(s) => heard(s, '享年六十二歲'), '走了，享年六十二歲。臨終前一直望著門口，說在等一個朋友。'],
+  ],
+  sun_zg: [
+    [f('sun_revealed'), '其實是修士，煉氣二層，三十年沒動過修為。'],
+    [f('sun_past'), '三十年前是落霞坊市丹師葛雲山的徒弟。師父替他煉築基丹，丹爐炸了，師父死在爐前。'],
+    [f('ge_letter_found'), '他的名字叫孫長春。'],
+    [f('sun_master_done'), '師父留下的字條說：「丹不成，非你之過。」三十年來，他頭一回閉關。'],
+    [f('sun_out'), '出關了，到了煉氣三層。'],
+  ],
+  su_qingyao: [
+    [f('banxian_secret'), '每回聽到古戰場那段書，臉色都是白的。錢半仙說，她不是怕，是在記。'],
+    [(s) => !!s.flags.su_ruins_met || heard(s, '帶出了一卷古經'), '古戰場的秘境裡，她好像早就知道機關在哪。'],
+    [f('blood_moon_warned'), '她說，天元三千零二十二年，月亮會變紅。'],
+    [f('su_farewell'), '她是重生的人。上一世，她死在血月那一夜。'],
+  ],
+  hu_sanniang: [
+    [f('hu_story_hunter'), '三百年前，一個獵戶放了她一條生路。她守著獵戶的子孫，一直守到現在。'],
+    [f('hu_story_crack'), '她見過一個人飛升失敗：天上裂開一道縫，縫後面什麼都沒有。'],
+    [f('hu_story_founder'), '青雲宗的開山祖師，年輕時偷過她的雞。'],
+    [f('fox_protected'), '青雲宗的人來獵狐那一回，你護住了她。'],
+    [f('fox_betrayed'), '青雲宗的人來獵狐那一回，你把她賣了。'],
+  ],
+  qian_banxian: [
+    [f('banxian_secret'), '早就看出那個白衣女修在記古戰場的事。'],
+    [(s) => ['banxian_tale_nl', 'banxian_tale_xm', 'banxian_tale_by'].some((k) => s.flags[k]), '你給他講過遠方的事，他講成了書。'],
+    [f('banxian_past'), '五十年前是煉氣九層的修士。在古戰場秘境最深處看了那道劍光一眼，修為就散了，從此只會說書。'],
+  ],
+  zhao_hu: [
+    [f('beat_zhao'), '在豆花攤前被你當眾教訓過。'],
+    [f('zhao_done'), '叫他當修士的表舅，在巷口堵過你。'],
+  ],
+};
+
+/** The lines you know of one of them (none: an empty list). */
+export function pastOf(s, id) {
+  return (PAST[id] || []).filter(([known]) => known(s)).map(([, line]) => line);
+}
+
+/** How many there are to know of one of them (for the people page). */
+export function pastTotal(id) {
+  return (PAST[id] || []).length;
+}
+
 export function initNpcs(s) {
   for (const [id, d] of Object.entries(NAMED)) {
     s.npcs[id] = {

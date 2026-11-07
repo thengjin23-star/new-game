@@ -251,6 +251,25 @@ export function recurring(s) {
     s.flags.bloodmoon_seen = true;
     rumor(s, '今夜的月亮是紅的。山裡的獵戶都早早關了門，說今夜的狼，眼睛也是紅的。', 'hint');
   }
+  // (0.25) 孫掌櫃, three months after his master's letter came back to him: out of seclusion, a layer up
+  if (s.flags.sun_master_done && !s.flags.sun_out && s.day >= (s.vars.sun_secl_day ?? Infinity) + 90) {
+    s.flags.sun_out = true;
+    const sun = s.npcs.sun_zg;
+    if (sun?.alive) {
+      sun.stage = Math.max(sun.stage, 2);
+      rumor(s, '回春堂的孫掌櫃出關了。鎮上的人說，他看起來年輕了十歲，算盤也打得比從前響。', 'arc', 'sun_zg');
+    }
+  }
+  // (0.25) 沈清歌, a year after she said she would write her own: 築基, on her own
+  if (s.flags.shen_own_path && !s.flags.shen_zhuji && s.day >= WINDOWS.pact[1] + 300) {
+    s.flags.shen_zhuji = true;
+    const shen = s.npcs.shen_qingge;
+    if (shen?.alive) {
+      shen.realm = Math.max(shen.realm, 2);
+      shen.stage = 0;
+      rumor(s, '青雲宗外門的沈清歌閉關三個月，築基了。她沒有回沈家報喜，直接搬進了內門。', 'arc', 'shen_qingge');
+    }
+  }
   const auctionStart = dayAt(0, 10, 10);
   s.flags.auction_open = doy >= auctionStart && doy < auctionStart + 15 && s.day >= 200;
   if (doy >= auctionStart - 30 && doy < auctionStart && s.vars.auctionNotice !== year && s.day >= 170) {

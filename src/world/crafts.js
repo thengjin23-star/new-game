@@ -101,6 +101,12 @@ export function brewWhy(s, id) {
   return lacking(s, R.in);
 }
 
+/** (0.25) How wide the moment to bank the fire is: 《葛氏丹經》 in the 行囊 makes it three tenths wider. */
+export function zoneOf(s, id) {
+  const z = RECIPES[id]?.zone || 0.2;
+  return has(s, 'ge_danjing') ? Math.min(0.5, z * 1.3) : z;
+}
+
 /** The grade a fire held this well gives. */
 export function brewGrade(hits) {
   return ['炸爐', '下品', '中品', '上品'][Math.max(0, Math.min(3, hits))];

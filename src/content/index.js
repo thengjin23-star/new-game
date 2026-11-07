@@ -19,12 +19,13 @@ import air from './events/air.js';
 import realms from './events/realms.js';
 import world from './events/world.js';
 import chapter from './events/chapter.js';
+import lore from './events/lore.js';
 import inquire, { GENERIC_INQUIRE } from './events/inquire.js';
 import generic, { GENERIC_EXPLORE } from './events/generic.js';
 
 export const EVENT_LIST = [
   ...opening, ...town, ...hill, ...temple, ...forest, ...market, ...valley,
-  ...sect, ...ruins, ...shrine, ...ferry, ...pass, ...nanling, ...ximo, ...beiyuan, ...fields, ...travel, ...air, ...realms, ...world, ...chapter, ...inquire, ...generic,
+  ...sect, ...ruins, ...shrine, ...ferry, ...pass, ...nanling, ...ximo, ...beiyuan, ...fields, ...travel, ...air, ...realms, ...world, ...chapter, ...lore, ...inquire, ...generic,
   GENERIC_INQUIRE, GENERIC_EXPLORE,
 ];
 

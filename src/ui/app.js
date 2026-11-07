@@ -34,7 +34,9 @@ import { TECHS } from '../content/techniques.js';
 import { PILL_CD, MOVES } from '../content/moves.js';
 import { FRAGMENTS, FRAGMENT_TOTAL } from '../content/fragments.js';
 import { SYS_LEVELS, SYS_FEATURES } from '../world/system.js';
-import { npcAge, npcRealm, NAMED } from '../world/npcs.js';
+import { npcAge, npcRealm, NAMED, pastOf } from '../world/npcs.js';
+import { storiesOf, GROUPS as STORY_GROUPS } from '../content/stories.js';
+import { annalsOf, ERAS as ANNAL_ERAS } from '../content/annals.js';
 import { saveGame, loadGame, clearGame, exportCode, importCode, migrate, saveMeta, loadMeta, parseSave } from '../core/save.js';
 import { connectCloud } from '../platform/cloud.js';
 import { pt, rectOf, watchOrient, turnedScrolling } from '../platform/orient.js';
@@ -2003,7 +2005,7 @@ export function startApp(root, { speed = 1, view = null } = {}) {
   const FIRE_PERIOD = [1.8, 1.5, 1.2];
 
   function fireRound(id, round) {
-    const zone = RECIPES[id].zone;
+    const zone = CR.zoneOf(ui.s, id);
     return { t0: performance.now(), period: FIRE_PERIOD[round] * 1000, at: 0.1 + Math.random() * (0.8 - zone), zone, shown: null, seen: undefined };
   }
 
@@ -2506,6 +2508,7 @@ export function startApp(root, { speed = 1, view = null } = {}) {
   // ── 見聞 ──
   function panelLog() {
     const subs = [
+      ['stories', '故事'],
       ['rumors', '傳聞'],
       ['people', '人物'],
       ['factions', '勢力'],
@@ -2513,9 +2516,9 @@ export function startApp(root, { speed = 1, view = null } = {}) {
       ['places', '地點'],
       ['codex', '圖鑑'],
       ['life', '生平'],
-      ['frags', '殘頁'],
+      ['frags', '史冊'],
     ];
-    const body = { rumors: logRumors, people: logPeople, factions: logFactions, events: logEvents, places: logPlaces, codex: logCodex, life: logLife, frags: logFrags }[ui.logTab]();
+    const body = { stories: logStories, rumors: logRumors, people: logPeople, factions: logFactions, events: logEvents, places: logPlaces, codex: logCodex, life: logLife, frags: logFrags }[ui.logTab]();
     return h('div.logpage',
       h('div.subtabs', subs.map(([id, label]) => h('button.subtab' + (ui.logTab === id ? '.on' : ''), { onclick: () => { ui.logTab = id; renderLayer(); } }, label))),
       body,
@@ -2583,6 +2586,8 @@ export function startApp(root, { speed = 1, view = null } = {}) {
             s.sys.lv >= 3 && n.luck ? h('span.tag.karma', '氣運之子') : null),
           h('p.muted.small', n.alive ? `${npcRealm(n)}・${npcAge(s, n)} 歲・${favorWord(n.favor)}${n.loc && NODES[n.loc] ? `・在${NODES[n.loc].name}` : ''}` : `已故・${favorWord(n.favor)}`),
           h('p', n.named ? NAMED[n.id].bio : `性情${n.trait}。相識於${NODES[n.metAt]?.name || '路上'}。`),
+          // (0.25) what you have come to know of them since
+          n.named && pastOf(s, n.id).length ? h('ul.past', pastOf(s, n.id).map((line) => h('li', line))) : null,
           END.fateLine(s, n.id) ? h('p.fate', END.fateLine(s, n.id)) : null,
         ),
       )));
@@ -2656,11 +2661,44 @@ export function startApp(root, { speed = 1, view = null } = {}) {
     );
   }
 
+  /**
+   * (0.25) 故事: every thread you are in — the steps you have reached, how it closed, or what you might
+   * do next — under the main line, the people, and each land.
+   */
+  function logStories() {
+    const s = ui.s;
+    const list = storiesOf(s);
+    if (!list.length) return h('p.muted.pad', '還沒有什麼故事。');
+    const open = list.filter((t) => !t.done).length;
+    return h('div.stories',
+      h('p.muted.pad', `進行中 ${open}・已了結 ${list.length - open}`),
+      STORY_GROUPS.filter((g) => list.some((t) => t.group === g)).map((g) => [
+        h('h3.story-group', g),
+        h('ul.story-list', list.filter((t) => t.group === g).map((t) =>
+          h('li' + (t.done ? '.done' : ''),
+            h('div.person-head', h('b', t.title), h('span.tag' + (t.done ? '' : '.good'), t.done ? '了結' : '進行中'), h('span.muted.small', `${t.steps.length}／${t.of}`)),
+            t.steps.length ? h('ol.story-steps', t.steps.map((x) => h('li', x.label))) : null,
+            t.end ? h('p.small.story-end', t.end) : null,
+            t.next ? h('p.small.story-next', `下一步：${t.next}`) : null,
+          ))),
+      ]),
+    );
+  }
+
+  /** (0.25) 史冊: what the steles and the ruins say happened, by era — then the 天機殘頁, word for word. */
   function logFrags() {
     const s = ui.s;
+    const { have, total } = annalsOf(s);
     const got = s.sys.frags.filter((f) => FRAGMENTS[f]);
     return h('div',
-      h('p.muted.pad', `天機殘頁 ${got.length} / ${FRAGMENT_TOTAL}`),
+      h('p.muted.pad', `史冊 ${have.length} / ${total}・各地的石碑、遺跡和見過那些事的人，說的未必一樣。`),
+      have.length
+        ? ANNAL_ERAS.filter((era) => have.some((a) => a.era === era)).map((era) => [
+          h('h3.story-group', era),
+          h('ul.annals', have.filter((a) => a.era === era).map((a) => h('li', h('div.person-head', h('b', a.title), h('span.muted.small', a.where)), h('p.small', a.text)))),
+        ])
+        : h('p.muted.pad', '一條也沒有。石碑、遺跡，和活得夠久的人，都記得一些事。'),
+      h('h3.story-group', `天機殘頁 ${got.length} / ${FRAGMENT_TOTAL}`),
       got.length
         ? h('ul.frags', got.map((f) => h('li', h('b', FRAGMENTS[f].title), paragraphs(FRAGMENTS[f].text))))
         : h('p.muted.pad', '一頁也沒有。它們散落在世界的各個角落。'),

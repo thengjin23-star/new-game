@@ -137,6 +137,51 @@ export default [
         },
       },
       {
+        // (0.25) a tale from where nobody in 東荒 has been
+        text: '散場後，給錢半仙講一段南嶺的見聞。',
+        show: (s) => flag(s, 'gu_cleared') && !flag(s, 'banxian_tale_nl'),
+        out: {
+          text: '你講了青竹寨發苦的井、萬蠱谷底的蠱母，和最後燒了蠱巢的那一把火。\n\n錢半仙聽得眼睛都直了，一邊聽一邊拿筆記，記了滿滿三頁：「好！這段好！這段我要講三個月！」',
+          effects: [
+            ['meet', 'qian_banxian'], ['flag', 'banxian_tale_nl'], ['favor', 'qian_banxian', 6], ['rep', 'market', 3], ['mind', 1],
+            ['rumor', '茶樓的說書人講了一段新書：〈南嶺除蠱〉——說的是一個東荒的修士，一把火燒了萬蠱谷的蠱巢。'],
+          ],
+        },
+      },
+      {
+        // (0.25) a tale from where nobody in 東荒 has been
+        text: '散場後，給錢半仙講一段西漠的見聞。',
+        show: (s) => (flag(s, 'palace_seen') || flag(s, 'steles_read')) && !flag(s, 'banxian_tale_xm'),
+        out: {
+          text: '你講了埋在沙裡的古城、五塊石碑，和觀星台底下那片會亮的星圖。\n\n錢半仙的筆停了好幾次。「接天城……」他喃喃地說，「天河的渡口……」\n\n他抬起頭：「小友，這段我不敢亂講。我得想想。」',
+          effects: [
+            ['meet', 'qian_banxian'], ['flag', 'banxian_tale_xm'], ['favor', 'qian_banxian', 6], ['rep', 'market', 3], ['mind', 1],
+            ['rumor', '茶樓的說書人講了一段新書：〈沉沙古城〉——說的是西漠沙底下的一座古城，城裡的星官看過天河。'],
+          ],
+        },
+      },
+      {
+        // (0.25) a tale from where nobody in 東荒 has been
+        text: '散場後，給錢半仙講一段北原的見聞。',
+        show: (s) => flag(s, 'mine_cleared') && !flag(s, 'banxian_tale_by'),
+        out: {
+          text: '你講了寒鐵堡的礦坑、深巷裡唱歌的冰蠶母，和吊在石頂上的三個冰繭。\n\n茶樓裡不知什麼時候安靜了，連夥計都站在一邊聽。錢半仙清了清嗓子：「明天，就講這段。」',
+          effects: [
+            ['meet', 'qian_banxian'], ['flag', 'banxian_tale_by'], ['favor', 'qian_banxian', 6], ['rep', 'market', 3], ['mind', 1],
+            ['rumor', '茶樓的說書人講了一段新書：〈寒鐵礦〉——說的是北原寒鐵堡的礦坑裡，三個礦工被吊在石頂上，只救回來一個。'],
+          ],
+        },
+      },
+      {
+        // (0.25) and his own, once he has three of yours
+        text: '問他：你那段「劍仙斷天河」，是聽誰說的？',
+        show: (s) => ['banxian_tale_nl', 'banxian_tale_xm', 'banxian_tale_by'].filter((k) => flag(s, k)).length >= 2 && !flag(s, 'banxian_past'),
+        out: {
+          text: '錢半仙把扇子合上了，很久沒有說話。\n\n「不是聽誰說的。」他說，「是我自己看見的。」\n\n「五十年前，我煉氣九層，跟著一夥人進了古戰場的秘境。走到最深那一層，石頭上留著一道劍痕。他們都繞過去了，我偏要看。」\n\n「我只看了一眼。」他伸出一根手指，「一眼。一身修為，就像被那道劍光削掉了，散得乾乾淨淨。」\n\n「後來我就只會說書了。說了五十年，沒有一個人信。」他笑了笑，「你信嗎？」\n\n你點了點頭。他愣了一下，然後轉過身去，給自己倒了一杯茶，倒得太滿，溢了一桌子。',
+          effects: [['meet', 'qian_banxian'], ['flag', 'banxian_past'], ['favor', 'qian_banxian', 10], ['insight', 2], ['sysexp', 12], ['log', '聽錢半仙說了五十年前，他在古戰場秘境看見的那道劍光']],
+        },
+      },
+      {
         text: '散場後，打賞錢半仙。',
         need: needLs(5),
         out: {

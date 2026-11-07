@@ -200,7 +200,13 @@ export default [
               '「我見過一個人飛升失敗。」她說，「雷劫劈下來的時候，天上裂開了一道縫。縫後面……什麼都沒有。」',
               '「青雲宗的開山祖師，年輕時偷過我的雞。」她說，「這事你可別往外說。」',
             ][Math.floor(s.day / 50) % 3],
-          effects: [['insight', 1], ['favor', 'hu_sanniang', 3]],
+          effects: [
+            ['insight', 1], ['favor', 'hu_sanniang', 3],
+            // (0.25) which of her stories you have heard (for the 史冊 and what you know of her)
+            (s) => {
+              s.flags[['hu_story_hunter', 'hu_story_crack', 'hu_story_founder'][Math.floor(s.day / 50) % 3]] = true;
+            },
+          ],
         },
         fail: { text: '她講著講著，自己先睡著了。', effects: [['favor', 'hu_sanniang', 2]] },
       },

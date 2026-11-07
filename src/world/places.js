@@ -129,7 +129,7 @@ export let POIS = [
   { id: 'teahouse_town', region: 'qingshi_town', x: 2400, y: 3232, name: '茶館', verb: '打聽', action: 'inquire' },
   { id: 'earth_temple', region: 'qingshi_town', x: 1965, y: 3332, name: '土地廟', verb: '查看', text: '小小的土地廟，香爐裡插著三根燒了一半的香。' },
   {
-    id: 'old_locust', region: 'qingshi_town', x: 2440, y: 3214, name: '老槐樹', verb: '查看',
+    id: 'old_locust', region: 'qingshi_town', x: 2440, y: 3214, name: '老槐樹', verb: '查看', auto: 90,
     text: (s) => (s.tod >= 8 && s.tod < 17.5 ? '老槐樹下，兩個老頭在下棋，旁邊圍著一圈看熱鬧的。你看了一會兒，看不出誰贏誰輸。' : '老槐樹下空蕩蕩的。石桌上還擺著半局殘棋，誰也沒去動它。'),
   },
   { id: 'stone_bridge', region: 'qingshi_town', x: 1795, y: 3152, name: '鎮口石橋', verb: '查看', text: '鎮口的石橋，橋下是從青石山流下來的溪水。小時候，你常在這裡摸魚。' },
@@ -194,6 +194,8 @@ export let POIS = [
   { id: 'sect_steps', region: 'qingyun_sect', x: 4235, y: 1585, name: '山門外石階', verb: '打聽', action: 'inquire' },
   { id: 'sect_woodshed', region: 'qingyun_sect', x: 4440, y: 1224, name: '柴房', verb: '查看', text: '柴堆得比人還高。', rest: true },
   { id: 'sect_task_hall', region: 'qingyun_sect', x: 4200, y: 1120, name: '任務堂', verb: '查看', action: 'board', board: 'sect', sprite: 'board' },
+  // (0.25) the stone by the gate: when the sect began, and why
+  { id: 'sect_stele', region: 'qingyun_sect', x: 4200, y: 1680, name: '開山碑', verb: '查看', sprite: 'stele_tall', text: '碑頂長滿了青苔。' },
   // 古戰場
   {
     id: 'realm_gate', region: 'ancient_ruins', x: 2600, y: 655, name: '斷石門', verb: '查看', auto: 170,
@@ -203,12 +205,16 @@ export let POIS = [
   },
   { id: 'broken_sword', region: 'ancient_ruins', x: 2950, y: 820, name: '斷劍', verb: '查看', sprite: 'sword_glint', show: (s) => !s.player.items.broken_sword, text: '三寸斷劍插在黑石裡，寒光凜凜。劍身上那股冰冷的意志還在，只是今天，它不想理你。' },
   { id: 'frag_stele', region: 'ancient_ruins', x: 2230, y: 520, name: '倒塌的石碑', verb: '查看', sprite: 'stele_fallen', hidden: { r: 110 }, text: '石碑底下已經空了。' },
+  // (0.25) the sword tomb: whose sword it was, and what it cut (hidden among the broken blades till you are near)
+  { id: 'sword_tomb', region: 'ancient_ruins', x: 3020, y: 700, name: '劍冢碑', verb: '查看', sprite: 'sword_tomb', hidden: { r: 100 }, text: '黑石碑前插著一圈鏽劍，劍尖都朝著碑。' },
   // 狐仙廟
   { id: 'fox_shrine_poi', region: 'fox_shrine', x: 3110, y: 3003, name: '狐仙廟', verb: '查看', auto: 100, glow: night, text: '供桌上的灰被擦過。狐仙像的眼睛，好像在看你。' },
   // 白鶴渡
   { id: 'ferry_pier', region: 'crane_ferry', x: 4590, y: 3950, name: '白鶴渡口', verb: '查看', text: '江風很大。' },
   // 鏡湖
   { id: 'lake_pavilion', region: 'mirror_lake', x: 3260, y: 3622, name: '湖心亭', verb: '歇腳', text: '湖面如鏡，倒映著天上的雲。你在亭子裡坐了一會兒，心也跟著靜了下來。', rest: true },
+  // (0.25) 孫掌櫃's master, under the willow by the lake (there once you have heard of him)
+  { id: 'ge_grave', region: 'mirror_lake', x: 3380, y: 3460, name: '葛老的墳', verb: '祭拜', sprite: 'grave', show: (s) => !!s.flags.sun_past, text: '一座小土墳，木牌上的字快看不清了。' },
   // 路上
   { id: 'roadside_tea', region: 'wilds', x: 3415, y: 2914, name: '路邊茶棚', verb: '歇腳', text: '路邊的茶棚，一個老婆婆在燒水。茶是粗茶，兩文錢一碗。趕路的人都在這裡歇歇腳。', rest: true },
   { id: 'hill_god', region: 'wilds', x: 2840, y: 2292, name: '山神廟', verb: '查看', text: '路邊的破山神廟，神像的頭不知被誰砍了去。供桌下有一堆灰燼，像是有人在這裡避過雨。', rest: true },

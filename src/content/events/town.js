@@ -149,6 +149,29 @@ export default [
           effects: [['flag', 'sun_revealed'], ['item', 'juqi_pill', 1], ['favor', 'sun_zg', 5], ['insight', 1]],
         },
       },
+      {
+        // (0.25) what happened thirty years ago
+        text: '問他：三十年前，發生了什麼事？',
+        show: (s) => flag(s, 'sun_revealed') && favor(s, 'sun_zg') >= 14 && !flag(s, 'sun_past'),
+        out: {
+          text: '孫掌櫃把算盤推到一邊，給自己倒了一杯茶。\n\n「我師父姓葛，叫葛雲山，是落霞坊市的丹師。三十年前，我煉氣二層，他說要替我煉一爐築基丹，讓我早點築基。」\n\n「那一爐丹煉到第七天，炸了。」他喝了一口茶，「師父一直守在爐前。」\n\n「我把他葬在鏡湖邊上，一棵柳樹底下。三十年了，我一次也沒有去過。」\n\n他抬起頭看著你：「你腳程快。哪天路過鏡湖，替我給他上一炷香吧。」',
+          effects: [['flag', 'sun_past'], ['favor', 'sun_zg', 3]],
+        },
+      },
+      {
+        text: '把葛老的字條交給孫掌櫃。',
+        show: (s) => has(s, 'ge_letter') && !flag(s, 'sun_master_done'),
+        out: {
+          text: '孫掌櫃展開字條，看了很久。他的手在抖。\n\n「赤焰花……」他說，「這三十年，我一直以為，是我那天搧錯了一下火。」\n\n他把字條摺好，收進貼身的口袋裡。然後他從櫃檯底下拿出一本泛黃的冊子：「師父的丹經。我三十年沒敢翻，你拿去吧。」\n\n那天傍晚，回春堂的門板上了一半。門板上貼著一張紙：「閉關，有事明日。」\n\n三十年來，這是頭一回。',
+          effects: [
+            ['item', 'ge_letter', -1], ['item', 'ge_danjing', 1], ['flag', 'sun_master_done'], ['favor', 'sun_zg', 15], ['mind', 4], ['sysexp', 10],
+            (s) => {
+              s.vars.sun_secl_day = s.day;
+            },
+            ['log', '把葛老的字條交給孫掌櫃；他三十年來頭一回閉關'],
+          ],
+        },
+      },
       { text: '隨便看看。', out: { text: '你在藥櫃前站了一會兒，記住了幾十種藥材的名字。' } },
     ],
   },

@@ -2090,6 +2090,71 @@ const PROPS = {
     for (let y = 18; y < 34; y += 4) line(ctx, [[9, y], [17, y]], 0.6, rgba(INK, 0.35));
     for (let i = 0; i < 4; i++) dab(ctx, 6 + rnd() * 14, 30 + rnd() * 6, 1.4, [70, 100, 70], 0.8, 1);
   } },
+  // (0.25) 青雲宗's 開山碑: whole, taller, a cap on it and moss on the cap
+  stele_tall: { w: 30, h: 52, fx: 15, fy: 49, draw(ctx, rnd) {
+    shadow(ctx, 15, 49, 14, 3, 0.25);
+    ctx.fillStyle = rgba([120, 124, 118], 1);
+    ctx.fillRect(4, 44, 22, 5);
+    ctx.fillStyle = rgba([150, 148, 138], 1);
+    ctx.fillRect(7, 12, 16, 33);
+    ctx.strokeStyle = rgba(INK, 0.85);
+    ctx.lineWidth = 1;
+    ctx.strokeRect(7, 12, 16, 33);
+    ctx.strokeRect(4, 44, 22, 5);
+    // the cap
+    ctx.fillStyle = rgba([110, 112, 106], 1);
+    ctx.beginPath();
+    ctx.moveTo(4, 13);
+    ctx.quadraticCurveTo(15, 3, 26, 13);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+    for (let y = 17; y < 41; y += 4) line(ctx, [[11, y], [19, y]], 0.6, rgba(INK, 0.38));
+    for (let i = 0; i < 7; i++) dab(ctx, 7 + rnd() * 16, 9 + rnd() * 4, 1.5, [76, 110, 74], 0.85, 0.8);
+  } },
+  // (0.25) 古戰場's 劍冢碑: a black stone leaning in the earth, rusted swords stuck round it pointing at it
+  sword_tomb: { w: 54, h: 46, fx: 27, fy: 40, draw(ctx, rnd) {
+    shadow(ctx, 27, 40, 24, 5, 0.28);
+    for (let k = 0; k < 9; k++) {
+      const a = Math.PI * (0.05 + (k / 8) * 0.9);
+      const x = 27 + Math.cos(a) * 22;
+      const y = 41 - Math.sin(a) * 5;
+      const tx = x + (27 - x) * 0.18;
+      line(ctx, [[x, y], [tx, y - 13 - rnd() * 4]], 1.3, rgba([120, 84, 56], 0.95));
+      line(ctx, [[tx - 2.5, y - 9], [tx + 2.5, y - 9]], 1, rgba(INK, 0.8));
+    }
+    ctx.fillStyle = rgba([52, 50, 50], 1);
+    ctx.beginPath();
+    ctx.moveTo(18, 40);
+    ctx.lineTo(19, 10);
+    ctx.lineTo(27, 5);
+    ctx.lineTo(36, 9);
+    ctx.lineTo(37, 40);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = rgba(INK, 0.95);
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    // the cuts of a sword for letters, pale on the black
+    for (let y = 13; y < 36; y += 4.5) line(ctx, [[23, y], [32, y + 0.6]], 0.7, rgba([210, 214, 220], 0.55));
+  } },
+  // (0.25) a small grave: a mound, a wooden marker, grass on it
+  grave: { w: 40, h: 30, fx: 20, fy: 26, draw(ctx, rnd) {
+    shadow(ctx, 20, 26, 18, 4, 0.22);
+    ctx.fillStyle = rgba([150, 128, 96], 1);
+    ctx.beginPath();
+    ctx.ellipse(20, 24, 16, 7, 0, Math.PI, 0);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = rgba(INK, 0.7);
+    ctx.lineWidth = 0.9;
+    ctx.stroke();
+    ctx.fillStyle = rgba([118, 88, 60], 1);
+    ctx.fillRect(18, 4, 5, 17);
+    ctx.strokeRect(18, 4, 5, 17);
+    for (let y = 7; y < 18; y += 3) line(ctx, [[19.2, y], [21.8, y]], 0.5, rgba(INK, 0.45));
+    for (let i = 0; i < 6; i++) dab(ctx, 7 + rnd() * 26, 17 + rnd() * 6, 1.3, [96, 128, 80], 0.85, 1);
+  } },
   stele_fallen: { w: 44, h: 18, fx: 22, fy: 15, draw(ctx) {
     shadow(ctx, 22, 14, 20, 4, 0.25);
     ctx.fillStyle = rgba([128, 124, 114], 1);

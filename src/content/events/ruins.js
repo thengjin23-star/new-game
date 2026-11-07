@@ -29,7 +29,7 @@ export default [
         check: { kind: 'xinxing', diff: 6 },
         ok: {
           text: '你在那片記憶裡站了很久。殘魂穿過你的身體，散了。\n\n你記住了那道劍光。也記住了劍光之後，天空裂開的那一道縫。',
-          effects: [['insight', 2], ['sysexp', 4]],
+          effects: [['insight', 2], ['sysexp', 4], ['flag', 'ghost_memory']],
         },
         fail: { text: '你被拖進了那場三千年前的大戰。等你掙脫出來，已經在地上躺了兩天。', effects: [['days', 2], ['mind', -6], ['hurt', 1, '神魂被殘魂撕碎']] },
       },
