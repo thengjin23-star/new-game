@@ -12,6 +12,7 @@ import { decorSprite, mountainSprite, structureSprite, wallSprite, propSprite } 
 import { drawPerson, aura, drawRide, LOOKS, FOLK_LOOKS, groundShadow } from './figures.js';
 import { makeParticles, drawParticles, rgba, INK, PAPER } from './ink.js';
 import { fallOf, drawSkyVeil } from './sky.js';
+import { moodOf } from './moods.js';
 import { drawActor, drawPose, poseOf, lookOf, drawSpeech } from './scenery.js';
 import * as CB from '../world/combat.js';
 import { paintBeast, paintHero, drawGroundMarks, drawCombatOverlay } from './combatfx.js';
@@ -1504,14 +1505,45 @@ export function createWorldView(canvas, { onFrame, idle } = {}) {
     }
   }
 
+  // (0.24) the region's own air (as the 3D view has it), eased in and out as you cross from one to the next
+  const air = { tint: [1, 1, 1], amount: 0, dim: 1 };
+  function regionAir(dt) {
+    const m = moodOf(s.player.loc);
+    const k = Math.min(1, dt * 0.8);
+    for (let i = 0; i < 3; i++) air.tint[i] += ((m.amount ? m.tint[i] : air.tint[i]) - air.tint[i]) * k;
+    air.amount += (m.amount - air.amount) * k;
+    air.dim += ((m.dim ?? 1) - air.dim) * k;
+    return m.motes;
+  }
+
   function drawScreenFx(dt) {
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    // rain or snow when the weather brings it, else the season's petals and leaves
-    const [kind, count] = fallOf(s, season);
+    const motes = regionAir(dt);
+    // the air over the whole picture: a gentle cast of its colour (multiplied, so the darks stay dark),
+    // dimmer where it is dim, and its colour gathering round the edges like a mist
+    if (air.amount > 0.01 || air.dim < 0.99) {
+      const a = Math.min(1, air.amount * 0.55);
+      const d = Math.min(1, air.dim);
+      const c = air.tint.map((v) => Math.round((1 - a + v * a) * d * 255));
+      ctx.globalCompositeOperation = 'multiply';
+      ctx.fillStyle = `rgb(${c[0]},${c[1]},${c[2]})`;
+      ctx.fillRect(0, 0, W, H);
+      ctx.globalCompositeOperation = 'source-over';
+      const tint = air.tint.map((v) => Math.round(v * 255));
+      const mist = ctx.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.32, W / 2, H / 2, Math.max(W, H) * 0.72);
+      mist.addColorStop(0, rgba(tint, 0));
+      mist.addColorStop(1, rgba(tint, Math.min(0.4, air.amount * 0.45)));
+      ctx.fillStyle = mist;
+      ctx.fillRect(0, 0, W, H);
+    }
+    // rain or snow when the weather brings it; else the region's own motes, or the season's petals and leaves
+    const [fall, count] = fallOf(s, season);
+    const wet = fall === 'rain' || fall === 'storm' || fall === 'snow' || fall === 'sand' || fall === 'blizzard';
+    const kind = wet ? fall : motes || fall;
     if (!reduce && kind) {
       if (particleKind !== kind) {
         particleKind = kind;
-        particles = makeParticles(kind, stream(5), W, H, count);
+        particles = makeParticles(kind, stream(5), W, H, kind === motes ? 26 : count);
       }
       drawParticles(ctx, kind, particles, W, H, dt * 1000, t * 1000, false);
     }

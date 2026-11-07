@@ -12,7 +12,7 @@ import { POIS, STRUCTURES } from '../world/places.js';
 import { VALLEY, LAKES } from '../world/geo.js';
 import { NODES, mapOf } from '../world/map.js';
 import { heightAt, waterAt } from '../world/height.js';
-import { landTable } from '../world/maps/index.js';
+import { moodOf } from './moods.js';
 import { seasonLook } from '../world/atlas.js';
 import { fogOf } from '../world/fog.js';
 import * as E from '../world/explore.js';
@@ -535,24 +535,9 @@ export function createWorld3D(canvas, { onFrame, idle, quality = 'high', onSlow 
     M.end();
   }
 
-  /**
-   * Each region has its own air: the valley breathes spirit, the forest broods, the ruins are dusty.
-   * sun: how much of the sun gets in (under the ground, little: 西漠's 地宮).
-   */
-  const MOODS = {
-    lingxi_valley: { tint: [0.8, 0.93, 0.9], amount: 0.38, dim: 1, motes: 'mote' },
-    black_forest: { tint: [0.5, 0.58, 0.52], amount: 0.42, dim: 0.86, motes: 'darkleaf' },
-    ancient_ruins: { tint: [0.86, 0.74, 0.6], amount: 0.36, dim: 0.95, motes: 'ash' },
-    qingyun_sect: { tint: [0.9, 0.94, 0.99], amount: 0.3, dim: 1.02, motes: null },
-    mirror_lake: { tint: [0.82, 0.88, 0.93], amount: 0.3, dim: 1, motes: null },
-    fox_shrine: { tint: [0.86, 0.82, 0.9], amount: 0.26, dim: 0.96, motes: null },
-    hidden_cave: { tint: [0.6, 0.62, 0.66], amount: 0.3, dim: 0.9, motes: null },
-    // the other maps' regions
-    ...landTable('moods'),
-  };
 
   function regionMood(dt) {
-    const m = MOODS[s.player.loc] || { tint: [0, 0, 0], amount: 0, dim: 1 };
+    const m = moodOf(s.player.loc);
     const k = Math.min(1, dt * 0.8);
     for (let i = 0; i < 3; i++) mood.tint[i] += ((m.amount ? m.tint[i] : mood.tint[i]) - mood.tint[i]) * k;
     mood.amount += (m.amount - mood.amount) * k;
