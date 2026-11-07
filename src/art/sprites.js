@@ -16,6 +16,10 @@ const TILE = [66, 72, 80];
 const TILE_RED = [146, 56, 42];
 const STRAW = [178, 150, 98];
 const STONE = [158, 152, 140];
+// a rock's faces: lit, between, in shade
+const ROCK_LIT = [198, 194, 182];
+const ROCK_MID = [160, 155, 144];
+const ROCK_DARK = [118, 113, 104];
 const GOLD = [196, 158, 78];
 const SNOW = [250, 250, 252];
 // the desert's (西漠): rammed earth and mud brick, and the sand drifted against them
@@ -346,28 +350,56 @@ function rockLump(ctx, rnd, fx, fy, W, H, season, moss = true) {
     const r = 0.75 + rnd() * 0.3;
     pts.push([fx + Math.cos(a) * W * 0.5 * r, fy + Math.sin(a) * H * r]);
   }
-  const g = ctx.createLinearGradient(0, fy - H, 0, fy);
-  g.addColorStop(0, rgba(INK, 0.6));
-  g.addColorStop(1, rgba(INK, 0.25));
+  // (0.24) stone, not a blot of ink: pale where the light falls on it (from the right, as in the 3D
+  // world), deeper at the foot and on the far side, a crease where its faces meet
+  const g = ctx.createLinearGradient(fx + W * 0.35, fy - H, fx - W * 0.4, fy);
+  g.addColorStop(0, rgba(ROCK_LIT, 1));
+  g.addColorStop(0.55, rgba(ROCK_MID, 1));
+  g.addColorStop(1, rgba(ROCK_DARK, 1));
   ctx.fillStyle = g;
   ctx.beginPath();
   pts.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)));
   ctx.closePath();
   ctx.fill();
-  ctx.strokeStyle = rgba(INK, 0.85);
-  ctx.lineWidth = 1.1;
-  ctx.stroke();
-  // 皴: a few dry strokes
+  ctx.save();
+  ctx.clip();
+  // a wash of ink along the bottom, where it sits in the ground
+  const foot = ctx.createLinearGradient(0, fy - H * 0.45, 0, fy);
+  foot.addColorStop(0, rgba(INK, 0));
+  foot.addColorStop(1, rgba(INK, 0.32));
+  ctx.fillStyle = foot;
+  ctx.fillRect(fx - W, fy - H, W * 2, H + 2);
+  // the crease: from near the top down to the foot, left of the middle
+  const cx = fx - W * (0.05 + rnd() * 0.15);
+  line(ctx, [[cx + W * 0.08, fy - H * 0.9], [cx, fy - H * 0.45], [cx - W * 0.06, fy]], 0.9, rgba(INK, 0.5));
+  // the shaded face beyond it a little deeper
+  ctx.fillStyle = rgba(INK, 0.12);
+  ctx.beginPath();
+  ctx.moveTo(cx + W * 0.08, fy - H * 0.9);
+  ctx.lineTo(cx, fy - H * 0.45);
+  ctx.lineTo(cx - W * 0.06, fy);
+  ctx.lineTo(fx - W * 0.6, fy);
+  ctx.lineTo(fx - W * 0.6, fy - H * 1.1);
+  ctx.closePath();
+  ctx.fill();
+  // 皴: dry strokes down its faces
   ctx.lineWidth = 0.7;
-  for (let i = 0; i < 6; i++) {
-    const x = fx + (rnd() - 0.5) * W * 0.7;
-    const y = fy - H * (0.2 + rnd() * 0.6);
-    ctx.strokeStyle = rgba(INK, 0.4 + rnd() * 0.3);
+  for (let i = 0; i < 7; i++) {
+    const x = fx + (rnd() - 0.5) * W * 0.8;
+    const y = fy - H * (0.25 + rnd() * 0.6);
+    ctx.strokeStyle = rgba(INK, 0.25 + rnd() * 0.25);
     ctx.beginPath();
     ctx.moveTo(x, y);
-    ctx.lineTo(x + (rnd() - 0.5) * 3, y + H * 0.25);
+    ctx.lineTo(x + (rnd() - 0.5) * 3, y + H * (0.18 + rnd() * 0.15));
     ctx.stroke();
   }
+  ctx.restore();
+  ctx.strokeStyle = rgba(INK, 0.85);
+  ctx.lineWidth = 1.1;
+  ctx.beginPath();
+  pts.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)));
+  ctx.closePath();
+  ctx.stroke();
   if (moss) for (let i = 0; i < 5; i++) dab(ctx, fx + (rnd() - 0.5) * W * 0.6, fy - H * (0.7 + rnd() * 0.2), 1.3, INK, 0.75, 1);
   if (season === 'winter') dab(ctx, fx, fy - H * 0.85, W * 0.38, SNOW, 0.85, 0.3);
 }

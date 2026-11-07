@@ -199,7 +199,8 @@ export const XIMO_LAND_BASE = { ground, trees, settled, roll, dunes, under, arid
 
 /** The desert's own ground colours (art/worldview.js): dark gravel for its stony waste, dry grass, sandy hills. */
 export const XIMO_PALETTE = {
-  [T.WASTE]: { all: [128, 116, 100] },
+  // (0.24: a little paler, with gravel painted on it — darker it read as stains, not stones)
+  [T.WASTE]: { all: [150, 136, 112] },
   [T.HILL]: { all: [186, 160, 120] },
   [T.GRASS]: { spring: [172, 180, 128], summer: [164, 172, 116], autumn: [194, 178, 118], winter: [204, 198, 176] },
   [T.TALLGRASS]: { spring: [150, 162, 104], summer: [142, 152, 96], autumn: [186, 160, 96], winter: [196, 186, 160] },

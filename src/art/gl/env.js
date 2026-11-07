@@ -91,6 +91,8 @@ export function createEnv() {
     uHeight: { value: heightTex },
     uWorld: { value: new THREE.Vector2(WORLD_W, WORLD_H) },
     uDark: { value: 0 },
+    // (0.24) the finer brushwork (the paper's grain on the ground): off in the lighter picture
+    uFine: { value: 1 },
     uSnow: { value: 0 },
     uStretch: { value: 1.5 },
     // a fight's ground (x, z, radius): trees standing in it fade back so the fighters can be seen

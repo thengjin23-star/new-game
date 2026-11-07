@@ -281,6 +281,15 @@ function groundMarks(ctx, rnd, t, x, y, season, region) {
       break;
     }
     case T.WASTE: {
+      // the desert's gravel (戈壁): stones, dark and pale, strewn thick
+      if (mapId() === 'ximo') {
+        for (let k = 0; k < 7; k++) {
+          ctx.fillStyle = rgba(k < 4 ? INK : [236, 224, 200], k < 4 ? 0.3 : 0.5);
+          ctx.beginPath();
+          ctx.ellipse(x + (rnd() - 0.5) * CELL, y + (rnd() - 0.5) * CELL, 0.9 + rnd() * 1.1, 0.6 + rnd() * 0.6, rnd() * 3, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
       if (r < 0.4) {
         ctx.strokeStyle = rgba(INK, 0.22);
         ctx.lineWidth = 0.7;
@@ -510,12 +519,30 @@ function roadLayer(ctx, g, x0, y0, x1, y1, season) {
   }
   for (const r of near) {
     if (r.kind === 'road') {
-      strokePath(ctx, offsetPath(r.path, r.width * 0.18), 1, rgba(INK, 0.1));
-      strokePath(ctx, offsetPath(r.path, -r.width * 0.18), 1, rgba(INK, 0.1));
+      // (0.24) two ruts worn by the carts, broken where the ground is hard; the road's edge brushed
+      // in a broken line, with pebbles kicked to the side
+      ctx.setLineDash([16, 5, 9, 4]);
+      strokePath(ctx, offsetPath(r.path, r.width * 0.18), 1.4, rgba(INK, 0.2));
+      ctx.lineDashOffset = 7;
+      strokePath(ctx, offsetPath(r.path, -r.width * 0.18), 1.4, rgba(INK, 0.2));
+      ctx.setLineDash([10, 4, 3, 7, 18, 5]);
+      ctx.lineDashOffset = 0;
+      strokePath(ctx, offsetPath(r.path, r.width * 0.5), 1.3, rgba(INK, 0.28));
+      ctx.lineDashOffset = 11;
+      strokePath(ctx, offsetPath(r.path, -r.width * 0.5), 1.3, rgba(INK, 0.28));
+      ctx.setLineDash([]);
+      ctx.lineDashOffset = 0;
+      pebbles(ctx, r.path, r.width * 0.56, 11);
     } else if (r.kind === 'trail') {
       ctx.setLineDash([3, 7]);
       strokePath(ctx, r.path, 1.2, rgba(INK, 0.2));
+      // its edges trodden ragged
+      ctx.setLineDash([5, 6, 2, 9]);
+      strokePath(ctx, offsetPath(r.path, r.width * 0.42), 1, rgba(INK, 0.18));
+      ctx.lineDashOffset = 6;
+      strokePath(ctx, offsetPath(r.path, -r.width * 0.42), 1, rgba(INK, 0.18));
       ctx.setLineDash([]);
+      ctx.lineDashOffset = 0;
     }
   }
   // bridges and piers: planks across the way wherever it runs over water
@@ -576,6 +603,30 @@ function roadLayer(ctx, g, x0, y0, x1, y1, season) {
     ctx.strokeStyle = rgba(INK, 0.8);
     ctx.lineWidth = 1;
     ctx.strokeRect(st.x - st.w / 2, st.y - st.h / 2, st.w, st.h);
+  }
+}
+
+/** Small stones along a way's edges, now one side, now the other (the same ones every time it is painted). */
+function pebbles(ctx, path, half, every) {
+  ctx.fillStyle = rgba(INK, 0.4);
+  let n = 0;
+  for (let k = 1; k < path.length; k++) {
+    const [ax, ay] = path[k - 1];
+    const [bx, by] = path[k];
+    const len = Math.hypot(bx - ax, by - ay) || 1;
+    const ux = (bx - ax) / len;
+    const uy = (by - ay) / len;
+    for (let d = 0; d < len; d += every) {
+      n++;
+      const h = hash2(Math.round(ax + ux * d), Math.round(ay + uy * d), 9);
+      if (h < 0.35) continue;
+      const side = (n & 1 ? 1 : -1) * (half + (h - 0.5) * 3);
+      const x = ax + ux * d - uy * side;
+      const y = ay + uy * d + ux * side;
+      ctx.beginPath();
+      ctx.ellipse(x, y, 1 + h * 1.1, 0.7 + h * 0.6, h * 3, 0, Math.PI * 2);
+      ctx.fill();
+    }
   }
 }
 

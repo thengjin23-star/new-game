@@ -20,13 +20,16 @@ const PAINT_RES = 1.25;
 const GLOBAL_RES = 0.25;
 
 const VERT = /* glsl */ `
+attribute float aCav;
 varying vec3 vPos;
 varying vec3 vNor;
 varying vec2 vUv;
+varying float vCav;
 void main() {
   vPos = position;
   vNor = normal;
   vUv = uv;
+  vCav = aCav;
   gl_Position = projectionMatrix * viewMatrix * vec4(position, 1.0);
 }
 `;
@@ -41,20 +44,47 @@ uniform float uSnow;
 uniform sampler2D uMarks;
 uniform vec4 uMarkRect;
 uniform vec3 uRock;
+uniform float uFine;
 varying vec3 vPos;
 varying vec3 vNor;
 varying vec2 vUv;
+varying float vCav;
 void main() {
   vec2 wuv = vPos.xz / uWorld;
   vec3 far = texture2D(uGlobal, vec2(wuv.x, 1.0 - wuv.y)).rgb;
   vec3 paint = mix(far, texture2D(uPaint, vUv).rgb, uPainted);
   vec3 n = normalize(vNor);
   float steep = 1.0 - n.y;
-  // 皴: where the ground is steep, bare rock brushed in long strokes down the slope
+  float camD = distance(uCam, vPos);
+  // (0.24) the ground is not one flat wash: blotches of deeper and paler ink some tens of paces across
+  // (gentler on snow, which would only look dirty), and near you the grain of the paper
+  float lum = dot(paint, vec3(0.299, 0.587, 0.114));
+  float wash = fbm2(vPos.xz * 0.011 + 3.7);
+  float wet = smoothstep(0.28, 0.72, wash);
+  // (dry patches a little warmer and paler, damp ones deeper and cooler)
+  paint *= mix(vec3(1.0), mix(vec3(1.05, 1.04, 1.0), vec3(0.92, 0.945, 0.945), wet), 1.0 - 0.6 * smoothstep(0.8, 0.92, lum));
+  float px = length(fwidth(vPos.xz));
+  float fine = uFine * (1.0 - smoothstep(0.7, 1.8, px));
+  if (fine > 0.0) {
+    float g = vnoise(vPos.xz * 0.42) * 0.6 + vnoise(vPos.xz * 1.13 + 7.1) * 0.4;
+    paint *= 1.0 + (g - 0.5) * 0.1 * fine;
+  }
+  // ink gathers in the hollows and at the foot of a slope; ridges and brows are paler
+  paint *= 1.0 - 0.13 * smoothstep(0.04, 0.7, vCav);
+  paint = mix(paint, min(paint * 1.06 + 0.02, vec3(1.0)), 0.6 * smoothstep(0.06, 0.6, -vCav));
+  // 皴: where the ground is steep, bare rock — long strokes down the face (斧劈皴), deeper at its foot
   float grain = vnoise(vPos.xz * 0.045 + vPos.y * 0.02);
-  float streak = vnoise(vec2(vPos.x * 0.11 + vPos.z * 0.03, vPos.y * 0.022 + vPos.z * 0.004));
-  vec3 rock = mix(vec3(0.44, 0.43, 0.4), vec3(0.64, 0.62, 0.57), grain);
-  rock *= 0.72 + 0.36 * smoothstep(0.3, 0.8, streak);
+  vec2 down = n.xz / max(length(n.xz), 1e-4);
+  float across = dot(vPos.xz, vec2(-down.y, down.x));
+  float s1 = vnoise(vec2(across * 0.075, vPos.y * 0.018 + grain * 0.6));
+  float s2 = vnoise(vec2(across * 0.19 + 5.3, vPos.y * 0.035 + 1.7));
+  float strokes = smoothstep(0.55, 0.8, s1) * 0.65 + smoothstep(0.62, 0.86, s2) * 0.35;
+  vec3 rock = mix(vec3(0.47, 0.46, 0.43), vec3(0.68, 0.66, 0.61), grain);
+  rock *= 1.0 - strokes * 0.42;
+  // the layers in the stone (the desert's sandstone shows them most)
+  float layers = abs(fract(vPos.y / 9.0 + vnoise(vPos.xz * 0.015) * 1.3) - 0.5);
+  rock *= 1.0 - (1.0 - smoothstep(0.02, 0.1, layers)) * (0.05 + 0.13 * smoothstep(1.05, 1.2, uRock.x));
+  rock *= 0.8 + 0.2 * smoothstep(0.6, -0.4, vCav);
   // (each map's own stone: grey in 東荒, sandstone in the desert)
   rock *= uRock;
   float r = smoothstep(0.14, 0.4, steep + (grain - 0.5) * 0.14);
@@ -68,8 +98,13 @@ void main() {
   // ink contours on the slopes, every so high
   float hz = vPos.y / 22.0;
   float line = abs(fract(hz) - 0.5) / max(fwidth(hz), 1e-4);
-  float contour = (1.0 - smoothstep(0.0, 1.1, line)) * smoothstep(0.1, 0.32, steep);
-  col = mix(col, vec3(0.15, 0.14, 0.13), contour * 0.26);
+  // (not on the sheer walls, where the strokes are: there they would only crosshatch it)
+  float contour = (1.0 - smoothstep(0.0, 1.1, line)) * smoothstep(0.1, 0.32, steep) * (1.0 - smoothstep(0.42, 0.62, steep));
+  col = mix(col, vec3(0.15, 0.14, 0.13), contour * 0.22);
+  // the brow of a cliff inked in one line, where the ground breaks over into rock
+  float edge = abs(r - 0.5) / max(fwidth(r), 1e-3);
+  float brow = (1.0 - smoothstep(0.5, 1.6, edge)) * smoothstep(0.02, 0.22, -vCav) * (1.0 - smoothstep(1600.0, 3000.0, camD));
+  col = mix(col, vec3(0.15, 0.14, 0.13), brow * 0.6);
   // marks on the ground near you: a beast's coming blow, where your spell will go
   if (uMarkRect.w > 0.5) {
     vec2 muv = (vPos.xz - uMarkRect.xy) / uMarkRect.z;
@@ -86,6 +121,9 @@ void main() {
 }
 `;
 
+// the ground looked at round each point, for its hollows and brows: two steps out, and the diagonals
+const RING = [[2, 0], [-2, 0], [0, 2], [0, -2], [1, 1], [1, -1], [-1, 1], [-1, -1]];
+
 function tileGeometry(tx, ty, H) {
   const i0 = tx * TQ;
   const j0 = ty * TQ;
@@ -95,6 +133,7 @@ function tileGeometry(tx, ty, H) {
   const pos = new Float32Array(nv * 3);
   const nor = new Float32Array(nv * 3);
   const uv = new Float32Array(nv * 2);
+  const cav = new Float32Array(nv);
   const hAt = (i, j) => H.h[Math.max(0, Math.min(HH - 1, j)) * HW + Math.max(0, Math.min(HW - 1, i))];
   let k = 0;
   for (let j = 0; j <= nj; j++) {
@@ -112,6 +151,10 @@ function tileGeometry(tx, ty, H) {
       nor[k * 3 + 2] = nz / len;
       uv[k * 2] = i / TQ;
       uv[k * 2 + 1] = 1 - j / TQ;
+      // (0.24) how far the ground around sits above it (+: a hollow, the foot of a slope) or below (-: a brow)
+      let around = 0;
+      for (const [di, dj] of RING) around += hAt(gi + di, gj + dj);
+      cav[k] = Math.max(-1, Math.min(1, (around / RING.length - pos[k * 3 + 1]) / 24));
       k++;
     }
   }
@@ -133,6 +176,7 @@ function tileGeometry(tx, ty, H) {
   geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
   geo.setAttribute('normal', new THREE.BufferAttribute(nor, 3));
   geo.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
+  geo.setAttribute('aCav', new THREE.BufferAttribute(cav, 1));
   geo.setIndex(new THREE.BufferAttribute(idx, 1));
   geo.computeBoundingSphere();
   geo.computeBoundingBox();

@@ -65,6 +65,7 @@ export function createWorld3D(canvas, { onFrame, idle, quality = 'high', onSlow 
   const octx = overlay.getContext('2d');
 
   const env = createEnv();
+  env.u.uFine.value = quality === 'low' ? 0 : 1;
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(36, 1, 30, 9000);
   const terrain = createTerrain(renderer, env);
@@ -850,6 +851,7 @@ export function createWorld3D(canvas, { onFrame, idle, quality = 'high', onSlow 
   function applyQuality() {
     // the lighter picture: fewer pixels, one layer of cloud
     clouds.group.children.forEach((m, n) => (m.visible = q === 'high' || n === 0));
+    env.u.uFine.value = q === 'high' ? 1 : 0;
     resize();
   }
 
