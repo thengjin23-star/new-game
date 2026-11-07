@@ -76,7 +76,10 @@ void main() {
   // what is left of it does not hide you, as a faded wash with depth would)
   if (vClear > 0.02 && fract(52.9829189 * fract(dot(gl_FragCoord.xy, vec2(0.06711056, 0.00583715)))) < vClear * 0.78) discard;
   vec3 col = c.rgb * (uAmbient + uSunColor * 0.9) * vShade;
-  gl_FragColor = vec4(haze(col, vWorld), edge);
+  // (the edge goes to ink as it thins, and is nearly solid by halfway: drawn nearest first — so a wood
+  // costs no more than before — an edge over a crown behind it shows as a fine ink line, not a pale one)
+  col = mix(vec3(0.16, 0.16, 0.15), col, smoothstep(0.15, 0.85, edge));
+  gl_FragColor = vec4(haze(col, vWorld), smoothstep(0.03, 0.45, edge));
 }
 `;
 
@@ -105,8 +108,8 @@ export function createDecor(env) {
   const g = world();
   // the trees of the wild, and the great trees that stand as landmarks
   const items = [...g.decor, ...STRUCTURES.map((st, i) => ({ st, i })).filter(({ st }) => GREAT_TREES.has(st.sprite)).map(({ st, i }) => ({ kind: 'big', v: i, st, x: st.x, y: st.y + st.h / 2, s: 1 }))];
-  // far ones first (the camera looks north): a soft edge then falls on what stands behind it
-  items.sort((a, b) => a.y - b.y);
+  // near ones first (the camera looks north): what they hide is never painted (a wood's crowns stand deep)
+  items.sort((a, b) => b.y - a.y);
   const kinds = [...new Set(items.map((d) => `${d.kind}:${d.v}`))];
   const index = new Map(kinds.map((k, n) => [k, n]));
 

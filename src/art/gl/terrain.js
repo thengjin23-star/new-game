@@ -59,7 +59,7 @@ void main() {
   // (0.24) the ground is not one flat wash: blotches of deeper and paler ink some tens of paces across
   // (gentler on snow, which would only look dirty), and near you the grain of the paper
   float lum = dot(paint, vec3(0.299, 0.587, 0.114));
-  float wash = fbm2(vPos.xz * 0.011 + 3.7);
+  float wash = 0.65 * vnoise(vPos.xz * 0.011 + 3.7) + 0.35 * vnoise(vPos.xz * 0.023 + 9.1);
   float wet = smoothstep(0.28, 0.72, wash);
   // (dry patches a little warmer and paler, damp ones deeper and cooler)
   paint *= mix(vec3(1.0), mix(vec3(1.05, 1.04, 1.0), vec3(0.92, 0.945, 0.945), wet), 1.0 - 0.6 * smoothstep(0.8, 0.92, lum));
@@ -74,21 +74,25 @@ void main() {
   paint = mix(paint, min(paint * 1.06 + 0.02, vec3(1.0)), 0.6 * smoothstep(0.06, 0.6, -vCav));
   // 皴: where the ground is steep, bare rock — long strokes down the face (斧劈皴), deeper at its foot
   float grain = vnoise(vPos.xz * 0.045 + vPos.y * 0.02);
-  vec2 down = n.xz / max(length(n.xz), 1e-4);
-  float across = dot(vPos.xz, vec2(-down.y, down.x));
-  float s1 = vnoise(vec2(across * 0.075, vPos.y * 0.018 + grain * 0.6));
-  float s2 = vnoise(vec2(across * 0.19 + 5.3, vPos.y * 0.035 + 1.7));
-  float strokes = smoothstep(0.55, 0.8, s1) * 0.65 + smoothstep(0.62, 0.86, s2) * 0.35;
-  vec3 rock = mix(vec3(0.47, 0.46, 0.43), vec3(0.68, 0.66, 0.61), grain);
-  rock *= 1.0 - strokes * 0.42;
-  // the layers in the stone (the desert's sandstone shows them most)
-  float layers = abs(fract(vPos.y / 9.0 + vnoise(vPos.xz * 0.015) * 1.3) - 0.5);
-  rock *= 1.0 - (1.0 - smoothstep(0.02, 0.1, layers)) * (0.05 + 0.13 * smoothstep(1.05, 1.2, uRock.x));
-  rock *= 0.8 + 0.2 * smoothstep(0.6, -0.4, vCav);
-  // (each map's own stone: grey in 東荒, sandstone in the desert)
-  rock *= uRock;
   float r = smoothstep(0.14, 0.4, steep + (grain - 0.5) * 0.14);
-  vec3 col = mix(paint, rock, r);
+  vec3 col = paint;
+  // (only where there is rock to show: most of the ground is not steep, and skips all this)
+  if (r > 0.0) {
+    vec2 down = n.xz / max(length(n.xz), 1e-4);
+    float across = dot(vPos.xz, vec2(-down.y, down.x));
+    float s1 = vnoise(vec2(across * 0.075, vPos.y * 0.018 + grain * 0.6));
+    float s2 = vnoise(vec2(across * 0.19 + 5.3, vPos.y * 0.035 + 1.7));
+    float strokes = smoothstep(0.55, 0.8, s1) * 0.65 + smoothstep(0.62, 0.86, s2) * 0.35;
+    vec3 rock = mix(vec3(0.47, 0.46, 0.43), vec3(0.68, 0.66, 0.61), grain);
+    rock *= 1.0 - strokes * 0.42;
+    // the layers in the stone (the desert's sandstone shows them most)
+    float layers = abs(fract(vPos.y / 9.0 + vnoise(vPos.xz * 0.015) * 1.3) - 0.5);
+    rock *= 1.0 - (1.0 - smoothstep(0.02, 0.1, layers)) * (0.05 + 0.13 * smoothstep(1.05, 1.2, uRock.x));
+    rock *= 0.8 + 0.2 * smoothstep(0.6, -0.4, vCav);
+    // (each map's own stone: grey in 東荒, sandstone in the desert)
+    rock *= uRock;
+    col = mix(paint, rock, r);
+  }
   // high ground is paler, as if seen through more air
   col = mix(col, vec3(0.7, 0.71, 0.7), smoothstep(260.0, 520.0, vPos.y) * 0.35);
   // snow on the heights in winter
