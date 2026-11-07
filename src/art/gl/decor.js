@@ -22,6 +22,8 @@ attribute vec4 aRect;
 attribute vec2 aSway;
 uniform float uStretch;
 uniform vec3 uClear;
+uniform vec3 uMe;
+uniform float uCot;
 varying vec2 vUv;
 varying vec3 vWorld;
 varying float vSeen;
@@ -29,6 +31,15 @@ varying float vShade;
 varying float vClear;
 void main() {
   vClear = uClear.z > 0.0 && distance(aPos.xz, uClear.xy) < uClear.z ? 1.0 : 0.0;
+  // (0.24) a tree standing between you and the eye (south of you, tall enough to reach over you on the
+  // screen, not far to the side) thins out, so you are not lost in a wood
+  if (uMe.z > 0.5) {
+    float dz = aPos.z - uMe.y;
+    float reach = aSize.y * uStretch * uCot + 12.0;
+    float side = abs(aPos.x - uMe.x) - aSize.x * 0.42;
+    float near = smoothstep(-14.0, 0.0, dz) * (1.0 - smoothstep(reach * 0.75, reach, dz)) * (1.0 - smoothstep(0.0, 14.0, side));
+    vClear = max(vClear, near * 0.9);
+  }
   vec2 c = position.xy;
   vec3 p = aPos;
   float up = (c.y - aSize.w);
@@ -61,8 +72,9 @@ void main() {
   float w = clamp(fwidth(c.a), 0.03, 0.12);
   float edge = smoothstep(0.45, 0.45 + 1.5 * w, c.a);
   if (edge < 0.03 || vSeen < 0.25) discard;
-  // on a fight's ground, only a ghost of the tree stays
-  if (vClear > 0.5 && mod(floor(gl_FragCoord.x) + floor(gl_FragCoord.y) * 2.0, 4.0) > 0.5) discard;
+  // on a fight's ground, or in front of you, only a ghost of the tree stays (thinned in a fine scatter:
+  // what is left of it does not hide you, as a faded wash with depth would)
+  if (vClear > 0.02 && fract(52.9829189 * fract(dot(gl_FragCoord.xy, vec2(0.06711056, 0.00583715)))) < vClear * 0.78) discard;
   vec3 col = c.rgb * (uAmbient + uSunColor * 0.9) * vShade;
   gl_FragColor = vec4(haze(col, vWorld), edge);
 }

@@ -107,6 +107,26 @@ function stroke(ctx, x0, y0, cx, cy, x1, y1, w0, w1, color) {
 }
 
 /** A soft round dab of wash. */
+/** A colour lifted toward sunlight (k: 0..1): leaves go a warm yellow-green, not grey (snow stays white). */
+const SUNLIT = { spring: [216, 230, 156], summer: [206, 222, 146], autumn: [240, 214, 150], winter: [226, 232, 230] };
+const lit = (c, k, season = 'summer') => {
+  const to = SUNLIT[season] || SUNLIT.summer;
+  return c.map((v, i) => Math.round(v + (to[i] - v) * k));
+};
+
+/**
+ * (0.24) Light on a crown: the sun comes from the right (as in the 3D world), so the upper right of a
+ * mass of leaves takes paler dabs, the lower left a wash of shade. cx, cy: its middle; R: its reach.
+ */
+function crownLight(ctx, rnd, cx, cy, R, col, season, n = 12, size = 0.16, shade = 0.16) {
+  dab(ctx, cx - R * 0.22, cy + R * 0.26, R * 0.72, INK, shade, 0.55);
+  for (let i = 0; i < n; i++) {
+    const a = -Math.PI * (0.05 + rnd() * 0.6);
+    const r = R * (0.25 + rnd() * 0.65);
+    dab(ctx, cx + Math.cos(a) * r, cy + Math.sin(a) * r * 0.72, R * size * (0.6 + rnd() * 0.7), lit(col, 0.3 + rnd() * 0.15, season), 0.5 + rnd() * 0.25, 0.7);
+  }
+}
+
 function dab(ctx, x, y, r, c, a, squash = 0.8) {
   ctx.fillStyle = rgba(c, a);
   ctx.beginPath();
@@ -159,6 +179,8 @@ function pineTree(ctx, rnd, fx, fy, H, season, dark = 1) {
     // the needle pad: a flat dark wash with needles fanning up
     dab(ctx, px, py, reach * 0.62, col, 0.75 * dark, 0.34);
     dab(ctx, px - reach * 0.1, py - reach * 0.06, reach * 0.42, INK, 0.28 * dark, 0.3);
+    // (0.24) the light along the top of the pad, from the right
+    dab(ctx, px + reach * 0.16, py - reach * 0.12, reach * 0.34, lit(col, 0.32, season), 0.45 * dark, 0.26);
     ctx.strokeStyle = rgba(INK, 0.55 * dark);
     ctx.lineWidth = 0.6;
     ctx.beginPath();
@@ -207,8 +229,10 @@ function leafyTree(ctx, rnd, fx, fy, H, season, v, opts = {}) {
     const x = cx + Math.cos(a) * r;
     const y = cy + Math.sin(a) * r * 0.75;
     if (blossom && rnd() < 0.45) dab(ctx, x, y, H * 0.022, [222, 150, 160], 0.85, 1);
-    else dab(ctx, x, y, H * (0.018 + rnd() * 0.02), rnd() < 0.5 ? INK : pal[0], 0.28 + rnd() * 0.35, 0.6);
+    // (the ink dots gather in the shaded lower left)
+    else dab(ctx, x - R * 0.08, y + R * 0.06, H * (0.018 + rnd() * 0.02), rnd() < 0.42 ? INK : pal[0], 0.26 + rnd() * 0.32, 0.6);
   }
+  crownLight(ctx, rnd, cx, cy, R, pal[pal.length - 1], season, 11, 0.17, 0.13);
 }
 
 function darkTree(ctx, rnd, fx, fy, H, season) {
@@ -220,17 +244,19 @@ function darkTree(ctx, rnd, fx, fy, H, season) {
   const cx = fx + lean * 0.3;
   const cy = fy - H * 0.72;
   const R = H * 0.32;
-  const col = season === 'autumn' ? [70, 60, 44] : season === 'winter' ? [70, 74, 72] : [34, 50, 42];
+  // (0.24) deep green, not black: three values — the shade below, the body, the lit upper right
+  const col = season === 'autumn' ? [84, 70, 50] : season === 'winter' ? [78, 84, 80] : [44, 68, 54];
   for (let i = 0; i < 7; i++) {
     const a = rnd() * Math.PI * 2;
     const r = rnd() * R * 0.55;
-    dab(ctx, cx + Math.cos(a) * r, cy + Math.sin(a) * r * 0.7, R * (0.5 + rnd() * 0.3), col, 0.4, 0.75);
+    dab(ctx, cx + Math.cos(a) * r, cy + Math.sin(a) * r * 0.7, R * (0.5 + rnd() * 0.3), col, 0.5, 0.75);
   }
-  for (let i = 0; i < 70; i++) {
+  for (let i = 0; i < 48; i++) {
     const a = rnd() * Math.PI * 2;
     const r = Math.sqrt(rnd()) * R * 1.05;
-    dab(ctx, cx + Math.cos(a) * r, cy + Math.sin(a) * r * 0.7, H * (0.015 + rnd() * 0.022), INK, 0.35 + rnd() * 0.35, 0.55);
+    dab(ctx, cx + Math.cos(a) * r - R * 0.1, cy + Math.sin(a) * r * 0.7 + R * 0.08, H * (0.015 + rnd() * 0.022), INK, 0.3 + rnd() * 0.3, 0.55);
   }
+  crownLight(ctx, rnd, cx, cy, R, col, season, 16, 0.15, 0.2);
   // hanging vines
   ctx.strokeStyle = rgba(INK, 0.45);
   ctx.lineWidth = 0.7;

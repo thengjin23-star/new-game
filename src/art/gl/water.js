@@ -54,6 +54,10 @@ void main() {
   float depth = vPos.y - ground;
   if (depth < -0.5) discard;
   vec3 col = mix(uShallow, uDeep, smoothstep(0.0, 22.0, depth));
+  // (0.24) the deep is not one flat blue: slow darker currents, and the sky's pale streaks lying on it
+  col *= 0.93 + 0.13 * vnoise(vPos.xz * 0.0065 + vec2(uTime * 0.012, 0.0));
+  float sheen = smoothstep(0.52, 0.86, fbm2(vec2(vPos.x * 0.0035, vPos.z * 0.012) + vec2(uTime * 0.005, 0.0)));
+  col = mix(col, uHaze * 1.03, sheen * 0.32 * (1.0 - uIce) * smoothstep(1.0, 6.0, depth));
   // along a stream the ripples run with the water; on still water they idle
   vec2 p = uRunning > 0.5 ? vec2(vFlow.x - uTime * 26.0, vFlow.y) : vPos.xz - uDrift * uTime;
   float rip = ripples(p, uTime);
@@ -62,9 +66,11 @@ void main() {
   float steep = uRunning * smoothstep(0.04, 0.16, vFlow.z);
   float froth = steep * smoothstep(0.3, 0.7, vnoise(vec2(vFlow.x * 0.09 - uTime * 2.4, vFlow.y * 0.25)));
   col = mix(col, vec3(0.95, 0.96, 0.95), froth * 0.7);
-  // a pale rim where it laps the shore
+  // a pale rim where it laps the shore, and the bank inked in one line just inside it
   float edge = 1.0 - smoothstep(0.2, 3.0, depth);
   col = mix(col, vec3(0.93, 0.93, 0.88), edge * 0.55);
+  float bank = 1.0 - smoothstep(0.6, 1.8, abs(depth - 1.6) / max(fwidth(depth), 1e-3));
+  col = mix(col, vec3(0.2, 0.21, 0.22), bank * 0.42 * (1.0 - smoothstep(1800.0, 3200.0, distance(uCam, vPos))));
   // ice in winter on still water
   col = mix(col, vec3(0.86, 0.9, 0.93), uIce * 0.65);
   col *= uAmbient + uSunColor * 0.9;

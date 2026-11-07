@@ -98,6 +98,8 @@ export function createEnv() {
     // a fight's ground (x, z, radius): trees standing in it fade back so the fighters can be seen
     uClear: { value: new THREE.Vector3(0, 0, 0) },
     uCot: { value: 0.8 },
+    // (0.24) where you stand (x, z, on): crowns between you and the eye thin out so you can be seen
+    uMe: { value: new THREE.Vector3(0, 0, 0) },
     // marks painted on the ground near you (a beast's coming blow, where your spell will go):
     // the picture, and where it lies (x0, z0, span, on)
     uMarks: { value: null },

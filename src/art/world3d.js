@@ -831,6 +831,7 @@ export function createWorld3D(canvas, { onFrame, idle, quality = 'high', onSlow 
     // a fight's ground: trees on it stand back (reaching toward the eye: a crown just in front could hide a fighter)
     if (CB.inCombat(s)) env.u.uClear.value.set(s.world.x, s.world.y + 40, 125);
     else env.u.uClear.value.set(0, 0, 0);
+    env.u.uMe.value.set(s.world.x, s.world.y, 1);
     const C = CB.combatOf(s);
     const me = C.me;
     const marks = C.on || C.preview || C.fx.length || C.pools.length || (me && (me.shield > 0 || me.target || me.ward || me.regen)) || (C.beasts || []).some((b) => b.state === 'windup' || b.state === 'leap');
