@@ -162,3 +162,31 @@ test('故事: only the threads you are in, the steps you have reached (never ahe
   s.flags.mine_cleared = true;
   assert.ok(thread(s, 'by_mine').done && thread(s, 'by_mine').next === null);
 });
+
+test('斷劍峰: 葉孤寒 at the scar, once you have read it yourself; told of the sword tomb, he tells where 天劍宗\'s first move came from', () => {
+  const s = fresh(207);
+  Object.assign(s.player, { realm: 2, stage: 1 });
+  assert.ok(!EVENTS.air_ye_guhan.cond(s), 'not before you have looked at the scar yourself');
+  s.flags.sword_scar_read = true;
+  s.flags.sword_stele_read = true;
+  startEvent(s, 'air_ye_guhan');
+  pickText(s, '一起看');
+  resolvePending(s);
+  assert.ok(s.flags.ye_met && s.flags.ye_lineage && s.npcs.ye_guhan.met);
+  assert.ok(annalsOf(s).have.some((a) => a.id === 'tianjian') && annalsOf(s).have.some((a) => a.id === 'cleft'));
+  assert.ok(pastOf(s, 'ye_guhan').some((l) => l.includes('天劍宗')));
+});
+
+test('豆花攤: 趙虎, a year or two after the alley, pushing 老李頭\'s millstone — with nobody behind him any more', () => {
+  const s = fresh(208);
+  s.flags.beat_zhao = true;
+  s.flags.zhao_done = true;
+  assert.ok(!EVENTS.town_zhao_changed.cond(s), 'not so soon');
+  waitUntil(s, 2 * 360 + 5);
+  resolvePending(s);
+  assert.ok(EVENTS.town_zhao_changed.cond(s));
+  startEvent(s, 'town_zhao_changed');
+  pickText(s, '豆花');
+  resolvePending(s);
+  assert.ok(s.flags.zhao_changed && pastOf(s, 'zhao_hu').some((l) => l.includes('推磨')));
+});

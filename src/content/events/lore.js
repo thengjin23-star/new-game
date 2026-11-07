@@ -5,6 +5,7 @@
 
 import { flag, has, alive, night } from '../helpers.js';
 import { WINDOWS } from '../../world/arcs.js';
+import { dayAt } from '../../core/calendar.js';
 
 const awake = (s) => flag(s, 'sys_awakened');
 
@@ -18,7 +19,7 @@ export default [
     once: true,
     title: '劍冢碑',
     text: (s) =>
-      '斷劍林的盡頭，一塊半人高的黑石碑歪在土裡。碑前插著一圈鏽劍，劍尖都朝著碑，像一群跪著的人。\n\n碑文是用劍刻的，一筆一劃都帶著劍氣。三千年了，手指摸上去，還會被割破：\n\n「世人皆言吾師一劍斷天河。非也。\n是夜，天外有手，探入天河。吾師仰天一劍，斬其一指。指斷，河亦斷。\n吾師劍折，人不知所終。\n弟子收師斷劍，插於黑石，立碑於此，以待後來者。\n——不肖弟子 謹書」' +
+      '斷劍林的盡頭，一塊半人高的黑石碑歪在土裡。碑前插著一圈鏽劍，劍尖都朝著碑，像一群跪著的人。\n\n碑文是用劍刻的，一筆一劃都帶著劍氣。三千年了，手指摸上去，還會被割破：\n\n「世人皆言吾師一劍斷天河。非也。\n是夜，天外有手，探入天河。吾師登東北孤峰，仰天一劍，斬其一指。指斷，河亦斷；峰亦為之裂。\n吾師劍折，人不知所終。\n弟子收師斷劍，插於黑石，立碑於此，以待後來者。\n——不肖弟子 謹書」' +
       (has(s, 'broken_sword') ? '\n\n懷裡的古劍殘片，輕輕地震了一下。' : ''),
     choices: [
       {
@@ -85,6 +86,69 @@ export default [
       {
         text: '不打擾他了。把鐵盒埋回去。',
         out: { text: '你把土蓋回去，又拜了三拜。湖上起了風，柳枝在你肩上拍了兩下。' },
+      },
+    ],
+  },
+
+  // ── 斷劍峰: 天劍宗's sword prodigy, come to look at the scar (once you have looked at it yourself) ──
+  {
+    id: 'air_ye_guhan',
+    trigger: 'explore',
+    poi: 'sword_cleft',
+    nodes: ['sword_peak'],
+    once: true,
+    cond: (s) => flag(s, 'sword_scar_read') && alive(s, 'ye_guhan'),
+    title: '劍痕前的人',
+    text: '裂口邊上坐著一個年輕人，背著一把很長的劍，一動不動，像是也長在了峰頂上。\n\n你落下來的時候，他沒有回頭。\n\n「三天了，」他說，「我還沒看完。」\n\n後來你才知道，他就是天劍宗的劍子——葉孤寒。',
+    choices: [
+      {
+        text: '在他旁邊坐下，一起看。',
+        out: {
+          text: (s) =>
+            '你們看了一天一夜，誰也沒有說話。\n\n天亮的時候，他站起來：「天劍宗的第一招，是祖師照著這道劍痕練的。練了三千年，沒有人練到過這一劍的一成。」\n\n' +
+            (flag(s, 'sword_stele_read')
+              ? '你告訴他古戰場的劍冢碑：那一夜，有人在這裡，斬下了天外伸進來的一根手指。\n\n他第一次轉過頭來看你。看了很久，他笑了——據說他這輩子，只為一把好劍笑過。\n\n「中州見。」他說。'
+              : '「你很好。」他說，然後御劍走了，連名字都沒有問你。'),
+          effects: [
+            ['meet', 'ye_guhan'], ['flag', 'ye_met'], ['insight', 2], ['sysexp', 10],
+            // (told of the sword tomb, he warms to you, and tells you where his sect's first move came from)
+            (s) => {
+              s.npcs.ye_guhan.favor += flag(s, 'sword_stele_read') ? 20 : 8;
+              if (flag(s, 'sword_stele_read')) s.flags.ye_lineage = true;
+            },
+            ['log', '在斷劍峰的劍痕前遇見葉孤寒'],
+          ],
+        },
+      },
+      {
+        text: '不打擾他，自己走開。',
+        out: { text: '你走遠了回頭看，他還坐在那裡，背上的劍比人還高。', effects: [['meet', 'ye_guhan'], ['flag', 'ye_met']] },
+      },
+    ],
+  },
+
+  // ── 豆花攤: 趙虎, a year or two after the alley, with nobody behind him any more ──
+  {
+    id: 'town_zhao_changed',
+    trigger: 'explore',
+    poi: 'tofu_stall',
+    nodes: ['qingshi_town'],
+    auto: true,
+    once: true,
+    cond: (s) => flag(s, 'beat_zhao') && flag(s, 'zhao_done') && s.day >= dayAt(2, 0) && alive(s, 'zhao_hu'),
+    title: '豆花攤',
+    text: '老李頭的豆花攤後面，有人在推石磨。推得很慢，一圈一圈，滿頭大汗——是趙虎。\n\n鎮上的人說，他舅舅收黑錢，被縣衙革了差；那個會使短劍的表舅，去年在黑風林撞上了劫修，再也沒回來。沒了靠山，趙虎來老李頭的攤子上推磨，說是要還那些年掀翻的豆花。\n\n他看見你，手停了一下，低下了頭。',
+    choices: [
+      {
+        text: '坐下來，要一碗豆花，加糖。',
+        out: {
+          text: '老李頭端來一碗豆花，糖放得滿滿的。\n\n你吃完，趙虎過來收碗。他站了半天，憋出一句：「那時候……對不住。」\n\n「推你的磨吧，」老李頭在一邊說，「還差得遠呢。」',
+          effects: [['meet', 'zhao_hu'], ['flag', 'zhao_changed'], ['favor', 'zhao_hu', 30], ['mind', 3]],
+        },
+      },
+      {
+        text: '看了他一眼，走開。',
+        out: { text: '你走過攤子。身後的石磨，又一圈一圈地轉了起來。', effects: [['meet', 'zhao_hu'], ['flag', 'zhao_changed']] },
       },
     ],
   },
