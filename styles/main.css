@@ -989,6 +989,21 @@ p {
   opacity: 0.9;
 }
 
+/* (0.24) a move's own painted icon, on paper, framed in its element's colour */
+.sk-icon.pic {
+  background-color: rgba(239, 233, 219, 0.96);
+  background-size: 94%;
+  background-position: center;
+  background-repeat: no-repeat;
+  box-shadow: inset 0 0 0 2px var(--el, #6f665a);
+  color: var(--ink);
+}
+
+.sk-icon.pic i {
+  color: var(--ink);
+  opacity: 0.65;
+}
+
 .sk-icon.passive {
   border-radius: 50%;
   background: var(--el, var(--violet));
@@ -3438,6 +3453,30 @@ canvas.fu-canvas {
   font-size: 15px;
   line-height: 1.1;
   letter-spacing: 0.04em;
+  /* (0.24) a halo of paper, so the name reads over its icon */
+  text-shadow: 0 0 2px rgba(239, 233, 219, 0.98), 0 0 5px rgba(239, 233, 219, 0.95), 0 0 8px rgba(239, 233, 219, 0.8);
+}
+
+/* (0.24) each move's icon, painted in ink, behind its name */
+.cbt-btn {
+  background-image: var(--ico, none);
+  background-size: 84%;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+.cbt-btn small {
+  text-shadow: 0 0 2px rgba(239, 233, 219, 0.98), 0 0 5px rgba(239, 233, 219, 0.9);
+}
+
+/* (the coloured buttons carry white names and no icon: no paper halo there) */
+.cbt-btn.strike b,
+.cbt-btn.dash b,
+.cbt-btn.setsw b,
+.cbt-btn.strike small,
+.cbt-btn.dash small,
+.cbt-btn.setsw small {
+  text-shadow: none;
 }
 
 .cbt-btn small {

@@ -12,6 +12,7 @@
 import { h } from './dom.js';
 import * as SK from '../world/skills.js';
 import { MOVES } from '../content/moves.js';
+import { iconUrl, hasIcon } from '../art/icons.js';
 import { rectOf } from '../platform/orient.js';
 
 const SET_NAME = ['第一組', '第二組', '第三組'];
@@ -24,6 +25,9 @@ const SORT_TABS = [['order', '預設'], ['mp', '靈力'], ['cd', '冷卻'], ['na
 /** A move's (or 心法's) seal: its first word on the colour of its element, how it goes off in the corner. */
 export function skillIcon(m) {
   const passive = m.type === 'passive';
+  // (0.24) a move with its own painted icon wears it, framed in its element's colour
+  const url = !passive && m.id && hasIcon(m.id) ? iconUrl(m.id, m.el || '') : null;
+  if (url) return h('span.sk-icon.pic' + (m.locked ? '.locked' : ''), { 'data-el': m.el || '', 'aria-hidden': 'true', style: { backgroundImage: `url("${url}")` } }, h('i', GLYPH[m.aim] || ''));
   return h('span.sk-icon' + (passive ? '.passive' : '') + (m.locked ? '.locked' : ''), { 'data-el': m.el || '', 'aria-hidden': 'true' },
     h('b', m.name[0]), h('i', passive ? '心' : GLYPH[m.aim] || ''));
 }

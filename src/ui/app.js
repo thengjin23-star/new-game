@@ -1,6 +1,7 @@
 import { h, paragraphs, clear, put } from './dom.js';
 import { skillsPage } from './skillsPage.js';
 import { createFeel, feelSettings, setFeel, SHAKE_LEVELS } from './feel.js';
+import { iconUrl, hasIcon } from '../art/icons.js';
 import { createScene } from '../art/ink.js';
 import { createWorldView, paintWorldThumb } from '../art/worldview.js';
 import { createWorld3D, canDraw3D } from '../art/world3d.js';
@@ -1357,6 +1358,15 @@ export function startApp(root, { speed = 1, view = null } = {}) {
       }
       set(el.querySelector('b'), 'textContent', name);
       set(el.querySelector('small'), 'textContent', cost);
+      // (0.24) the move's icon behind its name
+      const ico = id === 'strike' ? `strike:${S.fx}` : id;
+      const icoEl = id === 'strike' || id === 'dash' || id === 'setsw' || id === 'tal' || id === 'pill' ? '' : kit.find((x) => x.id === id)?.el || '';
+      if (el.dataset.ico !== `${ico}|${icoEl}`) {
+        el.dataset.ico = `${ico}|${icoEl}`;
+        const url = hasIcon(ico) ? iconUrl(ico, icoEl) : null;
+        if (url) el.style.setProperty('--ico', `url("${url}")`);
+        else el.style.removeProperty('--ico');
+      }
       el.classList.toggle('off-mp', off);
       el.style.setProperty('--cd', String(left > 0 ? Math.min(1, left / total) : 0));
       set(el.querySelector('.cbt-cd'), 'textContent', left > 0.05 && total > 1 ? left.toFixed(1) : '');
