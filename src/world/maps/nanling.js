@@ -379,14 +379,15 @@ export const NANLING_NODES = {
 /** Buildings, places to walk up to, and what roams (places.js STRUCTURES / POIS / BEASTS, for this map). */
 const STRUCTURES = [
   // 青竹寨: the elder's house at the top of the street, houses up and down the slope
-  { x: 3080, y: 1020, w: 160, h: 86, sprite: 'mansion', name: '寨老' },
-  { x: 2890, y: 1070, w: 70, h: 44, sprite: 'house' },
-  { x: 3250, y: 1050, w: 70, h: 44, sprite: 'house' },
-  { x: 3400, y: 1060, w: 64, h: 42, sprite: 'house' },
-  { x: 2900, y: 1230, w: 70, h: 44, sprite: 'house' },
-  { x: 3190, y: 1222, w: 90, h: 50, sprite: 'shop', name: '百藥鋪' },
-  { x: 3330, y: 1215, w: 70, h: 44, sprite: 'house' },
-  { x: 3040, y: 1300, w: 54, h: 38, sprite: 'hut' },
+  // 青竹寨 (look 'stilt': 吊腳樓, drawn the south's way; still houses to everyone who lives in them)
+  { x: 3080, y: 1020, w: 160, h: 86, sprite: 'mansion', name: '寨老', look: 'stilt' },
+  { x: 2890, y: 1070, w: 70, h: 44, sprite: 'house', look: 'stilt' },
+  { x: 3250, y: 1050, w: 70, h: 44, sprite: 'house', look: 'stilt' },
+  { x: 3400, y: 1060, w: 64, h: 42, sprite: 'house', look: 'stilt' },
+  { x: 2900, y: 1230, w: 70, h: 44, sprite: 'house', look: 'stilt' },
+  { x: 3190, y: 1222, w: 90, h: 50, sprite: 'shop', name: '百藥鋪', look: 'stilt' },
+  { x: 3330, y: 1215, w: 70, h: 44, sprite: 'house', look: 'stilt' },
+  { x: 3040, y: 1300, w: 54, h: 38, sprite: 'hut', look: 'stilt' },
   { x: 2780, y: 1150, w: 44, h: 36, sprite: 'shrine_small', name: '山神' },
   { x: 2990, y: 1190, w: 26, h: 20, sprite: 'well' },
   // the boundary stone at the top of the pass, and 韓三's lean-to below it

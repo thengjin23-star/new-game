@@ -17,6 +17,9 @@ import { GLSL_COMMON, GLSL_LIGHT } from './env.js';
 const C = (r, g, b) => [r / 255, g / 255, b / 255];
 const COL = {
   plaster: C(236, 230, 214),
+  // the south's (南嶺): bamboo and timber walls gone brown, a thatch dark with damp
+  bamboo: C(166, 140, 96),
+  thatch: C(140, 122, 84),
   warm: C(218, 190, 140),
   wallCream: C(226, 214, 188),
   wood: C(98, 66, 44),
@@ -520,6 +523,78 @@ export const BUILD = {
     kit.box(w * 0.26, H, -d * 0.12, 6, d * 0.68 + 6, 6, COL.stone, K.STONE);
     for (let k = 0; k < 4; k++) kit.box(-w / 2 - 6, k * 2.2, 0, 4, 2, 11, COL.logDark, K.WOOD, { hull: false });
   },
+  /**
+   * (0.24) 吊腳樓, 南嶺's way: the house up on timber stilts out of the damp, a plank deck along its
+   * front with a railing, a ladder down to the ground, plank walls and a steep, deep-eaved thatch.
+   * opts: floor height, wall height, how much of the footprint it takes.
+   */
+  stilt_house(kit, dc, st, rnd, o = {}) {
+    const FH = o.fh ?? 12;
+    const WH = o.wh ?? 13;
+    const w = (st.w - 8) * (o.part ?? 1);
+    const d = (st.h - 8) * (o.part ?? 1);
+    const zb = -2; // the house sits a little back on its deck
+    // the stilts, sunk a little into the slope, and two braces across the front
+    for (const fx of [-0.5, 0, 0.5]) {
+      for (const fz of [-0.5, 0.5]) kit.beam([fx * (w - 2), -3, zb + fz * (d - 2)], [fx * (w - 2), FH, zb + fz * (d - 2)], 2.2, COL.timber);
+    }
+    for (const fx of [-0.5, 0, 0.5]) kit.beam([fx * (w - 2), -3, zb + d / 2 + 12], [fx * (w - 2), FH, zb + d / 2 + 12], 1.8, COL.timber);
+    for (const sx of [-1, 1]) kit.beam([sx * (w / 2 - 1), 1, zb + d / 2 + 12], [0, FH - 1, zb + d / 2 + 12], 0.9, COL.timber);
+    // the deck, running out in front
+    const deckD = d + 14;
+    kit.box(0, FH, zb + 7, w + 5, 2, deckD, COL.plank, K.WOOD);
+    // plank walls
+    kit.box(0, FH + 2, zb, w, WH, d, COL.bamboo, K.WOOD, { top: false });
+    const front = zb + d / 2 + 0.25;
+    kit.decal(dc.door(9, 13, [84, 60, 40]), -w * 0.16, FH + 2, front, 9, 13);
+    if (w > 40) kit.decal(dc.window(8, 6), w * 0.24, FH + 7, front, 8, 6, 1);
+    // the railing along the deck's front edge
+    const zf = zb + 7 + deckD / 2 - 0.8;
+    kit.beam([-w / 2 - 2, FH + 6.5, zf], [w / 2 + 2, FH + 6.5, zf], 0.8, COL.timber);
+    for (const x of spread(7, w / 2 + 1.5)) if (x > -w / 2 + 8) kit.beam([x, FH + 2, zf], [x, FH + 6.5, zf], 0.6, COL.timber);
+    // a ladder down from the deck's left end
+    const lx = -w / 2 + 3.5;
+    for (const sx of [-2.4, 2.4]) kit.beam([lx + sx, -1, zf + 9], [lx + sx, FH + 2, zf], 0.8, COL.timber);
+    for (let k = 1; k <= 4; k++) {
+      const t = k / 5;
+      kit.beam([lx - 2.4, t * (FH + 2), zf + 9 * (1 - t)], [lx + 2.4, t * (FH + 2), zf + 9 * (1 - t)], 0.6, COL.timber);
+    }
+    // the thatch: steep, its eaves deep over the deck
+    roofAt(kit, 0, zb, { w: w + 4, d: d - 2, y: FH + 2 + WH, rise: d * 0.5 + 3, over: 5, col: COL.thatch, kind: K.STRAW, gable: true, lift: 2 });
+    return { FH, WH, w, d, zb };
+  },
+  stilt_hut(kit, dc, st, rnd) {
+    BUILD.stilt_house(kit, dc, st, rnd, { fh: 9, wh: 11 });
+  },
+  stilt_shop(kit, dc, st, rnd) {
+    const { FH, WH, w, d, zb } = BUILD.stilt_house(kit, dc, st, rnd, { wh: 15 });
+    const front = zb + d / 2 + 0.35;
+    kit.decal(dc.plaque(st.name || '藥鋪', Math.min(30, w * 0.42), 7), 0, FH + WH - 3.5, front, Math.min(30, w * 0.42), 7);
+    kit.beam([w / 2 + 6, -1, zb + d / 2 + 8], [w / 2 + 6, FH + WH + 14, zb + d / 2 + 8], 1.4, COL.timber);
+    kit.decal(dc.banner('藥', 7, 18), w / 2 + 2, FH + WH - 4, zb + d / 2 + 8.4, 7, 18);
+  },
+  /** The headman's: a bigger 吊腳樓 with a second roof over the middle, inside a bamboo fence. */
+  stilt_mansion(kit, dc, st, rnd) {
+    const { FH, WH, w, d, zb } = BUILD.stilt_house(kit, dc, st, rnd, { fh: 13, wh: 16, part: 0.62 });
+    const top = FH + 2 + WH;
+    kit.box(0, top + d * 0.3, zb, w * 0.42, 9, d * 0.42, COL.bamboo, K.WOOD, { top: false });
+    roofAt(kit, 0, zb, { w: w * 0.42 + 4, d: d * 0.42 + 2, y: top + d * 0.3 + 9, rise: d * 0.32 + 3, over: 7, col: COL.thatch, kind: K.STRAW, gable: true, lift: 3 });
+    kit.decal(dc.plaque(st.name || '寨老', 16, 7), 0, FH + WH - 4, zb + d / 2 + 0.35, 16, 7);
+    // the fence round its yard, open in front
+    const W = st.w / 2 - 2;
+    const D = st.h / 2 - 2;
+    const rail = (a, b) => {
+      kit.beam([a[0], 7, a[1]], [b[0], 7, b[1]], 0.8, COL.bamboo);
+      kit.beam([a[0], 3.5, a[1]], [b[0], 3.5, b[1]], 0.8, COL.bamboo);
+      const n = Math.max(1, Math.round(Math.hypot(b[0] - a[0], b[1] - a[1]) / 6));
+      for (let k = 0; k <= n; k++) kit.beam([a[0] + ((b[0] - a[0]) * k) / n, -1, a[1] + ((b[1] - a[1]) * k) / n], [a[0] + ((b[0] - a[0]) * k) / n, 9, a[1] + ((b[1] - a[1]) * k) / n], 0.9, COL.bamboo);
+    };
+    rail([-W, -D], [W, -D]);
+    rail([-W, -D], [-W, D]);
+    rail([W, -D], [W, D]);
+    rail([-W, D], [-W * 0.3, D]);
+    rail([W * 0.3, D], [W, D]);
+  },
   /** 鐵匠鋪: a log shop with its front opened on the forge (lit at night), an anvil before it. */
   smithy(kit, dc, st) {
     BUILD.cabin(kit, dc, st);
@@ -830,7 +905,8 @@ export function createBuildings(env) {
         }
       }
     }
-    const make = BUILD[st.sprite];
+    // (0.24) a place's own way of building (南嶺's 吊腳樓): the same kind of house, built otherwise
+    const make = (st.look && BUILD[`${st.look}_${st.sprite}`]) || BUILD[st.sprite];
     if (!make) return;
     kit.at(st.x, ground, st.y, st.rot || 0);
     make(kit, dc, st, stream(Math.floor(hash2(i, 7, 911) * 1e9)));

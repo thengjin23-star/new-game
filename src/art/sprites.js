@@ -1029,7 +1029,9 @@ function buildingSprite(key, st, season) {
   const tall = { teahouse: 2, auction: 3, tower: 2, bighall: 2, pagoda: 1, beacon: 3, fort: 3, observatory: 2, cairn: 2, minegate: 2, skygate: 3 }[sprite] || 1;
   const wallH = { mansion: 24, house: 17, shop: 20, teahouse: 18, auction: 18, hall: 26, bighall: 28, farmhouse: 15, shrine_small: 11, shrine: 18, hut: 14, tower: 18, teashed: 16, adobe: 18, beacon: 22, fort: 26, ruinwall: 24, observatory: 22, cabin: 15, smithy: 15, yurt: 14, cairn: 18, minegate: 22, skygate: 24 }[sprite] || 16;
   const great = sprite === 'bigtree' || sprite === 'bigpoplar';
-  const extraTop = sprite === 'pagoda' ? 150 : great ? 130 : 0;
+  // (0.24) a place's own way of building (南嶺's 吊腳樓, up on stilts: taller by its stilts and its second roof)
+  const look = st.look && BUILD[`${st.look}_${sprite}`] ? `${st.look}_${sprite}` : null;
+  const extraTop = (sprite === 'pagoda' ? 150 : great ? 130 : 0) + (look ? 26 : 0);
   const W = great ? 130 : w * 1.4 + 24;
   const H = wallH * tall + d * 0.95 + 26 + extraTop;
   const fx = W / 2;
@@ -1038,7 +1040,7 @@ function buildingSprite(key, st, season) {
     const x0 = fx - w / 2;
     const x1 = fx + w / 2;
     const base = fy;
-    const draw = BUILD[sprite];
+    const draw = BUILD[look || sprite];
     if (draw) draw(ctx, rnd, { x0, x1, base, w, d, wallH, snow, fx, season, st });
   });
 }
@@ -1149,6 +1151,104 @@ const BUILD = {
   },
   hut(ctx, rnd, b) {
     BUILD.farmhouse(ctx, rnd, b);
+  },
+  /** (0.24) 吊腳樓: up on stilts, a plank deck with a railing, a ladder, plank walls, a steep thatch. */
+  stilt_house(ctx, rnd, b, o = {}) {
+    const FH = o.fh ?? 10;
+    const part = o.part ?? 1;
+    const x0 = b.fx - (b.w * part) / 2;
+    const x1 = b.fx + (b.w * part) / 2;
+    const wallH = (o.wh ?? b.wallH) * 0.95;
+    shadow(ctx, b.fx, b.base + 1, b.w * part * 0.62, 7, 0.22);
+    // the stilts, and a brace
+    const deck = b.base - FH;
+    for (let k = 0; k < 4; k++) {
+      const x = x0 + 4 + ((x1 - x0 - 8) * k) / 3;
+      line(ctx, [[x, b.base + 1], [x, deck]], 1.7, rgba([88, 66, 46], 0.95));
+    }
+    line(ctx, [[x0 + 4, b.base - 1], [b.fx, deck + 1]], 0.7, rgba([88, 66, 46], 0.8));
+    line(ctx, [[x1 - 4, b.base - 1], [b.fx, deck + 1]], 0.7, rgba([88, 66, 46], 0.8));
+    // the deck
+    ctx.fillStyle = rgba([112, 86, 58], 1);
+    ctx.fillRect(x0 - 3, deck - 2.5, x1 - x0 + 6, 2.5);
+    ctx.strokeStyle = rgba(INK, 0.7);
+    ctx.lineWidth = 0.6;
+    ctx.strokeRect(x0 - 3, deck - 2.5, x1 - x0 + 6, 2.5);
+    // plank walls
+    const top = deck - 2.5 - wallH;
+    wall(ctx, x0 + 3, x1 - 3, top, deck - 2.5, [170, 140, 98]);
+    ctx.strokeStyle = rgba([96, 72, 48], 0.4);
+    ctx.lineWidth = 0.5;
+    ctx.beginPath();
+    for (let x = x0 + 6; x < x1 - 4; x += 3.2) {
+      ctx.moveTo(x, top + 1);
+      ctx.lineTo(x, deck - 3);
+    }
+    ctx.stroke();
+    door(ctx, b.fx - (x1 - x0) * 0.16, deck - 2.5, 7, wallH * 0.75, [84, 60, 40]);
+    if (x1 - x0 > 40) lattice(ctx, b.fx + (x1 - x0) * 0.16, top + wallH * 0.25, 7, 6);
+    // the railing along the deck
+    ctx.strokeStyle = rgba([88, 66, 46], 0.9);
+    ctx.lineWidth = 0.7;
+    ctx.beginPath();
+    ctx.moveTo(x0 - 3, deck - 6.5);
+    ctx.lineTo(x1 + 3, deck - 6.5);
+    for (let x = x0 + 8; x <= x1 + 2; x += 5) {
+      ctx.moveTo(x, deck - 2.5);
+      ctx.lineTo(x, deck - 6.5);
+    }
+    ctx.stroke();
+    // the ladder, down from the deck's left end
+    ctx.strokeStyle = rgba([88, 66, 46], 0.95);
+    ctx.lineWidth = 0.8;
+    ctx.beginPath();
+    for (const dx of [-2.2, 2.2]) {
+      ctx.moveTo(x0 + 2 + dx, deck - 2.5);
+      ctx.lineTo(x0 - 3 + dx, b.base + 2);
+    }
+    for (let k = 1; k <= 3; k++) {
+      const t = k / 4;
+      const y = deck - 2.5 + (b.base + 2 - deck + 2.5) * t;
+      const x = x0 + 2 - 5 * t;
+      ctx.moveTo(x - 2.2, y);
+      ctx.lineTo(x + 2.2, y);
+    }
+    ctx.stroke();
+    // the thatch: steep, deep over the deck
+    roofShape(ctx, x0 - 5, x1 + 5, top, b.d * part * 0.95 + 4, [146, 126, 86], { straw: true, lift: 2, snow: b.snow });
+    return { x0, x1, top, deck };
+  },
+  stilt_hut(ctx, rnd, b) {
+    BUILD.stilt_house(ctx, rnd, b, { fh: 8, wh: 12 });
+  },
+  stilt_shop(ctx, rnd, b) {
+    const { top, x1 } = BUILD.stilt_house(ctx, rnd, b);
+    plaque(ctx, b.fx, top + 4, b.st.name || '藥鋪', Math.min(28, b.w * 0.42));
+    flag(ctx, x1 + 5, b.base, 46, '藥');
+  },
+  stilt_mansion(ctx, rnd, b) {
+    // the bamboo fence round the yard behind
+    ctx.strokeStyle = rgba([150, 126, 84], 0.9);
+    ctx.lineWidth = 0.8;
+    ctx.beginPath();
+    for (let x = b.x0; x <= b.x1; x += 4) {
+      if (Math.abs(x - b.fx) < b.w * 0.15) continue;
+      ctx.moveTo(x, b.base + 2);
+      ctx.lineTo(x, b.base - 7);
+    }
+    ctx.moveTo(b.x0, b.base - 2);
+    ctx.lineTo(b.fx - b.w * 0.15, b.base - 2);
+    ctx.moveTo(b.fx + b.w * 0.15, b.base - 2);
+    ctx.lineTo(b.x1, b.base - 2);
+    ctx.stroke();
+    const { top, x0, x1 } = BUILD.stilt_house(ctx, rnd, { ...b, base: b.base - 6 }, { fh: 11, wh: 22, part: 0.62 });
+    // the second roof over the middle
+    const ux0 = b.fx - (x1 - x0) * 0.22;
+    const ux1 = b.fx + (x1 - x0) * 0.22;
+    const uTop = top - b.d * 0.42 - 8;
+    wall(ctx, ux0, ux1, uTop, uTop + 9, [170, 140, 98]);
+    roofShape(ctx, ux0 - 4, ux1 + 4, uTop, b.d * 0.3, [140, 120, 82], { straw: true, lift: 3, snow: b.snow });
+    plaque(ctx, b.fx, top + 4, b.st.name || '寨老', 16);
   },
   shrine_small(ctx, rnd, b) {
     shadow(ctx, b.fx, b.base + 1, b.w * 0.6, 5, 0.2);

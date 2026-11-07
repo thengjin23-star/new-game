@@ -50,7 +50,10 @@ export function skyLight(s) {
 
 /** Over the whole picture: a grey wash in the rain, a white veil in fog, red under a blood moon, white when the lightning strikes. t: seconds. */
 export function drawSkyVeil(ctx, s, W, H, t) {
-  if (underground(s)) return;
+  if (underground(s)) {
+    drawUnder(ctx, s, W, H);
+    return;
+  }
   const w = weatherNow(s);
   if (w.fog) {
     const g = ctx.createLinearGradient(0, 0, 0, H);
@@ -105,4 +108,68 @@ export function drawSkyVeil(ctx, s, W, H, t) {
     ctx.fillStyle = `rgba(250,250,255,${flash})`;
     ctx.fillRect(0, 0, W, H);
   }
+}
+
+// ── (0.24) under the ground ──
+
+/** The star map set in 地宮's dome: a handful of figures, stars joined by faint lines (where on the dome: 0..1). */
+const DOME = (() => {
+  let seed = 20240907;
+  const rnd = () => ((seed = (seed * 1664525 + 1013904223) >>> 0) / 4294967296);
+  const figures = [];
+  for (let f = 0; f < 8; f++) {
+    const cx = 0.06 + (f / 8) * 0.9 + (rnd() - 0.5) * 0.06;
+    const cy = 0.05 + rnd() * 0.22;
+    const stars = [];
+    const n = 4 + Math.floor(rnd() * 4);
+    let x = cx;
+    let y = cy;
+    for (let k = 0; k < n; k++) {
+      stars.push([x, y, 0.8 + rnd() * 1.4]);
+      x += (rnd() - 0.45) * 0.07;
+      y += (rnd() - 0.5) * 0.06;
+    }
+    figures.push(stars);
+  }
+  return figures;
+})();
+
+/**
+ * Under the ground (地宮, the mine): the dark closing in round the edges, a roof of rock darkest along
+ * the top of the picture; in 地宮 the star map on the dome above, glowing faintly, drifting a little as
+ * you walk under it.
+ */
+function drawUnder(ctx, s, W, H) {
+  const roof = ctx.createLinearGradient(0, 0, 0, H * 0.34);
+  roof.addColorStop(0, 'rgba(12,12,20,0.66)');
+  roof.addColorStop(1, 'rgba(12,12,20,0)');
+  ctx.fillStyle = roof;
+  ctx.fillRect(0, 0, W, H * 0.34);
+  const g = ctx.createRadialGradient(W / 2, H * 0.56, Math.min(W, H) * 0.32, W / 2, H * 0.56, Math.max(W, H) * 0.72);
+  g.addColorStop(0, 'rgba(10,10,16,0)');
+  g.addColorStop(1, 'rgba(10,10,16,0.58)');
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, W, H);
+  if (s.player?.loc !== 'underpalace') return;
+  const now = (typeof performance !== 'undefined' ? performance.now() : Date.now()) / 1000;
+  const ox = -((s.world?.x || 0) - 950) * 0.12;
+  const oy = -((s.world?.y || 0) - 440) * 0.06;
+  ctx.save();
+  ctx.lineWidth = 0.8;
+  DOME.forEach((stars, f) => {
+    const pts = stars.map(([x, y]) => [x * W + ox, y * H + oy]);
+    ctx.strokeStyle = 'rgba(214,196,140,0.22)';
+    ctx.beginPath();
+    pts.forEach(([x, y], k) => (k ? ctx.lineTo(x, y) : ctx.moveTo(x, y)));
+    ctx.stroke();
+    stars.forEach(([, , r], k) => {
+      const [x, y] = pts[k];
+      const a = 0.45 + 0.35 * Math.sin(now * (0.8 + ((f + k) % 3) * 0.4) + f * 2.1 + k);
+      ctx.fillStyle = `rgba(236,220,170,${a.toFixed(3)})`;
+      ctx.beginPath();
+      ctx.arc(x, y, r, 0, Math.PI * 2);
+      ctx.fill();
+    });
+  });
+  ctx.restore();
 }
