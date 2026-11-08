@@ -2,11 +2,12 @@ import { NODES, canSecludeAt } from '../world/map.js';
 import { POIS } from '../world/places.js';
 import { ITEMS, SHOPS, displayItem } from '../content/items.js';
 import { TECHS } from '../content/techniques.js';
-import { DEDUCE, DEDUCE_FALLBACK, sysGain } from '../world/system.js';
-import { advance, newReport, resetLifeWarnings, spendHours } from './time.js';
+import { DEDUCE, DEDUCE_FALLBACK } from '../world/system.js';
+import { advance, newReport, spendHours } from './time.js';
 import { applyEffects, logLife, techValue } from './effects.js';
 import { pickEvent, startEvent, takeDue, notice } from './events.js';
 import { breakthroughInfo, realmLabel, REALMS, stageReq } from './cultivation.js';
+import { rise, fallBack, openJie } from './jie.js';
 import { restore, wear, unwearGone } from './body.js';
 import { rand, randInt, chance, pick, pickWeighted } from './rng.js';
 import { fmtDuration, cnNum } from './calendar.js';
@@ -14,6 +15,16 @@ import { checkChance } from './checks.js';
 import { priceShare } from '../world/factions.js';
 
 export const MS_PER_DAY = 3000;
+
+/**
+ * (0.26) 入定: how long a day of seclusion takes in real time. The deeper the realm, the deeper the
+ * stillness, and the faster the years go by (元嬰 a third of the time, 化神 a twelfth): a great realm is
+ * still the work of a day or so of real time, though it is hundreds of years in the world.
+ */
+export function dayMs(s) {
+  const r = s.player.realm;
+  return r >= 5 ? 250 : r === 4 ? 1000 : MS_PER_DAY;
+}
 
 function busy(s) {
   return !!(s.pending || s.secl || s.dead);
@@ -97,7 +108,7 @@ export function startSeclusion(s, days, now, speed = 1) {
     start: now,
     days,
     done: 0,
-    msPerDay: MS_PER_DAY / speed,
+    msPerDay: dayMs(s) / speed,
     node: s.player.loc,
     startDay: s.day,
     xw: 0,
@@ -227,9 +238,10 @@ export function attemptBreakthrough(s, pills = 0) {
   const report = newReport();
   // pills: real ones first; a fake one does nothing (and you find out the hard way)
   let usedFake = 0;
+  let ningjin = 0;
   if (p.realm === 2 && info.kind === 'major' && pills > 0) {
-    const n = Math.min(2, pills, p.items.ningjin_pill || 0);
-    if (n) applyEffects(s, [['item', 'ningjin_pill', -n]], {}, report);
+    ningjin = Math.min(2, pills, p.items.ningjin_pill || 0);
+    if (ningjin) applyEffects(s, [['item', 'ningjin_pill', -ningjin]], {}, report);
   }
   if (p.realm === 1 && info.kind === 'major' && pills > 0) {
     const usable = Math.min(2, pills, (p.items.zhuji_pill || 0) + (p.items.fake_zhuji || 0));
@@ -246,15 +258,9 @@ export function attemptBreakthrough(s, pills = 0) {
   const fakeLine = usedFake ? '\n\n吞下「築基丹」的那一刻，你嚐到一股熟悉的甜味——是蜂蜜和麵粉。你被騙了。\n' : '';
   if (ok) {
     if (info.kind === 'major') {
-      p.realm += 1;
-      p.stage = 0;
-      p.xw = 0;
-      resetLifeWarnings(s);
-      sysGain(s, p.realm === 1 ? 5 : 30, report);
-      logLife(s, `突破至${realmLabel(p)}`);
-      const text = MAJOR_TEXT[p.realm] || `你突破到了${realmLabel(p)}。`;
-      report.chips.push({ text: `境界：${realmLabel(p)}`, tone: 'good' });
-      if (p.realm >= 2) report.chips.push({ text: `壽元上限 ${REALMS[p.realm].lifespan} 歲`, tone: 'good' });
+      // (0.26) at the gates of 元嬰 and 化神 the odds only open the 劫: live through it to come in
+      if (info.jie) return openJie(s, info.jie);
+      const text = rise(s, report, { chance: info.chance, pills: ningjin });
       notice(s, '突破成功', fakeLine + text, { chips: report.chips, toasts: report.toasts });
     } else {
       p.stage += 1;
@@ -265,13 +271,7 @@ export function attemptBreakthrough(s, pills = 0) {
     }
     return;
   }
-  const lossRate = info.kind === 'major' ? 0.3 : 0.2;
-  const lost = Math.round(p.xw * lossRate);
-  p.xw -= lost;
-  report.chips.push({ text: `修為 -${lost}`, tone: 'bad' });
-  const effects = info.kind === 'major' ? [['mind', -10], ['hurt', 1, '突破失敗，經脈盡碎']] : [['mind', -4]];
-  if (info.kind === 'major' && rand(s) < 0.3) effects.push(['hurt', 1, '突破失敗，經脈盡碎']);
-  applyEffects(s, effects, {}, report);
+  fallBack(s, info.kind, report);
   logLife(s, `衝擊${info.next}失敗`);
   if (s.dead) return;
   const text =
@@ -280,12 +280,6 @@ export function attemptBreakthrough(s, pills = 0) {
       : '差了一點。就差那麼一點。';
   notice(s, '突破失敗', fakeLine + text, { chips: report.chips, toasts: report.toasts });
 }
-
-const MAJOR_TEXT = {
-  1: '一縷靈氣破開閉塞的經脈，沉入丹田，化作一點溫熱。\n\n世界的聲音變了。你聽見草葉上露水滾動，聽見十丈外的蟲子振翅。\n\n你踏入了煉氣一層。從今天起，你是修士了。\n\n叮——恭喜宿主踏入修行之路。本系統溫馨提示：煉氣期壽元約一百二十年，請合理規劃。',
-  2: '丹田中的靈氣液化、凝實，最終化為一方圓融的道台。\n\n天地在你眼中忽然清晰了數倍。壽元的枷鎖，鬆開了一截。\n\n你築基了。\n\n在這東荒邊陲，築基修士，已是能開宗立派的人物。而你，是命簿上沒有名字的那個人。\n\n叮——恭喜宿主築基成功。壽元上限提升至二百二十歲。本系統……有點感動。',
-  3: '道台崩塌，又在烈火中重鑄，最終凝成一顆金燦燦的丹。\n\n你結丹了。',
-};
 
 // ── 物品 ──
 

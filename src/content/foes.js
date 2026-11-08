@@ -536,4 +536,41 @@ export const FOES = {
       scared: ['冰麟退回了靈脈的光裡。', '冰麟退回了靈脈的光裡。'],
     },
   },
+
+  // ── 0.26 劫 (core/jie.js; world/combat.js beginJie) ──
+  // 心魔劫 (結嬰): yourself, as you would rather not be — drawn as you are, in ink (art/combatfx.js),
+  // as strong as you; it never lets you go. What it says is your own story (combat.js demonWords). Worn
+  // down, it splits into shadows of you; near the end, desperate.
+  xinmo: {
+    name: '心魔', hp: 1.3, atk: 1.05, boss: true,
+    rt: {
+      tier: 1, person: true, look: 'foe', speed: 188, walk: 40, sight: 2000, lose: 99999, loseT: 99, leash: 99999, body: 10, tall: 37,
+      notice: 0, moves: ['slash', 'qi', 'blink'], keep: [100, 220], dodge: 0.35,
+      phases: [
+        { at: 0.5, moves: ['blink', 'xinmo_shades', 'slash', 'bloodfan'] },
+        { at: 0.25, enrage: true },
+      ],
+    },
+  },
+  xinmo_shade: {
+    name: '心魔', hp: 0.45, atk: 0.8,
+    rt: {
+      tier: 1, person: true, look: 'foe', speed: 176, walk: 40, sight: 2000, lose: 99999, loseT: 99, leash: 99999, body: 10, tall: 37,
+      notice: 0, moves: ['qi', 'slash'], keep: [110, 220], dodge: 0.4,
+    },
+  },
+  // 雷劫 (化神): the cloud. It is the sky — not seen, not touched, not aimed at; it pours itself out in
+  // thunder over wherever you are (it cannot find you, not being able to find your name), and is gone when
+  // it has (its def's cloud: in how many seconds). Three 重 of thunder, each thicker.
+  jieyun: {
+    name: '劫雲', hp: 1, atk: 1, boss: true,
+    rt: {
+      tier: 1, speed: 260, walk: 60, sight: 4000, lose: 99999, loseT: 99, leash: 99999, body: 12, tall: 60, notice: 0,
+      moves: ['leiyu', 'leizhu'], keep: [360, 520],
+      phases: [
+        { at: 0.66, moves: ['leiyu2', 'leizhu'], line: '第二重雷：劫雲壓得更低了，落雷又密了一倍！' },
+        { at: 0.33, moves: ['leiyu2', 'leizhu', 'leiyu'], enrage: true, line: '第三重雷：雲裡傳出一聲長嘯——最後一重了！' },
+      ],
+    },
+  },
 };

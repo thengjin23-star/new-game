@@ -1257,8 +1257,9 @@ export function createWorldView(canvas, { onFrame, idle } = {}) {
         ctx.save();
         ctx.translate(b.x, b.y);
         if (b.phantom) {
-          // a phantom: a cold blue haze about it
-          ctx.fillStyle = `rgba(120,170,235,${0.18 * (1 - (b.fade || 0))})`;
+          // a phantom: a cold blue haze about it (the 心魔: a haze of ink)
+          const ink = b.kind === 'xinmo' || b.kind === 'xinmo_shade';
+          ctx.fillStyle = ink ? `rgba(20,14,24,${0.3 * (1 - (b.fade || 0))})` : `rgba(120,170,235,${0.18 * (1 - (b.fade || 0))})`;
           ctx.beginPath();
           ctx.ellipse(0, -12, 26, 16, 0, 0, Math.PI * 2);
           ctx.fill();

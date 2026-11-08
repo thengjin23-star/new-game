@@ -375,4 +375,14 @@ export const BEAST_MOVES = {
   icespikes: { shape: 'zone', min: 0, max: 320, radius: 44, windup: 1, recover: 0.7, cd: 5.5, mult: 1.5, count: 4, spread: 80, fx: 'icespike' },
   qilincharge: { shape: 'leap', min: 90, max: 300, windup: 0.6, speed: 760, width: 36, overshoot: 30, recover: 0.8, cd: 7, mult: 1.6 },
   frostnova: { shape: 'ring', radius: 140, windup: 1, recover: 0.8, cd: 10, mult: 1.2, push: 80, fx: 'frostring', slow: 1.6 },
+
+  // ── 0.26 劫 ──
+  // 心魔: two shadows of you, that go to nothing at a touch
+  xinmo_shades: { shape: 'call', windup: 0.9, recover: 0.5, cd: 18, first: 2, fx: 'blink', call: { kind: 'xinmo_shade', phantom: true, n: 2, max: 2, share: 0.3, secs: 14, line: '心魔的身影一晃，分出了兩個你。' } },
+  // 劫雲: thunder all over the ground about you (scatter: anywhere within that far of where you are —
+  // it cannot find you, so it strikes all round); thicker in the second 重; now and then one great pillar
+  // of it right where you stand
+  leiyu: { shape: 'zone', min: 0, max: 900, radius: 50, windup: 1.15, recover: 0.35, cd: 2.4, mult: 1.4, count: 6, scatter: 230, fx: 'thunder' },
+  leiyu2: { shape: 'zone', min: 0, max: 900, radius: 50, windup: 1.05, recover: 0.3, cd: 2, mult: 1.4, count: 8, scatter: 220, fx: 'thunder' },
+  leizhu: { shape: 'zone', min: 0, max: 900, radius: 80, windup: 1.6, recover: 0.5, cd: 7.5, first: 4, mult: 2.2, fx: 'thunder' },
 };

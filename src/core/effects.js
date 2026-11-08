@@ -5,7 +5,8 @@ import { genNpc } from '../world/npcs.js';
 import { rumor } from '../world/rumors.js';
 import { sysGain, trySubstitute } from '../world/system.js';
 import { reveal, unseenSpot } from '../world/fog.js';
-import { addXiuwei, stageReq, INJURY } from './cultivation.js';
+import { addXiuwei, stageReq, INJURY, yearsLeft } from './cultivation.js';
+import { DAYS_PER_YEAR } from './calendar.js';
 import { restore, unwearGone, pools } from './body.js';
 import { advance, spendHours } from './time.js';
 import { schedule, unschedule } from './schedule.js';
@@ -81,7 +82,7 @@ export function addItem(s, id, n, report) {
   }
 }
 
-/** Death, unless the system's 替死 intervenes. Returns true if the player died. */
+/** Death, unless the system's 替死 intervenes (or, from 元嬰 on, the 元嬰 gets away). Returns true if the player died. */
 export function die(s, cause, report) {
   if (trySubstitute(s, report)) {
     report.saved = true;
@@ -89,8 +90,40 @@ export function die(s, cause, report) {
     logLife(s, `險死還生（${cause}）`);
     return false;
   }
+  if (escapeBody(s, cause, report)) return false;
   s.dead = { cause, day: s.day };
   report.died = s.dead;
+  return true;
+}
+
+/** How long a 元嬰 must rest after leaving a body before it can do it again (years). */
+export const YUANYING_REST = 60;
+
+/**
+ * (0.26) 元嬰出竅: from 元嬰 on, the body can die and you need not. The 元嬰 gets away with the last of its
+ * 真元, and a body is grown back about it: near death a long while, a share of this stage's 修為 lost, years
+ * of life gone, and a year of cultivating slowly in a body not yet up to it. Once in a long while
+ * (YUANYING_REST years). Age is not a body's death: it takes the 元嬰 too.
+ */
+export function escapeBody(s, cause, report) {
+  const p = s.player;
+  if (p.realm < 4 || (p.yyRest ?? -1) > s.day) return false;
+  p.injury = 3;
+  p.injuryDays = INJURY[3].days;
+  const lost = Math.round(p.xw * 0.3);
+  p.xw -= lost;
+  // (years gone: sixty, never leaving less than five)
+  const years = Math.max(0, Math.min(60, Math.floor(yearsLeft(s) - 5)));
+  p.lifeBonus = (p.lifeBonus || 0) - years;
+  p.yyRest = s.day + YUANYING_REST * DAYS_PER_YEAR;
+  p.buffs.reborn = DAYS_PER_YEAR;
+  report.saved = true;
+  report.escaped = true;
+  chip(report, '元嬰出竅：肉身已毀', 'bad');
+  if (lost) chip(report, `修為 -${lost}`, 'bad');
+  if (years) chip(report, `壽元 -${years} 年`, 'bad');
+  report.toasts.push('叮——宿主肉身已毀。元嬰尚存，正在重塑肉身。');
+  logLife(s, `肉身被毀，元嬰出竅（${cause}）`);
   return true;
 }
 

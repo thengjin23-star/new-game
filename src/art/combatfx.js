@@ -57,7 +57,11 @@ const PEOPLE = {
   vulture: { look: { robe: [58, 46, 40], trim: [170, 130, 60], hair: 'turban', wrapCol: [44, 40, 38], veil: true, big: true, skin: [184, 140, 100] }, weapon: 'sabre', blade: 22, unveil: true },
 };
 
+/** (0.26) The 心魔 and its shadows: you, as you are drawn, holding what you hold — washed in ink. */
+const mirrorOf = (b) => b.kind === 'xinmo' || b.kind === 'xinmo_shade';
+
 function personLook(b) {
+  if (mirrorOf(b)) return { look: LOOKS.player, weapon: b.weaponSet || b.master?.weaponSet || 'qinggang_sword' };
   const P = PEOPLE[b.kind];
   if (P?.unveil && b.enraged) return { ...P, look: { ...P.look, veil: false } };
   if (P) return P;
@@ -131,7 +135,7 @@ export function paintBeast(ctx, b, t, now, { tint = true, pic = null } = {}) {
   if (tint) {
     ctx.globalCompositeOperation = 'source-atop';
     if (b.phantom) {
-      ctx.fillStyle = 'rgba(120,170,235,0.42)';
+      ctx.fillStyle = mirrorOf(b) ? 'rgba(16,12,20,0.62)' : 'rgba(120,170,235,0.42)';
       ctx.fillRect(-70, -90, 140, 100);
     }
     if (b.enraged && st !== 'dead') {

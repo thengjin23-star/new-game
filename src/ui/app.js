@@ -19,7 +19,7 @@ import { happenings, whenWord } from '../world/happenings.js';
 import * as CB from '../world/combat.js';
 import * as AR from '../world/arts.js';
 import * as SK from '../world/skills.js';
-import { ROOTS, INJURY, BUFFS, REALMS, realmLabel, stageReq, age, lifespan, rateParts, breakthroughInfo, power, atBottleneck, techOf } from '../core/cultivation.js';
+import { ROOTS, INJURY, BUFFS, REALMS, BEYOND, realmLabel, stageReq, age, lifespan, rateParts, breakthroughInfo, power, atBottleneck, atCeiling, coreOf, techOf } from '../core/cultivation.js';
 import { SLOTS, STAT_WORD, gearOf, slotOf } from '../core/body.js';
 import { fmtDate, fmtDuration, seasonOf, SEASON_NAME } from '../core/calendar.js';
 import { NODES, canSecludeAt, nodeQi, mapOf } from '../world/map.js';
@@ -1375,11 +1375,19 @@ export function startApp(root, { speed = 1, view = null } = {}) {
     }
   }
 
+  /** (0.26) 修為 as a number you can read at a glance: past ten thousand, in 萬. */
+  function xwWord(v) {
+    v = Math.floor(v);
+    if (v < 100000) return String(v);
+    const w = v / 10000;
+    return `${w >= 100 ? Math.floor(w) : w.toFixed(1).replace(/\.0$/, '')}萬`;
+  }
+
   /** A fight starts or ends: a word across the screen. */
   function combatSignal(sig) {
     if (sig.combat === 'start') {
       hideCaption();
-      combatBanner('遭遇', sig.rank ? `${sig.name}・${sig.rank}` : sig.name);
+      combatBanner(sig.jie ? '渡劫' : '遭遇', sig.rank ? `${sig.name}・${sig.rank}` : sig.name);
     } else if (sig.combat === 'won') combatBanner('戰鬥結束', '勝');
     else if (sig.combat === 'spar') combatBanner('切磋', '負');
     else if (sig.combat === 'phase' && sig.enraged) combatBanner(sig.name, '狂暴');
@@ -1434,7 +1442,7 @@ export function startApp(root, { speed = 1, view = null } = {}) {
           h('span.hud-ls', { title: '靈石' }, h('i.gem'), String(p.ls)),
         ),
         h('div.hud-line.sub', h('span.hud-date', h('span.era', '天元'), fmtDate(s.day).replace(/^天元/, '')), h('span.hud-time', timeWord(s))),
-        h('div.hud-xw', bar(p.xw, req, neck ? 'full' : ''), h('span', neck ? '修為圓滿・可突破' : `修為 ${Math.floor(p.xw)} / ${req}`)),
+        h('div.hud-xw', bar(p.xw, req, neck ? 'full' : ''), h('span', neck ? '修為圓滿・可突破' : atCeiling(s) ? '修為圓滿・化神之後無路' : `修為 ${xwWord(p.xw)} / ${xwWord(req)}`)),
         // your blood and 靈力, always (they are what a fight takes, and rest gives back)
         h('div.hud-vitals', h('div.vbar.hp', h('i'), h('span')), h('div.vbar.mp', h('i'), h('span'))),
       );
@@ -2266,10 +2274,11 @@ export function startApp(root, { speed = 1, view = null } = {}) {
     put(wrap, 
       h('section.card.realm-card',
         h('div.realm-big', realmLabel(p)),
-        h('p.muted', `${ROOTS[p.root.type].name}（${p.root.els.join('、')}）・${tech ? tech.name : '未習功法'}・戰力 ${power(s)}`),
-        bar(p.xw, stageReq(s), atBottleneck(s) ? 'full' : ''),
+        h('p.muted', `${ROOTS[p.root.type].name}（${p.root.els.join('、')}）・${tech ? tech.name : '未習功法'}・戰力 ${power(s)}${coreOf(p) ? `・${coreOf(p).name}金丹` : ''}`),
+        bar(p.xw, stageReq(s), atBottleneck(s) || atCeiling(s) ? 'full' : ''),
         h('p.rate', `閉關時每日修為 +${rp.total.toFixed(2)}`),
-        h('p.breakdown', `基礎 ${rp.base} × 靈根 ${rp.root} × 功法 ${rp.tech.toFixed(2)} × 靈氣 ${rp.qi} × 心境 ${rp.mind.toFixed(2)}${rp.injury < 1 ? ` × 傷勢 ${rp.injury}` : ''}${rp.buff > 1 ? ` × 增益 ${rp.buff.toFixed(2)}` : ''}${rp.sky > 1 ? ` × 天時 ${rp.sky.toFixed(2)}` : ''}${rp.land > 1 ? ` × 地利 ${rp.land.toFixed(2)}` : ''}`),
+        h('p.breakdown', `基礎 ${rp.base} × 靈根 ${rp.root} × 功法 ${rp.tech.toFixed(2)} × 靈氣 ${rp.qi} × 心境 ${rp.mind.toFixed(2)}${rp.injury < 1 ? ` × 傷勢 ${rp.injury}` : ''}${rp.buff !== 1 ? ` × 增益 ${rp.buff.toFixed(2)}` : ''}${rp.sky > 1 ? ` × 天時 ${rp.sky.toFixed(2)}` : ''}${rp.land > 1 ? ` × 地利 ${rp.land.toFixed(2)}` : ''}${rp.core !== 1 ? ` × 成色 ${rp.core.toFixed(2)}` : ''}${rp.thin < 1 ? ` × 靈氣不足 ${rp.thin.toFixed(2)}` : ''}`),
+        rp.thin < 1 ? h('p.warn.small', `到了${REALMS[p.realm].name}${p.realm === 4 ? '中期' : ''}，要靈氣 ${rp.need} 以上的地方才修得快。`) : null,
       ),
       h('section.card',
         h('div.row-between', h('span', '壽元'), h('span', `${Math.floor(age(s))} / ${lifespan(s)} 歲`)),
@@ -2279,9 +2288,36 @@ export function startApp(root, { speed = 1, view = null } = {}) {
     );
     if (s.secl) put(wrap, seclusionCard());
     else if (atBottleneck(s)) put(wrap, breakthroughCard());
-    else put(wrap, seclusionOptions());
+    else {
+      if (atCeiling(s)) put(wrap, ceilingCard());
+      put(wrap, seclusionOptions());
+    }
     put(wrap, statusCard());
+    put(wrap, ladderCard());
     return wrap;
+  }
+
+  /** 化神圓滿: the top of this age, full, and no gate to try. */
+  function ceilingCard() {
+    return h('section.card.bt',
+      h('h3', '化神之後'),
+      h('p', '修為已經滿了，卻找不到下一道關。再往上是煉虛、合體、大乘、渡劫——命簿上沒有那幾頁。'),
+      h('p.muted.small', '玄微之後三千年，沒有人過得了化神。可是命簿上，本來就沒有你。'),
+    );
+  }
+
+  /** 境界一覽: the whole way, where you stand on it, and what lies past the top of this age. */
+  function ladderCard() {
+    const p = ui.s.player;
+    const span = (r) => (r.id === 'fan' ? '　' : r.id === 'lianqi' ? '九層' : '四期');
+    return h('section.card',
+      h('h3', '境界一覽'),
+      h('ol.ladder',
+        REALMS.map((r, k) => h('li' + (k === p.realm ? '.on' : k < p.realm ? '.past' : ''),
+          h('b', r.name), h('span', span(r)), h('span', `壽元 ${r.lifespan}`))),
+        BEYOND.map((r) => h('li.beyond', h('b', r.name), h('span', r.hint), h('span', '命簿以外')))),
+      h('p.muted.small', '三千年來，沒有人過得了化神。'),
+    );
   }
 
   function seclusionCard() {
@@ -2307,7 +2343,7 @@ export function startApp(root, { speed = 1, view = null } = {}) {
               h('b', o.label),
               h('span', `修為約 +${Math.round(rate * o.days)}`),
               h('span', `出關 ${Math.floor(age(s) + o.days / 360)} 歲`),
-              h('span.real', realTime((o.days * A.MS_PER_DAY) / speed)),
+              h('span.real', realTime((o.days * A.dayMs(s)) / speed)),
             ))),
       h('p.muted.small', '閉關就在你站著的地方。靈氣越濃，修煉越快；荒郊野外，也越可能被打擾。閉關時世界照常運轉。'),
     );
@@ -2332,12 +2368,14 @@ export function startApp(root, { speed = 1, view = null } = {}) {
             h('button.btn.small' + (ui.pills === n ? '.on' : ''), { onclick: () => { ui.pills = n; renderLayer(); } }, n === 0 ? '不用' : `${n} 顆`)))
         : null,
       info.kind === 'major' && p.realm >= 1 ? h('p.muted.small', '失敗會損失修為、受傷、心境下降；用掉的丹藥不會回來。') : null,
+      info.jie === 'xinmo' ? h('p.warn', '機率過了，還有一關：心魔劫——跟另一個你打一場。輸了，修為與心境都會退，還要折壽十年。找一片空曠的地方。') : null,
+      info.jie === 'leijie' ? h('p.warn', '機率過了，還有一關：雷劫——落雷會打在你身邊的一整片地方，看清楚落點，躲開。輸了重傷，還要折壽三十年；帶傷渡劫是找死。') : null,
       h('button.btn.primary', { onclick: () => {
         closeSheet();
         const was = `${p.realm}:${p.stage}`;
         act((x) => A.attemptBreakthrough(x, ui.pills));
         SND.tried(`${ui.s.player.realm}:${ui.s.player.stage}` !== was);
-      } }, p.realm === 0 ? '引氣入體' : '衝擊瓶頸'),
+      } }, p.realm === 0 ? '引氣入體' : info.jie === 'xinmo' ? '碎丹成嬰' : info.jie === 'leijie' ? '引動天劫' : '衝擊瓶頸'),
       h('p.muted.small', '也可以繼續閉關：修為已滿，閉關只會讓時間流逝。'),
     );
   }
@@ -2900,7 +2938,7 @@ export function startApp(root, { speed = 1, view = null } = {}) {
         !pend.notice && pend.result ? resultBlock(pend.result) : null,
       ),
       h('div.ev-side',
-        pend.notice ? h('button.btn.primary.wide', { onclick: () => act(continueEvent) }, '繼續') : null,
+        pend.notice ? h('button.btn.primary.wide', { onclick: () => act(continueEvent) }, pend.ok || '繼續') : null,
         !pend.notice && !pend.result
           ? h('div.choices', pend.choices.map((c) =>
               h('button.choice', { disabled: !!c.disabled, onclick: () => { SND.ui.choose(); act((x) => choose(x, c.i)); } },

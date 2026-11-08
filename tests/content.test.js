@@ -124,7 +124,8 @@ test('what roams the wild fights in real time; those that come to talk have a fi
     else if (M.shape === 'leap' || M.shape === 'shot') assert.ok(M.max > M.min && M.speed > 0 && M.width > 0, `${id}: a line, from min to max`);
     if (M.shape === 'shot') assert.ok(M.range >= M.max, `${id}: it reaches as far as it is thrown from`);
     if (M.shape === 'ring') assert.ok(M.radius > 0, `${id}: how far round`);
-    if (M.shape === 'zone') assert.ok(M.max > M.min && M.radius > 0 && (!(M.count > 1) || M.spread > 0), `${id}: where, how wide`);
+    // (several marks: spread round the spot, or scattered over the ground about it)
+    if (M.shape === 'zone') assert.ok(M.max > M.min && M.radius > 0 && (!(M.count > 1) || M.spread > 0 || M.scatter > 0), `${id}: where, how wide`);
     if (M.shape === 'call') assert.ok(FOES[M.call.kind]?.rt && M.call.n > 0 && M.call.max >= M.call.n, `${id}: whom it calls`);
     if (M.shape === 'blink') assert.ok(M.near > 0, `${id}: when`);
     if (M.combo) assert.ok(M.combo > 1 && M.again > 0, `${id}: a run of them`);

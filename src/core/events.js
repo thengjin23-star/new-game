@@ -278,6 +278,6 @@ export function continueEvent(s) {
 }
 
 /** A plain message box (results of actions such as 突破 or 出關). */
-export function notice(s, title, text, { chips = [], toasts = [], pre = null } = {}) {
-  s.pending = { notice: true, title, text, chips, toasts, pre };
+export function notice(s, title, text, { chips = [], toasts = [], pre = null, ok = null } = {}) {
+  s.pending = { notice: true, title, text, chips, toasts, pre, ok };
 }

@@ -89,4 +89,4 @@ export const PASSIVES = {
 };
 
 /** How many 心法 you can hold at once, by realm: none before 引氣入體. */
-export const PASSIVE_SLOTS = [0, 1, 2, 3, 4];
+export const PASSIVE_SLOTS = [0, 1, 2, 3, 4, 5];

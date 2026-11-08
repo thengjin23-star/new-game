@@ -21,11 +21,81 @@ export const REALMS = [
     id: 'jindan', name: '金丹', stages: ['初期', '中期', '後期', '圓滿'],
     req: [40000, 60000, 90000, 140000], base: 6, lifespan: 520, auto: false, minor: [0.7, 0.6, 0.5],
   },
-  // The highest realm in this build: cultivation fills up but there is nowhere further to go yet.
-  { id: 'yuanying', name: '元嬰', stages: ['初期'], req: [400000], base: 14, lifespan: 1020, auto: false },
+  // (0.26) 元嬰 in four (初期 asks what it always asked: a save already there stands where it stood)
+  {
+    id: 'yuanying', name: '元嬰', stages: ['初期', '中期', '後期', '圓滿'],
+    req: [400000, 600000, 900000, 1400000], base: 14, lifespan: 1020, auto: false, minor: [0.65, 0.55, 0.45],
+  },
+  // 化神: the ceiling of this age. 玄微 was the last to go past it; in the three thousand years since,
+  // no one has (the 命簿 only copies what it wrote before, and there are no pages past this one).
+  {
+    id: 'huashen', name: '化神', stages: ['初期', '中期', '後期', '圓滿'],
+    req: [4000000, 5500000, 7000000, 9500000], base: 30, lifespan: 2500, auto: false, minor: [0.6, 0.5, 0.4],
+  },
 ];
 
 export const TOP_REALM = REALMS.length - 1;
+
+/**
+ * Past 化神: the realms outside the 命簿 (煉虛, 合體, 大乘, 渡劫). No one of this age has seen them; each
+ * will be a thing that happens in the story, not a bar to fill. Shown, for now, as what lies beyond.
+ */
+export const BEYOND = [
+  { name: '煉虛', hint: '天上的縫' },
+  { name: '合體', hint: '天門' },
+  { name: '大乘', hint: '天河' },
+  { name: '渡劫', hint: '渡' },
+];
+
+/**
+ * (0.26) 金丹的成色: how well the core was made, judged as it forms. It sets how fast 金丹 goes (rate)
+ * and how the gate of 元嬰 stands (ying: added to the odds there). A save that formed its core before
+ * there were grades holds a 中品 one.
+ */
+export const CORE = [
+  { name: '下品', rate: 0.9, ying: -0.05 },
+  { name: '中品', rate: 1.0, ying: 0 },
+  { name: '上品', rate: 1.1, ying: 0.05 },
+  { name: '極品', rate: 1.25, ying: 0.1 },
+];
+
+/** Your core's grade (from 金丹 on), else null. */
+export function coreOf(p) {
+  return p.realm >= 3 ? CORE[p.core ?? 1] || CORE[1] : null;
+}
+
+/** The grade a core forms with: the odds you came to it with, the 凝金丹 you took, where, how steady you were, and luck. */
+export function coreGrade(s, { chance = 0.3, pills = 0 } = {}, roll = Math.random()) {
+  const p = s.player;
+  let q = Math.min(0.95, chance) * 0.6 + roll * 0.4 + pills * 0.05;
+  if (nodeQi(s, p.loc) >= 2) q += 0.05;
+  if (p.mind >= 80) q += 0.05;
+  return q < 0.35 ? 0 : q < 0.6 ? 1 : q < 0.82 ? 2 : 3;
+}
+
+/**
+ * (0.26) 元嬰 from its middle stage on, and 化神, want thick 靈氣: where it is thinner than that,
+ * cultivation goes slower again (never below a third). Nothing below 元嬰中期 is touched.
+ */
+export function qiNeed(p) {
+  if (p.realm === 4 && p.stage >= 1) return 1.6;
+  if (p.realm >= 5) return 2.2;
+  return 0;
+}
+
+/** At the top of this age: 化神圓滿, full. There is no gate to try. */
+export function atCeiling(s) {
+  const p = s.player;
+  const r = REALMS[p.realm];
+  return p.realm === TOP_REALM && p.stage === r.stages.length - 1 && p.xw >= r.req[p.stage];
+}
+
+/** The 劫 that waits past the odds at the gate of the next realm, if one does: 心魔劫 at 元嬰, 雷劫 at 化神. */
+export function jieAt(p) {
+  const r = REALMS[p.realm];
+  if (p.stage !== r.stages.length - 1 || r.auto) return null;
+  return p.realm === 3 ? 'xinmo' : p.realm === 4 ? 'leijie' : null;
+}
 
 export const ROOTS = {
   five: { name: '五靈根', mult: 0.5, major: 0.03 },
@@ -53,6 +123,8 @@ export const BUFFS = {
   bingxin: { name: '冰心', mult: 1 },
   // 暖身丹 (北原): the cold does not touch you while it lasts
   nuanshen: { name: '暖身', mult: 1 },
+  // (0.26) 元嬰出竅: the body you are growing back is not yet a vessel for much
+  reborn: { name: '肉身重塑', mult: 0.6 },
 };
 
 export function realmOf(s) {
@@ -114,8 +186,12 @@ export function rateParts(s, nodeId = s.player.loc) {
   const signs = skySigns(s);
   const sky = (signs.includes('tide') ? 1.5 : 1) * (signs.includes('fullmoon') || signs.includes('bloodmoon') ? 1.15 : 1);
   const land = landBonus(s);
-  const total = r.base * root * tech * qi * mind * injury * buff * sky * land;
-  return { base: r.base, root, tech, qi, mind, injury, buff, sky, land, total };
+  // (0.26) 金丹: as good as the core you made; 元嬰中期 on: where the 靈氣 is too thin for you, slower again
+  const core = p.realm === 3 ? coreOf(p).rate : 1;
+  const need = qiNeed(p);
+  const thin = need ? Math.max(0.35, Math.min(1, qi / need)) : 1;
+  const total = r.base * root * tech * qi * mind * injury * buff * sky * land * core * thin;
+  return { base: r.base, root, tech, qi, mind, injury, buff, sky, land, core, thin, need, total };
 }
 
 export function dailyRate(s, nodeId) {
@@ -126,8 +202,9 @@ export function dailyRate(s, nodeId) {
 export function atBottleneck(s) {
   const p = s.player;
   const r = REALMS[p.realm];
-  if (p.realm === TOP_REALM) return false;
   if (p.xw < r.req[p.stage]) return false;
+  // (化神圓滿: the top of this age — full, and no gate to try)
+  if (p.realm === TOP_REALM && p.stage === r.stages.length - 1) return false;
   return !r.auto || p.stage === r.stages.length - 1;
 }
 
@@ -177,6 +254,9 @@ export function basePower(p) {
     case 1: return 10 + 6 * (p.stage + 1);
     case 2: return 100 + 40 * p.stage;
     case 3: return 320 + 120 * p.stage;
+    // (0.26) 元嬰 grows by stage from where it always stood (1000); 化神 well above it
+    case 4: return 1000 + 300 * p.stage;
+    case 5: return 2800 + 800 * p.stage;
     default: return 1000;
   }
 }
@@ -257,11 +337,21 @@ export function breakthroughInfo(s, { pills = 0 } = {}) {
         }
       }
     }
+    // (0.26) at the gate of 元嬰: as good as the core you made
+    if (p.realm === 3) {
+      const g = coreOf(p);
+      if (g.ying) {
+        parts.push([`金丹成色・${g.name}`, g.ying]);
+        chance += g.ying;
+      }
+    }
   }
   if (p.realm > 0) {
-    const ins = Math.min(20, p.insight) * 0.01;
+    // (0.26) at the gate of 化神, what you have come to understand counts for twice as much (悟道)
+    const dao = p.realm === 4 && kind === 'major';
+    const ins = Math.min(dao ? 40 : 20, p.insight) * 0.01;
     if (ins) {
-      parts.push(['感悟', ins]);
+      parts.push([dao ? '悟道' : '感悟', ins]);
       chance += ins;
     }
     const mind = ((p.mind - 50) / 50) * 0.1;
@@ -283,5 +373,6 @@ export function breakthroughInfo(s, { pills = 0 } = {}) {
   }
   chance = Math.max(0.01, Math.min(0.95, chance));
   if (p.realm === 0) chance = 1;
-  return { kind, chance, parts, next, ready: atBottleneck(s) };
+  // (0.26) past the odds at the gates of 元嬰 and 化神, a 劫 to live through
+  return { kind, chance, parts, next, ready: atBottleneck(s), jie: kind === 'major' ? jieAt(p) : null };
 }

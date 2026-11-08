@@ -82,6 +82,8 @@ const hourOf = (s) => s.day * 24 + (s.tod ?? 8);
 export function weatherAt(s, region = s.player?.loc, hour = hourOf(s)) {
   // (tools and tests can hold the sky still)
   if (s.vars?.sky && WEATHER[s.vars.sky]) return s.vars.sky;
+  // (0.26) a 雷劫 under way: the 劫雲 over everything — dark, the rain, the thunder
+  if (s.jie?.on && s.jie.kind === 'leijie') return 'storm';
   const seed = (s.seed | 0) ^ 0x5bd1e995;
   const day = Math.floor(hour / 24);
   // the first three days of a life are fair (a first look at the world should be a clear one)

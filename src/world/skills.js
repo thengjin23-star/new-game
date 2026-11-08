@@ -19,7 +19,7 @@ export const SLOTS = 4;
 export const SETS = 3;
 export const setsOpen = (s) => (s.player.realm >= 2 ? SETS : 2);
 
-const REALM_WORD = ['', '需引氣入體', '需築基', '需結丹'];
+const REALM_WORD = ['', '需引氣入體', '需築基', '需結丹', '需結嬰', '需化神'];
 const knows = (p, ids) => ids.some((a) => (p.arts || []).includes(a) || (p.techs || []).includes(a) || p.tech === a);
 const pad = (ids) => Array.from({ length: SLOTS }, (_, i) => (ids[i] && MOVES[ids[i]] ? ids[i] : null));
 

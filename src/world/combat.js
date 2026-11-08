@@ -29,6 +29,7 @@ import { power } from '../core/cultivation.js';
 import { pools, gearOf } from '../core/body.js';
 import { applyEffects, addItem } from '../core/effects.js';
 import { notice, startEvent, choose, fightChoice, endRealFight, resolve } from '../core/events.js';
+import { jieOver } from '../core/jie.js';
 import { newReport, spendHours } from '../core/time.js';
 import { rand } from '../core/rng.js';
 import { weatherNow, moonTonight } from './weather.js';
@@ -113,7 +114,7 @@ export function combatOf(s) {
   if (!C) {
     C = {
       on: false, t: 0, me: null, beasts: null, shots: [], fx: [], pops: [], pools: [], hits: [], preview: null, notes: [], signals: [],
-      beaten: 0, foes: new Set(), quiet: 0, outcome: null, trial: null, rt: null, heard: {}, told: {}, uid: 0,
+      beaten: 0, foes: new Set(), quiet: 0, outcome: null, trial: null, jie: null, rt: null, heard: {}, told: {}, uid: 0,
     };
     LIVE.set(s, C);
   }
@@ -128,7 +129,7 @@ export function inCombat(s) {
 /** You crossed into another map: its beasts are another lot, and nothing from the last one is in the air. */
 export function leaveMap(s) {
   const C = combatOf(s);
-  Object.assign(C, { on: false, beasts: null, shots: [], fx: [], pops: [], pools: [], hits: [], preview: null, foes: new Set(), trial: null, outcome: null });
+  Object.assign(C, { on: false, beasts: null, shots: [], fx: [], pops: [], pools: [], hits: [], preview: null, foes: new Set(), trial: null, jie: null, outcome: null });
   if (C.me) Object.assign(C.me, { act: null, dash: null, kb: null, target: null, auto: false, hold: false, press: 0, steer: null, trail: [] });
 }
 
@@ -318,7 +319,8 @@ function away(s, key, days) {
 
 const alive = (b) => !DOWN.has(b.state) && b.state !== 'vanished';
 /** Alive, and not hidden: something you can see to go for. */
-const seen = (b) => alive(b) && b.state !== 'hide';
+// (the 劫雲 is the sky: never seen, never aimed at)
+const seen = (b) => alive(b) && b.state !== 'hide' && !b.def?.cloud;
 const hunting = (b) => b.side !== 'ally' && b.aggro && HUNTING.has(b.state);
 /** Against you (not one of those at your side). */
 const foe = (b) => b.side !== 'ally';
@@ -326,7 +328,8 @@ const foe = (b) => b.side !== 'ally';
 /** The beasts near you, for drawing and for picking whom to strike (the dead fade out among them). */
 export function beastsInWorld(s, radius = 1400) {
   const w = s.world;
-  return beastsOf(s).filter((b) => b.state !== 'gone' && b.state !== 'vanished' && present(s, b) && Math.abs(b.x - w.x) < radius && Math.abs(b.y - w.y) < radius);
+  // (the 劫雲 is the sky over you, not a thing in the world: nothing draws it or points at it)
+  return beastsOf(s).filter((b) => b.state !== 'gone' && b.state !== 'vanished' && !b.def.cloud && present(s, b) && Math.abs(b.x - w.x) < radius && Math.abs(b.y - w.y) < radius);
 }
 
 /** The people (by id) in a fight the story started, or still standing there after it: drawn as fighters, not where they would be. */
@@ -632,7 +635,7 @@ function dodgeShot(C, b) {
 
 /** You land a blow (or a spell) on a beast. kind: 'phys' | 'fire' | 'spirit' | 'burn'. */
 function hurtBeast(s, C, b, base, io, { kind = 'phys', by = null, el = null, blow = 'skill', of = null } = {}) {
-  if (!alive(b) || !foe(b)) return false;
+  if (!alive(b) || !foe(b) || b.def.cloud) return false;
   // it turns on whoever struck it
   if (kind !== 'burn') {
     b.tgt = by || s.world;
@@ -847,7 +850,7 @@ function fell(s, C, b, io) {
   C.beaten += 1;
   untarget(C, b);
   if (b.phantom) {
-    io.feed('good', `${b.name}散成了一縷青煙。`);
+    io.feed('good', b.def.cloud ? '最後一道雷落下，劫雲散了。' : `${b.name}散成了一縷青煙。`);
     return;
   }
   if (b.summon) {
@@ -957,6 +960,7 @@ function fallen(s, C, b, io) {
   C.on = false;
   C.outcome = 'fell';
   io.signal({ combat: 'fell' });
+  if (C.jie) return endJie(s, C, io, 'fell');
   if (C.trial) return endTrial(s, C, io, 'fell');
   hero(s, C);
   me.hp = Math.max(1, Math.round(me.cap * 0.5));
@@ -1012,7 +1016,7 @@ function engage(s, C, b, io, line = null) {
     }
   }
   if (!start) return;
-  io.signal({ combat: 'start', name: b.def.title || b.name, rank: rankOf(b), tier: b.tier, gap: b.gap, phantom: b.phantom });
+  io.signal({ combat: 'start', name: b.def.title || b.name, rank: rankOf(b), tier: b.tier, gap: b.gap, phantom: b.phantom, jie: !!C.jie });
   io.feed('bad', (line || b.R.cry || '{name}盯上了你！').replaceAll('{name}', b.name));
   if (b.gap > 0) {
     const [who, him] = b.R.person ? ['對方', '他'] : b.K.spirit ? ['它', '它'] : ['牠', '牠'];
@@ -1036,6 +1040,7 @@ function finish(s, C, io) {
   C.outcome = won ? 'won' : 'escaped';
   Object.assign(C.me, { auto: false, hold: false, press: 0, target: null, steer: null });
   io.signal({ combat: C.outcome });
+  if (C.jie) return endJie(s, C, io, C.outcome);
   if (C.trial) return endTrial(s, C, io, C.outcome);
   if (C.rt) {
     // a moment to see how it ended (on his knees, the rest of them running) before the story picks up
@@ -1247,6 +1252,9 @@ export function updateCombat(s, dt, io) {
     else if (C.rt.how && C.t >= C.taleAt) endTale(s, C, C.rt.how);
     if (s.pending || s.dead) return STILL;
   }
+  // (0.26) a 劫 waiting on you (the odds came up at the gate, and you have read what that means): it
+  // begins where you stand (and if the game was closed in the middle of one, it begins again)
+  if (s.jie && !C.jie && !C.on && !s.pending && !s.rtFight && !s.secl) beginJie(s, C, io);
   const steering = !!(io.input && (io.input.x || io.input.y));
   me.press = Math.max(0, me.press - dt);
   // taking the stick yourself ends walking up to someone
@@ -1336,6 +1344,18 @@ function think(s, C, b, dt, io) {
     untarget(C, b);
   }
   for (const k of Object.keys(b.cds)) b.cds[k] = Math.max(0, b.cds[k] - dt);
+  // (0.26) the 劫雲: it pours itself out in thunder (its blood is what is left of it), and keeps over you
+  // wherever you run
+  if (b.def.cloud && alive(b) && b.armed && b.aggro) {
+    b.hp -= (b.maxHp / b.def.cloud) * dt;
+    phaseUp(s, C, b, io);
+    if (b.hp <= 0) return fell(s, C, b, io);
+    const dd = Math.hypot(w.x - b.x, w.y - b.y);
+    if (dd > 520) {
+      b.x = w.x + ((b.x - w.x) / dd) * 420;
+      b.y = w.y + ((b.y - w.y) / dd) * 420;
+    }
+  }
   if (b.burn && alive(b)) {
     b.burn.left -= dt;
     b.burn.tick -= dt;
@@ -1824,6 +1844,17 @@ function zonesOf(b, M, ux, uy, d) {
   const r = Math.min(d, M.max);
   const x = b.x + ux * r;
   const y = b.y + uy * r;
+  // (0.26) scattered over all the ground about where you are (the 劫雲 cannot find you, so it strikes
+  // all round), not one of them meant for where you stand
+  if (M.scatter) {
+    const out = [];
+    for (let k = 0; k < (M.count || 1); k++) {
+      const a = b.rng() * Math.PI * 2;
+      const q = Math.sqrt(b.rng()) * M.scatter;
+      out.push([x + Math.cos(a) * q, y + Math.sin(a) * q]);
+    }
+    return out;
+  }
   const out = [[x, y]];
   const n = M.count || 1;
   const a0 = b.rng() * Math.PI * 2;
@@ -2481,7 +2512,7 @@ function flyShots(s, C, dt, io) {
         continue;
       }
       for (const b of list) {
-        if (sh.done || !alive(b) || !foe(b) || !present(s, b) || sh.hit.has(b.uid)) continue;
+        if (sh.done || !alive(b) || !foe(b) || b.def.cloud || !present(s, b) || sh.hit.has(b.uid)) continue;
         if (Math.hypot(b.x - sh.x, b.y - sh.y) > sh.r + b.R.body) continue;
         if (sh.boom) {
           burst(s, C, sh, io);
@@ -2860,16 +2891,7 @@ export function startTrial(s) {
   if (C.on || C.trial) return false;
   const w = s.world;
   const me = hero(s, C);
-  const a0 = Math.atan2(me.dir[1], me.dir[0]);
-  let spot = null;
-  for (let k = 0; k < 16 && !spot; k++) {
-    const a = a0 + (k % 2 ? 1 : -1) * Math.ceil(k / 2) * (Math.PI / 8);
-    const x = w.x + Math.cos(a) * 190;
-    const y = w.y + Math.sin(a) * 190;
-    let clear = isReachable(x, y) && !collides(s, x, y, 16);
-    for (let r = 14; clear && r < 190; r += 14) if (collides(s, w.x + Math.cos(a) * r, w.y + Math.sin(a) * r, 12)) clear = false;
-    if (clear) spot = [x, y];
-  }
+  const spot = openGround(s, me, 190);
   if (!spot) {
     C.notes.push({ kind: 'sys', text: '這裡太窄，施展不開。換個空曠的地方吧。' });
     return false;
@@ -2888,6 +2910,99 @@ export function startTrial(s) {
   C.notes.push({ kind: 'sys', text: '叮——戰鬥試煉。系統在你面前幻化出一頭妖狼。' });
   if (!s.player.realm) C.notes.push({ kind: 'sys', text: '系統暫借你三十點靈力，和三門法術。' });
   return true;
+}
+
+/** Open ground this far off, with nothing between it and you (the way you face first), or null. */
+function openGround(s, me, dist) {
+  const w = s.world;
+  const a0 = Math.atan2(me.dir[1], me.dir[0]);
+  for (let k = 0; k < 16; k++) {
+    const a = a0 + (k % 2 ? 1 : -1) * Math.ceil(k / 2) * (Math.PI / 8);
+    const x = w.x + Math.cos(a) * dist;
+    const y = w.y + Math.sin(a) * dist;
+    let clear = isReachable(x, y) && !collides(s, x, y, 16);
+    for (let r = 14; clear && r < dist; r += 14) if (collides(s, w.x + Math.cos(a) * r, w.y + Math.sin(a) * r, 12)) clear = false;
+    if (clear) return [x, y];
+  }
+  return null;
+}
+
+// ── 劫 (0.26): 結嬰's 心魔劫 and 化神's 雷劫 (core/jie.js) ──
+
+/**
+ * What your 心魔 says: that you were meant to die at the foot of the cliff, then what this life of yours
+ * has given it to say (those you let down, those you did not come back for), and last what it says to
+ * anyone it is the 心魔 of.
+ */
+export function demonWords(s) {
+  const f = s.flags;
+  const n = s.npcs || {};
+  const lines = [];
+  if (f.fox_betrayed) lines.push('心魔：「胡三娘信過你。你還記得她最後看你的那一眼嗎？」');
+  if (n.song_he && !n.song_he.alive && !f.songhe_saved) lines.push('心魔：「清虛觀那盞油燈滅的時候，你在哪裡？」');
+  if (n.wang_er && !n.wang_er.alive) lines.push('心魔：「王二到死都望著門口。他等的是你。」');
+  if ((n.lin_chen?.favor ?? 0) <= -30) lines.push('心魔：「林塵說他不恨你。你信嗎？」');
+  if (f.su_rival_end) lines.push('心魔：「蘇清瑤說得對。你搶來的東西，從來就不是你的。」');
+  const kills = Object.values(s.vars?.kills || {}).reduce((a, k) => a + k, 0);
+  if (kills >= 150) lines.push(`心魔：「${kills} 條命。你以為命簿上沒有你，就沒有人記得？」`);
+  lines.push('心魔：「你不是主角。你從來都不是。」', '心魔：「沒有人在等你。命簿上，連你的名字都沒有。」');
+  return { cry: '心魔：「你本來就該死在崖底。」', at: lines[0], last: lines[1] };
+}
+
+/** How much stronger than you your 心魔 is (as 戰力: by simulation, one who only stands and strikes loses to it, one who fights well wins). */
+const XINMO_EDGE = 2.5;
+
+/** The 劫 begins where you stand: the 心魔 a little way off (as strong as you are, and then some), or the 劫雲 over you. */
+function beginJie(s, C, io) {
+  const kind = s.jie.kind;
+  const w = s.world;
+  const me = hero(s, C);
+  C.jie = { kind };
+  // (under way: for the 雷劫, the sky turns to storm — world/weather.js)
+  s.jie.on = true;
+  Object.assign(me, { poison: null, held: null });
+  const power = Math.max(4, Math.round(me.P));
+  let b;
+  if (kind === 'xinmo') {
+    const spot = openGround(s, me, 170) || openGround(s, me, 100) || [w.x + 90, w.y];
+    const say = demonWords(s);
+    const phases = [
+      { at: 0.5, moves: ['blink', 'xinmo_shades', 'slash', 'bloodfan'], line: say.at },
+      { at: 0.25, enrage: true, line: say.last },
+    ];
+    // (it knows every move you know before you make it: as strong as you, and then some)
+    b = spawn(s, { id: `jie_${++C.uid}`, kind: 'xinmo', name: '心魔', title: '心魔劫', x: spot[0], y: spot[1], r: 100, power: Math.round(power * XINMO_EDGE), tier: s.player.realm, phantom: true, rt: { cry: say.cry, phases } });
+    b.weaponSet = weaponLook(s);
+  } else {
+    const a = Math.atan2(me.dir[1], me.dir[0]);
+    b = spawn(s, { id: `jie_${++C.uid}`, kind: 'jieyun', name: '劫雲', title: '雷劫', x: w.x - Math.cos(a) * 420, y: w.y - Math.sin(a) * 420, r: 50, power, tier: s.player.realm, phantom: true, cloud: 60 });
+  }
+  look(b, w.x - b.x, w.y - b.y);
+  beastsOf(s, C).push(b);
+  arm(s, C, b);
+  Object.assign(b, { state: 'chase', st: 0, aggro: true, lostT: 0 });
+  engage(s, C, b, io, kind === 'xinmo' ? b.R.cry : '劫雲壓頂。第一重雷，落下來了！');
+}
+
+/** The 劫 is over: what is left of it goes, and you come into the realm — or what failing costs, you pay. */
+function endJie(s, C, io, how) {
+  const kind = C.jie.kind;
+  C.jie = null;
+  for (const b of beastsOf(s, C)) if (b.phantom && b.state !== 'dead') {
+    b.state = 'vanish';
+    b.st = 0;
+  }
+  C.shots = [];
+  C.pools = [];
+  const report = newReport();
+  jieOver(s, how === 'won' ? 'won' : 'lost', report, kind);
+  if (s.dead) return;
+  const me = hero(s, C);
+  Object.assign(me, { shield: 0, shieldT: 0, poison: null, regen: null, ward: null });
+  if (how === 'won') {
+    me.hp = me.cap;
+    me.mp = me.maxMp;
+  } else me.hp = Math.max(1, Math.min(me.hp, Math.round(me.cap * 0.25)));
 }
 
 function endTrial(s, C, io, how) {

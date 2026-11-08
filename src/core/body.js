@@ -67,7 +67,15 @@ export function gearStats(s) {
 
 /** 靈力 of your own: none for a mortal, then by realm and layer. */
 function ownMp(p) {
-  return p.realm === 0 ? 0 : p.realm === 1 ? 18 + 4 * p.stage : p.realm === 2 ? 90 + 15 * p.stage : 260;
+  switch (p.realm) {
+    case 0: return 0;
+    case 1: return 18 + 4 * p.stage;
+    case 2: return 90 + 15 * p.stage;
+    // (0.26) from 金丹 on it grows by stage too (from the 260 it always was)
+    case 3: return 260 + 40 * p.stage;
+    case 4: return 500 + 60 * p.stage;
+    default: return 900 + 100 * p.stage;
+  }
 }
 
 /**

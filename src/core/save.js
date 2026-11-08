@@ -62,6 +62,8 @@ export function migrate(s) {
     s.world.away ||= {};
   }
   s.player.buffs ||= {};
+  // (0.26) a 金丹 formed before cores had grades: a 中品 one
+  if (s.player.realm >= 3 && s.player.core === undefined) s.player.core = 1;
   // what you wear besides a weapon (blood and 靈力 fill themselves the first time they are asked for)
   s.player.gear ||= {};
   s.player.arts ||= [];
