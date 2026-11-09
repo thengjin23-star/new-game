@@ -2987,11 +2987,12 @@ export function startApp(root, { speed = 1, view = null } = {}) {
     );
   }
 
-  /** 第一章 完: what became of you, and of those you knew; then back to 東荒 (the river can wait). */
+  /** 第一章 完: what became of you, and of those you knew; then over to 中州 (1.0: the boat puts in at 鶴歸渡), or back to where you were (seen again from 生平). */
   function endingScreen() {
     const s = ui.s;
     const me = END.chapterSelf(s);
     const sys = END.chapterSystem(s);
+    const going = s.world?.cross === 'crane_ferry';
     return h('div.death.ending',
       h('div.death-inner',
         h('p.muted.small', '第一章'),
@@ -3003,8 +3004,11 @@ export function startApp(root, { speed = 1, view = null } = {}) {
         h('p.small', sys.line),
         h('p.small.muted', sys.truth),
         h('p.ending-next', '天元三千零二十二年，月亮會變紅。'),
-        h('p.muted.small', '第二章「中州」，待續。你可以回到東荒，繼續修煉、探索，看看那些人的故事會怎麼走下去。'),
-        h('button.btn.primary.wide', { onclick: () => act((x) => { delete x.flags.chapter1_ending; }) }, '回到東荒'),
+        // (1.0) the first time, the boat is still on the river: it puts in at 鶴歸渡 once this is closed
+        going
+          ? h('p.muted.small', '第二章「中州」。對岸的城池與劍光，在等你。想回東荒的時候，鶴歸渡的老船夫隨時載你回去。')
+          : h('p.muted.small', '第二章「中州」。白鶴渡與鶴歸渡之間，老船夫隨時載你來回。'),
+        h('button.btn.primary.wide', { onclick: () => act((x) => { delete x.flags.chapter1_ending; }) }, going ? '踏上中州' : `回到${MAPS[s.world?.map || 'donghuang']?.name || '東荒'}`),
       ),
     );
   }
@@ -3207,7 +3211,7 @@ export function startApp(root, { speed = 1, view = null } = {}) {
           ways.length
             ? h('div.map-places.map-ways',
                 h('h3', '往別處去'),
-                ways.map(([from, way]) => h('p.small', `往${MAPS[way.to].name}（適合${MAPS[way.to].realm || '任何人'}）：從${NODES[from].name}翻過去，約 ${way.hours / 2} 個時辰。`)))
+                ways.map(([from, way]) => h('p.small', `往${MAPS[way.to].name}（適合${MAPS[way.to].realm || '任何人'}）：從${NODES[from].name}${way.by === 'boat' ? '坐船過去' : '翻過去'}，約 ${way.hours / 2} 個時辰。`)))
             : null,
         ),
       ),

@@ -114,6 +114,13 @@ function beiyuanGoal(s) {
   return null;
 }
 
+/** 中州 (1.0): where its stories stand — the city first. */
+function zhongzhouGoal(s) {
+  const n = s.nodes;
+  if (!n.linjiang?.visited) return { key: 'zz:city', text: '去臨江城', why: '鶴歸渡往東北，就是臨江城：中州的第一座大城。城裡有天驕榜，有懸賞，也有按月出租的洞府。' };
+  return null;
+}
+
 /**
  * What you could do next: { key, text, why } (or null while the opening
  * still leads you by the hand). The first that applies, from what cannot
@@ -156,7 +163,7 @@ export function nextGoal(s) {
   }
   // where the stories of the land you are in stand
   if (away) {
-    const g = (s.world.map === 'ximo' ? ximoGoal : s.world.map === 'beiyuan' ? beiyuanGoal : nanlingGoal)(s);
+    const g = ({ ximo: ximoGoal, beiyuan: beiyuanGoal, zhongzhou: zhongzhouGoal }[s.world.map] || nanlingGoal)(s);
     if (g) return g;
   }
   // the work you took
@@ -174,7 +181,9 @@ export function nextGoal(s) {
   // (0.23) a dead man's letter, carried home from the north
   if (s.player.items.frozen_letter > 0 && !away) return { key: 'chen', text: '鎮南田野：陳家', why: '那封凍住的信，寫著「青石鎮南，陳家小石收」。' };
   // 築基: the chapter's end is across the river
-  if (p.realm >= 2 && !s.flags.chapter1_done && !away) return { key: 'ferry', text: '白鶴渡：渡江', why: '築基了，白鶴渡的老船夫肯載你過江了——那是第一章的終點。走之前，想見的人先見一見；渡過江，還可以回到東荒繼續走。' };
+  if (p.realm >= 2 && !s.flags.chapter1_done && !away) return { key: 'ferry', text: '白鶴渡：渡江', why: '築基了，白鶴渡的老船夫肯載你過江了——那是第一章的終點，也是第二章「中州」的起點。走之前，想見的人先見一見；過了江，鶴歸渡的老船夫隨時載你回東荒。' };
+  // (1.0) a save that saw the ending before the far bank was open: it is open now
+  if (p.realm >= 2 && s.flags.chapter1_done && !s.flags.zhongzhou_crossed && !away) return { key: 'ferry', text: '白鶴渡：過江去中州', why: '中州的路通了。白鶴渡的老船夫說過：「中州不急，它又不會跑。」' };
   // (0.22) 老秦 has waited forty years for the beacon at 西風口 to answer his
   if (s.flags.laoqin_promise && !s.flags.west_beacon_lit && !away) return { key: 'xm:beacon', text: '西風口：點烽燧', why: '落日關的老秦，四十年沒等到東邊的烽燧亮。到西風口的烽燧下，等天黑了，點一把火。' };
   // the cave you found, not yet made your own
