@@ -7,7 +7,7 @@
 
 import { T } from './geo.js';
 import { omenAt } from './happenings.js';
-import { LANDS, landTable } from './maps/index.js';
+import { LANDS, landTable, landPeopleTable } from './maps/index.js';
 
 const night = (s) => s.tod >= 19.5 || s.tod < 5;
 
@@ -289,8 +289,9 @@ export const NPC_SPOTS = {
   hu_sanniang: { fox_shrine: [3080, 3040] },
   qian_banxian: { luoxia_market: [4090, 2516] },
   zhao_hu: { qingshi_town: [2340, 3172] },
-  ...landTable('spots'),
 };
+// (the other maps' people, and where 東荒's people stand on the other maps: world/maps/)
+Object.assign(NPC_SPOTS, landPeopleTable('spots', NPC_SPOTS));
 
 /** People who only show up under conditions. */
 export const NPC_SHOW = {

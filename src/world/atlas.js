@@ -31,6 +31,9 @@ export const CROSSINGS = {
   luori_pass: { to: 'donghuang', at: [120, 560], hours: 10 },
   yanhui_pass: { to: 'beiyuan', at: [2600, 4500], hours: 12 },
   xueling_kou: { to: 'donghuang', at: [3070, 60], hours: 12 },
+  // (1.0) over the 大江 by the old ferryman's boat: 白鶴渡 ↔ 鶴歸渡 (by: how the map page says it is gone)
+  crane_ferry: { to: 'zhongzhou', at: [800, 3900], hours: 8, by: 'boat' },
+  heguidu: { to: 'donghuang', at: [4440, 3800], hours: 8, by: 'boat' },
 };
 
 let current = 'donghuang';

@@ -12,7 +12,7 @@ import { world, regionAt, regionIdAt, collides, isReachable, findPath, hash2, RE
 import { STRUCTURES, NPC_SPOTS, NPC_SHOW, WANDERERS } from './places.js';
 import { NODES, PEOPLE_PLACES, mapOf } from './map.js';
 import { mapId, onMapChange } from './atlas.js';
-import { landTable, landList } from './maps/index.js';
+import { landTable, landList, landPeopleTable } from './maps/index.js';
 
 /** Beyond this distance from you, nobody walks: they are already there. */
 const SEE = 700;
@@ -102,9 +102,9 @@ export const ROUTINES = {
       [19, [3830, 2366], 'home'],
     ],
   },
-  // (the other maps' people: world/maps/)
-  ...landTable('routines'),
 };
+// (the other maps' people, and the other maps' days of 東荒's people: world/maps/)
+Object.assign(ROUTINES, landPeopleTable('routines', ROUTINES));
 
 /** What they say to nobody in particular, by what they are doing. */
 const SAYS = {

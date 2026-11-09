@@ -78,6 +78,12 @@ const SOUNDS = {
   // 北原: the wind, and under it the snow's hiss; the town's hammers and talk; the mine's drip; wolves far off on the ice
   snowpass: { beds: { wind: 1, sand: 0.15 }, day: {}, night: { howl: 0.006 } },
   minetown: { beds: { wind: 0.45, crowd: 0.55 }, day: { bell: 0.004 }, night: { howl: 0.004 } },
+  // 中州 (1.0): the great city loud all day; the docks with the river under the voices; the sword
+  // sect's bell; the night market quiet by day and murmuring after dark
+  city: { beds: { wind: 0.12, crowd: 1.3 }, day: { birds: 0.02, bell: 0.004 }, night: { clapper: 0.012 } },
+  docks: { beds: { wind: 0.3, river: 0.6, crowd: 0.8 }, day: { birds: 0.03 }, night: { clapper: 0.006 } },
+  swordsect: { beds: { wind: 0.6, leaves: 0.15 }, day: { bell: 0.014 }, night: { bell: 0.006 } },
+  nightmarket: { beds: { wind: 0.25, crowd: 0.35 }, day: { birds: 0.03 }, night: { clapper: 0.004 } },
   mine: { beds: { drone: 0.45 }, day: { drip: 0.25 }, night: { drip: 0.25 } },
   icesea: { beds: { wind: 0.75, drone: 0.18 }, day: {}, night: { howl: 0.005 } },
   tundra: { beds: { wind: 0.95, sand: 0.18 }, day: {}, night: { howl: 0.012 } },

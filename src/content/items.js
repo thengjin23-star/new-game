@@ -161,6 +161,27 @@ export const ITEMS = {
     name: '冰麟角', kind: 'material', sell: 400,
     desc: '冰麟頭上的獨角，像一截透明的冰，裡頭封著一縷藍光。',
   },
+  // 中州 (1.0): the herbs of the river country, where the 靈氣 runs thicker than anywhere in 東荒
+  longxu_grass: {
+    name: '龍鬚草', kind: 'herb', sell: 8,
+    desc: '中州的野地裡到處都是的靈草，細長的葉子一根一根垂下來，像龍的鬍鬚。中州的散修拿它當飯吃。',
+    use: { text: '龍鬚草嚼起來有一股青澀的甜味，一縷靈氣順著喉嚨滑下去。', effects: [['xw', 45], ['mp', 0.3]] },
+  },
+  jiangli: {
+    name: '江蘺', kind: 'herb', sell: 6,
+    desc: '大江邊、沼澤裡長的香草，葉子細碎，揉碎了有一股清香。中州的大夫拿它入藥，止血生肌。',
+    use: { text: '你把江蘺揉碎敷上，清清涼涼的，傷口一下子就不疼了。', effects: [['healdays', 15], ['hp', 0.25]] },
+  },
+  zizhi: {
+    name: '紫芝', kind: 'herb', sell: 70,
+    desc: '長在蒼梧林老樹根上的靈芝，紫得發黑，一圈一圈的紋像年輪。一株要長三十年。',
+    use: { text: '紫芝苦得你皺起眉頭。苦過去了，一股溫厚的藥力在丹田裡慢慢化開，心裡也定了下來。', effects: [['xw', 180], ['mind', 1]] },
+  },
+  jiuye_lotus: {
+    name: '九葉玄蓮', kind: 'herb', sell: 220,
+    desc: '雲夢大澤深處才有的黑蓮，九片葉子，花開的時候整片沼澤都是香的。金丹修士拿它當寶貝。',
+    use: { text: '玄蓮的藥力沉甸甸的，像一塊石頭沉進丹田，又像一池水慢慢漫開。', effects: [['xw', 900]] },
+  },
 
   // ── 丹藥 ──
   juqi_pill: {

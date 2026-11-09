@@ -78,6 +78,16 @@ export const CUES = {
   'highland:day': { lead: 'xiao', second: 'zheng', mode: 'yu', root: 49, bpm: 52, reg: [61, 81], bassReg: [37, 49], rhythm: { 1: 3, 1.5: 2, 2: 2 }, slide: 0.3, rest: [3, 6] },
   'snowpeak:day': { lead: 'xun', drum: 'dagu', mode: 'yu', root: 44, bpm: 46, reg: [56, 76], bassReg: [32, 44], rhythm: { 2: 3, 3: 2 }, rest: [5, 9], play: [60, 90], pause: [60, 100] },
   'pillar:day': { lead: 'guqin', pad: true, bells: 'zhong', mode: 'yu', root: 41, bpm: 34, reg: [60, 84], rhythm: { 2: 3, 3: 3 }, harm: 0.7, rest: [6, 10], play: [50, 80], pause: [70, 120] },
+  // 中州 (1.0): 宮調 and the 鐘 for the great city, broad and busy; the 商 of the river for the docks;
+  // the sword sect resolute on the 古琴 with a bell; the night market's 琵琶, low and a little sly
+  'city:day': { lead: 'dizi', second: 'pipa', pulse: 'pipa', bells: 'zhong', mode: 'gong', root: 55, bpm: 96, reg: [67, 88], bassReg: [43, 55], rhythm: { 0.5: 4, 1: 4, 1.5: 1, 2: 1 }, trem: 0.12, rest: [1, 3], play: [80, 110], pause: [50, 90] },
+  'city:night': { lead: 'xiao', pad: true, bells: 'chime', mode: 'zhi', root: 52, bpm: 54, reg: [64, 84], rhythm: { 1: 3, 1.5: 2, 2: 3 }, rest: [2, 5], play: [70, 100], pause: [60, 110] },
+  'docks:day': { lead: 'dizi', pulse: 'pipa', drum: 'dagu', mode: 'shang', root: 53, bpm: 84, reg: [65, 86], bassReg: [41, 53], rhythm: { 0.5: 3, 1: 4, 1.5: 1, 2: 1 }, rest: [1, 3], play: [70, 100], pause: [50, 90] },
+  'docks:night': { lead: 'xiao', bass: 'guqin', mode: 'yu', root: 48, bpm: 50, reg: [60, 79], bassReg: [36, 48], rhythm: { 1: 3, 1.5: 2, 2: 3 }, rest: [2, 5], play: [60, 90], pause: [60, 110] },
+  'swordsect:day': { lead: 'guqin', second: 'xiao', bells: 'zhong', pad: true, mode: 'shang', root: 50, bpm: 60, reg: [62, 84], bassReg: [38, 50], rhythm: { 1: 3, 1.5: 2, 2: 3 }, slide: 0.3, rest: [2, 4] },
+  'swordsect:night': { lead: 'guqin', bells: 'qing', mode: 'yu', root: 47, bpm: 46, reg: [59, 83], rhythm: { 1.5: 2, 2: 3, 3: 2 }, harm: 0.4, rest: [4, 8], play: [60, 90], pause: [60, 110] },
+  'nightmarket:day': { lead: 'xun', pad: true, mode: 'yu', root: 45, bpm: 44, reg: [57, 76], rhythm: { 2: 3, 3: 2 }, rest: [5, 9], play: [50, 80], pause: [70, 120] },
+  'nightmarket:night': { lead: 'pipa', second: 'xiao', pulse: 'pipa', mode: 'jue', root: 50, bpm: 72, reg: [62, 84], bassReg: [38, 50], rhythm: { 0.5: 3, 1: 4, 1.5: 2 }, trem: 0.3, rest: [2, 4], play: [70, 100], pause: [50, 90] },
   sky: { lead: 'dizi', second: 'xiao', pad: true, mode: 'gong', root: 55, bpm: 70, reg: [67, 88], rhythm: { 0.5: 2, 1: 4, 2: 2 }, rest: [1, 3], play: [90, 140], pause: [20, 40] },
   secl: { lead: 'guqin', pad: true, mode: 'gong', root: 48, bpm: 36, reg: [64, 88], rhythm: { 2: 3, 3: 3 }, harm: 0.8, rest: [6, 12], play: [150, 240], pause: [30, 60] },
   realm: { lead: 'xun', pad: true, mode: 'jue', root: 44, bpm: 42, reg: [56, 76], rhythm: { 2: 3, 3: 2 }, rest: [4, 8], play: [90, 150], pause: [30, 60] },
