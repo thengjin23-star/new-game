@@ -77,6 +77,7 @@
  "./src/core/cultivation.js",
  "./src/core/effects.js",
  "./src/core/events.js",
+ "./src/core/jie.js",
  "./src/core/refine.js",
  "./src/core/rng.js",
  "./src/core/save.js",
