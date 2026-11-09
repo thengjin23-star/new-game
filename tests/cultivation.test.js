@@ -162,6 +162,12 @@ test('at the gate of 元嬰, the odds coming up only open the 心魔劫; failing
       assert.equal(s.player.realm, 3, 'not yet 元嬰');
       assert.ok(s.pending?.notice && s.pending.title === '碎丹成嬰');
       assert.equal(s.pending.ok, '轉過身去。');
+      // (while it waits: no second roll, no seclusion)
+      s.pending = null;
+      const tries = s.stats.breakthroughs;
+      A.attemptBreakthrough(s, 0);
+      assert.equal(s.stats.breakthroughs, tries, 'the odds are not rolled again');
+      assert.ok(A.seclusionBlocker(s), 'no seclusion with a 劫 waiting');
     } else {
       failed++;
       assert.equal(s.player.realm, 3);

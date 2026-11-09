@@ -99,6 +99,8 @@ export const SECLUSION_OPTIONS = [
 export function seclusionBlocker(s) {
   if (s.pending || s.dead) return '眼下脫不開身。';
   if (s.secl) return '已在閉關中。';
+  // (0.26) a 劫 waiting on you
+  if (s.jie) return '劫在等你。渡過去之前，閉不了關。';
   return canSecludeAt(s, s.player.loc);
 }
 
@@ -231,7 +233,8 @@ function finishSeclusion(s) {
 // ── 突破 ──
 
 export function attemptBreakthrough(s, pills = 0) {
-  if (busy(s)) return;
+  // (a 劫 already waiting on you: the odds were rolled, the gate is that fight now)
+  if (busy(s) || s.jie) return;
   const info = breakthroughInfo(s, { pills });
   if (!info.ready) return;
   const p = s.player;

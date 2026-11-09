@@ -27,6 +27,32 @@ const CHY = Math.ceil(WORLD_H / CH);
 const GROUND_RES = 1.25; // chunk canvas pixels per world unit
 const FONT = "'LXGW WenKai TC', 'Kaiti TC', 'STKaiti', 'BiauKai', serif";
 
+/**
+ * (0.26) The 心魔 on the flat map: painted on a little card of its own and washed in ink there (as the 3D
+ * view's cards are), then laid down where it stands — ctx is at its feet. One card does for all of them:
+ * each is laid down before the next is painted.
+ */
+let inkCanvas = null;
+function inkCard(ctx, b, t, now) {
+  const m = ctx.getTransform();
+  const k = Math.max(0.5, Math.hypot(m.a, m.b));
+  const W = 150;
+  const H = 120;
+  const w = Math.ceil(W * k);
+  const h = Math.ceil(H * k);
+  inkCanvas ||= document.createElement('canvas');
+  if (inkCanvas.width !== w || inkCanvas.height !== h) {
+    inkCanvas.width = w;
+    inkCanvas.height = h;
+  }
+  const o = inkCanvas.getContext('2d');
+  o.setTransform(1, 0, 0, 1, 0, 0);
+  o.clearRect(0, 0, w, h);
+  o.setTransform(k, 0, 0, k, 75 * k, 100 * k);
+  paintBeast(o, b, t, now, { tint: true });
+  ctx.drawImage(inkCanvas, -75, -100, W, H);
+}
+
 // ── ground colours ──
 
 const GROUND = {
@@ -1265,7 +1291,10 @@ export function createWorldView(canvas, { onFrame, idle } = {}) {
           ctx.fill();
         }
         hurtHalo(Math.max(0, 1 - (C.t - b.flashT) / 0.2), b.R.tall);
-        paintBeast(ctx, b, t, C.t, { tint: false });
+        // (the 心魔 is you, in ink: painted on a card of its own and washed there, as the 3D view does — washing it
+        // on the world itself would darken the ground behind it too)
+        if (b.kind === 'xinmo' || b.kind === 'xinmo_shade') inkCard(ctx, b, t, C.t);
+        else paintBeast(ctx, b, t, C.t, { tint: false });
         ctx.restore();
         break;
       }

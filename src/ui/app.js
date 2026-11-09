@@ -46,6 +46,7 @@ import * as GUIDE from '../world/guide.js';
 import { FEATS, checkFeats } from '../world/feats.js';
 import { GUIDE as HOWTO } from '../content/guide.js';
 import { BEAST_NOTES, NOT_IN_BOOK } from '../content/codex.js';
+import { JIE } from '../core/jie.js';
 import { FOES } from '../content/foes.js';
 import * as CR from '../world/crafts.js';
 import { RECIPES, GLYPHS, ARRAY } from '../content/crafts.js';
@@ -2287,6 +2288,8 @@ export function startApp(root, { speed = 1, view = null } = {}) {
       ),
     );
     if (s.secl) put(wrap, seclusionCard());
+    // (0.26) the odds came up: the gate is the 劫 now, out in the world
+    else if (s.jie) put(wrap, h('section.card.bt', h('h3', JIE[s.jie.kind]?.name || '劫'), h('p', s.world?.fly ? '劫在等你。先落地。' : '劫在等你。回到世界裡，面對它。')));
     else if (atBottleneck(s)) put(wrap, breakthroughCard());
     else {
       if (atCeiling(s)) put(wrap, ceilingCard());

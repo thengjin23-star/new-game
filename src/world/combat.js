@@ -1253,8 +1253,9 @@ export function updateCombat(s, dt, io) {
     if (s.pending || s.dead) return STILL;
   }
   // (0.26) a 劫 waiting on you (the odds came up at the gate, and you have read what that means): it
-  // begins where you stand (and if the game was closed in the middle of one, it begins again)
-  if (s.jie && !C.jie && !C.on && !s.pending && !s.rtFight && !s.secl) beginJie(s, C, io);
+  // begins where you stand, once you are on the ground (and if the game was closed in the middle of one,
+  // it begins again)
+  if (s.jie && !C.jie && !C.on && !s.pending && !s.rtFight && !s.secl && !w.fly) beginJie(s, C, io);
   const steering = !!(io.input && (io.input.x || io.input.y));
   me.press = Math.max(0, me.press - dt);
   // taking the stick yourself ends walking up to someone
