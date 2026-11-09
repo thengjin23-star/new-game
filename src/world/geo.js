@@ -148,12 +148,17 @@ export let CLIFF_LINES = [[[1230, 2625], [1480, 2660], 34]];
 /** 靈溪谷 is ringed by cliffs, open only where its stream leaves (the gorge). */
 export let VALLEY = { cx: 600, cy: 1820, rx: 420, ry: 460, ring: 0.14, gorge: [1000, 2010], gorgeHalf: 0.24 };
 
-/** 青雲宗: a mountain massif with a plateau on top and stairs up the south face. */
+/**
+ * 青雲宗: a mountain massif with a plateau on top and stairs up the south face. name: whose 護山大陣 keeps
+ * the air over it; member: the flag of those it lets through (another map's sect has its own).
+ */
 export let SECT = {
   massif: [[3800, 600], [4700, 640], [4720, 1720], [3840, 1760]],
   plateau: [4300, 1080, 330, 240],
   gateY: 1420,
   gateX: [4200, 4320],
+  name: '青雲宗',
+  member: 'sect_member',
 };
 
 /**
@@ -221,6 +226,9 @@ export let BORDER = {
 /** The river whose far bank is the edge of the world (beyond it only mist and water), and its region. */
 export let EDGE_RIVER = 'great';
 export let RIVER_REGION = 'great_river';
+/** (1.0) Which side of the map the river edge is on (the mist lies beyond it), and what you are told if you would fly into it. */
+export let EDGE_SIDE = 'east';
+export let MIST_SAY = '江那邊雲霧太濃，辨不清方向。要過江，得到白鶴渡坐船。';
 
 /** The region a cell belongs to when no shape claims it. */
 export let HOME_REGION = 'wilds';
@@ -252,7 +260,7 @@ export let UPLAND = [
 /** 東荒・青石一帶, as above (what a map file gives for its own land). */
 export const DONGHUANG_GEO = {
   REGION_SHAPES, PEAKS, AIRY, CLIFF_LINES, VALLEY, SECT, RIVERS, LAKES, ROADS, MARKET_WALL, WALL_LOOK, BORDER,
-  EDGE_RIVER, RIVER_REGION, HOME_REGION, REACH_FROM, UPLAND,
+  EDGE_RIVER, RIVER_REGION, EDGE_SIDE, MIST_SAY, HOME_REGION, REACH_FROM, UPLAND,
 };
 
 /** Put another map's land in place (world/atlas.js). A map leaves out what it does not have (no sect, no walled market…). */
@@ -271,6 +279,8 @@ export function setGeo(g) {
   BORDER = g.BORDER;
   EDGE_RIVER = g.EDGE_RIVER || null;
   RIVER_REGION = g.RIVER_REGION || null;
+  EDGE_SIDE = g.EDGE_SIDE || 'east';
+  MIST_SAY = g.MIST_SAY || '雲霧太濃，辨不清方向。';
   HOME_REGION = g.HOME_REGION;
   REACH_FROM = g.REACH_FROM;
   UPLAND = g.UPLAND || [];

@@ -4,6 +4,7 @@
 // starts events, and leaves notes (toasts, banners) for the UI to show.
 
 import { world, regionAt, collides, speedAt, findPath, nearestOpen, canStand } from './terrain.js';
+import { RIVER_REGION } from './geo.js';
 import { heightAt } from './height.js';
 import { POIS, POI_BY_ID, GATHER, GATHER_RESPAWN } from './places.js';
 import { NODES, mapOf } from './map.js';
@@ -659,7 +660,8 @@ export function flashOf(s) {
  */
 function riverWatch(s, L, dt) {
   const w = s.world;
-  if (w.fly.state === 'down' || regionAt(s, w.x, w.y) !== 'great_river') {
+  // (the river of the map you are on: 東荒's 大江 — or the same river, seen from 中州)
+  if (w.fly.state === 'down' || !RIVER_REGION || regionAt(s, w.x, w.y) !== RIVER_REGION) {
     L.riverT = Math.max(0, (L.riverT || 0) - dt * 2);
     if (!L.riverT) L.riverSaid = false;
     return;

@@ -5,7 +5,7 @@
 
 import {
   WORLD_W, WORLD_H, CELL, COLS, ROWS, T, TERRAIN, REGION_SHAPES, PEAKS, CLIFF_LINES,
-  VALLEY, SECT, RIVERS, LAKES, ROADS, BORDER, MARKET_WALL, AIRY, EDGE_RIVER, RIVER_REGION, HOME_REGION, REACH_FROM,
+  VALLEY, SECT, RIVERS, LAKES, ROADS, BORDER, MARKET_WALL, AIRY, EDGE_RIVER, RIVER_REGION, EDGE_SIDE, HOME_REGION, REACH_FROM,
 } from './geo.js';
 import { STRUCTURES, POIS, GATHER, NPC_SPOTS } from './places.js';
 import { hash2, vnoise, fbm } from './noise.js';
@@ -88,7 +88,8 @@ export function edgeAt(x, y) {
   };
   return [
     BORDER.north + 80 * vnoise(x / 300, 1.5, 21) - notch('north', x),
-    BORDER.west + 80 * vnoise(y / 300, 2.5, 22) - notch('west', y),
+    // (a map with its river to the west has no mountains there)
+    BORDER.west != null ? BORDER.west + 80 * vnoise(y / 300, 2.5, 22) - notch('west', y) : -Infinity,
     BORDER.south - 80 * vnoise(x / 300, 3.5, 23) + notch('south', x),
     BORDER.east ? BORDER.east - 80 * vnoise(y / 300, 4.5, 24) + notch('east', y) : Infinity,
   ];
@@ -273,8 +274,18 @@ function build() {
       greatRiver[k] = 0;
     });
   }
-  // beyond the great river: mist
+  // beyond the great river: mist (to the east of it on 東荒; to the west of it on a map across the river)
   for (let j = 0; j < ROWS; j++) {
+    if (EDGE_SIDE === 'west') {
+      let first = COLS;
+      for (let i = COLS - 1; i >= 0; i--) if (greatRiver[idxOf(i, j)]) first = i;
+      if (first === COLS) continue;
+      for (let i = 0; i < first; i++) {
+        terr[idxOf(i, j)] = T.VOID;
+        greatRiver[idxOf(i, j)] = 1;
+      }
+      continue;
+    }
     let last = -1;
     for (let i = 0; i < COLS; i++) if (greatRiver[idxOf(i, j)]) last = i;
     if (last < 0) continue;
@@ -477,9 +488,14 @@ export function collides(s, x, y, r = PLAYER_R) {
   return collidesIn(world(), s, x, y, r);
 }
 
+/** Whether the sect's gate on the map you are on lets you through (青雲宗's its disciples; another map's sect, its own people). */
+function gateOpenFor(s) {
+  return !!s?.flags?.[SECT?.member || 'sect_member'];
+}
+
 /** The same, on a world given (one still being made). */
 function collidesIn(g, s, x, y, r) {
-  const gateOpen = !!s?.flags?.sect_member;
+  const gateOpen = gateOpenFor(s);
   if (x - r < 0 || y - r < 0 || x + r >= WORLD_W || y + r >= WORLD_H) return true;
   const i0 = colOf(x - r);
   const i1 = colOf(x + r);
@@ -531,7 +547,7 @@ function pathOpen(g, k, gateOpen) {
 /** The nearest open spot to (x, y), searching outwards cell by cell. */
 export function nearestOpen(s, x, y, maxRing = 12) {
   const g = world();
-  const gateOpen = !!s?.flags?.sect_member;
+  const gateOpen = gateOpenFor(s);
   const ci = colOf(x);
   const cj = rowOf(y);
   if (pathOpen(g, idxOf(ci, cj), gateOpen) && !collides(s, x, y)) return [x, y];
@@ -572,7 +588,7 @@ const LEAP_COST = 60;
  */
 export function findPath(s, x0, y0, x1, y1, leap = null) {
   const g = world();
-  const gateOpen = !!s?.flags?.sect_member;
+  const gateOpen = gateOpenFor(s);
   const goal = nearestOpen(s, x1, y1);
   if (!goal) return null;
   const [gx, gy] = goal;

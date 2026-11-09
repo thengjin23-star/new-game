@@ -4,7 +4,7 @@
 
 import { TECHS } from '../content/techniques.js';
 import { ITEMS } from '../content/items.js';
-import { T, TERRAIN, WORLD_W, WORLD_H, BORDER, SECT, CELL } from './geo.js';
+import { T, TERRAIN, WORLD_W, WORLD_H, BORDER, SECT, CELL, MIST_SAY } from './geo.js';
 import { world, collides, canStand, terrainAt, insidePoly, idxOf, colOf, rowOf, cellX, cellY } from './terrain.js';
 import { heightAt } from './height.js';
 
@@ -153,16 +153,16 @@ function sectAir(x, y) {
 /** Why you cannot fly over (x, y) this way (null: you can). */
 export function flyBlocked(s, x, y, by) {
   const F = FLIGHT[by];
-  if (x < BORDER.west + 40 || y < BORDER.north + 50 || y > BORDER.south - 40 || x > (BORDER.east ? BORDER.east - 40 : WORLD_W - 20)) return '再往外，是望不到頭的群山。';
-  if (terrainAt(x, y) === T.VOID) return '江那邊雲霧太濃，辨不清方向。那是中州，還不是你現在去的地方。';
-  if (!s.flags?.sect_member && sectAir(x, y)) return '一層看不見的光幕擋住了你：青雲宗的護山大陣。';
+  if ((BORDER.west != null && x < BORDER.west + 40) || x < 20 || y < BORDER.north + 50 || y > BORDER.south - 40 || x > (BORDER.east ? BORDER.east - 40 : WORLD_W - 20)) return '再往外，是望不到頭的群山。';
+  if (terrainAt(x, y) === T.VOID) return MIST_SAY;
+  if (!s.flags?.[SECT?.member || 'sect_member'] && sectAir(x, y)) return `一層看不見的光幕擋住了你：${SECT?.name || '宗門'}的護山大陣。`;
   if (heightAt(x, y) + F.clear > F.ceil) return '山太高了，飛不上去。';
   return null;
 }
 
 /** Can you come down here? */
 export function canLand(s, x, y) {
-  if (!s.flags?.sect_member && sectAir(x, y)) return false;
+  if (!s.flags?.[SECT?.member || 'sect_member'] && sectAir(x, y)) return false;
   return canStand(s, x, y);
 }
 
