@@ -41,6 +41,20 @@ export const FACTIONS = {
       [80, '自己人', '山賊見了你，抱拳叫一聲「當家的」。'],
     ],
   },
+  // 1.0 中州: the city by the river — its shops, its 懸賞堂, the watch on its walls (shown once you have crossed)
+  linjiang: {
+    name: '臨江城',
+    who: '城裡的商家、懸賞堂與巡城衛',
+    desc: '中州的第一座大城。東荒來的散修在這裡是生面孔；懸賞做得多了，掌櫃們才肯給你好價錢。',
+    show: (s) => !!s.flags.zhongzhou_crossed,
+    tiers: [
+      [-999, '城裡的麻煩', '巡城衛盯著你，掌櫃們的東西都貴一成。'],
+      [-20, '東荒來的', ''],
+      [25, '熟面孔', '臨江城的東西打九五折。'],
+      [70, '有名有號', '打九折。'],
+      [140, '臨江貴客', '打八五折。'],
+    ],
+  },
 };
 
 const RANGE = [-200, 300];

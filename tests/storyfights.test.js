@@ -68,8 +68,8 @@ test('every fight in the stories is fought where you stand: those in it exist an
   // (23 from the story; 3 more, the rounds of the sect's 大比; 3 in each 秘境; a 獸潮 and a treasure out of the sky;
   // 南嶺's: 阿水 in the 白絲洞; 西漠's: 沙盜 on the caravan road, 禿鷲 in his fort, the 石翁仲 at the 星門;
   // and 北原's: the 冰麟 on the knot of the veins; 中州's (1.0): three on the 天驕榜's 擂台, 蘇清瑤's reckoning,
-  // the stone beast of the old observatory)
-  assert.equal(n, 44);
+  // the stone beast of the old observatory, the watch that brings you down out of the sky over 臨江城)
+  assert.equal(n, 45);
   for (const f of Object.values(FOES)) for (const [, item] of f.loot || []) assert.ok(ITEMS[item], `loot ${item}`);
 });
 

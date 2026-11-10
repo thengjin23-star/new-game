@@ -315,7 +315,8 @@ export function shopHere(s) {
   let best = null;
   let bd = 160;
   for (const p of POIS) {
-    if (p.action !== 'shop') continue;
+    // (a stall that is only there some of the time — the 鬼市's, by night — is not there otherwise)
+    if (p.action !== 'shop' || (p.show && !p.show(s))) continue;
     const d = Math.hypot(p.x - s.world.x, p.y - s.world.y);
     if (d > bd) continue;
     bd = d;

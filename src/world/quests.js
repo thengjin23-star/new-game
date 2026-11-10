@@ -14,6 +14,8 @@ import { addRep } from './factions.js';
 export const BOARDS = {
   market: { name: '懸賞榜', faction: 'market', every: 10, size: 3, who: '坊市的管事', poi: 'bounty_board' },
   sect: { name: '任務堂', faction: 'sect', every: 7, size: 3, who: '任務堂的執事', poi: 'sect_task_hall', member: true },
+  // 1.0 中州: 臨江城's 懸賞堂 (its work pays better, and is further off)
+  linjiang: { name: '懸賞堂', faction: 'linjiang', every: 10, size: 3, who: '懸賞堂的管事', poi: 'lj_bounty' },
 };
 
 /**
@@ -40,6 +42,17 @@ export const WORK = {
     { id: 's_ghosts', title: '古戰場除魂', text: '古戰場的殘魂越來越多，宗門派人去清一清。', kind: 'slay', beasts: ['ghost'], n: 3, gx: 30, rep: 5, realm: 1 },
     { id: 's_bandits', title: '清剿山賊', text: '黑風寨的人越來越猖狂，劫到宗門的商隊頭上了。', kind: 'slay', beasts: ['bandit', 'bandit_chief'], whom: '黑風寨的山賊', n: 3, gx: 35, rep: 6 },
     { id: 's_robber', title: '捉拿劫修', text: '有劫修冒充本宗弟子在路上搶劫，壞了宗門的名聲。', kind: 'slay', beasts: ['cultivator'], whom: '劫修', n: 1, gx: 28, rep: 5 },
+  ],
+  linjiang: [
+    { id: 'z_pythons', title: '江堤除蟒', text: '江堤蘆蕩的青蟒又拖走了割葦子的一頭牛。漁家湊了錢，請人除蟒。', kind: 'slay', beasts: ['reed_python'], n: 3, ls: 90, rep: 8 },
+    { id: 'z_spirits', title: '蒼梧林的木精', text: '進蒼梧林採紫芝的人，有三個沒回來。藥鋪懸賞，打倒林子裡的木精。', kind: 'slay', beasts: ['wood_spirit'], n: 2, ls: 110, rep: 8 },
+    { id: 'z_apes', title: '猿群下山', text: '蒼梧林的黑猿下山偷靈稻，佃農不敢下田。謝家莊的管事懸賞。', kind: 'slay', beasts: ['cangwu_ape'], n: 2, ls: 120, rep: 8 },
+    { id: 'z_robbers', title: '緝拿劫修', text: '官道上又有商隊被劫。城主府懸賞緝拿劫道的散修。', kind: 'slay', beasts: ['jie_xiu'], whom: '劫修', n: 2, ls: 130, rep: 10 },
+    { id: 'z_assassin', title: '鬼市的影子', text: '有人從鬼市一路被跟到江邊，第二天在蘆葦裡找到了。懸賞那個夜裡跟人的刺客。', kind: 'slay', beasts: ['gs_assassin'], whom: '鬼市刺客', n: 1, ls: 150, rep: 12, realm: 2 },
+    { id: 'z_gall', title: '收青蟒膽', text: '回春閣收青蟒膽入藥，有多少收多少。', kind: 'bring', item: 'qingmang_gall', n: 2, ls: 70, rep: 5 },
+    { id: 'z_heart', title: '收木精心', text: '天工坊的老師傅要木精心做劍柄。', kind: 'bring', item: 'mujing_heart', n: 1, ls: 80, rep: 6 },
+    { id: 'z_longxu', title: '收龍鬚草', text: '丹鋪缺龍鬚草，價錢好說。', kind: 'bring', item: 'longxu_grass', n: 4, ls: 45, rep: 4 },
+    { id: 'z_zizhi', title: '收紫芝', text: '城主府的老夫人要做壽，收三十年的紫芝。', kind: 'bring', item: 'zizhi', n: 1, ls: 110, rep: 8 },
   ],
 };
 

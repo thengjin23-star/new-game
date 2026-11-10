@@ -2595,7 +2595,7 @@ export function startApp(root, { speed = 1, view = null } = {}) {
     const s = ui.s;
     const taken = Q.takenOf(s).map((q) => Q.progress(s, q)).filter(Boolean);
     return h('div',
-      h('ul.factions', Object.entries(FACTIONS).map(([id, f]) => {
+      h('ul.factions', Object.entries(FACTIONS).filter(([, f]) => !f.show || f.show(s)).map(([id, f]) => {
         const st = standing(s, id);
         return h('li',
           h('div.person-head', h('b', f.name), h('span.tier', st.name), h('span.muted.small', `聲望 ${st.at}`)),

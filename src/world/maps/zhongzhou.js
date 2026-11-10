@@ -143,6 +143,8 @@ export const ZHONGZHOU_GEO = {
   MARKET_WALL: CITY, WALL_LOOK: { mud: false, name: '臨江城' }, BORDER,
   EDGE_RIVER: 'great', RIVER_REGION: 'zz_river', EDGE_SIDE: 'west',
   MIST_SAY: '江那邊雲霧太濃，辨不清方向。那邊是東荒；要回去，到鶴歸渡坐船。',
+  // the sky over 臨江城 is the watch's (world/explore.js cityWatch)
+  NO_FLY: { region: 'linjiang', name: '臨江城' },
   HOME_REGION: 'zz_wilds', REACH_FROM: [800, 3900], UPLAND,
 };
 
@@ -415,6 +417,8 @@ const POIS = [
   { id: 'hg_shed', region: 'heguidu', x: 960, y: 4050, name: '茶棚', verb: '歇腳', rest: true, text: '茶棚裡擺著幾張條凳，一壺粗茶三文錢。剛下船的人都在這裡歇口氣，打聽城裡的事。' },
   // 鬼市
   { id: 'gs_stalls', region: 'guishi', x: 880, y: 3400, name: '鬼市', verb: '逛逛', glow: (s) => s.tod >= 20 || s.tod < 4, text: (s) => (s.tod >= 20 || s.tod < 4 ? '燈一盞一盞亮著。攤子上擺的東西，有的認得，有的不認得；擺攤的人都戴著斗笠。' : '空地上只有幾根木樁。要等天黑，鬼市才開。') },
+  // (1.0) by night only, a stall that sells: content/items.js SHOPS.guishi
+  { id: 'gs_shop', region: 'guishi', x: 960, y: 3430, name: '夜攤', verb: '看貨', action: 'shop', shop: 'guishi', show: (s) => s.tod >= 19.5 || s.tod < 5, glow: () => true, text: '一盞燈，一塊布，布上擺著來路不明的東西。' },
   { id: 'gs_lean', region: 'guishi', x: 1040, y: 3500, name: '破棚', verb: '查看', text: '牆根下一間破棚子，門口掛著一塊木牌：「洞府出租，一月十石，不問來歷。」' },
   // 臨江碼頭
   { id: 'ld_wharf', region: 'linjiang_docks', x: 760, y: 2900, name: '碼頭', verb: '查看', text: '碼頭上人聲鼎沸。腳夫扛著貨箱，一路小跑；船家扯著嗓子喊價，十幾種口音混在一起。' },
@@ -427,7 +431,7 @@ const POIS = [
   { id: 'lj_inn', region: 'linjiang', x: 1270, y: 3060, name: '客棧', verb: '歇腳', rest: true, text: '客棧的掌櫃看了你一眼：「住店？中州的店錢，可比東荒貴。」' },
   { id: 'lj_shop', region: 'linjiang', x: 2130, y: 3058, name: '百貨', verb: '購物', action: 'shop', shop: 'linjiang' },
   { id: 'lj_smith', region: 'linjiang', x: 2130, y: 3334, name: '兵器鋪', verb: '購物', action: 'shop', shop: 'linjiang_smith' },
-  { id: 'lj_bounty', region: 'linjiang', x: 1840, y: 3336, name: '懸賞堂', verb: '看榜', text: '懸賞堂的牆上貼滿了告示：某處出了妖獸，某人欠了債，某家丟了東西。賞金從十塊靈石到一千塊不等。' },
+  { id: 'lj_bounty', region: 'linjiang', x: 1840, y: 3336, name: '懸賞堂', verb: '看榜', action: 'board', board: 'linjiang', text: '懸賞堂的牆上貼滿了告示：某處出了妖獸，某人欠了債，某家丟了東西。賞金從十塊靈石到一千塊不等。' },
   { id: 'lj_cave', region: 'linjiang', x: 1560, y: 3092, name: '洞府行', verb: '租洞府', text: '洞府行的牆上掛著一張城外的圖，圖上一個一個圈著的，是能租的洞府。掌櫃說：「城裡寸土寸金，洞府按月算。」' },
   { id: 'lj_xie', region: 'linjiang', x: 2130, y: 2612, name: '謝府', verb: '查看', text: '謝府的大門緊閉，門口兩個家丁抱著胳膊，看人的眼神像在看一隻螞蟻。' },
   { id: 'lj_lane', region: 'linjiang', x: 1400, y: 3220, name: '散修巷', verb: '查看', text: '一條窄巷，兩邊的房子又矮又擠。巷口蹲著幾個散修，有的在打坐，有的在補衣裳，有的什麼也不做，只是看著街。' },

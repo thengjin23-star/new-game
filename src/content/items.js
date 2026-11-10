@@ -247,7 +247,8 @@ export const ITEMS = {
     use: { text: '一股清涼直透靈台，雜念如潮水般退去。', effects: [['mind', 15]] },
   },
   zhuji_pill: {
-    name: '築基丹', kind: 'pill', sell: 300,
+    // (sold nowhere but the 鬼市 of 臨江城, by night, and dear: 1.0)
+    name: '築基丹', kind: 'pill', price: 900, sell: 300,
     desc: '突破築基時服用，每顆增加兩成五的成功率，最多兩顆。在「修煉」頁突破時選用。',
   },
   fake_zhuji: {
@@ -363,6 +364,11 @@ export const ITEMS = {
     name: '寒鐵劍', kind: 'weapon', price: 520, sell: 200, power: 0.55, strike: 'qinggang_sword',
     desc: '寒鐵鍛的劍，劍身泛著冷光，已摸到了法器的門檻。',
   },
+  // 1.0 中州
+  qingfeng_sword: {
+    name: '青鋒劍', kind: 'weapon', price: 1200, sell: 480, power: 0.75, strike: 'qinggang_sword',
+    desc: '臨江城天工坊鍛的法劍，劍身薄得透光，揮起來沒有聲音。天劍宗的外門弟子，人手一把。',
+  },
 
   // ── 衣袍、佩飾、法器 ──
   cloth_robe: {
@@ -457,6 +463,23 @@ export const ITEMS = {
   zijin_bell: {
     name: '紫金鈴', kind: 'gear', slot: 'relic', price: 360, sell: 140, stats: { def: 0.04 }, move: 'bell',
     desc: '紫金打的小鈴，一搖，聲如洪鐘。戴著它，可以帶「金鐘」上陣。',
+  },
+  // 1.0 中州: what 臨江城 sells, and what its smith makes of the 大澤 and the old observatory
+  liuyun_robe: {
+    name: '流雲法袍', kind: 'gear', slot: 'robe', price: 900, sell: 350, stats: { hp: 0.12, def: 0.1, mpRegen: 0.4 },
+    desc: '臨江城天工坊織的法袍，料子輕得像一片雲，針腳裡織著聚靈的紋。中州的散修，攢夠了錢頭一件買的就是它。',
+  },
+  guiyuan_jade: {
+    name: '歸元玉', kind: 'gear', slot: 'charm', price: 600, sell: 240, stats: { mp: 30, mpRegen: 0.6 },
+    desc: '一塊溫潤的青玉，貼身戴著，靈力回得快些。上官家的鋪子裡，一年只進十塊。',
+  },
+  jiaoxiao_robe: {
+    name: '蛟綃衣', kind: 'gear', slot: 'robe', sell: 420, stats: { hp: 0.16, def: 0.18, mpRegen: 0.3 }, craft: { ls: 320, items: { jiao_pearl: 1, jiao_scale: 2 } },
+    desc: '拿雲夢蛟的鱗和蛟珠織成的衣裳，青幽幽的，摸上去總有一點濕涼。刀劍砍上去，像砍進了水裡。',
+  },
+  xingwen_pendant: {
+    name: '星紋墜', kind: 'gear', slot: 'charm', sell: 160, stats: { sense: 0.3, mp: 20 }, craft: { ls: 140, items: { star_stone: 3 } },
+    desc: '三塊星紋石磨成的墜子，夜裡一閃一閃。戴著它，四下裡有什麼東西靠近，你都先一步知道。',
   },
 
   // ── 飛行法器 ──（怎麼飛：world/air.js）
@@ -633,4 +656,31 @@ export const SHOPS = {
     made: '{keeper}把東西接過去，一聲不吭地幹了一整天。叮叮噹噹的聲音一直響到天黑，他才把一件{item}遞給你，手上全是燙出來的泡。',
     share: (s) => (s.flags.mine_cleared ? 0.85 : 1),
   },
+  // 1.0 中州・臨江城: 上官家's store on the east market (her 名帖 counts there) and the 天工坊; by night, the 鬼市's lamps
+  linjiang: {
+    name: '上官記百貨',
+    keeper: '上官家的掌櫃',
+    stock: ['juqi_pill', 'heal_pill', 'detox_pill', 'qingxin_pill', 'gold_talisman', 'wind_talisman', 'return_talisman', 'guiyuan_jade'],
+    share: (s) => zzShare(s) * (s.flags.sg_met ? 0.9 : 1),
+  },
+  linjiang_smith: {
+    name: '天工坊',
+    keeper: '天工坊的老師傅',
+    stock: ['qingfeng_sword', 'hantie_sword', 'liuyun_robe'],
+    recipes: ['jiaoxiao_robe', 'xingwen_pendant'],
+    made: '{keeper}把東西拿在手裡掂了掂，點點頭，進了後頭的爐房。第二天一早，學徒把一件{item}捧了出來，老師傅在後頭打著呵欠：「中州的手藝，不比東荒差吧？」',
+    share: (s) => zzShare(s),
+  },
+  guishi: {
+    name: '鬼市',
+    keeper: '戴斗笠的攤主',
+    stock: ['zhuji_pill', 'mystery', 'hide_talisman', 'return_talisman', 'juqi_pill', 'detox_pill'],
+    share: (s) => zzShare(s) * 1.1,
+  },
 };
+
+/** What 臨江城's shops ask of you, by your standing in the city (world/factions.js FACTIONS.linjiang). */
+function zzShare(s) {
+  const v = s.rep?.linjiang || 0;
+  return v >= 140 ? 0.85 : v >= 70 ? 0.9 : v >= 25 ? 0.95 : v < -20 ? 1.1 : 1;
+}

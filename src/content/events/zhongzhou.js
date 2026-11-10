@@ -10,6 +10,7 @@ import { flag, night, variant, alive, met, favor, has } from '../helpers.js';
 import { dayAt } from '../../core/calendar.js';
 import { power } from '../../core/cultivation.js';
 import { FRAGMENTS } from '../fragments.js';
+import { RENT, TERMS, rentCost, extendRent, rentUntil } from '../../world/caves.js';
 
 const HG = ['heguidu'];
 const LJ = ['linjiang'];
@@ -469,6 +470,68 @@ export default [
         '巷口貼著一張懸賞：「尋人：東荒來的散修張某，三月前進城，至今未歸。」紙已經黃了，沒人揭。',
       ]),
     choices: [{ text: '走過巷子。', out: { effects: [['mind', 1]] } }],
+  },
+
+  // 租洞府 (world/caves.js): the 洞府行 in the city, and the hole behind the 鬼市's lean-to
+  ...['linjiang', 'guishi'].map((at) => ({
+    id: at === 'linjiang' ? 'lj_cave' : 'gs_lean',
+    trigger: 'explore',
+    poi: at === 'linjiang' ? 'lj_cave' : 'gs_lean',
+    nodes: [at],
+    title: at === 'linjiang' ? '洞府行' : '破棚子',
+    text: (s) => {
+      const until = rentUntil(s, at);
+      const head =
+        at === 'linjiang'
+          ? `洞府行的掌櫃把一張城圖攤在櫃台上，上頭圈著一個一個能租的洞府：「城北靠山那一排，地下引了靈脈，每一間都布了聚靈陣。一個月，${RENT.linjiang.month} 塊靈石。」\n\n他抬眼看你：「東荒的靈石，我們也收。」`
+          : `破棚子後頭的牆根下，挖著一排洞，洞口掛著草簾子。看棚子的老婆婆說：「一個月，${RENT.guishi.month} 塊靈石。靈氣是沒有城裡的好——可也沒人問你是誰。」`;
+      return until ? `${head}\n\n（你租的洞府，還有 ${Math.ceil((until - s.day) / 30)} 個月左右到期。）` : head;
+    },
+    choices: [
+      ...TERMS.map(([months]) => ({
+        text: `${months === 1 ? '租一個月' : months === 6 ? '租半年' : '租一年'}（${rentCost(at, months)} 靈石）。`,
+        need: (s) => (s.player.ls >= rentCost(at, months) ? null : `靈石不足（需 ${rentCost(at, months)}）`),
+        out: {
+          text: at === 'linjiang' ? '掌櫃收了靈石，從牆上摘下一塊木牌給你：「城北，第七間。門上的禁制認牌不認人，別弄丟了。」' : '老婆婆把一塊缺了角的木牌塞給你：「最裡頭那一間。漏雨的時候，自己拿盆接。」',
+          effects: [['ls', -rentCost(at, months)], (s) => { extendRent(s, at, months); }, ['sysexp', 3]],
+        },
+      })),
+      { text: '不租了。', out: {} },
+    ],
+  })),
+
+  // (world/explore.js cityWatch) flown over 臨江城 too long: the watch has brought you down
+  {
+    id: 'lj_nofly',
+    trigger: 'scheduled',
+    title: '城上禁空',
+    text: '你剛落地，四個巡城衛就圍了上來，槍尖對著你。\n\n「城上禁空，」領頭的說，「告示貼在城門口，你不識字？」',
+    choices: [
+      {
+        text: '認罰。',
+        need: (s) => (s.player.ls >= 20 ? null : '靈石不足（需 20）'),
+        out: { text: '他收了二十塊靈石，在冊子上記了一筆：「下不為例。」\n\n巡城衛散開了。看熱鬧的人也散開了。', effects: [['ls', -20], ['rep', 'linjiang', -2]] },
+      },
+      {
+        text: '動手。',
+        check: { kind: 'power', diff: (s) => Math.max(160, Math.round(power(s) * 0.9)) },
+        fight: { foes: [['city_guard', 2]], close: true },
+        ok: {
+          text: '巡城衛倒了一地。遠處又響起了哨子，一聲接一聲，往這邊來了。\n\n你最好在更多人趕到以前離開。',
+          effects: [['rep', 'linjiang', -15], ['flag', 'lj_fought_watch'], ['log', '在臨江城打倒了攔你的巡城衛']],
+        },
+        fail: {
+          text: '你被按在了地上，捆了個結實，押進城主府的牢裡關了三天。\n\n出來的時候，你身上的靈石少了一半。牢頭說：「這是飯錢。」',
+          effects: [['halfls'], ['hours', 72], ['rep', 'linjiang', -5]],
+        },
+      },
+      {
+        text: '跑。',
+        check: { kind: 'jiyuan', diff: 6 },
+        ok: { text: '你一矮身，從兩桿槍中間鑽了過去，拐進一條小巷，又拐進一條小巷。身後的哨子聲，越來越遠了。', effects: [['rep', 'linjiang', -6]] },
+        fail: { text: '你沒跑出三步，就被一桿槍絆倒了。\n\n罰了四十塊靈石，還挨了一頓訓。', effects: [['ls', -40], ['rep', 'linjiang', -4]] },
+      },
+    ],
   },
 
   // what the city talks about over its tea (the places of 臨江一帶, one by one)

@@ -4,7 +4,7 @@
 // starts events, and leaves notes (toasts, banners) for the UI to show.
 
 import { world, regionAt, collides, speedAt, findPath, nearestOpen, canStand } from './terrain.js';
-import { RIVER_REGION } from './geo.js';
+import { RIVER_REGION, NO_FLY } from './geo.js';
 import { heightAt } from './height.js';
 import { POIS, POI_BY_ID, GATHER, GATHER_RESPAWN } from './places.js';
 import { NODES, mapOf } from './map.js';
@@ -613,6 +613,7 @@ function flyStep(s, L, dt, input) {
   L.moving = moved > 0.01;
   if (moved > 0) afterFlight(s, L, moved, mode);
   if (w.fly) riverWatch(s, L, dt);
+  if (w.fly) cityWatch(s, L, dt);
   if (w.fly) thunderWatch(s, L, dt);
   if (w.fly) sandWatch(s, L);
   if (w.fly && F.state === 'down' && F.z - ground < 2.5) touchDown(s, L);
@@ -686,6 +687,34 @@ function riverWatch(s, L, dt) {
   L.feed.push({ kind: 'bad', text: '江水猛地炸開，一張比船還大的嘴從你腳下咬上來——浪頭把你掀翻，摔到了岸上。' });
   flush(s, L, report);
   passHours(s, L, 0.5);
+}
+
+/**
+ * (1.0) The sky over a walled city (the map's NO_FLY: 中州's 臨江城) belongs to its watch. Not a wall
+ * in the air — fly over if you like; but stay up there and the watch on the walls calls out, and then
+ * comes up after you and brings you down (content/events/zhongzhou.js lj_nofly: pay, fight, or run).
+ */
+function cityWatch(s, L, dt) {
+  const w = s.world;
+  if (!NO_FLY || w.fly.state === 'down' || w.fly.forced || regionAt(s, w.x, w.y) !== NO_FLY.region) {
+    L.cityT = Math.max(0, (L.cityT || 0) - dt * 2);
+    if (!L.cityT) L.citySaid = false;
+    return;
+  }
+  L.cityT = (L.cityT || 0) + dt;
+  if (L.cityT > 1.5 && !L.citySaid) {
+    L.citySaid = true;
+    L.feed.push({ kind: 'bad', text: `${NO_FLY.name}的城頭上，有人吹起了哨子：「城上禁空！下來！」` });
+  }
+  if (L.cityT < 6) return;
+  L.cityT = 0;
+  L.citySaid = false;
+  // they come up for you: down onto the street, and the watch around you
+  const spot = landingNear(s, w.x, w.y, 2000);
+  if (spot) placeAt(s, spot[0], spot[1]);
+  else w.fly = null;
+  if (s.pending) s.queue.push('lj_nofly');
+  else startEvent(s, 'lj_nofly');
 }
 
 /** Flying on: the day goes by (slower than on foot), the clouds part wide, you pass over regions (what waits there waits till you land). */

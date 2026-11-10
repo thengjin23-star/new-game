@@ -6,6 +6,7 @@
 
 import { ARRAY } from '../content/crafts.js';
 import { LANDS } from './maps/index.js';
+import { RENT, rented } from './caves.js';
 
 export const NODES = {
   qingshi_town: {
@@ -121,11 +122,22 @@ export function nodeQi(s, id) {
   if (id === 'qingxu_temple' && s.flags.temple_well_open) qi = 1.0;
   // your own 洞府, with the 聚靈陣 you have laid
   if (id === 'hidden_cave' && s.flags.home_claimed) qi += ARRAY[s.vars?.array || 0]?.qi || 0;
+  // (1.0) a cave rented in 臨江城, or behind the 鬼市, while the rent is paid
+  if (RENT[id] && rented(s, id)) qi = RENT[id].qi;
   return qi;
 }
 
 /** Whether 閉關 is possible here, and why not. */
 export function canSecludeAt(s, id) {
+  // (1.0) 中州: in the city, a cave is rented or there is none; the landing, the docks and the great houses are no place for it
+  if (id === 'linjiang' && !rented(s, id)) return '城裡人來人往，找不到能閉關的清淨地方。要閉關，先到洞府行租一間洞府。';
+  if (id === 'guishi' && !rented(s, id)) return '鬼市裡人來人往。牆根下的破棚子後頭，有洞府出租。';
+  if (id === 'heguidu') return '渡口風大人雜，不宜閉關。';
+  if (id === 'linjiang_docks') return '碼頭上吵得像打雷，不宜閉關。';
+  if (id === 'shangguan') return '這是上官家的商棧，不是閉關的地方。';
+  if (id === 'xiejia') return '謝家莊不留外人。';
+  if (id === 'tianjian' && !s.flags.tianjian_guest) return '天劍宗不收外人，山門外也不讓人閉關。';
+  if (id === 'zz_river') return '這裡是江面。';
   if (id === 'luoxia_market') return '坊市人來人往，找不到能閉關的清淨地方。';
   if (id === 'qingyun_sect' && !s.flags.sect_member) return '你不是青雲宗弟子，不能在山門內閉關。';
   if (id === 'lingxi_valley' && !s.flags.valley_safe) return '谷中那頭妖蟒還在，在這裡閉關無異於送死。';
