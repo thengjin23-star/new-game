@@ -464,8 +464,27 @@ const POIS = [
   { id: 'zw_post', region: 'zz_wilds', x: 2830, y: 2940, name: '路標', verb: '查看', text: '路口一根石柱，刻著四行字：東，天衍城；北，天劍宗；西，臨江城；南，雲夢大澤。' },
 ];
 
-/** What roams (places.js BEASTS, for this map). (Filled in with 中州's beasts: content/foes.js.) */
-const BEASTS = [];
+const dark = (s) => s.tod >= 19.5 || s.tod < 5;
+const killed = (s, kind) => (s.vars.kills?.[kind] || 0) > 0;
+
+/**
+ * What roams (places.js BEASTS, for this map): pythons in the reeds north of the docks; the old wood's
+ * spirits and its apes; 劫修 on the ways between the towns; after dark, those who follow you out of the
+ * 鬼市; and out in the 大澤, the 蛟 (the stone beast of the old observatory is a story's fight:
+ * content/events/zhongzhou.js gx_platform).
+ */
+const BEASTS = [
+  { id: 'reed_pythons_a', kind: 'reed_python', n: 2, title: '蘆蕩青蟒', x: 800, y: 600, r: 150, respawn: 30, power: 150 },
+  { id: 'reed_pythons_b', kind: 'reed_python', n: 2, title: '蘆蕩青蟒', x: 900, y: 1400, r: 150, respawn: 30, power: 160 },
+  { id: 'wood_spirits_a', kind: 'wood_spirit', n: 2, title: '蒼梧木精', x: 2600, y: 900, r: 140, respawn: 30, power: 210 },
+  { id: 'wood_spirits_b', kind: 'wood_spirit', n: 2, title: '蒼梧木精', x: 2500, y: 1400, r: 140, respawn: 30, power: 200 },
+  { id: 'cangwu_apes_a', kind: 'cangwu_ape', n: 2, title: '蒼梧猿', x: 3200, y: 500, r: 150, respawn: 30, power: 240 },
+  { id: 'jie_xiu_a', kind: 'jie_xiu', n: 2, title: '劫修', x: 2000, y: 1900, r: 140, respawn: 40, power: 190 },
+  { id: 'jie_xiu_b', kind: 'jie_xiu', n: 2, title: '劫修', x: 3650, y: 2250, r: 140, respawn: 40, power: 220 },
+  { id: 'jie_xiu_c', kind: 'jie_xiu', n: 3, title: '劫修', x: 3300, y: 2900, r: 150, respawn: 40, power: 230 },
+  { id: 'gs_assassins_a', kind: 'gs_assassin', n: 2, title: '鬼市刺客', x: 1250, y: 4100, r: 140, respawn: 10, power: 220, cond: dark },
+  { id: 'yunmeng_jiao_a', kind: 'yunmeng_jiao', title: '雲夢蛟', x: 4600, y: 3400, r: 150, respawn: 999, power: 360, cond: (s) => !killed(s, 'yunmeng_jiao') },
+];
 
 export const ZHONGZHOU_PLACES = { STRUCTURES, POIS, BEASTS };
 

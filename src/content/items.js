@@ -182,6 +182,20 @@ export const ITEMS = {
     desc: '雲夢大澤深處才有的黑蓮，九片葉子，花開的時候整片沼澤都是香的。金丹修士拿它當寶貝。',
     use: { text: '玄蓮的藥力沉甸甸的，像一塊石頭沉進丹田，又像一池水慢慢漫開。', effects: [['xw', 900]] },
   },
+  // 1.0 中州: what its beasts leave
+  qingmang_gall: {
+    name: '青蟒膽', kind: 'material', sell: 40,
+    desc: '蘆蕩青蟒的膽，墨綠色，拇指大。臨江城的藥鋪收，說是明目、解毒。',
+    use: { text: '蟒膽苦得你半天說不出話。苦過去了，眼前一下子亮了，身上的毒也退了一些。', effects: [['hp', 0.2], ['mind', -1]] },
+  },
+  mujing_heart: {
+    name: '木精心', kind: 'material', sell: 55,
+    desc: '木精倒下以後，樹心裡剩下的一塊東西，像琥珀，綠得透亮，握在手裡是溫的。煉器的拿它當木料裡的上品。',
+  },
+  jiao_pearl: {
+    name: '蛟珠', kind: 'material', sell: 320,
+    desc: '雲夢蛟頷下的一顆珠子，鴿子蛋大，青幽幽的，裡面像有水在流。臨江城的當鋪看見了，眼睛都直了。',
+  },
 
   // ── 丹藥 ──
   juqi_pill: {

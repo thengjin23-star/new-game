@@ -156,6 +156,8 @@ export function inTide(day) {
 
 /** Is the full moon tonight a blood moon? (Only now and then, and only from the sixth year: a sign of what is to come.) */
 export function bloodMoon(s, day = s.day) {
+  // (1.0) 天元三千零二十二年七月十五 (world/arcs.js WINDOWS.bloodMoon): red, whatever else is so
+  if (day === dayAt(10, 7, 15)) return true;
   if (day < dayAt(5, 9) || dateOf(day).day !== 15) return false;
   return h1((s.seed | 0) + 77, Math.floor(day / 30)) < 0.3;
 }

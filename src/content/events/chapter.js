@@ -6,7 +6,8 @@
 
 import { flag, favor, has } from '../helpers.js';
 
-const SU_GOES = [['npc', 'su_qingyao', 'loc', null], ['npc', 'su_qingyao', 'title', '遠赴中州'], ['flag', 'su_left']];
+// (1.0) she goes to 臨江城: a 星官 of 欽天監 at the 榜樓 (content/events/zhongzhou.js)
+const SU_GOES = [['npc', 'su_qingyao', 'loc', 'linjiang'], ['npc', 'su_qingyao', 'title', '遠赴中州'], ['flag', 'su_left']];
 
 export default [
   {

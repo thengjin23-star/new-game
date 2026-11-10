@@ -108,6 +108,9 @@ export function fateLine(s, id) {
     case 'lin_chen':
       return '命簿：中州，天劍宗山門外，一場生死約戰。';
     case 'shen_qingge':
+      // (1.0) the page goes on being written — what she did with hers shows on it
+      if (f(s, 'shen_zhuji')) return '命簿：沈家敗落之後，一封遲了三年的信。——這一行底下，有人用自己的筆添了一行：「青雲宗外門，築基。」字寫得很用力。';
+      if (f(s, 'shen_own_path')) return '命簿：沈家敗落之後，一封遲了三年的信。——前半句的墨跡淡了：她沒有回沈家。後半句還在。';
       return '命簿：沈家敗落之後，一封遲了三年的信。';
     case 'song_he':
       return f(s, 'songhe_saved') ? '命簿：這一筆被人改過。墨跡還是濕的。' : '命簿：天元三千零一十六年，坐化於清虛觀。';
@@ -124,7 +127,8 @@ export function fateLine(s, id) {
     case 'qian_banxian':
       return '命簿：他說的書，有一半是真的。';
     case 'zhao_hu':
-      return '命簿：橫死街頭，無人收屍。';
+      // (1.0) the one who pushes the millstone now: the end of the line is going pale
+      return f(s, 'zhao_changed') ? '命簿：橫死街頭，無人收屍。——「無人收屍」四個字的墨淡了，像是快要寫不住了。' : '命簿：橫死街頭，無人收屍。';
     default:
       return null;
   }

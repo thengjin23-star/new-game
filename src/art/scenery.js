@@ -1687,9 +1687,44 @@ function iceQilin(ctx, t, moving) {
   ctx.stroke();
 }
 
+/**
+ * Draw a shape with every colour it sets passed through `map` — the same beast in another hide
+ * (1.0: 中州's). Only plain colour strings are mapped; a context with no style setters to wrap
+ * (a stand-in, in tests) draws as it is.
+ */
+function tinted(ctx, map, draw) {
+  const proto = Object.getPrototypeOf(ctx);
+  const F = Object.getOwnPropertyDescriptor(proto, 'fillStyle');
+  const S = Object.getOwnPropertyDescriptor(proto, 'strokeStyle');
+  if (!F?.set || !S?.set) return draw();
+  const re = (v) => (typeof v === 'string' ? map(v) : v);
+  Object.defineProperty(ctx, 'fillStyle', { configurable: true, get: () => F.get.call(ctx), set: (v) => F.set.call(ctx, re(v)) });
+  Object.defineProperty(ctx, 'strokeStyle', { configurable: true, get: () => S.get.call(ctx), set: (v) => S.set.call(ctx, re(v)) });
+  try {
+    draw();
+  } finally {
+    delete ctx.fillStyle;
+    delete ctx.strokeStyle;
+  }
+}
+
+/** A colour map from a function of r, g, b (the alpha kept); a colour it returns null for stays as it is. */
+const recolor = (fn) => (v) => {
+  const m = /^rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*(?:,\s*([\d.]+)\s*)?\)$/.exec(v);
+  const out = m && fn(+m[1], +m[2], +m[3]);
+  return out ? `rgba(${out.map((c) => Math.max(0, Math.min(255, Math.round(c)))).join(',')},${m[4] ?? 1})` : v;
+};
+
+// 中州's hides (1.0): a greener, bluer python for the reeds; a mossier tree; a dark-furred ape (throwing
+// stones, not ice); a 蛟 of the marsh, teal where the desert one is sand — the eyes left as they were
+const REED_HIDE = recolor((r, g, b) => (r > 200 || r > g * 2 ? null : [r * 0.8, g * 1.12 + 6, b * 1.28 + 8]));
+const MOSS_HIDE = recolor((r, g, b) => (g > 200 ? null : [r * 0.82, g * 1.08 + 8, b * 0.8]));
+const DARK_FUR = recolor((r, g, b) => (r > g * 2 || r > 245 ? null : b > r + 30 ? [118, 108, 96] : [r * 0.34 + 8, g * 0.28 + 6, b * 0.22 + 4]));
+const MARSH_HIDE = recolor((r, g, b) => (r > 230 && b < 100 ? null : [b * 0.62 + 6, g * 0.82, r * 0.6 + 4]));
+
 export function drawBigBeast(ctx, kind, { t = 0, face = 1, moving = false } = {}) {
   ctx.save();
-  groundShadow(ctx, 0, 0, { demon_wolf: 15, wolf_king: 22, python: 24, bear: 22, skeleton: 12, fire_tiger: 25, shanxiao: 12, mumei: 12, xuan_turtle: 27, spider: 14, toad: 16, toad_king: 25, swarm: 12, gu_mother: 30, scorpion: 15, sand_wolf: 16, mummy: 8, kuchan: 13, sand_jiao: 30, stone_puppet: 11, stone_general: 19, ice_wolf: 16, bailang_king: 25, snow_leopard: 16, ice_silkworm: 13, silk_queen: 26, snow_ape: 15, ape_king: 21, snow_wraith: 8, ice_qilin: 24 }[kind] || 14, 3);
+  groundShadow(ctx, 0, 0, { demon_wolf: 15, wolf_king: 22, python: 24, bear: 22, skeleton: 12, fire_tiger: 25, shanxiao: 12, mumei: 12, xuan_turtle: 27, spider: 14, toad: 16, toad_king: 25, swarm: 12, gu_mother: 30, scorpion: 15, sand_wolf: 16, mummy: 8, kuchan: 13, sand_jiao: 30, stone_puppet: 11, stone_general: 19, ice_wolf: 16, bailang_king: 25, snow_leopard: 16, ice_silkworm: 13, silk_queen: 26, snow_ape: 15, ape_king: 21, snow_wraith: 8, ice_qilin: 24, reed_python: 20, wood_spirit: 16, cangwu_ape: 14, star_beast: 25, yunmeng_jiao: 35 }[kind] || 14, 3);
   ctx.scale(face, 1);
   switch (kind) {
     case 'demon_wolf':
@@ -1797,13 +1832,35 @@ export function drawBigBeast(ctx, kind, { t = 0, face = 1, moving = false } = {}
     case 'ice_qilin':
       iceQilin(ctx, t, moving);
       break;
+    // 1.0 中州: old shapes in new hides
+    case 'reed_python':
+      ctx.scale(0.85, 0.85);
+      tinted(ctx, REED_HIDE, () => python(ctx, t));
+      break;
+    case 'wood_spirit':
+      ctx.scale(1.3, 1.3);
+      tinted(ctx, MOSS_HIDE, () => mumei(ctx, t, moving));
+      break;
+    case 'cangwu_ape':
+      ctx.scale(0.95, 0.95);
+      tinted(ctx, DARK_FUR, () => snowApe(ctx, t, moving));
+      break;
+    case 'star_beast':
+      // a stone lion with the stars in its eyes
+      ctx.scale(2.1, 2.1);
+      wolfShape(ctx, t, moving, { body: 'rgba(150,148,140,1)', dark: 'rgba(92,90,86,1)', eye: 'rgba(170,214,255,1)', mane: true });
+      break;
+    case 'yunmeng_jiao':
+      ctx.scale(1.35, 1.35);
+      tinted(ctx, MARSH_HIDE, () => sandJiao(ctx, t, moving));
+      break;
     default:
       break;
   }
   ctx.restore();
 }
 
-export const BIG_BEASTS = new Set(['demon_wolf', 'wolf_king', 'python', 'bear', 'skeleton', 'fire_tiger', 'shanxiao', 'mumei', 'xuan_turtle', 'spider', 'toad', 'toad_king', 'swarm', 'gu_mother', 'scorpion', 'sand_wolf', 'mummy', 'kuchan', 'sand_jiao', 'stone_puppet', 'stone_general', 'ice_wolf', 'bailang_king', 'snow_leopard', 'ice_silkworm', 'silk_queen', 'snow_ape', 'ape_king', 'snow_wraith', 'ice_qilin']);
+export const BIG_BEASTS = new Set(['demon_wolf', 'wolf_king', 'python', 'bear', 'skeleton', 'fire_tiger', 'shanxiao', 'mumei', 'xuan_turtle', 'spider', 'toad', 'toad_king', 'swarm', 'gu_mother', 'scorpion', 'sand_wolf', 'mummy', 'kuchan', 'sand_jiao', 'stone_puppet', 'stone_general', 'ice_wolf', 'bailang_king', 'snow_leopard', 'ice_silkworm', 'silk_queen', 'snow_ape', 'ape_king', 'snow_wraith', 'ice_qilin', 'reed_python', 'wood_spirit', 'cangwu_ape', 'star_beast', 'yunmeng_jiao']);
 
 /** Props that flicker or sway (repainted as they go); the rest are still. */
 export const LIVE_PROPS = new Set(['campfire', 'ginseng', 'wisp']);

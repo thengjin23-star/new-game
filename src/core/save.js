@@ -90,6 +90,11 @@ export function migrate(s) {
       loc: d.loc, alive: true, met: false, favor: 0, luck: !!d.luck, named: true,
     };
   }
+  // (1.0) those who went to 中州 before there was a 中州 to go to: 蘇清瑤 at the 榜樓 of 臨江城, 葉孤寒 at his sect
+  const su = s.npcs.su_qingyao;
+  if (su?.alive && s.flags.su_left && !su.loc) su.loc = 'linjiang';
+  const ye = s.npcs.ye_guhan;
+  if (ye?.alive && !ye.loc) ye.loc = 'tianjian';
   return s;
 }
 

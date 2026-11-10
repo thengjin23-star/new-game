@@ -111,6 +111,12 @@ export const DEDUCE = [
     effects: [['discover', 'buzhou']],
   },
   {
+    id: 'frag_star',
+    cond: (s) => s.sys.lv >= 5 && !hasFrag(s, 'frag_star') && !!s.flags.zhongzhou_crossed,
+    text: '臨江城北，一座光禿禿的荒山頂上，有一座塌了一半的石台。石台的縫裡夾著一頁殘頁——夜裡，星光照得進去的時候，才看得見。台邊蹲著的那隻石獸，守了它三千年。',
+    effects: [['discover', 'guanxing']],
+  },
+  {
     id: 'kun',
     cond: (s) => !!s.flags.beiyuan_crossed && !s.flags.kun_seen && !s.nodes.beiming?.known,
     text: '北原西邊，有一片凍到底的水。水底下，有一個很大很大的東西，在睡覺。',

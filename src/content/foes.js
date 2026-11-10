@@ -573,4 +573,93 @@ export const FOES = {
       ],
     },
   },
+  // ── 1.0 中州・臨江一帶 (二階: 築基初期 along the river, 築基中期 in the old wood, 築基後期 out in the 大澤) ──
+  // 江堤蘆蕩: green pythons that lie in the reeds and come up out of the water at you; they wrap you, and spit
+  reed_python: {
+    name: '蘆蕩青蟒', el: '水', hp: 1.2, atk: 1.05, loot: [[0.5, 'qingmang_gall', 1]],
+    rt: {
+      share: 1.2, tier: 2, speed: 122, walk: 30, sight: 220, lose: 420, loseT: 1.5, leash: 600, body: 18, bulk: 0.8, tall: 26,
+      notice: 0.5, moves: ['bite', 'constrict', 'spit'], night: 1.15, pack: true, tokens: 2, ring: 90,
+      warn: '蘆葦叢裡有東西滑過去，葦稈一根一根地倒。', cry: '一條青蟒從蘆葦裡昂起了頭，信子吞吐！',
+      scared: ['青蟒縮回了蘆葦裡。', '青蟒們縮回了蘆葦裡。'], broke: '剩下的青蟒滑進水裡，不見了。',
+    },
+  },
+  // 蒼梧林: the old wood standing up on its roots — a lash of branches, roots out of the ground to hold you, spores
+  wood_spirit: {
+    name: '蒼梧木精', el: '木', hp: 1.25, atk: 1, spirit: true, loot: [[0.45, 'mujing_heart', 1], [0.35, 'zizhi', 1]],
+    rt: {
+      share: 1.25, tier: 2, speed: 96, walk: 20, sight: 200, lose: 380, loseT: 1.4, leash: 460, body: 16, bulk: 1, tall: 42,
+      notice: 0.4, moves: ['vinewhip', 'rootgrab', 'sporecloud'], night: 1.2, pack: true, tokens: 2, ring: 92,
+      warn: '老樹的樹皮上，好像有一張臉，眼睛閉著。', cry: '一棵老樹從地裡拔出了腳，枝條嘩啦啦地張開！',
+      scared: ['木精退回了林子深處，又站成了一棵樹。', '木精們退回了林子深處，又站成了樹。'], broke: '剩下的木精退回林子深處，又站成了樹。',
+    },
+  },
+  // 蒼梧林: dark-furred apes in the canopy, that hurl stones and come down on you
+  cangwu_ape: {
+    name: '蒼梧猿', el: '土', hp: 1.2, atk: 1.15, loot: [[0.3, 'beast_core', 1]],
+    rt: {
+      share: 1.25, tier: 2, speed: 162, walk: 40, sight: 240, lose: 460, loseT: 1.5, leash: 700, body: 14, bulk: 0.85, tall: 32,
+      notice: 0.5, moves: ['apeswipe', 'rockthrow', 'stomp'], hop: 0.35, pack: true, tokens: 2, ring: 96,
+      low: { at: 0.3, mode: 'rage', line: '蒼梧猿齜著牙怪叫，撲了上來！' },
+      warn: '樹梢上嘩啦一響，掉下來半截啃過的果子。', cry: '幾頭黑毛大猿從樹上蕩了下來，手裡抓著石頭！',
+      scared: ['蒼梧猿怪叫一聲，蕩回了樹上。', '蒼梧猿們怪叫著，蕩回了樹上。'], broke: '剩下的蒼梧猿蕩回了樹上。',
+    },
+  },
+  // the roads between the towns: 散修 who take what others carry (劫修)
+  jie_xiu: {
+    name: '劫修', hp: 1, atk: 1.05, loot: [[0.6, 'juqi_pill', 1]],
+    rt: {
+      share: 1.2, tier: 2, person: true, look: 'foe', weapon: 'qinggang_sword', speed: 176, walk: 40, sight: 240, lose: 400, loseT: 1.5, leash: 700,
+      body: 10, tall: 37, notice: 0.4, moves: ['slash', 'qi', 'rush'], keep: [120, 220], flee: 0.25, dodge: 0.3, tokens: 2, ring: 100,
+      cry: '{name}橫劍攔住了路：「東西留下，人可以走。」', scared: ['那人看了你一眼，轉身就走。', '那幾個人看了你一眼，轉身就走。'], broke: '剩下的劫修四散跑了。',
+    },
+  },
+  // the dark between the 鬼市 and the river: those who follow a stranger home from the lamps
+  gs_assassin: {
+    name: '鬼市刺客', hp: 0.85, atk: 1.25, loot: [[0.5, 'juqi_pill', 1]],
+    rt: {
+      share: 1.15, tier: 2, person: true, look: 'thief', speed: 196, walk: 46, sight: 220, lose: 360, loseT: 1.2, leash: 600,
+      body: 9, tall: 35, notice: 0.3, moves: ['strike', 'lunge', 'blink'], dodge: 0.45, flee: 0.35, night: 1.2,
+      cry: '黑暗裡有人輕輕笑了一聲——{name}的刀，已經到了。', scared: ['那人退進了黑暗裡。', '那些人退進了黑暗裡。'],
+    },
+  },
+  // the city watch of 臨江城 (the sky over the city is not to be flown: world/explore.js)
+  city_guard: {
+    name: '巡城衛', hp: 1.15, atk: 1, loot: [],
+    rt: {
+      share: 1.2, tier: 2, person: true, look: 'guard', weapon: 'qinggang_sword', speed: 168, walk: 40, sight: 260, lose: 420, loseT: 1.5, leash: 700,
+      body: 11, tall: 38, notice: 0.4, moves: ['cleave', 'rush', 'qi'], tokens: 2, ring: 100, yield: 0.2,
+      cry: '{name}喝道：「城上禁空！下來！」', broke: '剩下的巡城衛退開了，有人吹起了哨子。',
+    },
+  },
+  // 舊觀星台: the stone beast that has crouched by the platform for three thousand years, starlight in its
+  // eyes; it leaps, it brings its weight down, it looks at you with the stars — worn down, it brings the
+  // sky down on you
+  star_beast: {
+    name: '守台石獸', el: '土', hp: 1.8, atk: 1.2, boss: true, loot: [[1, 'star_stone', 3], [1, 'beast_core', 2]],
+    rt: {
+      tier: 2, speed: 140, walk: 0, sight: 300, lose: 600, loseT: 2, leash: 420, body: 20, bulk: 1, tall: 40,
+      notice: 0.9, moves: ['pounce', 'stomp', 'starbeam'], poise: 2.4,
+      phases: [
+        { at: 0.6, moves: ['pounce', 'smash', 'starbeam', 'stomp'], line: '石獸仰天一吼，身上的石紋裡亮起了星光！' },
+        { at: 0.28, enrage: true, line: '石獸背上的石皮一塊一塊剝落，底下滿是星斗——牠發狂了！' },
+      ],
+      cry: '台邊的石獸，睜開了眼睛。', scared: ['石獸蹲回了台邊。', '石獸蹲回了台邊。'],
+    },
+  },
+  // 雲夢大澤: the 蛟 that has lived three hundred years in the deep of the marsh — its jaws, its tail, water
+  // shot at you; worn down, the marsh turns about it in whirlpools
+  yunmeng_jiao: {
+    name: '雲夢蛟', el: '水', hp: 1.85, atk: 1.25, boss: true, loot: [[1, 'beast_core', 3], [1, 'jiao_pearl', 1], [1, 'jiao_scale', 2]],
+    rt: {
+      tier: 2, speed: 150, walk: 24, sight: 280, lose: 560, loseT: 1.8, leash: 640, body: 26, bulk: 0.6, tall: 36,
+      notice: 0.7, moves: ['jiaobite', 'tailsweep', 'jet'],
+      phases: [
+        { at: 0.62, moves: ['jiaobite', 'whirlpool', 'jetfan', 'tailsweep'], line: '雲夢蛟一頭扎進水裡，大澤的水一圈一圈地轉了起來！' },
+        { at: 0.3, enrage: true, line: '雲夢蛟昂起頭一聲長吟，霧一下子濃得看不見手——牠發狂了！' },
+      ],
+      warn: '水面上浮起一長串氣泡，一直排到霧裡。', cry: '霧裡探出一顆頭，頭上兩隻角，眼睛像兩盞燈——是蛟！',
+      scared: ['蛟沉回了大澤深處。', '蛟沉回了大澤深處。'],
+    },
+  },
 };

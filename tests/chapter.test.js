@@ -74,7 +74,7 @@ test('蘇清瑤 leaves for 中州: a friend is waited for at the teahouse; a riv
   pickText(friend, '上一世');
   finish(friend);
   assert.ok(friend.player.items.su_slip && friend.flags.su_farewell && friend.flags.blood_moon_warned);
-  assert.equal(friend.npcs.su_qingyao.loc, null, 'and she is gone');
+  assert.equal(friend.npcs.su_qingyao.loc, 'linjiang', 'and she is gone — to 臨江城 (1.0)');
 
   const rival = fresh(95);
   Object.assign(rival.npcs.su_qingyao, { met: true, favor: -30 });
@@ -84,7 +84,7 @@ test('蘇清瑤 leaves for 中州: a friend is waited for at the teahouse; a riv
 
   const stranger = fresh(96);
   waitUntil(stranger, WINDOWS.suLeave[0] + 1);
-  assert.ok(stranger.flags.su_left && stranger.npcs.su_qingyao.loc === null);
+  assert.ok(stranger.flags.su_left && stranger.npcs.su_qingyao.loc === 'linjiang');
   assert.ok(stranger.rumors.some((r) => r.text.includes('白衣女修')));
 
   // a farewell never had: she goes all the same, in a year

@@ -34,7 +34,7 @@ export const NAMED = {
     bio: '狐仙廟裡修行了三百年的白狐。化成人形時，眼角有一顆紅痣。',
   },
   ye_guhan: {
-    name: '葉孤寒', title: '天劍宗劍子', gender: '男', age: 20, realm: 2, stage: 0, loc: null, luck: true,
+    name: '葉孤寒', title: '天劍宗劍子', gender: '男', age: 20, realm: 2, stage: 0, loc: 'tianjian', luck: true,
     bio: '天劍宗百年一遇的劍道天才，二十歲築基。據說從沒對人笑過。',
   },
   qian_banxian: {
