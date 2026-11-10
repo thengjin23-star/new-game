@@ -2,7 +2,7 @@
 // `npm run build`), then serve same-origin files from cache while refreshing
 // them in the background. Fonts are cached on first use.
 
-const VERSION = 'v26';
+const VERSION = 'v100';
 const CACHE = `yijie-${VERSION}`;
 const FONT_CACHE = 'yijie-fonts';
 

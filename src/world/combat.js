@@ -1157,7 +1157,8 @@ function whoIs(s, f, kind, who) {
   const person = FOES[kind]?.rt?.person && !FOES[kind].boss;
   const n = who === 'npc' ? (f.npcId ? s.npcs[f.npcId] : null) : typeof who === 'string' ? s.npcs[who] : null;
   if (n) return { name: who === 'npc' || n.met ? n.name : n.title, rank: person ? npcRealm(n) : null, tier: person ? n.realm : null, npcId: n.id };
-  return typeof who === 'object' ? { name: who.name || null } : null;
+  // (1.0) or { name, tier, rank }: one of the story's own, as strong as the story says (the 天驕榜's)
+  return typeof who === 'object' ? { name: who.name || null, tier: who.tier ?? null, rank: who.rank || null } : null;
 }
 
 /**

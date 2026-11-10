@@ -69,11 +69,11 @@ function notInBook(s) {
   ]);
 }
 
-/** The board's challengers: [flag, place, name, what they are like, 戰力 to beat, stones]. */
+/** The board's challengers: [flag, place, name, what they are like, 戰力 to beat, stones, their realm (tier), as named]. */
 const CHALLENGERS = [
-  ['bang_100', '第一百名', '石敢當', '一個扛著鐵棍的大漢，築基中期，散修出身。他在第一百名上待了三年，誰來挑戰都接。', 150, 30],
-  ['bang_50', '第五十名', '南宮燕', '南宮家的小姐，築基圓滿，一手軟劍使得像水一樣。她上台之前，先把你從頭到腳看了一遍。', 280, 80],
-  ['bang_10', '第十名', '慕容長風', '慕容家的少主，金丹初期。他上台的時候，台下的人自己往後退了三步。', 560, 200],
+  ['bang_100', '第一百名', '石敢當', '一個扛著鐵棍的大漢，築基中期，散修出身。他在第一百名上待了三年，誰來挑戰都接。', 150, 30, 2, '築基中期'],
+  ['bang_50', '第五十名', '南宮燕', '南宮家的小姐，築基圓滿，一手軟劍使得像水一樣。她上台之前，先把你從頭到腳看了一遍。', 280, 80, 2, '築基圓滿'],
+  ['bang_10', '第十名', '慕容長風', '慕容家的少主，金丹初期。他上台的時候，台下的人自己往後退了三步。', 560, 200, 3, '金丹初期'],
 ];
 
 export default [
@@ -232,11 +232,11 @@ export default [
       duel: {
         text: '擂台邊的執事問你：「挑哪一位？」\n\n台下的人圍了上來。有人認出了你的口音：「東荒來的？」',
         choices: [
-          ...CHALLENGERS.map(([key, rank, name, what, diff, ls], k) => ({
+          ...CHALLENGERS.map(([key, rank, name, what, diff, ls, tier, realm], k) => ({
             text: `${rank}：${name}。`,
             show: (s) => !flag(s, key) && (k === 0 || flag(s, CHALLENGERS[k - 1][0])),
             check: { kind: 'power', diff },
-            fight: { foes: [['swordsman', 1, { name }]], spar: true },
+            fight: { foes: [['swordsman', 1, { name, tier, rank: realm }]], spar: true },
             ok: {
               text: (s) => `${what}\n\n一炷香以後，你收了劍。台下靜了一會兒，才有人叫好。\n\n${notInBook(s)}\n\n執事把彩頭塞給你，小聲說：「這些年，你是頭一個。」`,
               effects: (s) => [['flag', key], ['flag', 'bang_beaten'], ['ls', ls], ['sysexp', 15], ['mind', 2], (x) => { x.vars.bang_day ??= x.day; }, ['log', `在臨江城的擂台上，打贏了天驕榜${rank}的${name}；星官查無此人`]],

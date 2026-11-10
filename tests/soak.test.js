@@ -57,6 +57,24 @@ function soak(seed, steps, cultivated, away = null) {
     assert.equal(s.world.map, 'beiyuan');
     delete s.vars.sky;
   }
+  if (away === 'zhongzhou') {
+    // (1.0) over the great river at 白鶴渡: the chapter's ending, then the boat puts in at 鶴歸渡
+    Object.assign(s.player, { realm: 2, stage: 1 });
+    s.flags.opening_done = true;
+    goToPoi(s, 'ferry_pier');
+    resolvePending(s);
+    for (let k = 0; k < 4 && s.pending?.id !== 'ferry_cross'; k++) {
+      resolvePending(s);
+      E.interact(s, { kind: 'poi', id: 'ferry_pier' });
+    }
+    pickText(s, '踏上中州');
+    resolvePending(s);
+    delete s.flags.chapter1_ending;
+    E.step(s, 0.05, null);
+    resolvePending(s);
+    assert.equal(s.world.map, 'zhongzhou');
+    delete s.vars.sky;
+  }
   if (cultivated) {
     // a 築基 cultivator with a sword, a few arts and things to burn: every kind of move gets thrown
     Object.assign(s.player, { realm: 2, stage: away === 'beiyuan' ? 2 : 1, weapon: 'qinggang_sword' });
@@ -159,6 +177,14 @@ test('長玩・南嶺：翻過山隘之後的隨機遊玩（瘴氣、毒蛛、�
 test('長玩・西漠：出了西風口之後的隨機遊玩（烈日、沙暴、流沙、沙蠍、乾屍、存讀檔），不出任何例外', () => {
   for (const seed of [26, 27]) {
     const run = soak(seed, 110, true, 'ximo');
+    assert.equal(run.error, null, run.error || '');
+    assert.equal(mapOf(run.s.player.loc), run.s.world.map, 'where you are is on the map you are on');
+  }
+});
+
+test('長玩・中州：渡江之後的隨機遊玩（臨江城、鬼市、擂台、青蟒、木精、劫修、存讀檔），不出任何例外', () => {
+  for (const seed of [30, 31]) {
+    const run = soak(seed, 110, true, 'zhongzhou');
     assert.equal(run.error, null, run.error || '');
     assert.equal(mapOf(run.s.player.loc), run.s.world.map, 'where you are is on the map you are on');
   }
