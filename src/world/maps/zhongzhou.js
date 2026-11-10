@@ -145,6 +145,8 @@ export const ZHONGZHOU_GEO = {
   MIST_SAY: '江那邊雲霧太濃，辨不清方向。那邊是東荒；要回去，到鶴歸渡坐船。',
   // the sky over 臨江城 is the watch's (world/explore.js cityWatch)
   NO_FLY: { region: 'linjiang', name: '臨江城' },
+  // 中州 builds in white stone and lime plaster under deep slate tile (art/gl/buildings.js)
+  BUILD_PALETTE: { plaster: [240, 238, 232], wallCream: [234, 230, 220], tile: [50, 56, 68], tile2: [62, 64, 72], stone: [204, 200, 190], stoneDark: [156, 152, 144] },
   HOME_REGION: 'zz_wilds', REACH_FROM: [800, 3900], UPLAND,
 };
 
@@ -416,15 +418,15 @@ const POIS = [
   { id: 'hg_stele', region: 'heguidu', x: 860, y: 3870, name: '渡碑', verb: '查看', text: '碑上刻著「鶴歸」兩個大字，底下一行小字：「天元元年，大衍立渡於此。」' },
   { id: 'hg_shed', region: 'heguidu', x: 960, y: 4050, name: '茶棚', verb: '歇腳', rest: true, text: '茶棚裡擺著幾張條凳，一壺粗茶三文錢。剛下船的人都在這裡歇口氣，打聽城裡的事。' },
   // 鬼市
-  { id: 'gs_stalls', region: 'guishi', x: 880, y: 3400, name: '鬼市', verb: '逛逛', glow: (s) => s.tod >= 20 || s.tod < 4, text: (s) => (s.tod >= 20 || s.tod < 4 ? '燈一盞一盞亮著。攤子上擺的東西，有的認得，有的不認得；擺攤的人都戴著斗笠。' : '空地上只有幾根木樁。要等天黑，鬼市才開。') },
+  { id: 'gs_stalls', region: 'guishi', x: 880, y: 3400, name: '鬼市', verb: '逛逛', crowd: (s) => s.tod >= 20 || s.tod < 3, glow: (s) => s.tod >= 20 || s.tod < 4, text: (s) => (s.tod >= 20 || s.tod < 4 ? '燈一盞一盞亮著。攤子上擺的東西，有的認得，有的不認得；擺攤的人都戴著斗笠。' : '空地上只有幾根木樁。要等天黑，鬼市才開。') },
   // (1.0) by night only, a stall that sells: content/items.js SHOPS.guishi
   { id: 'gs_shop', region: 'guishi', x: 960, y: 3430, name: '夜攤', verb: '看貨', action: 'shop', shop: 'guishi', show: (s) => s.tod >= 19.5 || s.tod < 5, glow: () => true, text: '一盞燈，一塊布，布上擺著來路不明的東西。' },
   { id: 'gs_lean', region: 'guishi', x: 1040, y: 3500, name: '破棚', verb: '查看', text: '牆根下一間破棚子，門口掛著一塊木牌：「洞府出租，一月十石，不問來歷。」' },
   // 臨江碼頭
-  { id: 'ld_wharf', region: 'linjiang_docks', x: 760, y: 2900, name: '碼頭', verb: '查看', text: '碼頭上人聲鼎沸。腳夫扛著貨箱，一路小跑；船家扯著嗓子喊價，十幾種口音混在一起。' },
+  { id: 'ld_wharf', region: 'linjiang_docks', x: 760, y: 2900, name: '碼頭', verb: '查看', crowd: (s) => s.tod >= 6 && s.tod < 18, text: '碼頭上人聲鼎沸。腳夫扛著貨箱，一路小跑；船家扯著嗓子喊價，十幾種口音混在一起。' },
   { id: 'ld_porters', region: 'linjiang_docks', x: 900, y: 3060, name: '腳夫', verb: '打聽', action: 'inquire' },
   // 臨江城
-  { id: 'lj_board', region: 'linjiang', x: 1790, y: 2850, name: '天驕榜', verb: '看榜', text: '榜樓的牆上貼著一張大榜，從第一名一直排到一百名。榜頭蓋著欽天監的大印。' },
+  { id: 'lj_board', region: 'linjiang', x: 1790, y: 2850, name: '天驕榜', verb: '看榜', crowd: (s) => s.tod >= 8 && s.tod < 19, text: '榜樓的牆上貼著一張大榜，從第一名一直排到一百名。榜頭蓋著欽天監的大印。' },
   { id: 'lj_lord', region: 'linjiang', x: 1550, y: 2600, name: '城主府', verb: '查看', text: '城主府門口站著兩排衛兵，門前的石階擦得發亮。門房說，城主不見閒人。' },
   { id: 'lj_tea', region: 'linjiang', x: 1850, y: 3100, name: '茶樓', verb: '打聽', action: 'inquire', glow: (s) => s.tod >= 17 || s.tod < 2 },
   { id: 'lj_teller', region: 'linjiang', x: 1810, y: 3080, name: '說書人', verb: '聽書', text: '茶樓裡的說書人一拍醒木：「上回說到，劍仙一劍斷天河……」' },

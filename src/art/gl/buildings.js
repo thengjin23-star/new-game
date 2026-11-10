@@ -5,7 +5,7 @@
 // piers. All of it is one still mesh with an ink outline.
 
 import * as THREE from './three.js';
-import { CELL, T, MARKET_WALL, WALL_LOOK } from '../../world/geo.js';
+import { CELL, T, MARKET_WALL, WALL_LOOK, BUILD_PALETTE } from '../../world/geo.js';
 import { world, idxOf, colOf, rowOf, hash2 } from '../../world/terrain.js';
 import { STRUCTURES } from '../../world/places.js';
 import { heights, heightAt, waterAt } from '../../world/height.js';
@@ -885,7 +885,26 @@ function stair(kit) {
   }
 }
 
+/** (1.0) Build with a map's own colours (geo.js BUILD_PALETTE): COL's entries swapped while it is built, then put back. */
+function withPalette(pal, build) {
+  if (!pal) return build();
+  const saved = {};
+  for (const [k, rgb] of Object.entries(pal)) {
+    saved[k] = COL[k];
+    COL[k] = C(...rgb);
+  }
+  try {
+    return build();
+  } finally {
+    Object.assign(COL, saved);
+  }
+}
+
 export function createBuildings(env) {
+  return withPalette(BUILD_PALETTE, () => buildAll(env));
+}
+
+function buildAll(env) {
   const kit = new Kit();
   const dc = createDecals();
   STRUCTURES.forEach((st, i) => {
