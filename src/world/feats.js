@@ -69,6 +69,12 @@ export const FEATS = [
   { id: 'fragment', name: '天機', desc: '找到第一頁天機殘頁。', test: (s) => (s.sys.frags || []).length > 0 },
   { id: 'xuanwei', name: '玄微', desc: '問道系統想起了自己的名字。', test: (s) => !!s.flags.sys_awakened },
   { id: 'chapter1', name: '東荒行盡', desc: '渡過大江，第一章「東荒」完。', test: (s) => !!s.flags.chapter1_done },
+  // 1.0 中州
+  { id: 'nobody', name: '查無此人', desc: '打贏天驕榜上的人；星官翻遍了冊子，找不到你。', test: (s) => !!s.flags.bang_beaten },
+  { id: 'blank', name: '第一百零一名', desc: '天驕榜最下面，多了一個空白的位置。', test: (s) => !!s.flags.bang_blank },
+  { id: 'stargazer', name: '看星的人', desc: '在舊觀星台的石縫裡，找到殘頁・星。', test: (s) => (s.sys.frags || []).includes('frag_star') },
+  { id: 'yunmeng', name: '大澤之主', desc: '打倒雲夢大澤裡的蛟。', test: (s) => (s.vars.kills?.yunmeng_jiao || 0) > 0 },
+  { id: 'letter', name: '豆花管夠', desc: '收到東荒捎來的信。', test: (s) => !!s.flags.wanger_letter1 },
   { id: 'reborn', name: '再世', desc: '輪迴轉世，又活了一次。', test: (s) => (s.meta?.life || 1) >= 2 },
 ];
 

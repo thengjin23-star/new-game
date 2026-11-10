@@ -225,7 +225,7 @@ export default [
               : '榜下坐著一個穿星官衣服的中年人，在冊子上寫著什麼。看榜的人說，欽天監每個月改一次榜，誰上誰下，星官說了算。'
           }\n\n榜樓前搭著一座擂台。榜上的人，誰來挑戰都得接——這是欽天監定的規矩。`,
         choices: [
-          { text: '上擂台，挑戰榜上的人。', out: { next: 'duel' } },
+          { text: '上擂台，挑戰榜上的人。', out: { text: '你走上擂台。台下的人一下子圍了上來，有人吹了一聲口哨。', next: 'duel' } },
           { text: '看完了。', out: { effects: [['flag', 'lj_board_seen']] } },
         ],
       },
@@ -319,7 +319,7 @@ export default [
           {
             text: '天黑以後，去茶樓二樓。',
             show: (s) => !flag(s, 'su_zz_met') && suFriend(s),
-            out: { effects: [['meet', 'su_qingyao'], (x) => { const su = x.npcs.su_qingyao; if (su.realm < 2) Object.assign(su, { realm: 2, stage: 1 }); }], next: 'tea' },
+            out: { text: '她沒再看你，低頭寫她的字。你在榜下站了一會兒，走了。\n\n天黑以後，你上了茶樓。', effects: [['meet', 'su_qingyao'], (x) => { const su = x.npcs.su_qingyao; if (su.realm < 2) Object.assign(su, { realm: 2, stage: 1 }); }], next: 'tea' },
           },
           // a rival: blades first
           {

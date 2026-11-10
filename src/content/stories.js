@@ -17,7 +17,7 @@ const STELES = ['stele_city', 'stele_ferry', 'stele_star', 'stele_break', 'stele
 const steles = (s) => STELES.filter((id) => s.flags[`read_${id}`]).length;
 const TALES = ['banxian_tale_nl', 'banxian_tale_xm', 'banxian_tale_by'];
 
-export const GROUPS = ['主線', '人物', '東荒', '南嶺', '西漠', '北原'];
+export const GROUPS = ['主線', '人物', '東荒', '南嶺', '西漠', '北原', '中州'];
 
 export const STORIES = [
   // ── 主線 ──
@@ -37,6 +37,23 @@ export const STORIES = [
       s.player.realm < 1 ? '閉關，攢夠修為，引氣入體。'
         : s.player.realm < 2 ? `修到築基。天機殘頁已找到 ${frags(s)}／9 頁，散在各地的遺跡裡。`
           : '到白鶴渡，渡江。',
+  },
+  // (1.0) 第二章: the first act, 「渡江」
+  {
+    id: 'main2', group: '主線', title: '中州',
+    start: (s) => !!s.flags.zhongzhou_crossed || !!s.flags.chapter1_done,
+    steps: [
+      ['在鶴歸渡上岸', f('zhongzhou_crossed')],
+      ['進了臨江城', (s) => visited(s, 'linjiang')],
+      ['擂台上，查無此人', f('bang_beaten')],
+      ['天驕榜的第一百零一名', f('bang_blank')],
+    ],
+    end: (s) => (s.flags.bang_blank ? '欽天監注意到你了。第二章第一幕「渡江」，完。' : null),
+    next: (s) =>
+      !s.flags.zhongzhou_crossed ? '到白鶴渡，坐老船夫的船過江。'
+        : !visited(s, 'linjiang') ? '鶴歸渡往東北，是臨江城。'
+          : !s.flags.bang_beaten ? '榜樓前的擂台上，榜上的人誰來挑戰都得接。'
+            : '過些日子，再去看看天驕榜。',
   },
   // ── 人物 ──
   {
@@ -88,9 +105,16 @@ export const STORIES = [
       ['古戰場的秘境', (s) => !!s.flags.su_ruins_met || heard(s, '帶出了一卷古經')],
       ['「血月」', f('blood_moon_warned')],
       ['臨別的茶', f('su_farewell')],
+      // (1.0) and on, in 中州
+      ['臨江城的榜樓', f('su_zz_met')],
+      ['茶樓二樓：她在查那一夜是誰下的筆', f('su_zz_ally')],
+      ['「然後，東荒就沒有了」', f('su_told_night')],
     ],
-    end: (s) => (s.flags.su_left ? '她去了中州。' : null),
-    next: () => null,
+    end: (s) => (dead(s, 'su_qingyao') ? '她沒有活過這一世。' : null),
+    next: (s) =>
+      !s.flags.su_left ? null
+        : !s.flags.zhongzhou_crossed ? '她去了中州。'
+          : !s.flags.su_zz_met ? '她在中州。臨江城的榜樓下，也許找得到她。' : null,
   },
   {
     id: 'hu', group: '人物', title: '胡三娘',
@@ -111,6 +135,8 @@ export const STORIES = [
       ['成親', f('wanger_married')],
       ['當爹', (s) => heard(s, '取名王小石')],
       ['兒子也成親了', (s) => heard(s, '王二的背')],
+      // (1.0) a letter across the river
+      ['過江的信：豆花管夠', f('wanger_letter1')],
       ['老了', (s) => !!s.flags.wanger_dying || dead(s, 'wang_er')],
     ],
     end: (s) => (dead(s, 'wang_er') ? '他過完了他的一生。' : null),
@@ -323,6 +349,52 @@ export const STORIES = [
     ],
     end: (s) => (s.flags.alan_closure ? '阿蘭把阿爹的狼皮裘給了你。' : null),
     next: (s) => (!(s.player.items.alan_knife || s.flags.alan_closure) ? '冰原東邊，白狼王出沒的一帶。小心。' : !s.flags.alan_closure ? '回白狼部，把獵刀還給阿蘭。' : null),
+  },
+  // ── 中州 (1.0) ──
+  {
+    id: 'zz_star', group: '中州', title: '舊觀星台',
+    start: (s) => visited(s, 'guanxing'),
+    steps: [
+      ['荒山上的石台', (s) => visited(s, 'guanxing')],
+      ['斷碑：被鑿掉的名字', f('gx_stele_read')],
+      ['守台石獸', f('gx_guard_down')],
+      ['殘頁・星', f('gx_page')],
+    ],
+    end: (s) => (s.flags.gx_page ? '他教他們看星。他們學會了看命簿。' : null),
+    next: (s) => (!s.flags.gx_guard_down ? '夜裡再上石台。台邊的石獸，夜裡才醒。' : '夜裡，星光照得進石縫的時候。'),
+  },
+  {
+    id: 'zz_tales', group: '中州', title: '兩個說書人',
+    start: (s) => !!(s.flags.zz_tale_stele || s.flags.zz_tale_banxian),
+    steps: [
+      ['臨江城的說書人：弟子逼死了師父', (s) => !!(s.flags.zz_tale_stele || s.flags.zz_tale_banxian)],
+      ['錢半仙的版本：一劍斷天河', f('zz_tale_banxian')],
+      ['劍冢碑：斬其一指', f('zz_tale_stele')],
+    ],
+    end: (s) => (s.flags.two_tales ? '兩邊的書對起來，真的那一半，刻在古戰場的石頭上。' : null),
+    next: (s) => (!s.flags.zz_tale_stele ? (s.flags.sword_stele_read ? '把劍冢碑的碑文，念給臨江城的說書人聽。' : '古戰場的斷劍林盡頭，有一塊碑。') : '跟他說說東荒的錢半仙。'),
+  },
+  {
+    id: 'zz_sword', group: '中州', title: '天劍宗',
+    start: (s) => visited(s, 'tianjian'),
+    steps: [
+      ['三千級劍階', (s) => visited(s, 'tianjian')],
+      ['門規碑：指在一日，劍不入鞘', f('tj_motto_read')],
+      ['山門外的葉孤寒', f('ye_zz_met')],
+      ['「改天，我帶你上去看一樣東西」', f('ye_promise')],
+    ],
+    end: () => null,
+    next: (s) => (!s.flags.tj_motto_read ? '看看山門邊的門規碑。' : !s.flags.ye_zz_met ? '山門外，常有個背劍的年輕人。' : s.flags.ye_promise ? '他說，還不是時候。' : null),
+  },
+  {
+    id: 'zz_xiaoqi', group: '中州', title: '鬼市的蕭七',
+    start: met('xiao_qi'),
+    steps: [
+      ['在中州當散修的三條規矩', f('xiaoqi_met')],
+      ['那條胳膊', f('xiaoqi_arm')],
+    ],
+    end: (s) => (s.flags.xiaoqi_arm ? '他換回一顆金丹；那個人換回一條狗。' : null),
+    next: (s) => (!s.flags.xiaoqi_arm ? '交情再深一點，他也許會說那條胳膊是怎麼沒的。' : null),
   },
 ];
 

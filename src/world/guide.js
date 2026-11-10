@@ -114,10 +114,21 @@ function beiyuanGoal(s) {
   return null;
 }
 
-/** 中州 (1.0): where its stories stand — the city first. */
+/** 中州 (1.0): where its stories stand — the city first; what has come due; the board; the old observatory; the sword sect. */
 function zhongzhouGoal(s) {
+  const f = s.flags;
   const n = s.nodes;
+  const su = s.npcs.su_qingyao;
   if (!n.linjiang?.visited) return { key: 'zz:city', text: '去臨江城', why: '鶴歸渡往東北，就是臨江城：中州的第一座大城。城裡有天驕榜，有懸賞，也有按月出租的洞府。' };
+  if (f.bang_beaten && !f.bang_blank && s.day >= (s.vars.bang_day ?? Infinity) + 7) return { key: 'zz:blank', text: '臨江城：再去看看天驕榜', why: '新榜貼出來了，榜樓下圍了一圈人。' };
+  if (s.npcs.wang_er?.alive && !f.wanger_letter1 && s.day >= (s.vars.zz_first ?? Infinity) + 30) return { key: 'zz:letter', text: '鶴歸渡：老船夫找你', why: '老船夫從東荒回來了，懷裡揣著一封信。' };
+  if (su?.alive && su.met && su.loc === 'linjiang' && !f.su_zz_met) return { key: 'zz:su', text: '臨江城的榜樓：蘇清瑤', why: '她說過：中州見。' };
+  if (!f.bang_beaten) return { key: 'zz:board', text: '臨江城：天驕榜的擂台', why: '榜上的人，誰來挑戰都得接。打贏了，看看星官怎麼說。' };
+  if (n.guanxing?.known && !f.gx_page)
+    return f.gx_guard_down
+      ? { key: 'zz:star', text: '舊觀星台：石縫裡的那頁紙', why: '夜裡，星光照得進石縫的時候，才看得見。' }
+      : { key: 'zz:star', text: '舊觀星台：夜裡上石台', why: '台邊的石獸夜裡才醒。打得過牠，才上得了台。' };
+  if (n.tianjian?.known && !f.ye_zz_met && s.npcs.ye_guhan?.alive) return { key: 'zz:ye', text: '天劍宗山門', why: f.ye_lineage ? '葉孤寒說過：中州見。' : '城東北的劍山上，是天劍宗。' };
   return null;
 }
 
