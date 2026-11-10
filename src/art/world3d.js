@@ -29,7 +29,8 @@ import { propSprite, SPRITE } from './sprites.js';
 import { makeParticles, drawParticles } from './ink.js';
 import { seasonOf } from '../core/calendar.js';
 import { asset } from './assets.js';
-import { drawActor, drawPose, poseOf, lookOf, drawSpeech, LIVE_PROPS } from './scenery.js';
+import { drawActor, drawPose, poseOf, lookOf, drawSpeech, LIVE_PROPS, drawSwordLight } from './scenery.js';
+import { swordLights } from '../world/skylanes.js';
 import * as CB from '../world/combat.js';
 import { paintBeast, paintHero, drawGroundMarks, drawCombatOverlay } from './combatfx.js';
 import { stream } from '../core/rng.js';
@@ -388,6 +389,13 @@ export function createWorld3D(canvas, { onFrame, idle, quality = 'high', onSlow 
       cards.add(`wild:${c.id}`, c.x, heightAt(c.x, c.y) + c.fly * 46, c.y, (cx) => drawActor(cx, { a: 'beast', beast: c.kind, face: c.face, moving: c.moving, fly: c.fly, n: c.seed }, { t }), { animated: true, fps: c.moving || c.fly ? 20 : 6, alpha });
       if (!c.fly) foot(c.x, c.y, c.kind === 'deer' || c.kind === 'spirit_deer' ? 11 : 6, 0.24 * alpha);
     }
+    // (1.0) 中州's sky: sword-light by day, lamps by night, going between the city and the sects
+    for (const f of swordLights(s.world.map, t)) {
+      if (!near(f.x, f.y)) continue;
+      // the way it goes, as the camera (looking north, tilted) sees it: in steps of 15°, so a few pictures serve
+      const ang = Math.round(Math.atan2(f.dy * 0.55, f.dx) / (Math.PI / 12)) * (Math.PI / 12);
+      cards.add(`sky:${night ? 'n' : 'd'}:${Math.round(ang * 100)}`, f.x, heightAt(f.x, f.y) + f.alt, f.y, (c) => drawSwordLight(c, ang, night), { alpha: f.alpha });
+    }
     // scenes out in the world: who and what is there
     for (const sc of E.scenesInWorld(s)) {
       if (!near(sc.x, sc.y)) continue;
@@ -493,6 +501,11 @@ export function createWorld3D(canvas, { onFrame, idle, quality = 'high', onSlow 
       const a = 1 - c.fade;
       if (c.kind === 'spirit_deer') L.add(c.x, heightAt(c.x, c.y) + 16, c.y, 34 + Math.sin(t * 2 + c.seed) * 3, 0.75, 1, 0.9, (0.3 + 0.35 * dark) * a);
       if (c.kind === 'fox') L.add(c.x + c.face * 13, heightAt(c.x, c.y) + 4, c.y, 24 + Math.sin(t * 5 + c.seed) * 3, 0.45, 0.7, 1, (0.4 + 0.4 * dark) * a);
+    }
+    // (1.0) the lamps of those flying over 中州 by night (a faint shine on a sword by day)
+    for (const f of swordLights(s.world.map, t)) {
+      if (!near(f.x, f.y)) continue;
+      L.add(f.x, heightAt(f.x, f.y) + f.alt + 26, f.y, 26, 1, 0.8, 0.5, (0.1 + 0.6 * dark) * f.alpha);
     }
     // a scene's own light: a fire, a ginseng's glow, a fox's blue lantern
     for (const sc of E.scenesInWorld(s)) {

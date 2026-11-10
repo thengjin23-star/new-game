@@ -1904,6 +1904,46 @@ function wrap(text, n) {
  * A speech bubble whose tail points down at (x, y): what someone is saying.
  * size is the font size in the context's units.
  */
+/**
+ * (1.0) Someone flying a sword high overhead (world/skylanes.js): by day a streak of light, its head
+ * bright, going the way (ang, on the screen) it flies; by night only a lamp, and a faint trail.
+ */
+export function drawSwordLight(ctx, ang, night) {
+  ctx.save();
+  ctx.translate(0, -26);
+  ctx.rotate(ang);
+  ctx.lineCap = 'round';
+  if (!night) {
+    // (by day, on pale ground: a blue haze about the light, so it shows)
+    const halo = ctx.createLinearGradient(-30, 0, 0, 0);
+    halo.addColorStop(0, 'rgba(80,150,235,0)');
+    halo.addColorStop(1, 'rgba(80,150,235,0.5)');
+    ctx.strokeStyle = halo;
+    ctx.lineWidth = 7;
+    ctx.beginPath();
+    ctx.moveTo(-30, 0);
+    ctx.lineTo(0, 0);
+    ctx.stroke();
+  }
+  const g = ctx.createLinearGradient(-30, 0, 0, 0);
+  g.addColorStop(0, night ? 'rgba(255,200,120,0)' : 'rgba(200,232,255,0)');
+  g.addColorStop(1, night ? 'rgba(255,214,150,0.5)' : 'rgba(255,255,255,1)');
+  ctx.strokeStyle = g;
+  ctx.lineWidth = night ? 1.4 : 2.4;
+  ctx.beginPath();
+  ctx.moveTo(night ? -18 : -30, 0);
+  ctx.lineTo(0, 0);
+  ctx.stroke();
+  const r = ctx.createRadialGradient(0, 0, 0, 0, 0, night ? 5 : 3.6);
+  r.addColorStop(0, night ? 'rgba(255,236,190,1)' : 'rgba(255,255,255,1)');
+  r.addColorStop(1, night ? 'rgba(255,190,110,0)' : 'rgba(210,236,255,0)');
+  ctx.fillStyle = r;
+  ctx.beginPath();
+  ctx.arc(0, 0, night ? 5 : 3.6, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+}
+
 export function drawSpeech(ctx, x, y, text, { font, size = 11, alpha = 1 } = {}) {
   const lines = wrap(text, 9);
   ctx.save();
