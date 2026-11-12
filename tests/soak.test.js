@@ -57,6 +57,18 @@ function soak(seed, steps, cultivated, away = null) {
     assert.equal(s.world.map, 'beiyuan');
     delete s.vars.sky;
   }
+  if (away === 'zhongzhou_late') {
+    // (1.1) the years gone by to the summer of the 生死約戰, a 金丹 over the river: 林塵 at 上官家, the duel's day near
+    s.flags.opening_done = true;
+    waitUntil(s, 8 * 360 + 8 * 30);
+    Object.assign(s.player, { realm: 3, stage: 0, hp: 99999 });
+    Object.assign(s.flags, { chapter1_done: true, zhongzhou_crossed: true });
+    s.world.cross = 'crane_ferry';
+    E.step(s, 0.05, null);
+    resolvePending(s);
+    assert.equal(s.world.map, 'zhongzhou');
+    delete s.vars.sky;
+  }
   if (away === 'zhongzhou') {
     // (1.0) over the great river at 白鶴渡: the chapter's ending, then the boat puts in at 鶴歸渡
     Object.assign(s.player, { realm: 2, stage: 1 });
@@ -77,7 +89,7 @@ function soak(seed, steps, cultivated, away = null) {
   }
   if (cultivated) {
     // a 築基 cultivator with a sword, a few arts and things to burn: every kind of move gets thrown
-    Object.assign(s.player, { realm: 2, stage: away === 'beiyuan' ? 2 : 1, weapon: 'qinggang_sword' });
+    Object.assign(s.player, { realm: away === 'zhongzhou_late' ? 3 : 2, stage: away === 'beiyuan' ? 2 : away === 'zhongzhou_late' ? 0 : 1, weapon: 'qinggang_sword' });
     s.player.items.qinggang_sword = 1;
     s.player.items.fire_talisman = 5;
     s.player.items.huichun_pill = 3;
@@ -185,6 +197,14 @@ test('長玩・西漠：出了西風口之後的隨機遊玩（烈日、沙暴�
 test('長玩・中州：渡江之後的隨機遊玩（臨江城、鬼市、擂台、青蟒、木精、劫修、存讀檔），不出任何例外', () => {
   for (const seed of [30, 31]) {
     const run = soak(seed, 110, true, 'zhongzhou');
+    assert.equal(run.error, null, run.error || '');
+    assert.equal(mapOf(run.s.player.loc), run.s.world.map, 'where you are is on the map you are on');
+  }
+});
+
+test('長玩・中州 1.1：生死約戰那年的金丹在中州隨機遊玩（林塵、龍脊嶺、天劍宗、百草谷、本命、存讀檔），不出任何例外', () => {
+  for (const seed of [32, 33]) {
+    const run = soak(seed, 110, true, 'zhongzhou_late');
     assert.equal(run.error, null, run.error || '');
     assert.equal(mapOf(run.s.player.loc), run.s.world.map, 'where you are is on the map you are on');
   }

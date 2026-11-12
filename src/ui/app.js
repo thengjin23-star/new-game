@@ -55,7 +55,7 @@ import * as END from '../world/ending.js';
 import { refineLevel, refineMult } from '../core/refine.js';
 import * as BM from '../core/benming.js';
 
-const VERSION = '1.0';
+const VERSION = '1.1';
 const ITEM_ORDER = ['weapon', 'gear', 'flyer', 'tool', 'pill', 'talisman', 'herb', 'material', 'book', 'treasure', 'token', 'unknown'];
 const ITEM_KIND = { pill: '丹藥', food: '飲食', herb: '靈草', material: '材料', book: '典籍', weapon: '兵器', gear: '裝備', flyer: '飛行法器', tool: '工具', treasure: '寶物', talisman: '符籙', token: '信物', unknown: '未知' };
 const DOCK = [
