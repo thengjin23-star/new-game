@@ -53,6 +53,7 @@ import { RECIPES, GLYPHS, ARRAY } from '../content/crafts.js';
 import { KE } from '../content/wuxing.js';
 import * as END from '../world/ending.js';
 import { refineLevel, refineMult } from '../core/refine.js';
+import * as BM from '../core/benming.js';
 
 const VERSION = '1.0';
 const ITEM_ORDER = ['weapon', 'gear', 'flyer', 'tool', 'pill', 'talisman', 'herb', 'material', 'book', 'treasure', 'token', 'unknown'];
@@ -2433,10 +2434,31 @@ export function startApp(root, { speed = 1, view = null } = {}) {
     return parts.join('・');
   }
 
-  /** A piece of gear by name, and how far it has been refined. */
+  /** A piece of gear by name, and how far it has been refined (and, 1.1, if it is your 本命, its 重). */
   function gearName(id) {
     const lv = refineLevel(ui.s, id);
-    return `${ITEMS[id].name}${lv ? ` +${lv}` : ''}`;
+    const bm = BM.benming(ui.s);
+    return `${ITEMS[id].name}${lv ? ` +${lv}` : ''}${bm?.id === id ? `・本命第${bm.lv}重` : ''}`;
+  }
+
+  /** (1.1) Your 本命法寶: make a piece of what you carry yours to the root; feed it. */
+  function benmingActs(id) {
+    const s = ui.s;
+    const p = s.player;
+    const bm = BM.benming(s);
+    const busy = !!s.secl;
+    if (bm?.id === id) {
+      const next = BM.bmNext(s);
+      const food = Object.keys(p.items).filter((k) => p.items[k] > 0 && BM.feedValue(k) > 0);
+      return [
+        h('p.small', next ? `本命第 ${bm.lv} 重：再養 ${next[1] - next[0]}，到第 ${bm.lv + 1} 重${bm.lv + 1 === BM.BM_MOVE_AT ? '（學會本命一擊）' : ''}。` : `本命第 ${bm.lv} 重：已經養到頭了。`),
+        next && food.length
+          ? h('div.item-acts', food.map((k) => h('button.btn.small.ghost', { disabled: busy, onclick: () => act((x) => BM.feedBenming(x, k)) }, `餵${ITEMS[k].name}（+${BM.feedValue(k)}）`)))
+          : next ? h('p.muted.small', '行囊裡沒有能餵它的材料。') : null,
+      ];
+    }
+    if (BM.bindLock(s, id)) return [];
+    return [h('div.item-acts', h('button.btn.small.ghost', { disabled: busy, onclick: () => act((x) => BM.bindBenming(x, id)) }, bm ? `改定為本命（${ITEMS[bm.id].name}的本命歸零）` : '定為本命'))];
   }
 
   /** 精煉 at the 百煉坊: what you have on, made a share stronger (up to +3). */
@@ -2532,7 +2554,7 @@ export function startApp(root, { speed = 1, view = null } = {}) {
     const busy = !!s.secl;
     const price = A.sellPrice(s, id);
     return h('li',
-      h('div.item-head', h('b', shown.name, refineLevel(s, id) ? ` +${refineLevel(s, id)}` : '', n > 1 ? ` ×${n}` : ''), h('span.kindtag', slotOf(id) ? SLOTS[slotOf(id)] : ITEM_KIND[it.kind] || '')),
+      h('div.item-head', h('b', shown.name, refineLevel(s, id) ? ` +${refineLevel(s, id)}` : '', BM.benming(s)?.id === id ? `・本命第${BM.benming(s).lv}重` : '', n > 1 ? ` ×${n}` : ''), h('span.kindtag', slotOf(id) ? SLOTS[slotOf(id)] : ITEM_KIND[it.kind] || '')),
       slotOf(id) && statLine(id) ? h('p.gearstats', statLine(id, true)) : null,
       h('p', shown.desc),
       h('div.item-acts',
@@ -2541,8 +2563,9 @@ export function startApp(root, { speed = 1, view = null } = {}) {
         AR.fightTalisman(id) ? h('button.btn.small' + (CB.talismanOf(s) === id ? '.on' : ''), { disabled: busy, onclick: () => act((x) => { x.player.ready = id; }) }, CB.talismanOf(s) === id ? '隨身中' : '隨身') : null,
         slotOf(id) ? h('button.btn.small' + (gearOf(s)[slotOf(id)] === id ? '.on' : ''), { disabled: busy, onclick: () => act((x) => A.equip(x, id)) }, gearOf(s)[slotOf(id)] === id ? '卸下' : '裝備') : null,
         A.canIdentify(s, id) ? h('button.btn.small', { disabled: busy, onclick: () => act((x) => A.identify(x, id)) }, A.identifyCost(s) ? '鑑定（10 靈石）' : '系統鑑定') : null,
-        shop && price > 0 ? h('button.btn.small.ghost', { disabled: busy, onclick: () => act((x) => A.sell(x, id)) }, `出售 ${price}`) : null,
+        shop && price > 0 && BM.benming(s)?.id !== id ? h('button.btn.small.ghost', { disabled: busy, onclick: () => act((x) => A.sell(x, id)) }, `出售 ${price}`) : null,
       ),
+      ...benmingActs(id),
     );
   }
 

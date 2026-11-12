@@ -73,6 +73,12 @@ export const MOVES = {
     weapon: ['qinggang_sword', 'hantie_sword', 'qingfeng_sword', 'duantian_sword'],
     desc: '築基之後，劍能離手：飛劍直直射出，穿過途中所有敵人，再飛回你手上——回來的路上，再斬一次。',
   },
+  // (1.1) your 本命法寶 at its third 重 (core/benming.js): it goes out by itself, and comes back
+  benming: {
+    name: '本命一擊', school: '法器', aim: 'line', mp: 20, cd: 12, cast: 0.3, range: 420, width: 40, speed: 760, mult: 2.6, pierce: true, back: true, fx: 'feijian', realm: 3,
+    learn: ['benming'],
+    desc: '養到第三重的本命法寶，自己會出手：化作一道光直直射出，穿過途中所有敵人，再飛回你身上。',
+  },
   // (1.1) the stroke on the lone peak, learned at 天劍宗's sword pool with the old sword made whole again
   duantian: {
     name: '斷天', school: '劍修', el: '金', aim: 'line', mp: 22, cd: 14, cast: 0.45, range: 520, width: 34, speed: 1100, mult: 3.2, pierce: true, fx: 'swordqi', realm: 2,

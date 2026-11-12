@@ -21,6 +21,8 @@ import { SHOPS } from '../src/content/items.js';
 import { lockOf } from '../src/world/skills.js';
 import { MOVES } from '../src/content/moves.js';
 import { PASSIVES } from '../src/content/passives.js';
+import * as BM from '../src/core/benming.js';
+import { refineMult } from '../src/core/refine.js';
 import { fresh, resolvePending, pickText, finish, waitUntil } from './helpers.js';
 
 const tick = (s) => E.step(s, 0.05, null);
@@ -414,4 +416,31 @@ test('百草谷: 葛雲蘅 knows her brother\'s hand in the 《葛氏丹經》; 
   } finally {
     useMap('donghuang');
   }
+});
+
+// ── 本命法寶 ──
+
+test('本命法寶: from 金丹 on, one piece made yours; fed materials it grows (its gifts a tenth more each 重), at the third it strikes by itself; another starts over', () => {
+  const s = fresh(541);
+  s.player.items.qinggang_sword = 1;
+  s.player.items.cloth_robe = 1;
+  assert.ok(BM.bindLock(s, 'qinggang_sword'), 'not before 金丹');
+  Object.assign(s.player, { realm: 3, stage: 0 });
+  assert.ok(BM.bindLock(s, 'juqi_pill'), 'a pill cannot be one');
+  assert.ok(BM.bindBenming(s, 'qinggang_sword'));
+  s.player.weapon = 'qinggang_sword';
+  const plain = refineMult(s, 'qinggang_sword');
+  assert.ok(Math.abs(plain - 1.1) < 1e-9, 'the first 重: a tenth more');
+  s.player.items.jiao_pearl = 3;
+  s.player.items.star_stone = 4;
+  for (let k = 0; k < 3; k++) BM.feedBenming(s, 'jiao_pearl');
+  assert.ok(BM.benming(s).lv >= 3);
+  assert.ok(s.player.arts.includes('benming'));
+  assert.equal(lockOf(s, MOVES.benming), null, '本命一擊 is yours');
+  assert.ok(refineMult(s, 'qinggang_sword') > plain);
+  assert.equal(BM.feedBenming(s, 'qinggang_sword'), null, 'only materials feed it');
+  // another piece: starts again
+  assert.ok(BM.bindBenming(s, 'cloth_robe'));
+  assert.equal(BM.benming(s).lv, 1);
+  assert.equal(refineMult(s, 'qinggang_sword'), 1);
 });

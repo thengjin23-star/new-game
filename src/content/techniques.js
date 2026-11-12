@@ -94,6 +94,13 @@ export const TECHS = {
     power: 0.35,
     desc: '山腹洞府中前輩留下的劍訣，一劍青光，三丈之內斬妖除魔。',
   },
+  // (1.1) what your 本命法寶 learns at its third 重 (core/benming.js)
+  benming: {
+    name: '本命法寶',
+    kind: 'spell',
+    grade: '本命',
+    desc: '養到第三重的本命法寶，和你心意相通：不用你動手，它自己會出擊（本命一擊）。',
+  },
   // (1.1) 百草谷
   baicao_jing: {
     name: '百草心經',
