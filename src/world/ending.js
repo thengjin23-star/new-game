@@ -122,7 +122,8 @@ export function fateLine(s, id) {
     case 'wang_er':
       return '命簿：平安終老。臨終前，一直望著門口。';
     case 'sun_zg':
-      return '命簿：回春堂會在血月那年關門。';
+      // (1.1) 百草谷 has written to him: he means to close it himself
+      return f(s, 'sun_to_baicao') ? '命簿：回春堂會在血月那年關門。——關門的那隻手，是他自己的。' : '命簿：回春堂會在血月那年關門。';
     case 'su_qingyao':
       return '命簿：這一頁有兩段字跡疊在一起，看不清哪一段才是真的。';
     case 'hu_sanniang':

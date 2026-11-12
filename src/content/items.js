@@ -574,6 +574,11 @@ export const ITEMS = {
     name: '龍脊靈髓', kind: 'token', sell: 0, keep: true,
     desc: '靈眼最深處凝出來的一團東西，像水，又像光，握在手裡涼得發燙。帶在身上衝擊金丹，多一成二的把握。',
   },
+  // (1.1) for 孫掌櫃, over the river: 百草谷's door is open to her brother's last student
+  ge_invite: {
+    name: '葛雲蘅的信', kind: 'token', sell: 0, keep: true,
+    desc: '一封寫給「孫長春」的信，封口蓋著百草谷的印。葛雲蘅說：「讓他來。百草谷的門，給葛雲山的徒弟開著。」',
+  },
   // (1.1) for 林塵, over the river: what 沈家's ruin taught her about 謝家
   shen_letter: {
     name: '沈清歌的信', kind: 'token', sell: 0, keep: true,
@@ -686,6 +691,13 @@ export const SHOPS = {
     recipes: ['jiaoxiao_robe', 'xingwen_pendant'],
     made: '{keeper}把東西拿在手裡掂了掂，點點頭，進了後頭的爐房。第二天一早，學徒把一件{item}捧了出來，老師傅在後頭打著呵欠：「中州的手藝，不比東荒差吧？」',
     share: (s) => zzShare(s),
+  },
+  // (1.1) 百草谷's 藥廬 (葛雲蘅's): dearer to strangers than to one who brought her brother's book back
+  baicao: {
+    name: '百草谷藥廬',
+    keeper: '揹藥簍的少年',
+    stock: ['heal_pill', 'detox_pill', 'qingxin_pill', 'juqi_pill', 'bizhang_pill', 'bingxin_pill'],
+    share: (s) => (s.flags.ge_book_known ? 0.85 : 1.05),
   },
   // (1.1) 天劍宗's vault, for its 客卿
   tianjian: {

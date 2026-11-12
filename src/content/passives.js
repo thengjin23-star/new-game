@@ -32,6 +32,13 @@ export const PASSIVES = {
     needs: { learn: ['qingyuan_sword', 'jianzhen'] },
     stats: { dmg: { school: { 劍修: 0.12 } }, crit: 0.03 },
   },
+  // (1.1) 百草谷's: how the green things mend
+  baicao_xin: {
+    name: '百草', school: '法修',
+    desc: '百草生生：療傷的招式多回四成；戰鬥中氣血每秒回復一成的五百分之一（0.2%），出了戰鬥回得更快。',
+    needs: { learn: ['baicao_jing'] },
+    stats: { heal: 0.4, regenFight: 0.002, regen: 0.35 },
+  },
   // (1.1) what 天劍宗's sword has in it, learned on the 試劍崖
   jianyi: {
     name: '劍意', school: '劍修',

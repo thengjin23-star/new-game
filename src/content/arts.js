@@ -13,7 +13,7 @@ export const SPELLS = {
     desc: '神識往四周一掃：藏著的地方、草叢裡伏著的東西都瞞不過你，雲霧也散開一片。境界越高、戴著照妖鏡，掃得越遠。',
   },
   mend: {
-    name: '回春術', mp: 12, cd: 14, realm: 1, learn: ['qingmu', 'songhe'], last: 3,
+    name: '回春術', mp: 12, cd: 14, realm: 1, learn: ['qingmu', 'songhe', 'baicao_jing'], last: 3,
     desc: '三息之內回三成氣血，也化去身上的毒。',
   },
   conceal: {

@@ -462,7 +462,7 @@ const POIS = [
   { id: 'gd_gate', region: 'guandao_guan', x: 4780, y: 2700, name: '關門', verb: '查看', text: '關門緊閉，關樓上的兵丁居高臨下地看著你。門口貼著一張告示：「天衍城戒嚴，閒人止步。」' },
   // 百草谷
   { id: 'bc_mouth', region: 'baicao', x: 2700, y: 3780, name: '谷口', verb: '查看', text: '谷口的石頭上刻著「百草谷」三個字。谷裡飄出來的風，帶著一股說不出的藥香。' },
-  { id: 'bc_hall', region: 'baicao', x: 2620, y: 4120, name: '藥廬', verb: '查看', text: '谷裡的藥廬，門口晾著一排一排的藥草。一個背著藥簍的少年從裡頭跑出來，看了你一眼又跑了。' },
+  { id: 'bc_hall', region: 'baicao', x: 2620, y: 4120, name: '藥廬', verb: '看看', action: 'shop', shop: 'baicao', text: '谷裡的藥廬，門口晾著一排一排的藥草。一個背著藥簍的少年從裡頭跑出來，看了你一眼又跑了。' },
   // 雲夢大澤
   { id: 'ym_hut', region: 'yunmeng', x: 3900, y: 3340, name: '漁屋', verb: '查看', text: '蘆葦邊一間高腳漁屋，屋簷下掛著魚網。門口一個老漁婆在補網，頭也不抬：「往裡走？別往裡走。」' },
   { id: 'ym_shore', region: 'yunmeng', x: 4000, y: 3560, name: '澤畔', verb: '查看', text: '大澤的水是黑的，霧貼著水面飄。遠處的水面上，冒起一串很大的氣泡。' },
@@ -507,6 +507,11 @@ export const ZHONGZHOU_PEOPLE = {
   shangguan_jin: {
     name: '上官瑾', title: '上官家的女當家', gender: '女', age: 34, realm: 2, stage: 3, loc: 'shangguan',
     bio: '上官家做江上生意的當家，二十出頭就接下了家裡的樓船。說話客氣，算盤打得比誰都精；謝家的人來，她也笑著請喝茶。',
+  },
+  // (1.1) out of her seclusion
+  ge_yunheng: {
+    name: '葛雲蘅', title: '百草谷谷主', gender: '女', age: 88, realm: 3, stage: 2, loc: 'baicao',
+    bio: '百草谷的谷主，看上去不過四十，頭髮卻全白了。丹術是中州第一，脾氣也是。五十年前，她的哥哥離開百草谷去了東荒，再也沒有回來。',
   },
   xie_xuanlang: {
     name: '謝玄朗', title: '謝家少主', gender: '男', age: 24, realm: 2, stage: 2, loc: 'linjiang',
@@ -686,6 +691,14 @@ const routines = {
       [19, [1790, 2740], 'home'],
     ],
   },
+  // (1.1) 葛雲蘅 in her herb beds from first light; home at the 藥廬 after dark
+  ge_yunheng: {
+    baicao: [
+      [0, [2620, 4170], 'home'],
+      [6, [2760, 4050], 'stand'],
+      [19, [2620, 4170], 'home'],
+    ],
+  },
   // (1.1) 林塵, 上官家's 客卿: lodged by the hall, practising on the open ground by the warehouses, at the pier at dusk
   lin_chen: {
     shangguan: [
@@ -710,6 +723,7 @@ const spots = {
   su_qingyao: { linjiang: [1810, 2880] },
   ye_guhan: { tianjian: [4450, 1770] },
   lin_chen: { shangguan: [860, 2300] },
+  ge_yunheng: { baicao: [2760, 4050] },
 };
 
 /** The air of each region in the 3D world (art/world3d.js MOODS). */

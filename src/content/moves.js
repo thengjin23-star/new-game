@@ -97,7 +97,7 @@ export const MOVES = {
   },
   mend: {
     name: '回春術', school: '法修', el: '木', aim: 'self', mp: 12, cd: 14, cast: 0.3, heal: 0.3, last: 3, cure: true, fx: 'mend',
-    learn: ['qingmu', 'songhe'],
+    learn: ['qingmu', 'songhe', 'baicao_jing'],
     mastery: [[4, { last: 2 }]],
     desc: '青木生機，止血生肌：三息之內回復三成氣血，也化去身上的毒。',
   },

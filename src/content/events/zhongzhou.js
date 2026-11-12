@@ -1533,10 +1533,73 @@ export default [
     cooldown: 30,
     title: '百草谷',
     text: (s) =>
-      `谷口的石頭上刻著三個字：百草谷。谷裡飄出來的風，一年四季都是香的。\n\n藥廬門口貼著一張告示：「谷主閉關，百草谷暫不收客。」${
-        flag(s, 'ge_story') || has(s, 'ge_book') ? '\n\n你想起孫掌櫃說過，葛老是從中州來的。' : ''
+      `谷口的石頭上刻著三個字：百草谷。谷裡飄出來的風，一年四季都是香的。\n\n谷口的石門開著。門邊的告示撕掉了一半，剩下的一半寫著：「……谷主出關，收客。」${
+        flag(s, 'sun_past') || has(s, 'ge_danjing') ? '\n\n你想起孫掌櫃說過：他的師父葛老，是從中州來的。' : ''
       }`,
     choices: [{ text: '在谷口站了一會兒。', out: { effects: [['mind', 1]] } }],
+  },
+  // (1.1) 葛雲蘅, out of her seclusion: her brother went to 東荒 fifty years ago and did not come back
+  {
+    id: 'ge_meet',
+    trigger: 'visit',
+    npc: 'ge_yunheng',
+    nodes: BC,
+    title: '葛雲蘅',
+    text: (s) =>
+      flag(s, 'ge_met')
+        ? variant(s, ['葛雲蘅蹲在藥圃裡拔草，頭也不抬：「又來了。」', '葛雲蘅在藥廬裡看爐火，爐子上咕嘟咕嘟地響。她用下巴指了指一張凳子。'])
+        : '藥圃裡蹲著一個白頭髮的女人，在拔草。看臉不過四十，頭髮卻白得像雪。\n\n她頭也不抬：「東荒來的？」\n\n你還沒開口，她又說：「你身上有東荒的藥味。靈溪谷的凝氣草，曬乾了是那個味道。」\n\n藥廬的少年小聲說，那就是百草谷的谷主，葛雲蘅。',
+    choices: [
+      {
+        text: '「這是《葛氏丹經》。」',
+        show: (s) => has(s, 'ge_danjing') && !flag(s, 'ge_book_known'),
+        out: {
+          text: '她看見封皮上那幾個字，手裡的草掉在了地上。\n\n她翻開丹經，一頁一頁地看，看得很慢。\n\n「是我哥哥的字。」她說，「葛雲山。五十年前，他說要去東荒，煉一種平常人也煉得起、吃了不會死的築基丹。他說，中州的築基丹，只有世家吃得起。」\n\n你把回春堂的事告訴了她：三十年前，葛老替徒弟煉築基丹，丹爐炸了，他死在爐前。那個徒弟叫孫長春，守著一間藥鋪，三十年沒動過修為。\n\n她聽完，很久沒有說話。\n\n「那孩子……還活著？」她終於問。\n\n她進了藥廬，出來的時候拿著一封信：「替我交給他。讓他來百草谷——葛雲山的徒弟，就是百草谷的人。」\n\n她又把一卷竹簡放在你手裡：「這是百草谷的心經。你把我哥哥的書帶回來了，這個給你。」',
+          effects: [['meet', 'ge_yunheng'], ['flag', 'ge_met'], ['flag', 'ge_book_known'], ['item', 'ge_invite', 1], (x) => { x.player.arts = [...new Set([...(x.player.arts || []), 'baicao_jing'])]; }, ['favor', 'ge_yunheng', 20], ['insight', 2], ['sysexp', 30], ['log', '把《葛氏丹經》帶到百草谷：葛雲蘅是葛老的妹妹。她傳你百草心經，託你捎信給孫掌櫃']],
+        },
+      },
+      {
+        text: '「谷主的哥哥，是不是叫葛雲山？」',
+        show: (s) => !has(s, 'ge_danjing') && flag(s, 'sun_past') && !flag(s, 'ge_book_known') && !flag(s, 'ge_asked'),
+        out: {
+          text: '她拔草的手停住了。\n\n「你從哪裡聽來的這個名字？」\n\n你說了東荒回春堂的孫掌櫃，說了三十年前炸了的那一爐丹。\n\n她站起來，拍了拍手上的土：「他的丹經，要是還在，替我找回來。」\n\n她轉身進了藥廬，關上了門。',
+          effects: [['meet', 'ge_yunheng'], ['flag', 'ge_met'], ['flag', 'ge_asked'], ['sysexp', 10]],
+        },
+      },
+      {
+        text: '「谷主在種什麼？」',
+        out: {
+          text: (s) =>
+            variant(s, [
+              '「九葉玄蓮的苗。」她說，「雲夢大澤裡的野蓮，一百年開一回花。種在這裡的，三十年就開——可是藥性只有野的一半。」',
+              '「紫芝。」她撥開草給你看，「蒼梧林的老樹根上長的，移到這裡就不肯長了。草也有脾氣。」',
+              '「凝氣草。」她說，「東荒的種子。我哥哥五十年前寄回來的，就這一包。」',
+            ]),
+          effects: [['meet', 'ge_yunheng'], ['flag', 'ge_met'], ['favor', 'ge_yunheng', 2]],
+        },
+      },
+      { text: '走了。', out: {} },
+    ],
+  },
+  // and in 東荒, 孫掌櫃: his master's sister has written to him (the 命簿 said 回春堂 would close the year of the blood moon)
+  {
+    id: 'sun_invite',
+    trigger: 'visit',
+    npc: 'sun_zg',
+    priority: 8,
+    once: true,
+    cond: (s) => has(s, 'ge_invite') && alive(s, 'sun_zg'),
+    title: '孫掌櫃',
+    text: '孫掌櫃拆開信，看了一行，手就抖了。\n\n「師父的妹妹……」他說，「師父說過，他有個妹妹，在一個比東荒的天還大的地方種藥。他說她脾氣壞，種的藥比誰都好。」\n\n他把信看了三遍，折好，貼著心口放著。\n\n「她讓我去。」',
+    choices: [
+      {
+        text: '「去吧。」',
+        out: {
+          text: '「再過幾年。」他說，「鎮上的人吃慣了回春堂的藥。等我把方子都教給鎮上的郎中，就關了回春堂，去中州。」\n\n他笑了，三十年來頭一回笑得像個年輕人：「回春堂開了三十年，也該關了。關門的時候，我自己關。」',
+          effects: [['item', 'ge_invite', -1], ['flag', 'sun_to_baicao'], ['favor', 'sun_zg', 15], ['mind', 4], ['sysexp', 20], ['log', '把葛雲蘅的信交給孫掌櫃：再過幾年，他要關了回春堂，去百草谷']],
+        },
+      },
+    ],
   },
   {
     id: 'ym_hut',

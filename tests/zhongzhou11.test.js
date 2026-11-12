@@ -378,3 +378,40 @@ test('the 試劍崖: a month apart, three bouts won, and 天劍訣 is learned (i
     useMap('donghuang');
   }
 });
+
+// ── 百草谷 ──
+
+test('百草谷: 葛雲蘅 knows her brother\'s hand in the 《葛氏丹經》; she teaches 百草心經 and writes to his student — and 孫掌櫃 means to close 回春堂 himself', () => {
+  const s = overAt(531, 30);
+  try {
+    s.player.items.ge_danjing = 1;
+    s.nodes.baicao.known = true;
+    s.nodes.linjiang.visited = true;
+    assert.equal(nextGoal(s)?.key, 'zz:ge');
+    goToPoiAt(s, 'bc_hall');
+    const before = priceOf(s, 'heal_pill');
+    A.visit(s, 'ge_yunheng', { near: true });
+    assert.equal(s.pending?.id, 'ge_meet');
+    pickText(s, '葛氏丹經');
+    finish(s);
+    assert.ok(s.flags.ge_book_known && s.player.items.ge_invite > 0);
+    assert.ok(s.player.arts.includes('baicao_jing'));
+    assert.equal(lockOf(s, MOVES.mend), null, '回春術, by 百草心經');
+    assert.ok(PASSIVES.baicao_xin.needs.learn.includes('baicao_jing'));
+    assert.ok(priceOf(s, 'heal_pill') < before, 'the 藥廬 is kinder to you now');
+    // over the river, to 回春堂
+    s.world.cross = 'heguidu';
+    tick(s);
+    finish(s);
+    assert.equal(s.world.map, 'donghuang');
+    assert.equal(nextGoal(s)?.key, 'sun_invite');
+    A.visit(s, 'sun_zg', { near: true });
+    assert.equal(s.pending?.id, 'sun_invite');
+    pickText(s, '去吧');
+    finish(s);
+    assert.ok(s.flags.sun_to_baicao);
+    assert.match(fateLine({ ...s, sys: { ...s.sys, lv: 5 } }, 'sun_zg'), /他自己的/);
+  } finally {
+    useMap('donghuang');
+  }
+});
