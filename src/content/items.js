@@ -563,6 +563,11 @@ export const ITEMS = {
     name: '林塵的玉佩', kind: 'token', sell: 0,
     desc: '青玉上刻著一個「塵」字。他說：「憑此物，可向我討一個人情。」',
   },
+  // (1.1) for 林塵, over the river: what 沈家's ruin taught her about 謝家
+  shen_letter: {
+    name: '沈清歌的信', kind: 'token', sell: 0, keep: true,
+    desc: '一封封了口的信，信封上寫著「林塵 親啟」，字很用力。她說：「別讓他喝謝家的東西。」',
+  },
   su_slip: {
     name: '蘇清瑤的玉簡', kind: 'token', sell: 0, keep: true,
     desc: '一枚溫潤的白玉簡，貼在額上，能看見她記下的事：中州幾個大宗門的山門與規矩，還有「天元三千零二十二年，血月」幾個字，刻得特別深。',

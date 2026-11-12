@@ -11,6 +11,7 @@ import { dayAt } from '../../core/calendar.js';
 import { power } from '../../core/cultivation.js';
 import { FRAGMENTS } from '../fragments.js';
 import { RENT, TERMS, rentCost, extendRent, rentUntil } from '../../world/caves.js';
+import { resolveDuel, duelOf } from '../../world/duel.js';
 
 const HG = ['heguidu'];
 const LJ = ['linjiang'];
@@ -638,6 +639,15 @@ export default [
           effects: [['meet', 'xiao_qi'], ['flag', 'xiaoqi_met'], ['favor', 'xiao_qi', 5], ['discover', 'cangwu'], ['discover', 'longji'], ['sysexp', 10], ['log', '在鬼市認識了獨臂的散修蕭七']],
         },
       },
+      // (1.1) the summer of the 生死約戰: what has been bought at the lamps
+      {
+        text: '「鬼市最近有什麼新鮮事？」',
+        show: (s) => flag(s, 'xiaoqi_met') && flag(s, 'duel_notice') && !flag(s, 'duel_done') && !flag(s, 'xie_trap_known'),
+        out: {
+          text: '蕭七剝花生的手停了一下，四下看了看。\n\n「前天夜裡，謝家的一個管事來鬼市，買了一包軟筋散。」他把聲音壓得很低，「那東西無色無味，化在茶裡，喝下去一炷香，人就提不起勁。」\n\n「九月十五那一場，」他把花生殼一扔，「你自己想。」',
+          effects: [['flag', 'xie_trap_known'], ['favor', 'xiao_qi', 3], ['sysexp', 8], ['log', '蕭七說，謝家的管事在鬼市買了一包軟筋散']],
+        },
+      },
       {
         text: '「你的胳膊，是怎麼沒的？」',
         show: (s) => flag(s, 'xiaoqi_met') && favor(s, 'xiao_qi') >= 10 && !flag(s, 'xiaoqi_arm'),
@@ -960,6 +970,241 @@ export default [
         },
       },
     ],
+  },
+
+  // ── (1.1) 林塵, 上官家's 客卿; 沈清歌's letter; the 生死約戰 ──
+  {
+    id: 'lin_zz',
+    trigger: 'visit',
+    npc: 'lin_chen',
+    nodes: SG,
+    priority: 6,
+    title: '林塵',
+    text: (s) => {
+      const L = s.npcs.lin_chen;
+      const duel = duelOf(s);
+      if (flag(s, 'lin_zz_met')) {
+        if (duel === 'ye') return '林塵在商棧後頭的空地上練劍。他的劍比從前慢了，一招一招，像在找什麼。\n\n看見你，他收了劍。';
+        if (duel === 'draw') return '林塵在商棧後頭的空地上練劍，劍光一閃一閃，像一道一道小小的雷。看見你，他收了劍：「來了。」';
+        return variant(s, ['林塵在商棧後頭的空地上練劍。看見你，他收了劍。', '林塵坐在碼頭邊，看著上官家的樓船。你走過去，他往旁邊挪了挪。']);
+      }
+      if (has(s, 'lin_jade') || L.favor >= 30) return '商棧後頭的空地上，有個青衣人在練劍。劍上帶著一點紫色的雷光，一閃，又一閃。\n\n他收劍回頭，愣了一下，笑了：「你真的來了。」\n\n是林塵。';
+      if (flag(s, 'lin_grudge') || L.favor <= -30) return '商棧後頭的空地上，有個青衣人在練劍。他看見你，劍停在半空。\n\n「中州見——我說過的。」林塵收了劍，臉上看不出喜怒。';
+      if (met(s, 'lin_chen')) return '商棧後頭的空地上，有個青衣人在練劍。你認出了他——林塵，青石鎮那個林家少爺。\n\n他也認出了你：「青石鎮的？」';
+      return '商棧後頭的空地上，有個青衣少年在練劍，手上戴著一枚不起眼的黑戒指。劍上帶著一點紫色的雷光。\n\n夥計說，那是上官家請的客卿，天驕榜上排得很前，姓林，東荒來的。';
+    },
+    choices: [
+      // the first time, by how you parted in 東荒
+      {
+        text: '「你在這裡過得怎麼樣？」',
+        show: (s) => !flag(s, 'lin_zz_met') && (has(s, 'lin_jade') || s.npcs.lin_chen.favor >= 30),
+        out: {
+          text: '「上官家給的條件好：一間屋子，一塊練劍的空地，不問我從哪裡來。」他給你倒了一杯茶，「謝家也請過我，三回。我一回都沒去。」\n\n「為什麼？」\n\n他看著自己的手：「謝家看人的眼神，跟那年林家門口的人一樣。」',
+          effects: [['meet', 'lin_chen'], ['flag', 'lin_zz_met'], ['favor', 'lin_chen', 5], ['sysexp', 10], ['log', '在上官商棧見到了林塵：他是上官家的客卿']],
+        },
+      },
+      {
+        text: '「我來中州，不是來找你的。」',
+        show: (s) => !flag(s, 'lin_zz_met') && !(has(s, 'lin_jade') || s.npcs.lin_chen.favor >= 30) && (flag(s, 'lin_grudge') || s.npcs.lin_chen.favor <= -30),
+        out: {
+          text: '「我知道。」他又練起了劍，「我說過，我不恨你。只是記得。」\n\n你走的時候，他沒有回頭。劍風一陣一陣的，吹得地上的落葉打轉。',
+          effects: [['flag', 'lin_zz_met'], ['sysexp', 6]],
+        },
+      },
+      {
+        text: '「久仰。」',
+        show: (s) => !flag(s, 'lin_zz_met') && !(has(s, 'lin_jade') || s.npcs.lin_chen.favor >= 30) && !(flag(s, 'lin_grudge') || s.npcs.lin_chen.favor <= -30),
+        out: {
+          text: (s) => (met(s, 'lin_chen') ? '「青石鎮的人，在中州見到，倒是稀奇。」他點點頭，「坐吧。上官家的茶不錯。」' : '「東荒來的？」他看了你一眼，「我也是。」\n\n他報了名字：林塵。你也報了你的。'),
+          effects: [['meet', 'lin_chen'], ['flag', 'lin_zz_met'], ['favor', 'lin_chen', 2], ['sysexp', 6]],
+        },
+      },
+      // 沈清歌's letter
+      {
+        text: '「沈清歌託我帶給你的信。」',
+        show: (s) => flag(s, 'lin_zz_met') && has(s, 'shen_letter'),
+        out: {
+          text: (s) =>
+            flag(s, 'duel_done')
+              ? '他拆開信，看了很久。\n\n信上只有幾行字。他看完，把信折好，收進懷裡。\n\n「要是早一點收到就好了。」他說。'
+              : '他拆開信，看了很久。信上只有幾行字，他卻看了一遍又一遍。\n\n「謝家吃沈家的時候，他們的管事喝醉了，說我活不過明年秋天。」他把信折好，「她讓我別喝謝家的東西。」\n\n他抬起頭，看著你：「她……還好嗎？」\n\n你說了沈家的事。他聽完，很久沒有說話。\n\n「九月十五，」他說，「我知道該怎麼做了。」',
+          effects: (s) => [['item', 'shen_letter', -1], ['flag', 'shen_letter_given'], ...(flag(s, 'duel_done') ? [] : [['flag', 'lin_warned']]), ['favor', 'lin_chen', 10], ['sysexp', 15], ['log', flag(s, 'duel_done') ? '把沈清歌的信交給林塵——遲了' : '把沈清歌的信交給林塵：別喝謝家的東西']],
+        },
+      },
+      // what 蕭七 heard at the 鬼市
+      {
+        text: '「謝家的管事在鬼市買了一包軟筋散。」',
+        show: (s) => flag(s, 'lin_zz_met') && flag(s, 'xie_trap_known') && !flag(s, 'lin_warned') && !flag(s, 'duel_done') && !flag(s, 'lin_told_poison'),
+        out: {
+          text: (s) =>
+            s.npcs.lin_chen.favor <= -30 || flag(s, 'lin_grudge')
+              ? '他看了你一眼：「你的話，我記下了。」\n\n他說得很客氣。你知道，他一個字也沒信。'
+              : '他的手停了一下。\n\n「軟筋散。」他重複了一遍，笑了，笑得很冷，「謝家倒是看得起我。」\n\n「多謝。」他說，「九月十五，謝家的茶，我不喝。」',
+          effects: (s) => [['flag', 'lin_told_poison'], ...(s.npcs.lin_chen.favor <= -30 || flag(s, 'lin_grudge') ? [] : [['flag', 'lin_warned'], ['favor', 'lin_chen', 6]])],
+        },
+      },
+      {
+        text: '「九月十五那一場，你非打不可？」',
+        show: (s) => flag(s, 'lin_zz_met') && flag(s, 'duel_notice') && !flag(s, 'duel_done'),
+        out: {
+          text: '「葉孤寒是天驕榜第一。」他說，「不打這一場，我永遠是第三。」\n\n「生死狀是謝家牽的頭。」\n\n「我知道。」他把劍收進鞘裡，「他們想讓我死在天劍宗的山門外——死在葉孤寒的劍下，誰也怪不到謝家頭上。」\n\n「那你還去？」\n\n「去。」他說，「我這輩子，被人笑過一次。不會再有第二次。」',
+          effects: [['insight', 1]],
+        },
+      },
+      // after
+      {
+        text: '「那一戰……」',
+        show: (s) => flag(s, 'lin_zz_met') && flag(s, 'duel_done') && !flag(s, 'lin_after_talk') && s.npcs.lin_chen.alive,
+        out: {
+          text: (s) =>
+            duelOf(s) === 'draw'
+              ? '「平手。」他說，笑了一下，「三十招。他沒有讓我，我也沒有讓他。」\n\n「謝家呢？」\n\n「謝玄朗那杯茶，我沒喝。」他看著遠處的劍山，「葉孤寒說，下一回，在他的劍池邊上打。」'
+              : `「我輸了。」他看著自己握劍的手，「十招以後，劍就重得提不起來。」\n\n「葉孤寒可以殺我。生死狀上寫得清清楚楚。」他說，「他沒有。」\n\n${flag(s, 'lin_saved_duel') ? '他看了你一眼：「你跳上台的時候，我看見了。」\n\n' : ''}${flag(s, 'shen_letter_late') || flag(s, 'shen_letter_given') ? '「沈清歌的信，我後來才收到。」他說，「信上說，別喝謝家的茶。」' : '「那杯茶……」他沒有說下去。'}`,
+          effects: [['flag', 'lin_after_talk'], ['favor', 'lin_chen', 3]],
+        },
+      },
+      {
+        text: '「那塊玉佩的人情……」',
+        show: (s) => flag(s, 'lin_zz_met') && has(s, 'lin_jade'),
+        out: { text: '「我說過的話，算數。」他看著你，「什麼時候要討，你說一聲。」\n\n「現在還不用。」\n\n「那就留著。」他說，「留到你真的要用的時候。」' },
+      },
+      {
+        text: '陪他練一會兒劍。',
+        show: (s) => flag(s, 'lin_zz_met'),
+        out: {
+          text: (s) =>
+            variant(s, [
+              '你們拆了幾十招。他的劍很快，快得像雷，可每一招都留著三分。',
+              '他教你一招雷劍的起手：「別想著快。想著劈開它。」',
+              '練完劍，你們坐在碼頭邊，看上官家的樓船一艘一艘地出港。他說，等哪天打完了，他想回青石鎮看看那棵老槐樹。',
+            ]),
+          effects: [['favor', 'lin_chen', 2], ['insight', 1]],
+        },
+      },
+      { text: '走了。', out: {} },
+    ],
+  },
+
+  // 沈家 eaten by 謝家 (3019 spring): 沈清歌 has a letter for 林塵, and nobody to take it over the river
+  {
+    id: 'shen_letter',
+    trigger: 'visit',
+    npc: 'shen_qingge',
+    priority: 8,
+    once: true,
+    cond: (s) => flag(s, 'shen_fall') && flag(s, 'lin_zz') && alive(s, 'lin_chen') && !flag(s, 'duel_done') && (s.player.realm >= 2 || flag(s, 'zhongzhou_crossed')),
+    title: '沈清歌',
+    text: (s) =>
+      `沈清歌${flag(s, 'shen_zhuji') ? '穿著青雲宗內門的衣服' : '還穿著那身舊衣裳'}，眼睛是紅的。\n\n「沈家的鋪子，都改姓謝了。」她說，「謝家的人來收鋪子那天，他們的管事喝醉了，在我家的堂屋裡說：『林塵那小子，也活不過明年秋天。』」\n\n她從袖子裡取出一封信，信封上寫著「林塵 親啟」：「我過不了江。${
+        flag(s, 'zhongzhou_crossed') ? '你去過中州。' : '你築基了，老船夫肯載你。'
+      }替我把這封信帶給他——別讓他喝謝家的東西。」`,
+    choices: [
+      {
+        text: '「我替你送。」',
+        out: {
+          text: '她把信放在你手裡，手指冰涼。\n\n「他恨我。」她說，「可他不能死在謝家手裡。」\n\n叮——檢測到命簿標記：「一封遲了三年的信」。此刻，它在宿主手裡。',
+          effects: [['item', 'shen_letter', 1], ['flag', 'shen_letter_offered'], ['meet', 'shen_qingge'], ['favor', 'shen_qingge', 8], ['sysexp', 10], ['log', '沈清歌託你把一封信帶過江，交給林塵']],
+        },
+      },
+      {
+        text: '「這是你們的事。」',
+        out: {
+          text: '她看了你很久，把信收了回去。\n\n「我會找別人。」她說。\n\n你知道，在東荒，找不到第二個能過江的人。',
+          effects: [['flag', 'shen_letter_offered'], ['meet', 'shen_qingge'], ['favor', 'shen_qingge', -5]],
+        },
+      },
+    ],
+  },
+
+  // 天元三千零二十年九月十五, outside the gate of 天劍宗 (world/duel.js)
+  {
+    id: 'zz_duel',
+    trigger: 'scheduled',
+    title: '生死約戰',
+    cond: (s) => !flag(s, 'duel_done') && alive(s, 'lin_chen'),
+    steps: {
+      start: {
+        text: (s) =>
+          `天還沒亮，天劍宗山門外已經站滿了人。劍階底下搭了一座台，台邊立著一塊木牌，上面貼著一張生死狀。\n\n台的東邊是葉孤寒，閉著眼睛，背上的劍比人還高。西邊是林塵，手上那枚黑戒指，在晨光裡一點光也不反。\n\n謝玄朗坐在台下的主位上，笑著拱了拱手：「今日論劍，生死各安天命。」\n\n一個謝家的僕人端著一杯茶，走上台，遞給林塵：「少主敬林客卿的。」${
+            flag(s, 'lin_warned') ? '\n\n林塵看了那杯茶一眼，伸手一推。茶杯落在台上，摔得粉碎。\n\n「謝少主的茶，」他說，「我喝不起。」' : ''
+          }`,
+        choices: [
+          { text: '看他們打。', show: (s) => flag(s, 'lin_warned'), out: { text: '台下一片譁然。謝玄朗的笑容僵在臉上。\n\n葉孤寒睜開了眼睛。', next: 'fair' } },
+          {
+            text: '「那杯茶有毒！」',
+            show: (s) => !flag(s, 'lin_warned') && flag(s, 'xie_trap_known'),
+            out: {
+              text: '你的聲音不大，台下卻一下子靜了。\n\n林塵低頭看著那杯茶，又抬頭看著謝玄朗。他把茶杯往地上一扣，石頭上嗤地冒起一縷白煙。\n\n謝玄朗的臉色變了又變，最後笑了：「下人辦事不力，讓林客卿見笑了。」',
+              effects: [['flag', 'xie_exposed'], ['rep', 'linjiang', 6]],
+              next: 'fair',
+            },
+          },
+          {
+            text: '擠上前去，撞翻那杯茶。',
+            show: (s) => !flag(s, 'lin_warned'),
+            check: { kind: 'jiyuan', diff: 6 },
+            ok: {
+              text: '你從人群裡擠上台邊，腳下一絆，撞在那個僕人身上。茶杯飛出去，摔在石頭上——嗤的一聲，冒起一縷白煙。\n\n台下一片譁然。林塵看了看地上的白煙，又看了看你，什麼也沒說。',
+              effects: [['flag', 'xie_exposed']],
+              next: 'fair',
+            },
+            fail: {
+              text: '你剛擠到台邊，兩個謝家的護衛就一左一右架住了你：「這位朋友，看戲就看戲。」\n\n台上，林塵接過那杯茶，一飲而盡。',
+              next: 'poisoned',
+            },
+          },
+          {
+            text: '照謝玄朗交代的做。',
+            show: (s) => !flag(s, 'lin_warned') && flag(s, 'xie_ally'),
+            out: { text: '你從袖子裡摸出謝玄朗給你的那個小紙包，趁著人擠，把裡頭的粉末抖進了林塵的茶裡。\n\n林塵接過茶，一飲而盡。', next: 'murder' },
+          },
+          { text: '看著。', show: (s) => !flag(s, 'lin_warned'), out: { text: '林塵接過那杯茶，一飲而盡。', next: 'poisoned' } },
+        ],
+      },
+      fair: {
+        text: '兩個人在台上站定。\n\n第一招，誰也沒有動。第二招，一道紫雷和一道寒光撞在一起，台下的人被劍風吹得往後退了三步。\n\n三十招。劍光把台上的石板劈出一道一道的溝。到第三十招，兩把劍同時停在對方的喉前三寸。\n\n誰也沒有再往前一分。\n\n「平。」葉孤寒說。\n\n他收了劍，看著林塵：「下一回，在我的劍池邊上打。」',
+        choices: [
+          {
+            text: '看著兩個人走下台。',
+            out: {
+              text: '謝玄朗站起來，拂袖走了。他身後的人跟著走了，台下的人又合攏了，議論紛紛。\n\n叮——偵測到命簿變動：「與葉孤寒，第一戰」——平。',
+              effects: [(s) => resolveDuel(s, 'draw'), ['sysexp', 30], ['insight', 2], ['log', '天劍宗山門外的生死約戰：林塵沒有喝謝家的茶，與葉孤寒三十招，平手'], ['rumor', '天劍宗山門外的生死約戰，林塵和葉孤寒三十招平手。謝家敬的那杯茶，被摔碎在台上。']],
+            },
+          },
+        ],
+      },
+      poisoned: {
+        text: '十招以後，林塵的劍慢了。二十招，他的手在抖。\n\n第二十三招，他單膝跪在了台上，劍拄著地，一口血吐在石板上。\n\n「生死狀！」謝玄朗站了起來，「葉劍子，還等什麼？」\n\n葉孤寒的劍尖，停在林塵的喉前。',
+        choices: [
+          {
+            text: '跳上台，擋在林塵前面。',
+            out: {
+              text: '你落在兩個人中間。台下的人都屏住了氣。\n\n葉孤寒看著你，又看了看跪在地上的林塵，最後看了看台下的謝玄朗。\n\n他收了劍。\n\n「這一戰，我勝了。」他說，「生死狀上寫的是生死——沒寫我非殺他不可。」\n\n他走下台，從謝玄朗身邊走過的時候，停了一下：「你的茶，下回自己喝。」',
+              effects: [(s) => resolveDuel(s, 'ye'), ['flag', 'lin_saved_duel'], ['favor', 'lin_chen', 15], ['favor', 'ye_guhan', 5], ['sysexp', 25], ['log', '天劍宗山門外的生死約戰：林塵中了毒，你跳上台擋在他前面；葉孤寒收了劍']],
+            },
+          },
+          {
+            text: '看著。',
+            out: {
+              text: '葉孤寒的劍尖停了很久。\n\n然後，他收了劍。\n\n「這一戰，我勝了。」他說，「生死狀上寫的是生死——沒寫我非殺他不可。」\n\n他走下台的時候，林塵還跪在那裡，看著地上的血。\n\n叮——命簿校驗：「與林塵三戰」，第一戰，勝。與命簿相符。',
+              effects: [(s) => resolveDuel(s, 'ye'), ['sysexp', 20], ['log', '天劍宗山門外的生死約戰：林塵中了謝家的毒，敗了；葉孤寒沒有殺他']],
+            },
+          },
+        ],
+      },
+      murder: {
+        text: '第三招，林塵的劍從手裡掉了下去。\n\n他自己也愣住了，低頭看著空空的手，然後慢慢地倒了下去。葉孤寒的劍還在鞘裡，一動也沒動過。\n\n台下靜得聽得見風聲。\n\n葉孤寒蹲下去，探了探林塵的鼻息。他站起來的時候，看的不是謝玄朗，是你。',
+        choices: [
+          {
+            text: '轉身走進人群。',
+            out: {
+              text: '謝玄朗在主位上鼓起了掌，一下，一下。\n\n叮——偵測到命簿變動。\n\n叮——「與葉孤寒三戰」：後兩戰的字，被血洇開了。\n\n叮——此人的那一頁，寫完了。',
+              effects: [(s) => resolveDuel(s, 'lin_dead'), ['flag', 'lin_murdered'], ['favor', 'ye_guhan', -60], ['mind', -15], ['sysexp', 10], ['log', '天劍宗山門外，你在林塵的茶裡下了毒。林塵死了'], ['rumor', '天劍宗山門外的生死約戰，林塵三招就倒下了，再也沒有起來。有人說，那杯茶裡有東西。']],
+            },
+          },
+        ],
+      },
+    },
   },
 
   // ── 謝家莊、龍脊嶺、百草谷、雲夢、靈田、蘆蕩、官道關: what each is, for now ──

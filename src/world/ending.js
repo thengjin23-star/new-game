@@ -106,8 +106,13 @@ export function fateLine(s, id) {
   if (!n.alive) return '命簿：這一頁，已經寫完了。';
   switch (id) {
     case 'lin_chen':
+      // (1.1) after the 生死約戰: as the 命簿 had it, or not
+      if (s.vars.duel === 'ye') return '命簿：與葉孤寒，第一戰，負。下一筆：天劍宗的劍池邊，第二戰。';
+      if (s.vars.duel === 'draw') return '命簿：與葉孤寒，第一戰——平。這一筆被人改過，墨跡還是濕的。';
       return '命簿：中州，天劍宗山門外，一場生死約戰。';
     case 'shen_qingge':
+      // (1.1) the letter: taken over the river in time, its 「三年」 struck out
+      if (f(s, 'shen_letter_given') && f(s, 'lin_warned')) return '命簿：沈家敗落之後，一封遲了三年的信。——「三年」兩個字被劃掉了。這一封，沒有遲。';
       // (1.0) the page goes on being written — what she did with hers shows on it
       if (f(s, 'shen_zhuji')) return '命簿：沈家敗落之後，一封遲了三年的信。——這一行底下，有人用自己的筆添了一行：「青雲宗外門，築基。」字寫得很用力。';
       if (f(s, 'shen_own_path')) return '命簿：沈家敗落之後，一封遲了三年的信。——前半句的墨跡淡了：她沒有回沈家。後半句還在。';
@@ -123,6 +128,10 @@ export function fateLine(s, id) {
     case 'hu_sanniang':
       return f(s, 'fox_betrayed') ? '命簿：記仇三百年。' : '命簿：再修行一百年，渡雷劫。';
     case 'ye_guhan':
+      // (1.1) the first of the three (whichever it was, the 命簿 is content — unless it did not stop at the 命簿)
+      if (s.vars.duel === 'lin_dead') return '命簿：與林塵三戰——後兩戰的字，被血洇開了，認不出來。';
+      if (s.vars.duel === 'ye') return '命簿：與林塵三戰，一勝、一負、一平。——「勝」字已經寫上了。';
+      if (s.vars.duel === 'draw') return '命簿：與林塵三戰，一勝、一負、一平。——「平」字已經寫上了。';
       return '命簿：與林塵三戰，一勝、一負、一平。';
     case 'qian_banxian':
       return '命簿：他說的書，有一半是真的。';

@@ -9,6 +9,10 @@ import { happenings, tideTonight } from './happenings.js';
 import { realmOpen, realmDone, SECRET_REALMS } from './realms.js';
 import * as Q from './quests.js';
 import * as SECT from './sect.js';
+import { WINDOWS } from './arcs.js';
+
+/** (1.1) The day of the 生死約戰. */
+const DUEL_DAY = WINDOWS.duel;
 
 /** At the last layer of a realm (the next step is a realm of its own). */
 const atGateOf = (p) => p.stage === REALMS[p.realm].stages.length - 1;
@@ -121,6 +125,9 @@ function zhongzhouGoal(s) {
   const su = s.npcs.su_qingyao;
   if (!n.linjiang?.visited) return { key: 'zz:city', text: '去臨江城', why: '鶴歸渡往東北，就是臨江城：中州的第一座大城。城裡有天驕榜，有懸賞，也有按月出租的洞府。' };
   if (f.bang_beaten && !f.bang_blank && s.day >= (s.vars.bang_day ?? Infinity) + 7) return { key: 'zz:blank', text: '臨江城：再去看看天驕榜', why: '新榜貼出來了，榜樓下圍了一圈人。' };
+  // (1.1) 沈清歌's letter; the 生死約戰's day
+  if (s.player.items.shen_letter > 0 && !f.shen_letter_given && s.npcs.lin_chen?.alive) return { key: 'zz:letter2', text: '上官商棧：把信交給林塵', why: '沈清歌說：別讓他喝謝家的東西。' };
+  if (f.duel_notice && !f.duel_done && s.day <= DUEL_DAY) return { key: 'zz:duel', text: '九月十五：天劍宗山門外', why: '葉孤寒和林塵要在天劍宗山門外立生死狀論劍。牽頭的是謝家。那一天在山門外，就看得到。' };
   if (s.npcs.wang_er?.alive && !f.wanger_letter1 && s.day >= (s.vars.zz_first ?? Infinity) + 30) return { key: 'zz:letter', text: '鶴歸渡：老船夫找你', why: '老船夫從東荒回來了，懷裡揣著一封信。' };
   if (su?.alive && su.met && su.loc === 'linjiang' && !f.su_zz_met) return { key: 'zz:su', text: '臨江城的榜樓：蘇清瑤', why: '她說過：中州見。' };
   if (!f.bang_beaten) return { key: 'zz:board', text: '臨江城：天驕榜的擂台', why: '榜上的人，誰來挑戰都得接。打贏了，看看星官怎麼說。' };
@@ -195,6 +202,10 @@ export function nextGoal(s) {
   if (p.realm >= 2 && !s.flags.chapter1_done && !away) return { key: 'ferry', text: '白鶴渡：渡江', why: '築基了，白鶴渡的老船夫肯載你過江了——那是第一章的終點，也是第二章「中州」的起點。走之前，想見的人先見一見；過了江，鶴歸渡的老船夫隨時載你回東荒。' };
   // (1.0) a save that saw the ending before the far bank was open: it is open now
   if (p.realm >= 2 && s.flags.chapter1_done && !s.flags.zhongzhou_crossed && !away) return { key: 'ferry', text: '白鶴渡：過江去中州', why: '中州的路通了。白鶴渡的老船夫說過：「中州不急，它又不會跑。」' };
+  // (1.1) 沈家 is ruined; she has a letter for 林塵, and nobody to take it over the river
+  const shen = s.npcs.shen_qingge;
+  if (s.flags.shen_fall && !s.flags.shen_letter_offered && s.flags.lin_zz && s.npcs.lin_chen?.alive && !s.flags.duel_done && shen?.alive && shen.loc && (p.realm >= 2 || s.flags.zhongzhou_crossed) && !away)
+    return { key: 'shen_letter', text: `${NODES[shen.loc]?.name || '青石鎮'}：沈清歌`, why: '沈家敗落了。她有話，要託人帶過江。' };
   // (0.22) 老秦 has waited forty years for the beacon at 西風口 to answer his
   if (s.flags.laoqin_promise && !s.flags.west_beacon_lit && !away) return { key: 'xm:beacon', text: '西風口：點烽燧', why: '落日關的老秦，四十年沒等到東邊的烽燧亮。到西風口的烽燧下，等天黑了，點一把火。' };
   // the cave you found, not yet made your own

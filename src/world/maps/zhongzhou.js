@@ -684,6 +684,15 @@ const routines = {
       [19, [1790, 2740], 'home'],
     ],
   },
+  // (1.1) 林塵, 上官家's 客卿: lodged by the hall, practising on the open ground by the warehouses, at the pier at dusk
+  lin_chen: {
+    shangguan: [
+      [0, [1000, 2260], 'home'],
+      [7, [860, 2300], 'stand'],
+      [18, [780, 2120], 'stand'],
+      [21, [1000, 2260], 'home'],
+    ],
+  },
   ye_guhan: {
     tianjian: [
       [0, [4450, 1770], 'stand'],
@@ -698,6 +707,7 @@ const spots = {
   xie_xuanlang: { linjiang: [1900, 3090] },
   su_qingyao: { linjiang: [1810, 2880] },
   ye_guhan: { tianjian: [4450, 1770] },
+  lin_chen: { shangguan: [860, 2300] },
 };
 
 /** The air of each region in the 3D world (art/world3d.js MOODS). */

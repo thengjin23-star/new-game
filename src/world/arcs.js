@@ -4,6 +4,7 @@ import { rumor } from './rumors.js';
 import { inTide, bloodMoon } from './weather.js';
 import { SECRET_REALMS } from './realms.js';
 import { tideNight, omensOf, OMEN_WHERE } from './happenings.js';
+import { resolveDuel } from './duel.js';
 
 // The world's own timeline. These beats happen whether or not the player is
 // there; content events let the player witness or change them inside their
@@ -19,6 +20,13 @@ export const WINDOWS = {
   suLeave: [dayAt(4, 6), dayAt(5, 6)],
   // (1.0) 天元三千零二十二年七月十五：中元，月圓，血月（1.0–1.2 only an omen; the night itself is 1.3's）
   bloodMoon: dayAt(10, 7, 15),
+  // (1.1) 中州's years: 林塵 a 客卿 of 上官家 (3016 autumn); 沈家 eaten by 謝家 (3019 spring); the 生死約戰
+  // put about (3020 summer) and fought (3020/9/15); 沈清歌's letter, if nobody carries it, three years late (3022 spring)
+  linToZz: dayAt(4, 9),
+  shenFall: dayAt(7, 3),
+  duelNotice: dayAt(8, 6),
+  duel: dayAt(8, 9, 15),
+  shenLetterLate: dayAt(10, 3),
 };
 
 const BEATS = [
@@ -241,6 +249,66 @@ export function runArcs(s) {
 }
 
 /** Recurring world events: yearly auction, sect recruitment every ten years; the signs in the sky, told of before they come. */
+/**
+ * (1.1) The years over the river, kept by flags (never by the BEATS above: a save keeps only an index into
+ * those). 林塵 goes from 東荒 to be 上官家's 客卿 and climbs; 葉孤寒 forms his core; 謝家 eats 沈家; the
+ * 生死約戰 is put about and set for its day — and, if you are not at 天劍宗 that day, it goes as it goes
+ * (world/duel.js); 沈清歌's letter, if nobody took it over the river, gets there three years late.
+ */
+function zhongzhouYears(s) {
+  const f = s.flags;
+  const lin = s.npcs.lin_chen;
+  const ye = s.npcs.ye_guhan;
+  const shen = s.npcs.shen_qingge;
+  if (s.day >= WINDOWS.linToZz && !f.lin_zz && lin?.alive && !f.lin_ruined && !lin.loc) {
+    f.lin_zz = true;
+    Object.assign(lin, { loc: 'shangguan', title: '上官家客卿' });
+    if (lin.realm < 2) Object.assign(lin, { realm: 2, stage: 1 });
+  }
+  if (s.day >= dayAt(6, 1) && f.lin_zz && !f.lin_zz_grown && lin?.alive) {
+    f.lin_zz_grown = true;
+    if (lin.realm === 2) lin.stage = Math.max(lin.stage, 3);
+  }
+  if (s.day >= dayAt(8, 1) && f.lin_zz && !f.lin_zz_core && lin?.alive) {
+    f.lin_zz_core = true;
+    if (lin.realm < 3) Object.assign(lin, { realm: 3, stage: 0 });
+  }
+  if (s.day >= dayAt(6, 1) && !f.ye_core && ye?.alive) {
+    f.ye_core = true;
+    if (ye.realm < 3) Object.assign(ye, { realm: 3, stage: 1 });
+  }
+  if (s.day >= WINDOWS.shenFall && !f.shen_fall) {
+    f.shen_fall = true;
+    rumor(s, '東荒沈家的鋪子一間接一間關了門，招牌都換成了一個「謝」字。聽說是中州謝家的人做的局。', 'arc', 'shen_qingge');
+  }
+  // the duel: put about three months ahead; fought on its day; or, gone by without you, as it went
+  if (s.day > WINDOWS.duel && !f.duel_done) {
+    if (f.lin_zz && lin?.alive) {
+      resolveDuel(s, f.lin_warned ? 'draw' : 'ye');
+      rumor(
+        s,
+        f.lin_warned
+          ? '天劍宗山門外的生死約戰打完了：林塵推開了謝家敬的那杯茶，和葉孤寒打了三十招，同時收劍——平手。謝家少主的臉，比鍋底還黑。'
+          : '天劍宗山門外的生死約戰打完了：林塵十招以後劍就慢了，跪在地上。葉孤寒的劍停在他喉前，收了回去：「這一戰，我勝了。生死狀上寫的是生死，沒寫我非殺他不可。」',
+        'arc',
+        'lin_chen',
+      );
+    } else {
+      f.duel_done = true;
+      s.vars.duel = 'none';
+    }
+  }
+  if (s.day >= WINDOWS.duelNotice && s.day < WINDOWS.duel && !f.duel_notice && f.lin_zz && lin?.alive) {
+    f.duel_notice = true;
+    rumor(s, '九月十五，天驕榜第一的葉孤寒和第三的林塵，要在天劍宗山門外立生死狀論劍。牽頭的是謝家。', 'arc', 'lin_chen');
+    schedule(s, 'zz_duel', WINDOWS.duel - s.day, WINDOWS.duel - s.day, { node: 'tianjian', expire: 0 });
+  }
+  if (s.day >= WINDOWS.shenLetterLate && f.shen_fall && !f.shen_letter_given && !f.shen_letter_late && shen?.alive) {
+    f.shen_letter_late = true;
+    rumor(s, '沈清歌三年前託人帶給林塵的一封信，今天才送到中州。信上只有一句：「小心謝家的茶。」', 'arc', 'shen_qingge');
+  }
+}
+
 export function recurring(s) {
   const doy = s.day % DAYS_PER_YEAR;
   const year = Math.floor(s.day / DAYS_PER_YEAR);
@@ -256,6 +324,7 @@ export function recurring(s) {
   // (1.0) 天元三千零二十二年七月十五: the blood moon. Until 1.3 writes the night itself, only the omen — at 子時, wherever you
   // are (content/events/zhongzhou.js blood_moon_omen); slept or sat through, it is told after
   if (s.day === WINDOWS.bloodMoon && !s.flags.blood_moon_omen) schedule(s, 'blood_moon_omen', 1, 1, { expire: 0 });
+  zhongzhouYears(s);
   if (s.day === WINDOWS.bloodMoon + 2 && !s.flags.blood_moon_told) {
     s.flags.blood_moon_told = true;
     rumor(s, '天元三千零二十二年七月十五那一夜，月亮紅得像血。有人說，看見天上裂開了一道縫，縫裡亮了一下，像有人提起了筆——又什麼也沒有落下來。', 'arc');
