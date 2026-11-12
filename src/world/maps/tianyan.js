@@ -421,7 +421,7 @@ const POIS = [
   { id: 'hl_face', region: 'huangling', x: 2700, y: 850, name: '峰背', verb: '查看', text: '從北面看，玉指峰更像一根指頭了：白，直，指節的地方有一道一道的橫紋。山腳的石縫裡長著一叢紅草，別處都沒有。' },
   // 皇陵地宮 (once the way down is open)
   { id: 'hlg_coffin', region: 'hl_gong', x: 1180, y: 610, name: '梓宮', verb: '查看', show: (s) => !!s.flags.hl_open, text: '地宮正中停著一口石棺，棺蓋上刻著一個人，閉著眼睛，手裡握著一支筆。' },
-  { id: 'hlg_mural', region: 'hl_gong', x: 1110, y: 670, name: '壁畫', verb: '查看', show: (s) => !!s.flags.hl_open, text: '地宮的牆上畫著壁畫：七個人坐在一座白色的山下，聽一個人講星星。講的人背對著畫外，看不見臉。' },
+  { id: 'hlg_mural', region: 'hl_gong', x: 1110, y: 670, name: '壁畫', verb: '查看', show: (s) => !!s.flags.hl_open, text: '地宮的牆上畫著一幅一幅的壁畫，從門口一直畫到梓宮後面。' },
   // 禁苑
   { id: 'jy_gate', region: 'jinyuan', x: 4220, y: 3050, name: '禁苑', verb: '查看', text: '牌坊上兩個字：禁苑。牌坊底下立著一塊鐵牌：「擅入者，以盜論。」鐵牌上有幾道爪痕，很深。' },
   { id: 'jy_lodge', region: 'jinyuan', x: 4520, y: 2410, name: '行宮', verb: '查看', text: '皇帝打獵時住的行宮，一年住不了一回。看守的老太監坐在台階上打瞌睡，腳邊趴著一隻比狗還大的白貓。' },
@@ -434,6 +434,17 @@ const POIS = [
 const BEASTS = [];
 
 export const TIANYAN_PLACES = { STRUCTURES, POIS, BEASTS };
+
+/** The 皇城's terrace, 欽天監 at its back, and the top of the peak: inside the 大陣. */
+const INSIDE = new Set(['huangcheng', 'qintianjian', 'yuzhi']);
+
+/**
+ * As you go from place to place on this map (world/explore.js enterRegion): one who got up the 御階
+ * unbidden (content/events/tianyan.js hc_guard: hc_in) is stopped again the next time, once out.
+ */
+export function tianyanRegion(s, to) {
+  if (!INSIDE.has(to) && s.flags.hc_in) delete s.flags.hc_in;
+}
 
 // ── who lives here ──
 
@@ -460,7 +471,7 @@ const gather = {
 const wanderers = { waicheng: 12, jingjiao: 3, ty_road: 2 };
 const folk = {
   waicheng: [
-    '玉指峰封山快一年了，欽天監說是天象。', '今年的血月，聽說又多了兩回。', '拍賣行這個月拍凝金丹，起價三千。',
+    '玉指峰又封山了，欽天監說是天象。', '今年的血月，聽說又多了兩回。', '拍賣行這個月拍凝金丹，起價三千。',
     '別在城上飛，禁軍的箭可不長眼。', '天驕榜換了，第一名還是葉孤寒。', '京兆府又在查令牌了，沒令牌的都被趕出城了。',
     '世家這兩年都在囤靈石，囤來做什麼？', '東荒？東荒在哪兒？', '欽天監的星官，走路都是看天的。',
   ],
@@ -492,7 +503,7 @@ const extras = [
   {
     id: 'ty_shed_keeper', region: 'ty_road', name: '茶棚老闆', look: 'villager', at: [770, 3110], face: -1, hours: [6, 20], act: 'stand',
     calls: ['喝碗茶再走——'],
-    chat: ['茶棚老闆給你倒了一碗茶：「進京的？前兩年還好，這一年，令牌查得嚴。」他朝東努了努嘴，「玉指峰封了山，欽天監的人說，是要下大雨。下什麼雨，要封山？」'],
+    chat: ['茶棚老闆給你倒了一碗茶：「進京的？早些年還好，這幾年，令牌查得嚴。」他朝東努了努嘴，「玉指峰封了山，欽天監的人說，是要下大雨。下什麼雨，要封山？」'],
   },
 ];
 

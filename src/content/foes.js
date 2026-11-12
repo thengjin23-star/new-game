@@ -650,6 +650,28 @@ export const FOES = {
       cry: '{name}喝道：「拿下！」', broke: '剩下的禁軍退開了，城頭上的鼓響了起來。',
     },
   },
+  // (1.2) 欽天監's 星衛: the star guards of the terrace and the sealed peak, in night-blue with the stars in silver
+  xingwei: {
+    name: '欽天監星衛', el: '金', hp: 1.35, atk: 1.25, loot: [[0.3, 'star_stone', 1]],
+    rt: {
+      share: 1.3, tier: 2, person: true, look: 'guard', weapon: 'qinggang_sword', speed: 184, walk: 44, sight: 300, lose: 480, loseT: 1.6, leash: 720,
+      body: 11, tall: 39, notice: 0.55, moves: ['slash', 'qi', 'starbeam'], tokens: 2, ring: 110, dodge: 0.3, yield: 0.1,
+      cry: '{name}的劍上亮起了星光：「封山令在此，擅入者死。」', broke: '剩下的星衛退開了，有人點起了一盞信燈。',
+    },
+  },
+  // (1.2) 大衍皇陵: the stone tortoise at the 陵門 with the blank stele on its back (贔屭), three thousand years on watch
+  bixi: {
+    name: '守陵贔屭', el: '土', hp: 2.3, atk: 1.3, boss: true, loot: [[1, 'beast_core', 3], [1, 'turtle_shell', 1], [1, 'star_stone', 2]],
+    rt: {
+      tier: 3, speed: 104, walk: 0, sight: 300, lose: 600, loseT: 2, leash: 380, body: 28, bulk: 1, tall: 40,
+      notice: 0.9, moves: ['shellbite', 'stomp', 'smash'], poise: 2.6,
+      phases: [
+        { at: 0.6, moves: ['shellbite', 'stomp', 'smash', 'starbeam'], line: '贔屭背上的無字碑亮了起來，碑上浮出一行一行的字，又一行一行地滅了！' },
+        { at: 0.28, enrage: true, line: '贔屭仰起頭，石殼上的裂縫裡透出紅光——像墨，又像血。牠發狂了！' },
+      ],
+      cry: '三千年的灰從牠背上簌簌地往下落：台階口的石龜，睜開了眼睛。', scared: ['石龜趴回了台階口。', '石龜趴回了台階口。'],
+    },
+  },
   // 舊觀星台: the stone beast that has crouched by the platform for three thousand years, starlight in its
   // eyes; it leaps, it brings its weight down, it looks at you with the stars — worn down, it brings the
   // sky down on you

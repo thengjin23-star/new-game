@@ -58,6 +58,10 @@ const PEOPLE = {
   // (1.1) 謝家's livery, deep blue and gold: the guards, and the old man three hundred years in seclusion
   xie_guard: { look: { robe: [44, 52, 76], trim: [176, 142, 70], hair: 'bun' }, weapon: 'sabre' },
   xie_ancestor: { look: { robe: [36, 42, 64], trim: [196, 160, 80], hair: 'topknot', beard: true, big: true }, weapon: 'qinggang_sword', blade: 21 },
+  // (1.2) 天衍城: the 禁軍 in black with red at the throat; 欽天監's 星衛 in night-blue, stars in silver; 官道關's men plainer
+  jinjun: { look: { robe: [34, 32, 32], trim: [160, 44, 36], hair: 'topknot' }, weapon: 'qinggang_sword' },
+  xingwei: { look: { robe: [30, 38, 70], trim: [198, 204, 222], hair: 'topknot' }, weapon: 'qinggang_sword' },
+  guan_bing: { look: { robe: [86, 80, 66], trim: [140, 60, 40], hair: 'bun' }, weapon: 'sabre' },
 };
 
 /** (0.26) The 心魔 and its shadows: you, as you are drawn, holding what you hold — washed in ink. */

@@ -4,7 +4,7 @@
 // 青石一帶 at once, though the valley, the lake and the river keep their
 // mists longer, and the high peaks stand above the clouds.
 
-import { seasonOf, dateOf, dayAt } from '../core/calendar.js';
+import { seasonOf, dateOf, dayAt, DAYS_PER_YEAR } from '../core/calendar.js';
 import { NODES } from './map.js';
 import { landTable } from './maps/index.js';
 
@@ -159,7 +159,10 @@ export function bloodMoon(s, day = s.day) {
   // (1.0) 天元三千零二十二年七月十五 (world/arcs.js WINDOWS.bloodMoon): red, whatever else is so
   if (day === dayAt(10, 7, 15)) return true;
   if (day < dayAt(5, 9) || dateOf(day).day !== 15) return false;
-  return h1((s.seed | 0) + 77, Math.floor(day / 30)) < 0.3;
+  // (1.2) 欽天監 trying its brush: the nearer 3022 comes, the oftener (one month in five in 3017; by 3022, three in four)
+  const y = Math.floor(day / DAYS_PER_YEAR);
+  const odds = y <= 5 ? 0.2 : y >= 10 ? (day < dayAt(10, 7, 15) ? 0.75 : 0.3) : [0.25, 0.32, 0.42, 0.58][y - 6];
+  return h1((s.seed | 0) + 77, Math.floor(day / 30)) < odds;
 }
 
 /**

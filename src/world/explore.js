@@ -828,6 +828,8 @@ function enterRegion(s, L, to, quiet = false) {
   const w = s.world;
   w.region = to;
   s.player.loc = to;
+  // (1.2) what a map keeps track of as you go from place to place (天衍城: one who got into the 皇城 unbidden is out of it again)
+  MAPS[w.map]?.onRegion?.(s, to);
   const node = NODES[to];
   const n = s.nodes[to];
   if (!node || !n) return;

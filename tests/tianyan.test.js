@@ -11,7 +11,10 @@ import { continueEvent } from '../src/core/events.js';
 import { useMap, CROSSINGS } from '../src/world/atlas.js';
 import { NODES, mapOf } from '../src/world/map.js';
 import { POI_BY_ID } from '../src/world/places.js';
-import { findPath, regionIdAt } from '../src/world/terrain.js';
+import { findPath, regionIdAt, regionAt } from '../src/world/terrain.js';
+import { WINDOWS } from '../src/world/arcs.js';
+import { bloodMoon } from '../src/world/weather.js';
+import { fragmentText } from '../src/content/fragments.js';
 import { heightAt } from '../src/world/height.js';
 import { flyBlocked } from '../src/world/air.js';
 import { FACTIONS } from '../src/world/factions.js';
@@ -216,6 +219,216 @@ test('the 皇城 stands on a terrace up 玉指峰\'s face, walked to by its stai
     assert.match(flyBlocked(s, ...NODES.yuzhi.at, 'sword') || '', /護城大陣/);
     s.flags.huangcheng_pass = true;
     assert.equal(flyBlocked(s, ...NODES.yuzhi.at, 'sword'), null, 'with the 皇城\'s token, up');
+  } finally {
+    useMap('donghuang');
+  }
+});
+
+// ── 1.2's story: 欽天監's 抄本閣 (with 蘇清瑤, or with 衛長庚), the 御階 by night, the peak's ink, the 皇陵 ──
+
+/** On the capital's map (over the 官道 from 官道關), at `day`, with what more is so. */
+function inCapital(seed, day = 9 * 360 + 60, more = {}) {
+  const s = over(seed, day, more);
+  s.world.cross = 'guandao_guan';
+  onward(s);
+  assert.equal(s.world.map, 'tianyan');
+  return s;
+}
+
+/** Take a choice that leads on to another step of the story. */
+function goOn(s, text) {
+  pickText(s, text);
+  if (s.pending?.result?.next) continueEvent(s);
+}
+
+test('蘇清瑤 finds what she was looking for: back to 欽天監 with a token for you; up the 御階, into the 抄本閣 — 東荒\'s page, the date, the ink, the roster — and 衛長庚 at the door', () => {
+  const s = over(611, 8 * 360 + 300, { su_zz_met: true, su_zz_ally: true, su_told_night: true });
+  try {
+    const su = s.npcs.su_qingyao;
+    Object.assign(su, { alive: true, loc: 'linjiang', met: true });
+    waitUntil(s, WINDOWS.suFound + 3);
+    assert.equal(su.loc, 'qintianjian', 'back to the capital');
+    E.placeAt(s, 1700, 2960);
+    for (let k = 0; k < 4 && s.pending?.id !== 'su_token'; k++) {
+      finish(s);
+      E.placeAt(s, 1700 + 40 * k, 3000);
+    }
+    assert.equal(s.pending?.id, 'su_token');
+    assert.match(s.pending.text, /我查到了/);
+    finish(s);
+    assert.ok(s.player.items.qintian_token && s.flags.huangcheng_pass);
+    s.world.cross = 'linjiang';
+    s.player.ls = 1000;
+    onward(s);
+    assert.equal(s.world.map, 'tianyan');
+    // up the stair: nobody stops the token
+    E.placeAt(s, 2700, 2380);
+    assert.notEqual(s.pending?.id, 'hc_guard');
+    finish(s);
+    E.placeAt(s, 2600, 1660);
+    finish(s);
+    A.visit(s, 'su_qingyao', { near: true });
+    assert.equal(s.pending?.id, 'su_archive');
+    goOn(s, '跟她進去');
+    goOn(s, '我的那一行');
+    assert.equal(s.pending.step, 'east');
+    assert.match(s.pending.text, /天元三千零二十二年七月十五，玉指峰朱墨足，當除此頁/);
+    assert.match(s.pending.text, /蘇清瑤，歿/);
+    goOn(s, '劃掉了');
+    assert.equal(s.pending.step, 'ink');
+    assert.match(s.pending.text, /墨池/);
+    goOn(s, '我們怎麼辦');
+    assert.ok(s.flags.ty_truth && s.flags.yz_ink_known && s.flags.ty_roster);
+    assert.equal(s.pending.step, 'door');
+    assert.match(s.pending.text, /衛長庚/);
+    pickText(s, '去找那隻手');
+    finish(s);
+    assert.ok(s.npcs.wei_changgeng.met && s.flags.wei_met);
+  } finally {
+    useMap('donghuang');
+  }
+});
+
+test('with nobody to take you in, 衛長庚 sends down for you from the 天驕閣: his 抄本, your missing line, the tenth page — and down again by dawn', () => {
+  const s = inCapital(612);
+  try {
+    at(s, 'wc_board', 'wc_board');
+    assert.match(s.pending.text, /監正請你上山/);
+    goOn(s, '跟他上山');
+    assert.equal(s.pending.step, 'wei');
+    assert.ok(s.flags.hc_in);
+    assert.match(s.pending.text, /找你自己/);
+    assert.match(s.pending.text, /第十頁/);
+    goOn(s, '為什麼');
+    assert.equal(s.pending.step, 'end');
+    pickText(s, '下山');
+    finish(s);
+    assert.ok(s.flags.ty_truth && s.flags.wei_met && !s.flags.hc_in);
+    tick(s);
+    finish(s);
+    assert.equal(regionIdAt(s.world.x, s.world.y), 'waicheng', 'down at the foot of the stair');
+    // one 蘇清瑤 means to bring is left for her
+    const t = inCapital(613, 9 * 360 + 60, { su_zz_ally: true });
+    t.npcs.su_qingyao.alive = true;
+    at(t, 'wc_board', 'wc_board');
+    assert.doesNotMatch(t.pending.text, /監正請你上山/);
+    finish(t);
+  } finally {
+    useMap('donghuang');
+  }
+});
+
+test('the 御階 without a token: turned back by day; by night, past the 禁軍 in the dark — inside, nobody asks again until you are out', () => {
+  const s = inCapital(614);
+  try {
+    s.tod = 12;
+    E.placeAt(s, 2700, 2380);
+    assert.equal(s.pending?.id, 'hc_guard');
+    assert.ok(!s.pending.choices.some((c) => /摸上去/.test(c.text)), 'nothing to be done in daylight but turn back or fight');
+    pickText(s, '轉身下去');
+    finish(s);
+    tick(s);
+    finish(s);
+    assert.equal(regionIdAt(s.world.x, s.world.y), 'waicheng');
+    s.player.attrs.jiyuan = 12;
+    s.tod = 23;
+    E.placeAt(s, 2700, 2380);
+    assert.equal(s.pending?.id, 'hc_guard');
+    pickText(s, '摸上去');
+    finish(s);
+    assert.ok(s.flags.hc_in);
+    E.placeAt(s, 2700, 1960);
+    finish(s);
+    E.placeAt(s, 2600, 1660);
+    assert.notEqual(s.pending?.id, 'hc_guard');
+    finish(s);
+    E.placeAt(s, 2700, 2560);
+    finish(s);
+    assert.ok(!s.flags.hc_in, 'out again: stopped again next time');
+  } finally {
+    useMap('donghuang');
+  }
+});
+
+test('why the peak is sealed, seen for yourself: by night under its north face the 星衛 catch the ink it seeps; at the top, the ink will not stay on your hand — and the 天梯 takes you down', () => {
+  const s = inCapital(615);
+  try {
+    s.player.attrs.jiyuan = 12;
+    at(s, 'hl_face', 'hl_face', 23);
+    assert.match(s.pending.text, /是墨/);
+    pickText(s, '躲在柏樹後面');
+    finish(s);
+    assert.ok(s.flags.yz_ink_seen && s.flags.yz_ink_known);
+    s.flags.huangcheng_pass = true;
+    E.placeAt(s, ...NODES.yuzhi.at);
+    finish(s);
+    E.interact(s, { kind: 'poi', id: 'yz_platform' });
+    assert.equal(s.pending?.id, 'yz_platform');
+    pickText(s, '碰一碰');
+    assert.match(s.pending.result.text, /一滴也沒有留下/);
+    finish(s);
+    E.interact(s, { kind: 'poi', id: 'yz_platform' });
+    pickText(s, '順著天梯');
+    finish(s);
+    tick(s);
+    finish(s);
+    assert.equal(regionIdAt(s.world.x, s.world.y), 'qintianjian', 'down at 欽天監');
+  } finally {
+    useMap('donghuang');
+  }
+});
+
+test('the 皇陵: the stone tortoise at the 陵門, beaten, lets you down to the 地宮 — the founder was 玄微\'s student, and 殘頁・星 is whole', () => {
+  const s = inCapital(616);
+  try {
+    s.sys.frags.push('frag_star');
+    at(s, 'hl_gate', 'hl_gate');
+    pickText(s, '拔劍');
+    assert.ok(s.rtFight);
+    finish(s);
+    assert.ok(s.flags.hl_open && s.nodes.hl_gong.known);
+    assert.equal(regionAt(s, 1180, 640), 'hl_gong');
+    at(s, 'hlg_coffin', 'hlg_coffin');
+    assert.match(s.pending.text, /他當了皇帝/);
+    finish(s);
+    assert.ok(s.flags.hl_seen && s.flags.frag_star_whole);
+    assert.match(fragmentText(s, 'frag_star'), /他當了皇帝/);
+    assert.doesNotMatch(fragmentText(s, 'frag_star'), /整整齊齊地裁掉了/);
+    at(s, 'hlg_mural', 'hlg_mural');
+    assert.match(s.pending.text, /少了一根指頭/);
+    finish(s);
+  } finally {
+    useMap('donghuang');
+  }
+});
+
+test('small blood moons come oftener as 3022 comes nearer (欽天監 trying its brush)', () => {
+  const count = (y) => {
+    let n = 0;
+    for (let seed = 1; seed <= 40; seed++) for (let m = 0; m < 12; m++) if (bloodMoon({ seed }, y * 360 + m * 30 + 14)) n++;
+    return n;
+  };
+  assert.ok(count(6) < count(9), `3018 (${count(6)}) fewer than 3021 (${count(9)})`);
+  assert.ok(count(9) > 40 * 12 * 0.45, 'by 3021, more than half the months');
+});
+
+test('no papers in the capital: the 京兆府\'s men ask when you come into the 外城; a name the capital knows makes it right', () => {
+  const s = over(617);
+  try {
+    s.player.ls = 1000;
+    at(s, 'gd_gate', 'gd_gate', 22);
+    pickText(s, '三百');
+    onward(s);
+    assert.ok(s.flags.ty_nopass);
+    E.placeAt(s, 2700, 3240);
+    assert.equal(s.pending?.id, 'ty_check');
+    pickText(s, '認罰');
+    finish(s);
+    s.rep.tianyan = 30;
+    at(s, 'wc_yamen', 'wc_pass');
+    pickText(s, '補辦');
+    finish(s);
+    assert.ok(s.player.items.tongxing_ling && !s.flags.ty_nopass);
   } finally {
     useMap('donghuang');
   }

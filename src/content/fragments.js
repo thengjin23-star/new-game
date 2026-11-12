@@ -31,3 +31,23 @@ export const FRAGMENTS = {
 };
 
 export const FRAGMENT_TOTAL = 9;
+
+/**
+ * (1.2) What a page reads now: 殘頁・星's lower half, cut away, was carved on the founder's coffin in the
+ * 皇陵's 地宮 (content/events/tianyan.js hlg_coffin) — once read there, the page is whole.
+ */
+export const FRAGMENT_REST = {
+  frag_star: {
+    flag: 'frag_star_whole',
+    cut: '（這一頁的下半截，被人用刀，整整齊齊地裁掉了）',
+    text: '他們中間最小的那一個，半夜去了東邊那座白色的山。山裡在滲墨，紅的。他拿筆蘸了，在天上那本書裡，給自己寫了一行字。\n第二天，他當了皇帝。\n我走的那天，他在山下送我。他說：先生，你說不能改，可我改了。\n我說：你沒有改。你只是多寫了一行。這本書上的每一個字，都是那隻手寫的；你寫的這一行，它也會照著抄下去，一遍一遍，抄到爛。\n他不懂。\n我也不懂，我為什麼要教他們看星星。\n（下半截是從大衍皇陵的梓宮上拓下來的）',
+  },
+};
+
+/** A page as it reads for you (whole, if you have found what was cut from it). */
+export function fragmentText(s, id) {
+  const f = FRAGMENTS[id];
+  const rest = FRAGMENT_REST[id];
+  if (!f || !rest || !s.flags?.[rest.flag]) return f?.text || '';
+  return f.text.replace(rest.cut, rest.text);
+}

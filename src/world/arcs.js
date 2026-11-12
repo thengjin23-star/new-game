@@ -22,6 +22,9 @@ export const WINDOWS = {
   bloodMoon: dayAt(10, 7, 15),
   // (1.1) 中州's years: 林塵 a 客卿 of 上官家 (3016 autumn); 沈家 eaten by 謝家 (3019 spring); the 生死約戰
   // put about (3020 summer) and fought (3020/9/15); 沈清歌's letter, if nobody carries it, three years late (3022 spring)
+  // (1.2) 天衍城: 蘇清瑤 has found what she went into 欽天監 for (3020 winter); 玉指峰 sealed, the capital shut (3021)
+  suFound: dayAt(8, 11),
+  yuzhiSeal: dayAt(9, 1),
   linToZz: dayAt(4, 9),
   shenFall: dayAt(7, 3),
   duelNotice: dayAt(8, 6),
@@ -315,6 +318,13 @@ function zhongzhouYears(s) {
     f.lg_both_found = true;
     for (const id of ['shangguan_jin', 'xie_xuanlang']) if (s.npcs[id]) s.npcs[id].favor -= 20;
     rumor(s, '龍脊嶺的官司打到第五年，謝家和上官家對了一回帳，才發現兩家請的是同一個散修。', 'arc');
+  }
+  // (1.2) 蘇清瑤 has found it ("等我查到了，我來找你"): back to 欽天監 in the capital, and its token sent you with a line
+  const su = s.npcs.su_qingyao;
+  if (s.day >= WINDOWS.suFound && !f.su_found && su?.alive && su.loc === 'linjiang' && (f.su_zz_ally || f.su_zz_beaten)) {
+    f.su_found = true;
+    su.loc = 'qintianjian';
+    schedule(s, 'su_token', 0, 2);
   }
   if (s.day >= WINDOWS.shenLetterLate && f.shen_fall && !f.shen_letter_given && !f.shen_letter_late && shen?.alive) {
     f.shen_letter_late = true;

@@ -9,7 +9,7 @@ import { NANLING_GEO, NANLING_LAND, NANLING_NODES, NANLING_PLACES, NANLING_PEOPL
 import { XIMO_GEO, XIMO_LAND, XIMO_NODES, XIMO_PLACES, XIMO_PEOPLE, XIMO_PALETTE } from './ximo.js';
 import { BEIYUAN_GEO, BEIYUAN_LAND, BEIYUAN_NODES, BEIYUAN_PLACES, BEIYUAN_PEOPLE, BEIYUAN_PALETTE } from './beiyuan.js';
 import { ZHONGZHOU_GEO, ZHONGZHOU_LAND, ZHONGZHOU_NODES, ZHONGZHOU_PLACES, ZHONGZHOU_PEOPLE, ZHONGZHOU_PALETTE } from './zhongzhou.js';
-import { TIANYAN_GEO, TIANYAN_LAND, TIANYAN_NODES, TIANYAN_PLACES, TIANYAN_PEOPLE, TIANYAN_PALETTE } from './tianyan.js';
+import { TIANYAN_GEO, TIANYAN_LAND, TIANYAN_NODES, TIANYAN_PLACES, TIANYAN_PEOPLE, TIANYAN_PALETTE, tianyanRegion } from './tianyan.js';
 
 export const LANDS = [
   { id: 'nanling', name: '南嶺', title: '南嶺・青竹一帶', realm: '煉氣中期～築基初期', home: 'qingzhu_village', geo: NANLING_GEO, land: NANLING_LAND, nodes: NANLING_NODES, places: NANLING_PLACES, people: NANLING_PEOPLE },
@@ -19,7 +19,7 @@ export const LANDS = [
   // (1.0) 第二章: across the river
   { id: 'zhongzhou', name: '中州', title: '中州・臨江一帶', realm: '築基初期～金丹', home: 'linjiang', palette: ZHONGZHOU_PALETTE, geo: ZHONGZHOU_GEO, land: ZHONGZHOU_LAND, nodes: ZHONGZHOU_NODES, places: ZHONGZHOU_PLACES, people: ZHONGZHOU_PEOPLE },
   // (1.2) 中州's other map: the capital, three days east of 官道關 (its stone pale as jade, like the finger it is built round)
-  { id: 'tianyan', name: '天衍城', title: '中州・天衍城', realm: '築基後期～金丹', home: 'waicheng', rock: [1.1, 1.1, 1.08], palette: TIANYAN_PALETTE, geo: TIANYAN_GEO, land: TIANYAN_LAND, nodes: TIANYAN_NODES, places: TIANYAN_PLACES, people: TIANYAN_PEOPLE },
+  { id: 'tianyan', name: '天衍城', title: '中州・天衍城', realm: '築基後期～金丹', home: 'waicheng', rock: [1.1, 1.1, 1.08], palette: TIANYAN_PALETTE, geo: TIANYAN_GEO, land: TIANYAN_LAND, nodes: TIANYAN_NODES, places: TIANYAN_PLACES, people: TIANYAN_PEOPLE, onRegion: tianyanRegion },
 ];
 
 /** One table from every map's entries of a kind (by region): e.g. landTable('trees'). */

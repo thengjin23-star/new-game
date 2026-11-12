@@ -32,7 +32,7 @@ import { fogOf, isRevealed, exploredPct } from '../world/fog.js';
 import { ITEMS, displayItem } from '../content/items.js';
 import { TECHS } from '../content/techniques.js';
 import { PILL_CD, MOVES } from '../content/moves.js';
-import { FRAGMENTS, FRAGMENT_TOTAL } from '../content/fragments.js';
+import { FRAGMENTS, FRAGMENT_TOTAL, fragmentText } from '../content/fragments.js';
 import { SYS_LEVELS, SYS_FEATURES } from '../world/system.js';
 import { npcAge, npcRealm, NAMED, pastOf } from '../world/npcs.js';
 import { storiesOf, GROUPS as STORY_GROUPS } from '../content/stories.js';
@@ -2767,7 +2767,7 @@ export function startApp(root, { speed = 1, view = null } = {}) {
         : h('p.muted.pad', '一條也沒有。石碑、遺跡，和活得夠久的人，都記得一些事。'),
       h('h3.story-group', `天機殘頁 ${got.length} / ${FRAGMENT_TOTAL}`),
       got.length
-        ? h('ul.frags', got.map((f) => h('li', h('b', FRAGMENTS[f].title), paragraphs(FRAGMENTS[f].text))))
+        ? h('ul.frags', got.map((f) => h('li', h('b', FRAGMENTS[f].title), paragraphs(fragmentText(s, f)))))
         : h('p.muted.pad', '一頁也沒有。它們散落在世界的各個角落。'),
     );
   }
