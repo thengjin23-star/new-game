@@ -336,6 +336,20 @@ export function breakthroughInfo(s, { pills = 0 } = {}) {
           chance += 0.05;
         }
       }
+      // (1.1) 中州: the 靈眼 under 龍脊嶺 (opened, once the two houses' quarrel over it is done), its 靈髓 in
+      // your hand, and the 結丹洞 of 天劍宗 (for its 客卿)
+      if (p.loc === 'longji' && s.flags.lg_eye_open) {
+        parts.push(['龍脊靈眼', 0.1]);
+        chance += 0.1;
+      }
+      if (p.items.lingsui) {
+        parts.push(['龍脊靈髓', 0.12]);
+        chance += 0.12;
+      }
+      if (p.loc === 'tianjian' && s.flags.tianjian_guest) {
+        parts.push(['天劍宗結丹洞', 0.1]);
+        chance += 0.1;
+      }
     }
     // (0.26) at the gate of 元嬰: as good as the core you made
     if (p.realm === 3) {

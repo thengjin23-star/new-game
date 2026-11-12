@@ -647,6 +647,41 @@ export const FOES = {
       cry: '台邊的石獸，睜開了眼睛。', scared: ['石獸蹲回了台邊。', '石獸蹲回了台邊。'],
     },
   },
+  // ── 1.1 中州・靈脈之爭 ──
+  // 龍脊嶺's mine: what 謝家's diggers woke when they broke into the deep vein — centipedes grown on 靈氣, their
+  // shells gone to crystal; they bite, and come at you along the gallery
+  vein_crawler: {
+    name: '靈脈蜈', el: '金', hp: 1.1, atk: 1.1, loot: [[0.5, 'beast_core', 1], [0.25, 'star_stone', 1]],
+    rt: {
+      share: 1.2, tier: 2, speed: 158, walk: 30, sight: 220, lose: 420, loseT: 1.4, leash: 520, body: 15, bulk: 0.7, tall: 22,
+      notice: 0.6, moves: ['centbite', 'centcharge'], pack: true, tokens: 2, ring: 90,
+      warn: '巷道的石壁上，一道一道新刮出來的痕，閃著藍光。', cry: '石縫裡竄出幾條一尺多長的蜈蚣，甲殼像水晶一樣發亮！',
+      scared: ['靈脈蜈鑽回了石縫裡。', '靈脈蜈們鑽回了石縫裡。'], broke: '剩下的靈脈蜈鑽回了石縫裡。',
+    },
+  },
+  // 謝家's men, on the ridge and at the manor: hired blades in a great house's livery
+  xie_guard: {
+    name: '謝家護衛', hp: 1.1, atk: 1.05, loot: [[0.5, 'juqi_pill', 1]],
+    rt: {
+      share: 1.2, tier: 2, person: true, look: 'guard', weapon: 'iron_saber', speed: 170, walk: 40, sight: 240, lose: 400, loseT: 1.5, leash: 700,
+      body: 11, tall: 38, notice: 0.4, moves: ['cleave', 'rush', 'slash'], tokens: 2, ring: 100, flee: 0.2, yield: 0.15,
+      cry: '{name}拔刀出鞘：「謝家辦事，閒人退開！」', broke: '剩下的謝家護衛退開了，有人跑去報信。',
+    },
+  },
+  // 謝家老祖: three hundred years old, out of his seclusion for the vein his house has wanted all that time; his
+  // sword, his 劍氣, a rush; worn down he calls up his house's men, and at the last does not care what he spends
+  xie_ancestor: {
+    name: '謝家老祖', hp: 1.9, atk: 1.25, boss: true, loot: [[1, 'beast_core', 3], [1, 'guiyuan_jade', 1]],
+    rt: {
+      tier: 3, person: true, look: 'elder', weapon: 'hantie_sword', speed: 172, walk: 30, sight: 300, lose: 600, loseT: 2, leash: 520,
+      body: 11, tall: 38, notice: 0.9, moves: ['slash', 'qi', 'rush'], keep: [110, 220], dodge: 0.35,
+      phases: [
+        { at: 0.6, moves: ['cleave', 'qi', 'rush', 'xie_call'], line: '謝家老祖冷哼一聲，袖子一拂，四周的石頭後面跳出了人影！' },
+        { at: 0.28, enrage: true, line: '謝家老祖鬚髮皆張，一身金丹靈力毫無保留地爆了開來——他拚命了！' },
+      ],
+      cry: '{name}從洞口走進來，背著手：「年輕人，這條脈，謝家要了三百年。」',
+    },
+  },
   // 雲夢大澤: the 蛟 that has lived three hundred years in the deep of the marsh — its jaws, its tail, water
   // shot at you; worn down, the marsh turns about it in whirlpools
   yunmeng_jiao: {

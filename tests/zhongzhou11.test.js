@@ -13,6 +13,8 @@ import { duelOf } from '../src/world/duel.js';
 import { fateLine } from '../src/world/ending.js';
 import { nextGoal } from '../src/world/guide.js';
 import { continueEvent } from '../src/core/events.js';
+import { POI_BY_ID } from '../src/world/places.js';
+import { breakthroughInfo } from '../src/core/cultivation.js';
 import { fresh, resolvePending, pickText, finish, waitUntil } from './helpers.js';
 
 const tick = (s) => E.step(s, 0.05, null);
@@ -179,4 +181,115 @@ test('one who comes over after it is long done hears of it, and 林塵 talks of 
   } finally {
     useMap('donghuang');
   }
+});
+
+// ── 龍脊嶺's vein ──
+
+function goToPoiAt(s, id) {
+  const p = POI_BY_ID[id];
+  E.placeAt(s, p.x, p.y + 30);
+  finish(s);
+}
+
+test('龍脊嶺 for 上官家: through the gallery, 謝家\'s men out of the 靈眼, 謝家老祖 beaten — the case is won, the river-boat owes you, the 靈眼 helps a 結丹', () => {
+  const s = overAt(511, 7 * 360 + 30, { sg_met: true, sg_longji: true });
+  try {
+    A.visit(s, 'shangguan_jin', { near: true });
+    pickText(s, '龍脊嶺的事');
+    finish(s);
+    assert.ok(s.flags.lg_job_sg);
+    goToPoiAt(s, 'lg_mine');
+    for (let k = 0; k < 4 && s.pending?.id !== 'lg_mine'; k++) {
+      finish(s);
+      E.interact(s, { kind: 'poi', id: 'lg_mine' });
+    }
+    goOn(s, '下礦');
+    pickText(s, '拔劍');
+    // won in the gallery, on to the 靈眼; 謝家's men out; the old man comes; beaten
+    resolvePending(s, (opts) => opts.find((c) => c.text.includes('謝家的人')) || opts.find((c) => c.text.includes('拔劍')) || opts[0], 'won');
+    assert.ok(s.flags.lg_clear_sg && s.flags.xie_ancestor_beaten, 'cleared, and the ancestor beaten');
+    A.visit(s, 'shangguan_jin', { near: true });
+    pickText(s, '從礦底出來了');
+    finish(s);
+    assert.equal(s.flags.lg_side, 'shangguan');
+    assert.ok(s.flags.sg_boat_owed && s.flags.lg_eye_open);
+    // a 築基圓滿 at the ridge: the 靈眼 counts for the 結丹
+    Object.assign(s.player, { realm: 2, stage: 3 });
+    s.player.loc = 'longji';
+    assert.ok(breakthroughInfo(s).parts.some(([n]) => n === '龍脊靈眼'));
+  } finally {
+    useMap('donghuang');
+  }
+});
+
+test('龍脊嶺 for 謝家: 上官家\'s miners driven off for 謝玄朗 — and then his paper of powder, and 林塵 dead on the stage (the 命簿 broken)', () => {
+  const s = overAt(512, 7 * 360 + 30, { xie_met: true });
+  try {
+    A.visit(s, 'xie_xuanlang', { near: true });
+    pickText(s, '謝少主找我');
+    finish(s);
+    assert.ok(s.flags.lg_job_xie);
+    goToPoiAt(s, 'lg_mine');
+    for (let k = 0; k < 4 && s.pending?.id !== 'lg_mine'; k++) {
+      finish(s);
+      E.interact(s, { kind: 'poi', id: 'lg_mine' });
+    }
+    goOn(s, '下礦');
+    pickText(s, '拔劍');
+    resolvePending(s, (opts) => opts.find((c) => c.text.includes('上官家的人')) || opts[0], 'won');
+    assert.ok(s.flags.lg_clear_xie);
+    A.visit(s, 'xie_xuanlang', { near: true });
+    pickText(s, '下山了');
+    finish(s);
+    assert.equal(s.flags.lg_side, 'xie');
+    // his favour, before the 生死約戰
+    A.visit(s, 'xie_xuanlang', { near: true });
+    assert.equal(s.pending?.id, 'xie_ask');
+    pickText(s, '收下紙包');
+    finish(s);
+    assert.ok(s.flags.xie_ally);
+    waitUntil(s, WINDOWS.duelNotice + 2);
+    s.day = WINDOWS.duel;
+    E.placeAt(s, ...NODES.tianjian.at);
+    for (let k = 0; k < 4 && s.pending?.id !== 'zz_duel'; k++) finish(s);
+    goOn(s, '謝玄朗交代');
+    finish(s);
+    assert.equal(duelOf(s), 'lin_dead');
+    assert.ok(!s.npcs.lin_chen.alive);
+    assert.match(fateLine({ ...s, sys: { ...s.sys, lv: 5 } }, 'ye_guhan'), /洇開/);
+  } finally {
+    useMap('donghuang');
+  }
+});
+
+test('龍脊嶺 for yourself: the 靈髓 taken while they fought; 謝家老祖 beaten, it is yours (and counts at your 結丹)', () => {
+  const s = overAt(513, 7 * 360 + 30);
+  try {
+    goToPoiAt(s, 'lg_mine');
+    for (let k = 0; k < 4 && s.pending?.id !== 'lg_mine'; k++) {
+      finish(s);
+      E.interact(s, { kind: 'poi', id: 'lg_mine' });
+    }
+    goOn(s, '下礦');
+    pickText(s, '拔劍');
+    resolvePending(s, (opts) => opts.find((c) => c.text.includes('靈髓')) || opts.find((c) => c.text.includes('拔劍')) || opts[0], 'won');
+    assert.equal(s.flags.lg_side, 'self');
+    assert.ok(s.player.items.lingsui > 0);
+    Object.assign(s.player, { realm: 2, stage: 3 });
+    assert.ok(breakthroughInfo(s).parts.some(([n]) => n === '龍脊靈髓'));
+  } finally {
+    useMap('donghuang');
+  }
+});
+
+test('nobody takes a hand in it: 謝家 has the vein by 3021; one who played both houses is found out by then', () => {
+  const s = fresh(514);
+  waitUntil(s, WINDOWS.veinDone + 2);
+  assert.equal(s.flags.lg_side, 'xie_default');
+  const t = fresh(515);
+  t.flags.lg_side = 'both';
+  const before = t.npcs.shangguan_jin.favor;
+  waitUntil(t, WINDOWS.veinDone + 2);
+  assert.ok(t.flags.lg_both_found);
+  assert.ok(t.npcs.shangguan_jin.favor < before);
 });

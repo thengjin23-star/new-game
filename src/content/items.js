@@ -563,6 +563,11 @@ export const ITEMS = {
     name: '林塵的玉佩', kind: 'token', sell: 0,
     desc: '青玉上刻著一個「塵」字。他說：「憑此物，可向我討一個人情。」',
   },
+  // (1.1) what the 靈眼 under 龍脊嶺 had at its heart (taken for yourself, while the two houses fought over it)
+  lingsui: {
+    name: '龍脊靈髓', kind: 'token', sell: 0, keep: true,
+    desc: '靈眼最深處凝出來的一團東西，像水，又像光，握在手裡涼得發燙。帶在身上衝擊金丹，多一成二的把握。',
+  },
   // (1.1) for 林塵, over the river: what 沈家's ruin taught her about 謝家
   shen_letter: {
     name: '沈清歌的信', kind: 'token', sell: 0, keep: true,

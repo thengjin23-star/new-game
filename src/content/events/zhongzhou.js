@@ -706,6 +706,31 @@ export default [
           effects: [['flag', 'sg_longji'], ['discover', 'longji'], ['favor', 'shangguan_jin', 2]],
         },
       },
+      // (1.1) the quarrel over 龍脊嶺's vein
+      {
+        text: '「龍脊嶺的事，我幫得上忙嗎？」',
+        show: (s) => flag(s, 'sg_longji') && !flag(s, 'lg_side') && !flag(s, 'lg_job_sg'),
+        out: {
+          text: '她撥算盤的手停了。\n\n「謝家的人夜裡偷偷下礦，挖穿了礦底。」她說，「挖穿的地方是靈脈的眼——靈眼。眼一開，底下的東西就爬上來了。我們的礦工死了兩個，剩下的都不肯再下去。」\n\n「謝家的人還在底下挖。」她看著你，「把他們趕出來。礦底有什麼，你看見了，到官府替我們作個證。」\n\n「事成，三百塊靈石。上官家的人情，另算。」',
+          effects: [['flag', 'lg_job_sg'], ['discover', 'longji'], ['log', '上官瑾請你把謝家的人趕出龍脊嶺的礦底']],
+        },
+      },
+      {
+        text: '「謝家的人，從礦底出來了。」',
+        show: (s) => flag(s, 'lg_clear_sg') && !flag(s, 'lg_side'),
+        out: {
+          text: (s) =>
+            `她聽你說完礦底的事，把算盤推到一邊，親手給你倒了一杯茶。\n\n「謝家的人下礦挖穿了靈眼，有你作證，這場官司他們輸定了。」${
+              flag(s, 'xie_ancestor_beaten') ? '\n\n她頓了頓：「連謝家那個三百年沒出過關的老祖宗，都被你打回去了？」她笑了，「臨江城要熱鬧好一陣子了。」' : ''
+            }\n\n她把一袋靈石和一塊木牌推到你面前。木牌上刻著一隻鷁鳥：「上官家的樓船，往後欠你一回。不管什麼時候，不管載什麼人。」`,
+          effects: [(s) => { s.flags.lg_side = 'shangguan'; s.flags.lg_eye_open = true; }, ['ls', 300], ['flag', 'sg_boat_owed'], ['favor', 'shangguan_jin', 20], ['rep', 'linjiang', 8], ['sysexp', 25], ['log', '龍脊嶺的官司，上官家贏了：上官家的樓船欠你一回'], ['rumor', '龍脊嶺的官司判下來了：謝家私挖礦底，靈脈歸上官家。']],
+        },
+      },
+      {
+        text: '「我聽說……」',
+        show: (s) => flag(s, 'lg_job_sg') && (s.flags.lg_side === 'xie' || s.flags.lg_side === 'self'),
+        out: { text: (s) => (s.flags.lg_side === 'xie' ? '「你收了謝家的錢，」她說，臉上還是笑著，「把我們的人趕下了山。」\n\n她把茶杯輕輕放下：「上官家記得每一筆帳。請回吧。」' : '「靈眼裡的靈髓，」她說，「是你挖走的。」\n\n她沒有生氣，只是看著你：「中州的散修，大概都是這麼活下來的。」'), effects: [['favor', 'shangguan_jin', -3]] },
+      },
       { text: '喝一杯茶。', show: (s) => flag(s, 'sg_met'), out: { text: '她泡的茶很香。她說，這茶是用東荒的野茶樹做的，一年只得三斤。', effects: [['favor', 'shangguan_jin', 2], ['mind', 1]] } },
       { text: '告辭。', out: {} },
     ],
@@ -748,6 +773,23 @@ export default [
         text: '不理他，走開。',
         show: (s) => !flag(s, 'xie_met'),
         out: { text: '你從他身邊走了過去。身後傳來一陣笑聲，你沒有回頭。', effects: [['meet', 'xie_xuanlang'], ['flag', 'xie_met']] },
+      },
+      // (1.1) the quarrel over 龍脊嶺's vein, from the other side
+      {
+        text: '「謝少主找我有事？」',
+        show: (s) => flag(s, 'xie_met') && !flag(s, 'lg_side') && !flag(s, 'lg_job_xie'),
+        out: {
+          text: '他把你拉到一邊，聲音壓得很低，笑容沒變：「龍脊嶺上，上官家的礦工還賴著不走。」\n\n「你是散修，跟誰都不沾。替我把他們趕下山——不用殺人，嚇走就行。」他伸出四根手指，「四百塊靈石。」\n\n「礦底下的事，」他又說，「你什麼也沒看見。」',
+          effects: [['flag', 'lg_job_xie'], ['discover', 'longji'], ['log', '謝玄朗出四百靈石，要你把上官家的礦工趕下龍脊嶺']],
+        },
+      },
+      {
+        text: '「上官家的人，下山了。」',
+        show: (s) => flag(s, 'lg_clear_xie') && !flag(s, 'lg_side'),
+        out: {
+          text: '「好。」他拍了拍你的肩膀，「我就知道，東荒來的人懂事。」\n\n一個管事捧上來一袋靈石。謝玄朗看著你笑：「往後在臨江城，有謝家在，沒人敢欺負你。」',
+          effects: [(s) => { s.flags.lg_side = 'xie'; s.flags.lg_eye_open = true; }, ['ls', 400], ['favor', 'xie_xuanlang', 15], ['rep', 'linjiang', -4], ['sysexp', 15], ['log', '龍脊嶺：替謝家把上官家的礦工趕下了山'], ['rumor', '龍脊嶺的官司判下來了：上官家的人自己下了山，靈脈歸謝家。']],
+        },
       },
       { text: '點點頭，走開。', show: (s) => flag(s, 'xie_met'), out: { text: '他也沒再說什麼。他身後的人看了你一眼，又看了一眼。' } },
     ],
@@ -1219,14 +1261,138 @@ export default [
     choices: [{ text: '走了。', out: {} }],
   },
   {
+    // (1.1) the mine under 龍脊嶺: the gallery and what crawls in it, the 靈眼, and who is digging at it
     id: 'lg_mine',
     trigger: 'explore',
     poi: 'lg_mine',
     nodes: LG,
-    cooldown: 30,
     title: '靈石礦',
-    text: '礦口立著兩塊界碑，一塊刻著「謝」，一塊刻著「上官」，中間隔著三步遠。兩家的護衛各站一邊，誰也不看誰。\n\n礦口黑漆漆的，往外冒著一股涼氣。涼氣裡，是很濃的靈氣。',
-    choices: [{ text: '走了。', out: { effects: [['flag', 'lg_seen']] } }],
+    steps: {
+      start: {
+        text: (s) => {
+          const side = s.flags.lg_side;
+          if (side === 'shangguan') return '礦口換了一塊新碑，只刻著「上官」兩個字。上官家的礦工一筐一筐地往外背靈石，看見你，都停下來點頭。';
+          if (side === 'xie' || side === 'xie_default') return '礦口只剩一塊碑，刻著「謝」。謝家的護衛抱著刀守在洞口，看你的眼神像看賊。';
+          if (side === 'self') return '礦口的兩塊碑都倒了。兩家的人都不來了：靈眼的靈髓被人挖走了，礦底只剩一個空空的石窩。';
+          if (side === 'both') return '礦口的兩塊界碑還立著，兩家的護衛還是各站一邊，誰也不看誰。兩邊都以為你是自己人。';
+          return '礦口立著兩塊界碑，一塊刻著「謝」，一塊刻著「上官」，中間隔著三步遠。\n\n封條撕開過，又胡亂貼了回去。礦口往外冒著一股涼氣，涼氣裡是很濃的靈氣——還有一股腥味。';
+        },
+        choices: [
+          { text: '下礦。', show: (s) => !s.flags.lg_side, out: { text: '你點起一盞燈，彎腰鑽進了礦口。巷道往下斜，越走越冷，石壁上一道一道新刮出來的痕，閃著藍光。', next: 'gallery' } },
+          { text: '到靈眼看看。', show: (s) => !!s.flags.lg_eye_open, out: { text: '礦底的靈眼還在冒著光，一圈一圈的，像一口井。你在旁邊坐了一會兒，渾身的毛孔都張開了。\n\n在這裡衝擊金丹，大概能多一成把握。', effects: [['mind', 2]] } },
+          { text: '走了。', out: { effects: [['flag', 'lg_seen']] } },
+        ],
+      },
+      gallery: {
+        text: '巷道拐了個彎，燈光照到的地方，石壁在動。\n\n不是石壁——是蜈蚣，一尺多長，甲殼像水晶一樣發亮，一條接一條從石縫裡鑽出來。',
+        choices: [
+          {
+            text: '拔劍。',
+            check: { kind: 'power', diff: 220 },
+            fight: { foes: [['vein_crawler', 3]], close: true },
+            ok: { text: '最後一條靈脈蜈縮回了石縫裡。巷道再往下，盡頭透出一片藍光。', next: 'eye' },
+            fail: { text: '蜈蚣的毒牙咬穿了你的護體靈氣。你連滾帶爬地退出了礦口，半邊身子都是麻的。', effects: [['wound', 0.3]] },
+          },
+          { text: '退出去。', out: { text: '你退出了礦口。身後的石縫裡，沙沙的聲音響了很久。' } },
+        ],
+      },
+      eye: {
+        text: (s) => {
+          const who =
+            s.flags.lg_job_sg && !s.flags.lg_job_xie
+              ? '十幾個穿藍金號衣的人圍著它，一鎬一鎬地往裡挖——是謝家的人。'
+              : s.flags.lg_job_xie && !s.flags.lg_job_sg
+                ? '靈眼這一頭，幾個上官家的礦工縮在石頭後面，一個護院拿著棍子守著他們。那一頭，謝家的人在挖。'
+                : '靈眼兩邊，謝家的人和上官家的人隔著三步遠，誰也不讓誰。';
+          return `巷道盡頭是一個大石窟。窟底有一個圓圓的洞，洞裡一圈一圈地往外冒藍光，像一口井——靈眼。\n\n${who}\n\n靈眼最深處，凝著一團像水又像光的東西：靈髓。`;
+        },
+        choices: [
+          {
+            text: '把謝家的人趕出去。',
+            check: { kind: 'power', diff: 250 },
+            fight: { foes: [['xie_guard', 3]], close: true },
+            ok: { text: '謝家的護衛扔下鎬頭，一個接一個退出了石窟。最後一個跑出去的時候喊：「你等著！」\n\n巷道裡，傳來一陣慢慢的腳步聲。', effects: [['flag', 'lg_clear_sg']], next: 'ancestor' },
+            fail: { text: '三把刀一起劈下來。你被逼出了石窟，一路退到礦口，身上多了三道口子。', effects: [['wound', 0.3]] },
+          },
+          {
+            text: '把上官家的人趕出去。',
+            show: (s) => !!s.flags.lg_job_xie,
+            check: { kind: 'power', diff: 190 },
+            fight: { foes: [['escort', 2, { name: '上官家的護院', tier: 2 }]], close: true },
+            ok: { text: '上官家的護院扔下棍子，帶著礦工們退出了石窟。一個老礦工走的時候回頭看了你一眼，什麼也沒說。', effects: [['flag', 'lg_clear_xie'], ['mind', -3]] },
+            fail: { text: '上官家的護院比你想的硬。你被一棍子掃出了石窟。', effects: [['wound', 0.2]] },
+          },
+          {
+            text: '兩邊都說：我是來幫你們的。',
+            show: (s) => !!(s.flags.lg_job_sg && s.flags.lg_job_xie),
+            check: { kind: 'wuxing', diff: 7 },
+            ok: {
+              text: '你對謝家的人說：上官家的人我會處置；又對上官家的人說：謝家的人我會盯著。兩邊都點了頭。\n\n官司接著打。靈眼誰也挖不成。兩家的靈石，都進了你的口袋。',
+              effects: [(s) => { s.flags.lg_side = 'both'; s.flags.lg_eye_open = true; }, ['ls', 350], ['mind', -2], ['log', '龍脊嶺：兩邊都以為你是自己人，兩家的靈石都收了']],
+            },
+            fail: { text: '你的話說到一半，兩邊的人都看出來了。謝家的護衛和上官家的護院第一次站到了一邊——對著你。\n\n你退出了礦口。', effects: [(s) => { s.flags.lg_side = 'none'; }, ['favor', 'shangguan_jin', -10], ['favor', 'xie_xuanlang', -10]] },
+          },
+          {
+            text: '趁亂挖走靈髓。',
+            out: { text: '你一矮身鑽到靈眼邊上，伸手探進那團光裡。冷——冷得像握住了一塊冰，又燙得像握住了一塊炭。\n\n你把靈髓揣進懷裡的時候，兩邊的人都愣住了。\n\n巷道裡，傳來一陣慢慢的腳步聲。', effects: [['item', 'lingsui', 1], ['flag', 'lg_took_marrow']], next: 'ancestor' },
+          },
+          { text: '退出去。', out: { text: '你悄悄退了出去。身後，鎬頭一下一下地響著。' } },
+        ],
+      },
+      ancestor: {
+        text: '一個老人走進了石窟。白鬚，藍金的袍子，背著手，走得很慢。他走過的地方，靈眼的光都暗了一暗。\n\n石窟裡的人一個接一個跪了下去。\n\n「謝家老祖……」有人小聲說，「三百年沒出過關了……」\n\n老人看著你：「年輕人，這條脈，謝家要了三百年。」',
+        choices: [
+          {
+            text: '拔劍。',
+            check: { kind: 'power', diff: 480 },
+            fight: { foes: [['xie_ancestor', 1, { name: '謝家老祖', tier: 3, rank: '金丹圓滿' }]], close: true },
+            ok: {
+              text: '老人的劍停在半空，慢慢地垂了下來。\n\n「三百年……」他看著你，又看著那口靈眼，「謝家的東西，到底不是謝家的。」\n\n他轉身走了，背比來的時候駝了一些。',
+              effects: (s) => [['flag', 'xie_ancestor_beaten'], ['sysexp', 40], ['log', '在龍脊嶺的靈眼前，打退了出關的謝家老祖'], ['rumor', '謝家閉關三百年的老祖宗出了關，在龍脊嶺的礦底被一個東荒來的散修打回去了。'], ...(s.flags.lg_took_marrow ? [(x) => { x.flags.lg_side = 'self'; }] : [])],
+            },
+            fail: {
+              text: (s) => `老人只出了三劍。第三劍，你就倒在了靈眼邊上。\n\n${s.flags.lg_took_marrow ? '他從你懷裡取回了靈髓，' : ''}他讓人把你抬出了礦口，扔在山坡上：「回去吧。東荒來的，不懂中州的規矩。」`,
+              effects: (s) => [['wound', 0.45], ...(s.flags.lg_took_marrow ? [['item', 'lingsui', -1], ['unflag', 'lg_took_marrow']] : []), ['unflag', 'lg_clear_sg']],
+            },
+          },
+          {
+            text: '跑。',
+            check: { kind: 'jiyuan', diff: 7 },
+            ok: {
+              text: (s) => `你轉身就跑，沿著巷道往上竄。身後一道劍氣追著你削下來，削掉了你半片衣角。\n\n你衝出礦口的時候，天已經黑了。${s.flags.lg_took_marrow ? '懷裡的靈髓，還在。' : ''}`,
+              effects: (s) => [['flag', 'xie_marked'], ...(s.flags.lg_took_marrow ? [(x) => { x.flags.lg_side = 'self'; }] : [])],
+            },
+            fail: {
+              text: (s) => `你沒跑出十步，一道劍氣就從背後打在了你身上。\n\n${s.flags.lg_took_marrow ? '老人從你懷裡取回了靈髓。' : ''}你醒過來的時候，躺在礦口外的山坡上。`,
+              effects: (s) => [['wound', 0.4], ...(s.flags.lg_took_marrow ? [['item', 'lingsui', -1], ['unflag', 'lg_took_marrow']] : []), ['unflag', 'lg_clear_sg']],
+            },
+          },
+        ],
+      },
+    },
+  },
+
+  // (1.1) having taken 謝家's side on the ridge: 謝玄朗 has one more thing to ask, before the 生死約戰
+  {
+    id: 'xie_ask',
+    trigger: 'visit',
+    npc: 'xie_xuanlang',
+    nodes: LJ,
+    priority: 7,
+    once: true,
+    cond: (s) => s.flags.lg_side === 'xie' && flag(s, 'lin_zz') && alive(s, 'lin_chen') && !flag(s, 'duel_done'),
+    title: '謝玄朗',
+    text: '謝玄朗把你請進了謝府的花廳，屏退了左右。\n\n他從袖子裡取出一個小紙包，放在桌上，又放上一袋靈石。\n\n「九月十五，天劍宗山門外，林塵會喝一杯茶。」他笑著說，「茶是我敬的。你只要在人擠的時候，把這包東西抖進去。」\n\n「軟筋散，不要命的。」他頓了頓，「剩下的，交給葉孤寒的劍。」',
+    choices: [
+      {
+        text: '收下紙包。',
+        out: { text: '他把靈石推到你面前：「我就知道。」\n\n你把紙包收進袖子裡。紙包很輕，輕得像什麼也沒有。', effects: [['flag', 'xie_ally'], ['ls', 500], ['mind', -8], ['favor', 'xie_xuanlang', 10], ['log', '收下了謝玄朗的紙包：九月十五，林塵的那杯茶']] },
+      },
+      {
+        text: '「這件事，我不幹。」',
+        out: { text: '他的笑容一點也沒變：「那就當我沒說。」\n\n你走出謝府的時候，覺得背後有人在看你。', effects: [['flag', 'xie_refused'], ['flag', 'xie_trap_known'], ['mind', 3], ['favor', 'xie_xuanlang', -10]] },
+      },
+    ],
   },
   {
     id: 'bc_mouth',

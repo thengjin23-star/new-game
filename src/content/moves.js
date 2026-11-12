@@ -341,6 +341,8 @@ export const BEAST_MOVES = {
   // stand (smash); the stone guards called up
   halberd: { shape: 'fan', reach: 84, arc: 2.4, windup: 0.7, recover: 0.9, cd: 3.6, mult: 1.6, lunge: 8, fx: 'cut' },
   starbeam: { shape: 'shot', min: 60, max: 340, range: 380, windup: 0.9, speed: 720, width: 26, recover: 0.6, cd: 5, mult: 1.45, fx: 'star' },
+  // (1.1) 謝家老祖 calls up his house's men
+  xie_call: { shape: 'call', windup: 1.1, recover: 0.7, cd: 22, first: 6, fx: 'howl', call: { kind: 'xie_guard', n: 2, max: 2, share: 0.3, line: '謝家老祖一拂袖。兩個謝家的護衛，從石頭後面跳了出來。' } },
   stonecall: { shape: 'call', windup: 1.1, recover: 0.7, cd: 22, first: 6, fx: 'howl', call: { kind: 'stone_puppet', n: 2, max: 2, share: 0.3, line: '石翁仲把戟往地上一頓。兩旁的石傀，眼裡亮起了光。' } },
   // ── 0.23 北原 ──
   // 冰原狼: a bite that leaves the cold in you (slow: for a moment your legs will not answer)

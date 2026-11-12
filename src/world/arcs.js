@@ -27,6 +27,8 @@ export const WINDOWS = {
   duelNotice: dayAt(8, 6),
   duel: dayAt(8, 9, 15),
   shenLetterLate: dayAt(10, 3),
+  // (1.1) 龍脊嶺's quarrel: settled in 謝家's favour by 3021, if nobody takes a hand in it
+  veinDone: dayAt(9, 1),
 };
 
 const BEATS = [
@@ -302,6 +304,17 @@ function zhongzhouYears(s) {
     f.duel_notice = true;
     rumor(s, '九月十五，天驕榜第一的葉孤寒和第三的林塵，要在天劍宗山門外立生死狀論劍。牽頭的是謝家。', 'arc', 'lin_chen');
     schedule(s, 'zz_duel', WINDOWS.duel - s.day, WINDOWS.duel - s.day, { node: 'tianjian', expire: 0 });
+  }
+  // 龍脊嶺: if nobody takes a hand in it, 謝家 has the vein by 3021
+  if (s.day >= WINDOWS.veinDone && !f.lg_side) {
+    f.lg_side = 'xie_default';
+    rumor(s, '龍脊嶺的官司判下來了：靈脈歸謝家。上官家的礦工連夜搬下了山。', 'arc');
+  }
+  // (played both houses: by then they have compared their books)
+  if (s.day >= WINDOWS.veinDone && f.lg_side === 'both' && !f.lg_both_found) {
+    f.lg_both_found = true;
+    for (const id of ['shangguan_jin', 'xie_xuanlang']) if (s.npcs[id]) s.npcs[id].favor -= 20;
+    rumor(s, '龍脊嶺的官司打到第五年，謝家和上官家對了一回帳，才發現兩家請的是同一個散修。', 'arc');
   }
   if (s.day >= WINDOWS.shenLetterLate && f.shen_fall && !f.shen_letter_given && !f.shen_letter_late && shen?.alive) {
     f.shen_letter_late = true;

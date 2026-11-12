@@ -55,6 +55,9 @@ const PEOPLE = {
   // 西漠: 沙盜 in sand-colored cloth, the faces veiled; 禿鷲 big, black-turbaned, a great curved blade (the veil torn off when he goes all in)
   sand_bandit: { look: { robe: [138, 112, 78], trim: [96, 58, 40], hair: 'turban', wrapCol: [196, 180, 146], veil: true, short: true, skin: [196, 156, 116] }, weapon: 'sabre' },
   vulture: { look: { robe: [58, 46, 40], trim: [170, 130, 60], hair: 'turban', wrapCol: [44, 40, 38], veil: true, big: true, skin: [184, 140, 100] }, weapon: 'sabre', blade: 22, unveil: true },
+  // (1.1) 謝家's livery, deep blue and gold: the guards, and the old man three hundred years in seclusion
+  xie_guard: { look: { robe: [44, 52, 76], trim: [176, 142, 70], hair: 'bun' }, weapon: 'sabre' },
+  xie_ancestor: { look: { robe: [36, 42, 64], trim: [196, 160, 80], hair: 'topknot', beard: true, big: true }, weapon: 'qinggang_sword', blade: 21 },
 };
 
 /** (0.26) The 心魔 and its shadows: you, as you are drawn, holding what you hold — washed in ink. */

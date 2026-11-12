@@ -1721,10 +1721,12 @@ const REED_HIDE = recolor((r, g, b) => (r > 200 || r > g * 2 ? null : [r * 0.8, 
 const MOSS_HIDE = recolor((r, g, b) => (g > 200 ? null : [r * 0.82, g * 1.08 + 8, b * 0.8]));
 const DARK_FUR = recolor((r, g, b) => (r > g * 2 || r > 245 ? null : b > r + 30 ? [118, 108, 96] : [r * 0.34 + 8, g * 0.28 + 6, b * 0.22 + 4]));
 const MARSH_HIDE = recolor((r, g, b) => (r > 230 && b < 100 ? null : [b * 0.62 + 6, g * 0.82, r * 0.6 + 4]));
+// (1.1) the mine's centipedes: shells gone to blue glass
+const CRYSTAL_HIDE = recolor((r, g, b) => (r > 200 && g > 200 ? null : [r * 0.55 + 30, g * 0.8 + 40, b * 0.6 + 120]));
 
 export function drawBigBeast(ctx, kind, { t = 0, face = 1, moving = false } = {}) {
   ctx.save();
-  groundShadow(ctx, 0, 0, { demon_wolf: 15, wolf_king: 22, python: 24, bear: 22, skeleton: 12, fire_tiger: 25, shanxiao: 12, mumei: 12, xuan_turtle: 27, spider: 14, toad: 16, toad_king: 25, swarm: 12, gu_mother: 30, scorpion: 15, sand_wolf: 16, mummy: 8, kuchan: 13, sand_jiao: 30, stone_puppet: 11, stone_general: 19, ice_wolf: 16, bailang_king: 25, snow_leopard: 16, ice_silkworm: 13, silk_queen: 26, snow_ape: 15, ape_king: 21, snow_wraith: 8, ice_qilin: 24, reed_python: 20, wood_spirit: 16, cangwu_ape: 14, star_beast: 25, yunmeng_jiao: 35 }[kind] || 14, 3);
+  groundShadow(ctx, 0, 0, { demon_wolf: 15, wolf_king: 22, python: 24, bear: 22, skeleton: 12, fire_tiger: 25, shanxiao: 12, mumei: 12, xuan_turtle: 27, spider: 14, toad: 16, toad_king: 25, swarm: 12, gu_mother: 30, scorpion: 15, sand_wolf: 16, mummy: 8, kuchan: 13, sand_jiao: 30, stone_puppet: 11, stone_general: 19, ice_wolf: 16, bailang_king: 25, snow_leopard: 16, ice_silkworm: 13, silk_queen: 26, snow_ape: 15, ape_king: 21, snow_wraith: 8, ice_qilin: 24, reed_python: 20, wood_spirit: 16, cangwu_ape: 14, star_beast: 25, yunmeng_jiao: 35, vein_crawler: 16 }[kind] || 14, 3);
   ctx.scale(face, 1);
   switch (kind) {
     case 'demon_wolf':
@@ -1854,13 +1856,18 @@ export function drawBigBeast(ctx, kind, { t = 0, face = 1, moving = false } = {}
       ctx.scale(1.35, 1.35);
       tinted(ctx, MARSH_HIDE, () => sandJiao(ctx, t, moving));
       break;
+    // 1.1: the mine's crystal centipedes (the 蠱母's shape, small, its shell gone to blue glass)
+    case 'vein_crawler':
+      ctx.scale(0.62, 0.62);
+      tinted(ctx, CRYSTAL_HIDE, () => centipede(ctx, t, moving));
+      break;
     default:
       break;
   }
   ctx.restore();
 }
 
-export const BIG_BEASTS = new Set(['demon_wolf', 'wolf_king', 'python', 'bear', 'skeleton', 'fire_tiger', 'shanxiao', 'mumei', 'xuan_turtle', 'spider', 'toad', 'toad_king', 'swarm', 'gu_mother', 'scorpion', 'sand_wolf', 'mummy', 'kuchan', 'sand_jiao', 'stone_puppet', 'stone_general', 'ice_wolf', 'bailang_king', 'snow_leopard', 'ice_silkworm', 'silk_queen', 'snow_ape', 'ape_king', 'snow_wraith', 'ice_qilin', 'reed_python', 'wood_spirit', 'cangwu_ape', 'star_beast', 'yunmeng_jiao']);
+export const BIG_BEASTS = new Set(['demon_wolf', 'wolf_king', 'python', 'bear', 'skeleton', 'fire_tiger', 'shanxiao', 'mumei', 'xuan_turtle', 'spider', 'toad', 'toad_king', 'swarm', 'gu_mother', 'scorpion', 'sand_wolf', 'mummy', 'kuchan', 'sand_jiao', 'stone_puppet', 'stone_general', 'ice_wolf', 'bailang_king', 'snow_leopard', 'ice_silkworm', 'silk_queen', 'snow_ape', 'ape_king', 'snow_wraith', 'ice_qilin', 'reed_python', 'wood_spirit', 'cangwu_ape', 'star_beast', 'yunmeng_jiao', 'vein_crawler']);
 
 /** Props that flicker or sway (repainted as they go); the rest are still. */
 export const LIVE_PROPS = new Set(['campfire', 'ginseng', 'wisp']);
