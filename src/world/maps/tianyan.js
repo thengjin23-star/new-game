@@ -397,7 +397,7 @@ const POIS = [
   { id: 'wc_market', region: 'waicheng', x: 2400, y: 3380, name: '坊市', verb: '逛逛', crowd: (s) => s.tod >= 7 && s.tod < 20, text: '坊市裡人擠著人，賣什麼的都有：符、丹、法器、妖獸的皮、不知道哪一朝的古錢。叫賣的口音天南地北。' },
   { id: 'wc_tavern', region: 'waicheng', x: 2900, y: 3455, name: '醉仙樓', verb: '打聽', action: 'inquire', glow: (s) => s.tod >= 17 || s.tod < 2 },
   { id: 'wc_inn', region: 'waicheng', x: 1820, y: 3452, name: '客棧', verb: '歇腳', rest: true, text: '客棧的掌櫃說：「京城的店錢，臨江城的兩倍。不還價。」' },
-  { id: 'wc_temple', region: 'waicheng', x: 3500, y: 3455, name: '天衍觀', verb: '查看', text: '天衍觀的正殿裡供的不是三清，是一座白玉雕的小山，形如一指。香客跪在山前，求的都是同一件事：命好。' },
+  { id: 'wc_temple', region: 'waicheng', x: 3500, y: 3455, name: '天衍觀', verb: '看看', action: 'shop', shop: 'ty_temple', text: '天衍觀的正殿裡供的不是三清，是一座白玉雕的小山，形如一指。香客跪在山前，求的都是同一件事：命好。' },
   { id: 'wc_lane', region: 'waicheng', x: 1780, y: 3690, name: '散修巷', verb: '查看', text: '京城也有散修巷，比臨江城的更窄、更擠。巷口的牆上寫著一行字，被人刷了三遍白灰，還是看得出來：「命不由天」。' },
   { id: 'wc_plaza', region: 'waicheng', x: 2700, y: 2560, name: '午門外', verb: '查看', text: '外城北門外是一片石板廣場，廣場盡頭，御階順著山壁一直往上，通到雲裡的午門。下馬碑上刻著：「文武官員至此下馬」。' },
   // 皇城

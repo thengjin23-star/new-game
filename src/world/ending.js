@@ -98,6 +98,31 @@ export function chapterSystem(s) {
   };
 }
 
+/**
+ * (1.2) 命簿全頁 (系統六級): whose line you have changed — the ink on it still wet. Each named person, and
+ * what about them is not as the 命簿 first wrote it.
+ */
+const WET = {
+  song_he: (s) => f(s, 'songhe_saved'),
+  lin_chen: (s) => f(s, 'lin_ruined') || f(s, 'lin_warned') || f(s, 'roster_lin'),
+  shen_qingge: (s) => (f(s, 'shen_letter_given') && f(s, 'lin_warned')) || f(s, 'shen_zhuji') || f(s, 'shen_own_path'),
+  sun_zg: (s) => f(s, 'sun_to_baicao') || f(s, 'sun_master_done'),
+  su_qingyao: (s) => f(s, 'su_farewell') || f(s, 'su_zz_ally') || f(s, 'su_archive'),
+  hu_sanniang: (s) => f(s, 'fox_betrayed'),
+  ye_guhan: (s) => s.vars?.duel === 'draw' || s.vars?.duel === 'lin_dead',
+  zhao_hu: (s) => f(s, 'zhao_changed'),
+};
+
+/** Is this person's line one you have changed (命簿全頁, 系統六級)? */
+export function fateWet(s, id) {
+  return s.sys.lv >= 6 && !!s.npcs[id]?.named && !!WET[id]?.(s);
+}
+
+/** How many lines you have changed (for the system page). */
+export function wetCount(s) {
+  return Object.keys(WET).filter((id) => s.npcs[id]?.met && WET[id](s)).length;
+}
+
 /** 命簿殘影 (系統五級): the next stroke the 命簿 has written for each of the named — as it stands now. */
 export function fateLine(s, id) {
   if (s.sys.lv < 5) return null;

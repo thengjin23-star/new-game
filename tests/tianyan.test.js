@@ -15,6 +15,10 @@ import { findPath, regionIdAt, regionAt } from '../src/world/terrain.js';
 import { WINDOWS } from '../src/world/arcs.js';
 import { bloodMoon } from '../src/world/weather.js';
 import { fragmentText } from '../src/content/fragments.js';
+import { levelFor, sysGain, SYS_FEATURES } from '../src/world/system.js';
+import { fateWet, wetCount } from '../src/world/ending.js';
+import { rosterOpen, rosterOf, planBlocked, setPlan, rosterSummary, helpersOf } from '../src/world/roster.js';
+import { SHOPS, ITEMS } from '../src/content/items.js';
 import { heightAt } from '../src/world/height.js';
 import { flyBlocked } from '../src/world/air.js';
 import { FACTIONS } from '../src/world/factions.js';
@@ -429,6 +433,107 @@ test('no papers in the capital: the 京兆府\'s men ask when you come into the 
     pickText(s, '補辦');
     finish(s);
     assert.ok(s.player.items.tongxing_ling && !s.flags.ty_nopass);
+  } finally {
+    useMap('donghuang');
+  }
+});
+
+// ── 系統六級 and the 血月名冊 ──
+
+test('系統六級 at 1600 見聞: 玄微 remembers his forty years in 中州; 命簿全頁 marks the lines you have changed, the ink still wet', () => {
+  const s = fresh(621);
+  s.sys.bound = true;
+  s.flags.sys_awakened = true;
+  assert.equal(levelFor(1599), 5);
+  assert.equal(levelFor(1600), 6);
+  assert.ok(SYS_FEATURES.some((x) => x.lv === 6 && x.name === '命簿全頁') && SYS_FEATURES.some((x) => x.lv === 6 && x.name === '朱筆預警'));
+  Object.assign(s.sys, { exp: 1590, lv: 5 });
+  sysGain(s, 20, null);
+  assert.equal(s.sys.lv, 6);
+  assert.ok(s.sched.some((x) => x.ev === 'sys_six'));
+  s.npcs.song_he.met = true;
+  assert.ok(!fateWet(s, 'song_he'), 'his line as it was written');
+  s.flags.songhe_saved = true;
+  assert.ok(fateWet(s, 'song_he'), 'saved: the line is yours');
+  assert.ok(wetCount(s) >= 1);
+  s.sys.lv = 5;
+  assert.ok(!fateWet(s, 'song_he'), 'a 五級 system does not see it');
+});
+
+test('the 血月名冊 opens with the truth: a plan for each of 東荒\'s people — each needing something real (the boat and their will, a shelter kept, a charm, a promise)', () => {
+  const s = fresh(622);
+  assert.ok(!rosterOpen(s));
+  s.flags.ty_roster = true;
+  assert.ok(rosterOpen(s));
+  const list = rosterOf(s);
+  assert.ok(['wang_er', 'sun_zg', 'song_he', 'hu_sanniang', 'shen_qingge', 'zhao_hu', 'qian_banxian'].every((id) => list.some((r) => r.id === id)));
+  assert.match(planBlocked(s, 'qian_banxian', 'evacuate'), /樓船/);
+  s.flags.roster_boat = true;
+  assert.equal(planBlocked(s, 'qian_banxian', 'evacuate'), null, '錢半仙 is the first on the boat');
+  assert.equal(planBlocked(s, 'wang_er', 'evacuate'), '不肯走', '王二: my home is here');
+  assert.match(rosterOf(s).find((r) => r.id === 'wang_er').refuse, /我的家在這裡/);
+  assert.equal(setPlan(s, 'qian_banxian', 'evacuate'), null);
+  assert.equal(s.vars.roster.qian_banxian, 'evacuate');
+  // 清虛觀 is kept by 松鶴 while he lives; with him gone, by one who has promised to watch 青石鎮
+  s.npcs.song_he.alive = false;
+  assert.match(planBlocked(s, 'wang_er', 'qingxu'), /沒有人守/);
+  s.flags.roster_lin = true;
+  assert.equal(planBlocked(s, 'wang_er', 'qingxu'), null);
+  // a charm is given when it is written, and given back if you change your mind
+  assert.match(planBlocked(s, 'zhao_hu', 'charm'), /護身符/);
+  s.player.items.hushen_fu = 1;
+  assert.equal(setPlan(s, 'zhao_hu', 'charm'), null);
+  assert.ok(!s.player.items.hushen_fu);
+  assert.equal(setPlan(s, 'zhao_hu', null), null);
+  assert.equal(s.player.items.hushen_fu, 1);
+  // each takes only so many
+  for (const id of ['wang_er', 'sun_zg', 'zhao_hu']) assert.equal(setPlan(s, id, 'lin'), null);
+  assert.equal(planBlocked(s, 'shen_qingge', 'lin'), '人已經滿了');
+  assert.equal(rosterSummary(s).done, 4);
+  // the dead are off the page
+  assert.ok(!rosterOf(s).find((r) => r.id === 'song_he').options.length);
+  // it keeps
+  const t = SV.migrate(SV.parseSave(SV.serialize(s)));
+  assert.deepEqual(t.vars.roster, s.vars.roster);
+});
+
+test('those who can say yes: 上官瑾 lends the 樓船 to one she owes; 林塵 goes home for his 玉佩\'s favour; 葉孤寒 for the founder\'s rule; 蕭七 for the 散修; 胡三娘 hides three on her hill', () => {
+  const s = over(623, 9 * 360 + 60, { ty_roster: true, sg_met: true, sg_boat_owed: true, lin_zz: true, tianjian_guest: true, tj_ancestors_seen: true });
+  try {
+    A.visit(s, 'shangguan_jin', { near: true });
+    assert.equal(s.pending?.id, 'roster_boat');
+    pickText(s, '借我樓船');
+    finish(s);
+    assert.ok(s.flags.roster_boat);
+    Object.assign(s.npcs.lin_chen, { alive: true, loc: 'shangguan', met: true });
+    s.player.items.lin_jade = 1;
+    A.visit(s, 'lin_chen', { near: true });
+    assert.equal(s.pending?.id, 'roster_lin');
+    pickText(s, '玉佩');
+    finish(s);
+    assert.ok(s.flags.roster_lin && !s.player.items.lin_jade, 'the favour asked, the jade given back');
+    Object.assign(s.npcs.ye_guhan, { alive: true, met: true });
+    A.visit(s, 'ye_guhan', { near: true });
+    assert.equal(s.pending?.id, 'roster_tj');
+    pickText(s, '劍不入鞘');
+    finish(s);
+    assert.ok(s.flags.roster_tj);
+    Object.assign(s.npcs.xiao_qi, { alive: true, met: true });
+    s.player.ls = 500;
+    A.visit(s, 'xiao_qi', { near: true });
+    assert.equal(s.pending?.id, 'roster_xiao');
+    pickText(s, '我出錢');
+    finish(s);
+    assert.ok(s.flags.roster_xiao);
+    Object.assign(s.npcs.hu_sanniang, { alive: true, met: true });
+    A.visit(s, 'hu_sanniang', { near: true });
+    assert.equal(s.pending?.id, 'roster_fox');
+    pickText(s, '你護著');
+    finish(s);
+    assert.ok(s.flags.roster_fox);
+    assert.ok(helpersOf(s).every((x) => x.yes || x.name === '清虛觀'));
+    // 天衍觀 sells the charms
+    assert.ok(SHOPS.ty_temple.stock.includes('hushen_fu') && ITEMS.hushen_fu.price > 0);
   } finally {
     useMap('donghuang');
   }

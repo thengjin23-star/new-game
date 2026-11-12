@@ -589,6 +589,11 @@ export const ITEMS = {
     name: '通行令牌', kind: 'token', sell: 0, keep: true,
     desc: '一塊銅牌，正面鑄著「大衍」，背面刻著持牌人的名字。京師戒嚴以後，過官道關、上傳送陣，都要驗它。',
   },
+  // (1.2) 天衍觀's charm, for the 血月名冊 (world/roster.js): given to one of 東荒's people against the night
+  hushen_fu: {
+    name: '護身符', kind: 'token', price: 180, sell: 30,
+    desc: '天衍觀的黃紙符，硃砂畫的，折成三角，用紅繩繫著。觀裡的老道說能替人擋一災。擋不擋得住天上那支筆，他沒說。',
+  },
   // (1.2) 蘇清瑤's: a 欽天監 star officer's token — the papers of the capital, and the 皇城's stair (flag huangcheng_pass)
   qintian_token: {
     name: '欽天監腰牌', kind: 'token', sell: 0, keep: true,
@@ -716,6 +721,13 @@ export const SHOPS = {
     stock: ['qingfeng_sword', 'ningjin_pill', 'gold_talisman', 'wind_talisman', 'return_talisman'],
     share: () => 0.9,
   },
+  // (1.2) 天衍城: the 天衍觀, where the capital buys its luck
+  ty_temple: {
+    name: '天衍觀',
+    keeper: '觀裡的老道',
+    stock: ['hushen_fu', 'qingxin_pill', 'return_talisman', 'hide_talisman'],
+    share: (s) => tyShare(s),
+  },
   guishi: {
     name: '鬼市',
     keeper: '戴斗笠的攤主',
@@ -723,6 +735,12 @@ export const SHOPS = {
     share: (s) => zzShare(s) * 1.1,
   },
 };
+
+/** (1.2) What the capital's shops ask of you, by your standing there (world/factions.js FACTIONS.tianyan). */
+function tyShare(s) {
+  const v = s.rep?.tianyan || 0;
+  return v >= 140 ? 0.9 : v >= 70 ? 0.95 : v >= 25 ? 1 : v < -20 ? 1.2 : 1.08;
+}
 
 /** What 臨江城's shops ask of you, by your standing in the city (world/factions.js FACTIONS.linjiang). */
 function zzShare(s) {

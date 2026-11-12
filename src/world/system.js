@@ -4,7 +4,7 @@ import { schedule, isScheduled } from '../core/schedule.js';
 
 // 問道輔助系統. It grows through 見聞 (exploration), never through fighting.
 
-export const SYS_LEVELS = [0, 60, 180, 400, 800];
+export const SYS_LEVELS = [0, 60, 180, 400, 800, 1600];
 
 export const SYS_FEATURES = [
   { lv: 1, name: '預感', desc: '面臨選擇時，隱約感到吉凶。' },
@@ -19,6 +19,9 @@ export const SYS_FEATURES = [
   { lv: 4, name: '雙重替死', desc: '替死可以儲存兩次。' },
   { lv: 5, name: '命簿殘影', desc: '在「見聞 → 人物」看得見命簿上，一個人接下來的一筆。' },
   { lv: 5, name: '天機感應', desc: '推演時，先告訴你還沒找到的天機殘頁在哪裡。' },
+  // (1.2) 六級
+  { lv: 6, name: '命簿全頁', desc: '在「見聞 → 人物」看得見你改過誰的命：改過的那一行，墨跡是濕的。' },
+  { lv: 6, name: '朱筆預警', desc: '血月那一夜，朱筆落下以前，落點會早一點紅起來。' },
 ];
 
 export function levelFor(exp) {
@@ -46,6 +49,8 @@ export function sysGain(s, n, report) {
     report?.logs.push(`問道系統升至 ${s.sys.lv} 級`);
     // 五級: it remembers who it was (in a moment, when nothing else is going on)
     if (s.sys.lv === 5) awaken(s);
+    // (1.2) 六級: more of what it was — its forty years in 中州
+    if (s.sys.lv === 6 && !isScheduled(s, 'sys_six')) schedule(s, 'sys_six', 0, 1, { expire: 3600 });
   }
 }
 

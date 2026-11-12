@@ -2,7 +2,7 @@
 // days; papers at the pass — or not, and the risk of it: content/events/zhongzhou.js gd_gate), the 傳送陣
 // between 臨江城 and the 外城 (a moment, for 靈石; papers going in, none going out); the first sight of the
 // white peak the city is built round; and the 禁軍, whose sky it is.
-import { flag, has, needLs, night, alive, variant } from '../helpers.js';
+import { flag, has, needLs, night, alive, variant, favor, met } from '../helpers.js';
 import { power } from '../../core/cultivation.js';
 import { dayAt } from '../../core/calendar.js';
 import { repOf } from '../../world/factions.js';
@@ -361,6 +361,7 @@ export default [
       ]),
     choices: [
       { text: '「上一世的那一夜，你在哪裡？」', show: (s) => !flag(s, 'su_last_night'), out: { text: '「在青石鎮。」她說，「我回去找一個人。沒找到，月亮就紅了。」\n\n她低下頭，接著抄：「這一世，我在觀星台上。他們下筆的時候，總得有人在旁邊看著。」', effects: [['flag', 'su_last_night'], ['favor', 'su_qingyao', 2]] } },
+      { text: '「名單上的人……」', out: { text: '「名單在你那裡。」她說，「見聞裡的名冊。誰撤，誰躲，誰託給誰，你寫上去。」\n\n「樓船，問上官家；守青石鎮的人，問林塵；天劍宗的劍，問葉孤寒；散修，問蕭七；狐仙廟，問胡三娘。」她低下頭，「我能做的，是那一夜在觀星台上。」', effects: [['flag', 'roster_told']] } },
       { text: '陪她站一會兒。', out: { text: '你們站在屋簷下，看著峰頂的紅光。誰也沒有說話。', effects: [['favor', 'su_qingyao', 1], ['mind', 1]] } },
       { text: '走開。', out: {} },
     ],
@@ -741,5 +742,126 @@ export default [
     title: '進京',
     text: '「進京的？」茶棚老闆給你倒了一碗茶，「過了十里亭就是西門。城裡禁空——別在城上飛，禁軍的箭可不長眼。」\n\n「北邊那座白山，是玉指峰。皇城就在峰腰上。峰頂，」他往上指了指，「封了。」',
     choices: [{ text: '記下了。', out: { effects: [['discover', 'waicheng'], ['discover', 'huangcheng']] } }],
+  },
+
+  // ── 系統六級 (world/system.js sysGain): more of what it was — its forty years in 中州 ──
+  {
+    id: 'sys_six',
+    trigger: 'scheduled',
+    cond: (s) => s.sys.bound && s.sys.lv >= 6 && flag(s, 'sys_awakened') && !flag(s, 'sys_six_seen'),
+    title: '玄微',
+    text: (s) =>
+      `叮——問道系統升至六級。記憶校正……百分之三十七。\n\n這一回，玄微說話的時候，聲音不像從前那樣遠了。\n\n「我想起來了一些。」他說，「在中州的那四十年。」\n\n「我在江邊的荒山上看星，看到一隻眼睛壞了。看懂了以後，我把看星的法子教給了七個孩子。衍最小。」${
+        flag(s, 'hl_seen') ? '\n\n「你在他的棺材上，看見過我寫的字。」' : ''
+      }\n\n「我教他們看，沒有教他們改。可是看得見的人，總會想伸手。」\n\n「現在，我看得見你改過的那幾行了。」他說，「墨是濕的。那隻手抄書的時候，抄到濕的字，會停一下。」\n\n「它每停一下，就離我們近一點。」`,
+    choices: [
+      { text: '「它是誰？」', out: { text: '「我不知道。」他說，「我只知道，它少了一根指頭。」\n\n叮——解鎖：命簿全頁、朱筆預警。', effects: [['flag', 'sys_six_seen'], ['insight', 2], ['log', '問道系統升至六級：玄微想起了他在中州的四十年']] } },
+      { text: '「那就讓它來。」', out: { text: '玄微沒有回答。過了很久，「叮」了一聲。\n\n叮——解鎖：命簿全頁、朱筆預警。', effects: [['flag', 'sys_six_seen'], ['mind', 3], ['log', '問道系統升至六級：玄微想起了他在中州的四十年']] } },
+    ],
+  },
+
+  // ── 血月名冊 (world/roster.js): those who can say yes — the boat, 林塵, 天劍宗, 蕭七, 胡三娘 ──
+  {
+    id: 'roster_boat',
+    trigger: 'visit',
+    npc: 'shangguan_jin',
+    priority: 8,
+    cooldown: 2,
+    cond: (s) => flag(s, 'ty_roster') && flag(s, 'sg_met') && !flag(s, 'roster_boat'),
+    title: '上官瑾',
+    text: (s) =>
+      `你把事情跟上官瑾說了：七月十五，血月，東荒那一頁。\n\n她的算盤停了。她看了你很久。\n\n「欽天監的事，」她說，「上官家從來不沾。」${
+        flag(s, 'sg_boat_owed') || favor(s, 'shangguan_jin') >= 40 ? '\n\n她把算盤推到一邊：「可是上官家欠你一回。」' : ''
+      }`,
+    choices: [
+      {
+        text: '「借我樓船。」',
+        show: (s) => flag(s, 'sg_boat_owed') || favor(s, 'shangguan_jin') >= 40,
+        out: { text: '「七月十三，」她說，「樓船在白鶴渡靠岸，等一天一夜。能上船的，我都載。」\n\n她頓了頓：「上不了船的，我也沒辦法。」', effects: [['flag', 'roster_boat'], ['favor', 'shangguan_jin', 3], ['log', '上官瑾答應借樓船：七月十三，在白鶴渡等一天一夜']] },
+      },
+      {
+        text: '「我付錢。」（兩千塊靈石）',
+        show: (s) => !flag(s, 'sg_boat_owed') && favor(s, 'shangguan_jin') < 40,
+        need: needLs(2000),
+        out: { text: '她看著那一袋靈石，沒有伸手。過了一會兒，她把算盤撥了一下：「……七月十三，白鶴渡。樓船等一天一夜。」\n\n「錢我收下了。」她說，「不收，你會以為上官家是好人。」', effects: [['ls', -2000], ['flag', 'roster_boat'], ['log', '花兩千塊靈石，向上官瑾借了樓船：七月十三，在白鶴渡等一天一夜']] },
+      },
+      { text: '「那就算了。」', out: { text: '「上官家，記得你今天來過。」她說。' } },
+    ],
+  },
+  {
+    id: 'roster_lin',
+    trigger: 'visit',
+    npc: 'lin_chen',
+    priority: 8,
+    cooldown: 2,
+    cond: (s) => flag(s, 'ty_roster') && !flag(s, 'roster_lin') && flag(s, 'lin_zz') && alive(s, 'lin_chen'),
+    title: '林塵',
+    text: '你把事情跟林塵說了：七月十五，血月，東荒那一頁，青石鎮。\n\n他聽完，很久沒有說話。他手上那枚黑戒指，一下一下地發著燙。\n\n「青石鎮。」他終於說，「我從那裡出來的時候，發過誓，再也不回去了。」',
+    choices: [
+      {
+        text: '拿出他給你的玉佩。',
+        show: (s) => has(s, 'lin_jade'),
+        out: {
+          text: '他看著那枚刻著「塵」字的青玉，笑了一下。\n\n「我說過，憑這個，可以向我討一個人情。」他把玉佩收了回去，「七月十五，我在青石鎮。」\n\n「我的命簿上寫著，那一年，我在天劍宗的劍池邊。」他把劍背到背上，「隨它寫。」',
+          effects: [['item', 'lin_jade', -1], ['flag', 'roster_lin'], ['favor', 'lin_chen', 5], ['log', '用林塵的玉佩討了一個人情：血月那一夜，他回青石鎮']],
+        },
+      },
+      {
+        text: '「王二家的門，你也敲過。」',
+        show: (s) => !has(s, 'lin_jade') && favor(s, 'lin_chen') >= 60,
+        out: { text: '林塵低下頭，看著手上的戒指。\n\n「……七月十五，」他說，「我在青石鎮。」', effects: [['flag', 'roster_lin'], ['log', '林塵答應了：血月那一夜，他回青石鎮']] },
+      },
+      { text: '「我再想想。」', out: {} },
+    ],
+  },
+  {
+    id: 'roster_tj',
+    trigger: 'visit',
+    npc: 'ye_guhan',
+    priority: 8,
+    cooldown: 2,
+    cond: (s) => flag(s, 'ty_roster') && !flag(s, 'roster_tj') && flag(s, 'tianjian_guest') && alive(s, 'ye_guhan'),
+    title: '葉孤寒',
+    text: (s) =>
+      `你把事情跟葉孤寒說了。他沒有說話，看著劍山的山頂。${
+        flag(s, 'tj_ancestors_seen') ? '\n\n「指在一日，劍不入鞘。」他說，「祖師的話。闕老說，指，是那根手指。」' : '\n\n「天劍宗的事，宗主說了算。」他說，「宗裡分兩派。一派說，三千年了，指頭沒動過。」'
+      }`,
+    choices: [
+      {
+        text: '「劍不入鞘。」',
+        show: (s) => flag(s, 'tj_ancestors_seen') || has(s, 'duantian_sword'),
+        out: { text: '「我帶兩個師弟過江。」他說，「要護誰，你指給我。」\n\n他頓了頓：「主戰的那一派，今天多了一個人。」', effects: [['flag', 'roster_tj'], ['favor', 'ye_guhan', 5], ['log', '葉孤寒答應了：血月那一夜，天劍宗的人過江去東荒']] },
+      },
+      { text: '「我再來。」', out: {} },
+    ],
+  },
+  {
+    id: 'roster_xiao',
+    trigger: 'visit',
+    npc: 'xiao_qi',
+    priority: 8,
+    cooldown: 2,
+    cond: (s) => flag(s, 'ty_roster') && !flag(s, 'roster_xiao') && met(s, 'xiao_qi') && alive(s, 'xiao_qi'),
+    title: '蕭七',
+    text: '你把事情跟蕭七說了。他用剩下的那隻手摸了摸下巴上的鬍渣。\n\n「血月。」他說，「散修的命，從來沒人告訴我們。」',
+    choices: [
+      { text: '「鬼市的人，過江去幾個。」', show: (s) => favor(s, 'xiao_qi') >= 10, out: { text: '「兩個。」他說，「我和一個欠我錢的。」\n\n他咧嘴笑了：「別擔心，那一夜，他會比誰都賣力。」', effects: [['flag', 'roster_xiao'], ['log', '蕭七答應了：血月那一夜，鬼市的散修過江去東荒']] } },
+      { text: '「我出錢。」（三百塊靈石）', need: needLs(300), out: { text: '蕭七把靈石掂了掂，揣進懷裡：「兩個人，過江。」\n\n「散修嘛，」他說，「給錢就辦事。不給錢，也辦——只是不這麼痛快。」', effects: [['ls', -300], ['flag', 'roster_xiao'], ['log', '花三百塊靈石請了蕭七：血月那一夜，鬼市的散修過江去東荒']] } },
+      { text: '「再說。」', out: {} },
+    ],
+  },
+  {
+    id: 'roster_fox',
+    trigger: 'visit',
+    npc: 'hu_sanniang',
+    priority: 8,
+    cooldown: 2,
+    cond: (s) => flag(s, 'ty_roster') && !flag(s, 'roster_fox') && alive(s, 'hu_sanniang') && !flag(s, 'fox_betrayed'),
+    title: '胡三娘',
+    text: '你把事情跟胡三娘說了。她聽完，眼角那顆紅痣跳了一下。\n\n「三百年了，」她說，「我這座山，還沒讓那支筆碰過。」',
+    choices: [
+      { text: '「躲到你山上的人，你護著？」', out: { text: '「護著。」她說，「三個。多了，我的山也藏不住。」\n\n她看著你，笑了：「你呢？你那一夜，在哪裡？」', effects: [['flag', 'roster_fox'], ['favor', 'hu_sanniang', 3], ['log', '胡三娘答應了：血月那一夜，狐仙廟護著三個人']] } },
+      { text: '「再說。」', out: {} },
+    ],
   },
 ];

@@ -43,6 +43,7 @@ import { pt, rectOf, watchOrient, turnedScrolling } from '../platform/orient.js'
 import * as SND from '../audio/director.js';
 import { settings as soundSettings, setSettings as setSound } from '../audio/engine.js';
 import * as GUIDE from '../world/guide.js';
+import * as ROSTER from '../world/roster.js';
 import { FEATS, checkFeats } from '../world/feats.js';
 import { GUIDE as HOWTO } from '../content/guide.js';
 import { BEAST_NOTES, NOT_IN_BOOK } from '../content/codex.js';
@@ -2576,6 +2577,8 @@ export function startApp(root, { speed = 1, view = null } = {}) {
   function panelLog() {
     const subs = [
       ['stories', '故事'],
+      // (1.2) the 血月名冊, once you know what the night is for (near the front: it is what there is to do)
+      ...(ROSTER.rosterOpen(ui.s) ? [['roster', '名冊']] : []),
       ['rumors', '傳聞'],
       ['people', '人物'],
       ['factions', '勢力'],
@@ -2585,7 +2588,8 @@ export function startApp(root, { speed = 1, view = null } = {}) {
       ['life', '生平'],
       ['frags', '史冊'],
     ];
-    const body = { stories: logStories, rumors: logRumors, people: logPeople, factions: logFactions, events: logEvents, places: logPlaces, codex: logCodex, life: logLife, frags: logFrags }[ui.logTab]();
+    if (ui.logTab === 'roster' && !ROSTER.rosterOpen(ui.s)) ui.logTab = 'stories';
+    const body = { stories: logStories, rumors: logRumors, people: logPeople, factions: logFactions, events: logEvents, places: logPlaces, codex: logCodex, life: logLife, frags: logFrags, roster: logRoster }[ui.logTab]();
     return h('div.logpage',
       h('div.subtabs', subs.map(([id, label]) => h('button.subtab' + (ui.logTab === id ? '.on' : ''), { onclick: () => { ui.logTab = id; renderLayer(); } }, label))),
       body,
@@ -2656,6 +2660,8 @@ export function startApp(root, { speed = 1, view = null } = {}) {
           // (0.25) what you have come to know of them since
           n.named && pastOf(s, n.id).length ? h('ul.past', pastOf(s, n.id).map((line) => h('li', line))) : null,
           END.fateLine(s, n.id) ? h('p.fate', END.fateLine(s, n.id)) : null,
+          // (1.2) 命簿全頁: a line you have changed, its ink still wet
+          END.fateWet(s, n.id) && !/墨跡還是濕的/.test(END.fateLine(s, n.id) || '') ? h('p.fate.wet', '命簿全頁：這一行，是你改的。墨跡還是濕的。') : null,
         ),
       )));
   }
@@ -2753,6 +2759,36 @@ export function startApp(root, { speed = 1, view = null } = {}) {
   }
 
   /** (0.25) 史冊: what the steles and the ruins say happened, by era — then the 天機殘頁, word for word. */
+  /**
+   * (1.2) 血月名冊 (world/roster.js): 東荒's people, and what is written for each against the night — the
+   * plans that can be made for them now (a tap writes one, a tap on it again takes it off), and who has said yes.
+   */
+  function logRoster() {
+    const s = ui.s;
+    const left = ROSTER.daysLeft(s);
+    const sum = ROSTER.rosterSummary(s);
+    const list = ROSTER.rosterOf(s);
+    return h('div.roster',
+      h('p.muted.pad', left > 0 ? `天元三千零二十二年七月十五，血月。還有 ${left} 天。東荒的 ${sum.of} 個人裡，安排了 ${sum.done} 個。` : '血月那一夜，已經過去了。名冊上寫的，還在。'),
+      h('ul.people-list.roster-list', list.map((r) =>
+        h('li' + (r.alive && !r.away ? '' : '.dead'),
+          seal(r.name[0], r.alive ? '' : 'grey'),
+          h('div',
+            h('div.person-head', h('b', r.name), h('span.muted.small', !r.alive ? '已經不在了' : r.away ? '不在東荒' : r.plan ? r.planName : '還沒安排')),
+            r.plan ? h('p.small', ROSTER.PLANS.find(([id]) => id === r.plan)[2]) : null,
+            r.refuse && s.flags.roster_boat ? h('p.small.muted', r.refuse) : null,
+            r.options.length
+              ? h('div.roster-opts', r.options.filter((o) => !o.why || r.plan === o.id).map((o) =>
+                h('button.btn.small' + (r.plan === o.id ? '.primary' : ''), { onclick: () => act((x) => ROSTER.setPlan(x, r.id, r.plan === o.id ? null : o.id)) }, r.plan === o.id ? `${o.name}（取消）` : o.name)))
+              : null,
+          ),
+        ))),
+      h('h3.story-group', '誰答應了'),
+      h('ul.roster-helpers', ROSTER.helpersOf(s).map((x) => h('li.small', h('b', x.name), '：', x.yes ? `${x.who}答應了。` : `還沒有——去問${x.who}。`))),
+      h('p.muted.small.pad', '護身符在天衍城的天衍觀。名冊上寫的，那一夜見分曉。'),
+    );
+  }
+
   function logFrags() {
     const s = ui.s;
     const { have, total } = annalsOf(s);
