@@ -58,7 +58,8 @@ test('孫掌櫃: what happened thirty years ago; his master\'s grave by 鏡湖 a
   assert.ok(s.flags.sun_out && s.npcs.sun_zg.stage >= 2, 'out of seclusion, a layer up');
   assert.ok(s.rumors.some((r) => r.text.includes('孫掌櫃出關')));
   const t = thread(s, 'sun');
-  assert.ok(t.done && t.steps.length === t.of);
+  // (1.1: the thread goes on, over the river — his master was from 中州)
+  assert.ok(!t.done && t.steps.length === t.of - 1 && /中州/.test(t.next));
 });
 
 test('錢半仙: two tales from where nobody in 東荒 has been become his new stories; then he tells his own — the sword light he looked at once, fifty years ago', () => {

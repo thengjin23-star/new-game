@@ -65,9 +65,21 @@ export const STORIES = [
       ['測出雷靈根，入青雲宗', (s) => heard(s, '雷靈根')],
       ['三年之約', (s) => !!s.flags.pact_seen || heard(s, '三年之約')],
       ['去了中州', (s) => heard(s, '林塵離開東荒')],
+      // (1.1) over the river
+      ['上官家的客卿', f('lin_zz_met')],
+      ['「別喝謝家的東西」', f('lin_warned')],
+      ['天劍宗山門外的生死約戰', f('duel_done')],
     ],
-    end: (s) => (heard(s, '林塵離開東荒') ? '他走了，走進了他自己的故事。' : null),
-    next: () => null,
+    end: (s) =>
+      s.flags.lin_dead ? '他死在天劍宗山門外的台上。'
+        : s.vars.duel === 'draw' ? '第一戰，平。他說，下一回在劍池邊上打。'
+          : s.vars.duel === 'ye' ? '第一戰，他輸了。葉孤寒沒有殺他。'
+            : null,
+    next: (s) =>
+      !s.flags.lin_zz ? null
+        : !s.flags.zhongzhou_crossed ? '他在中州，上官家請他當了客卿。'
+          : !s.flags.lin_zz_met ? '上官商棧後頭的空地上，常有人在練劍。'
+            : s.flags.duel_notice && !s.flags.lin_warned ? '九月十五，謝家牽頭的那一場。他不知道那杯茶裡有什麼。' : null,
   },
   {
     id: 'shen', group: '人物', title: '沈清歌',
@@ -78,9 +90,20 @@ export const STORIES = [
       ['老槐樹下，說起那一天', f('shen_talked')],
       ['「我不做誰的墊腳石」', f('shen_own_path')],
       ['自己築了基', f('shen_zhuji')],
+      // (1.1) 沈家 eaten by 謝家; a letter for 林塵
+      ['沈家敗落', f('shen_fall')],
+      ['託你帶過江的信', f('shen_letter_offered')],
+      ['信送到了', f('shen_letter_given')],
     ],
-    end: (s) => (s.flags.shen_zhuji ? '她自己寫了自己的那一頁。' : s.flags.shen_talked && !s.flags.shen_own_path ? '她走了，沒有回頭。' : null),
-    next: (s) => (!s.flags.shen_talked && s.day >= WINDOWS.pact[1] && !s.flags.lin_ruined ? '三年之約以後，她夜裡常到青石鎮的老槐樹下坐一坐。' : null),
+    end: (s) =>
+      s.flags.shen_letter_given && s.flags.lin_warned ? '那封信，沒有遲。'
+        : s.flags.shen_letter_late ? '那封信，遲了三年。'
+          : s.flags.shen_zhuji && !s.flags.shen_fall ? '她自己寫了自己的那一頁。'
+            : s.flags.shen_talked && !s.flags.shen_own_path && !s.flags.shen_fall ? '她走了，沒有回頭。' : null,
+    next: (s) =>
+      s.flags.shen_fall && !s.flags.shen_letter_offered && !s.flags.duel_done ? '沈家敗落了。她有話，要託人帶過江。'
+        : s.player.items.shen_letter > 0 ? '把信交給中州上官商棧的林塵。'
+          : !s.flags.shen_talked && s.day >= WINDOWS.pact[1] && !s.flags.lin_ruined ? '三年之約以後，她夜裡常到青石鎮的老槐樹下坐一坐。' : null,
   },
   {
     id: 'songhe', group: '人物', title: '松鶴道人',
@@ -151,13 +174,16 @@ export const STORIES = [
       ['鏡湖邊的墳', f('ge_letter_found')],
       ['師父的字條', f('sun_master_done')],
       ['出關', f('sun_out')],
+      // (1.1) his master's sister writes from 百草谷
+      ['師門的信', f('sun_to_baicao')],
     ],
-    end: (s) => (s.flags.sun_out ? '三十年後，他又往前走了一步。' : null),
+    end: (s) => (s.flags.sun_to_baicao ? '三十年後，他又往前走了一步。再過幾年，他要自己關了回春堂，去中州的百草谷。' : null),
     next: (s) =>
       !s.flags.sun_past ? '他好像還有話沒說。（交情再深一點）'
         : !s.flags.ge_letter_found ? '到鏡湖邊的柳樹底下，替他給葛老上一炷香。'
           : !s.flags.sun_master_done ? '把葛老的字條交給孫掌櫃。'
-            : !s.flags.sun_out ? '他在閉關。過幾個月再看。' : null,
+            : !s.flags.sun_out ? '他在閉關。過幾個月再看。'
+            : s.player.items.ge_invite > 0 ? '把葛雲蘅的信交給他。' : '他的師父葛老，是從中州來的。《葛氏丹經》，也許有人認得。',
   },
   {
     id: 'banxian', group: '人物', title: '錢半仙',
@@ -382,9 +408,53 @@ export const STORIES = [
       ['門規碑：指在一日，劍不入鞘', f('tj_motto_read')],
       ['山門外的葉孤寒', f('ye_zz_met')],
       ['「改天，我帶你上去看一樣東西」', f('ye_promise')],
+      // (1.1) up the steps
+      ['掛名的客卿', f('tianjian_guest')],
+      ['祖師堂：指，是那根手指', f('tj_ancestors_seen')],
+      ['劍池：斷天', f('duantian_forged')],
     ],
-    end: () => null,
-    next: (s) => (!s.flags.tj_motto_read ? '看看山門邊的門規碑。' : !s.flags.ye_zz_met ? '山門外，常有個背劍的年輕人。' : s.flags.ye_promise ? '他說，還不是時候。' : null),
+    end: (s) => (s.flags.duantian_forged ? '古劍接回來了。孤峰上的那一劍，你也學會了。' : null),
+    next: (s) =>
+      !s.flags.tj_motto_read ? '看看山門邊的門規碑。'
+        : !s.flags.ye_zz_met ? '山門外，常有個背劍的年輕人。'
+          : !s.flags.tianjian_guest ? (s.flags.ye_promise && !(s.flags.sword_stele_read && s.player.items.broken_sword > 0) ? '他要帶你上去看的東西，和古戰場的劍冢碑、那截古劍殘片有關。' : s.flags.ye_promise ? '帶著古劍殘片，去山門外找葉孤寒。' : '金丹以後，過了守門師兄的劍，可以掛名做客卿。')
+            : !s.flags.tj_ancestors_seen ? '祖師堂不見外人，除非有人帶著師祖的劍來。'
+              : s.player.items.broken_sword > 0 ? '把古劍殘片帶到劍池。' : null,
+  },
+  {
+    id: 'zz_vein', group: '中州', title: '龍脊嶺之爭',
+    start: (s) => !!(s.flags.lg_job_sg || s.flags.lg_job_xie || s.flags.lg_side || s.flags.sg_longji),
+    steps: [
+      ['兩家爭一條靈脈', (s) => !!(s.flags.sg_longji || s.flags.lg_job_sg || s.flags.lg_job_xie)],
+      ['上官瑾的請託', f('lg_job_sg')],
+      ['謝玄朗的四百靈石', f('lg_job_xie')],
+      ['礦底的靈眼', (s) => !!(s.flags.lg_clear_sg || s.flags.lg_clear_xie || s.flags.lg_took_marrow || s.flags.lg_side)],
+      ['出關的謝家老祖', f('xie_ancestor_beaten')],
+    ],
+    end: (s) =>
+      ({
+        shangguan: '官司上官家贏了。上官家的樓船，欠你一回。',
+        xie: '你替謝家把上官家的人趕下了山。',
+        self: '靈髓在你懷裡。兩家誰也沒拿到。',
+        both: s.flags.lg_both_found ? '兩家對了帳，才知道請的是同一個人。' : '兩邊都以為你是自己人。',
+        none: '兩邊都看穿了你。',
+        xie_default: '沒有人插手，官司判給了謝家。',
+      })[s.flags.lg_side] || null,
+    next: (s) => (s.flags.lg_clear_sg ? '回上官商棧，告訴上官瑾。' : s.flags.lg_clear_xie ? '去找謝玄朗領賞。' : '龍脊嶺的礦口，封條撕開過。'),
+  },
+  {
+    id: 'zz_baicao', group: '中州', title: '百草谷',
+    start: met('ge_yunheng'),
+    steps: [
+      ['百草谷的谷主', met('ge_yunheng')],
+      ['她的哥哥', (s) => !!(s.flags.ge_asked || s.flags.ge_book_known)],
+      ['《葛氏丹經》回到了百草谷', f('ge_book_known')],
+      ['捎給孫長春的信', f('sun_to_baicao')],
+    ],
+    end: (s) => (s.flags.sun_to_baicao ? '回春堂的門，他打算自己關。' : null),
+    next: (s) =>
+      !s.flags.ge_book_known ? (s.player.items.ge_danjing > 0 ? '把《葛氏丹經》給她看。' : '她哥哥的丹經，在東荒回春堂的孫掌櫃那裡。')
+        : s.player.items.ge_invite > 0 ? '把信交給東荒回春堂的孫掌櫃。' : null,
   },
   {
     id: 'zz_xiaoqi', group: '中州', title: '鬼市的蕭七',

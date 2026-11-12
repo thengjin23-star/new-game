@@ -128,6 +128,11 @@ function zhongzhouGoal(s) {
   // (1.1) 沈清歌's letter; the 生死約戰's day; 葛老's book back to his sister
   if (s.player.items.shen_letter > 0 && !f.shen_letter_given && s.npcs.lin_chen?.alive) return { key: 'zz:letter2', text: '上官商棧：把信交給林塵', why: '沈清歌說：別讓他喝謝家的東西。' };
   if (s.player.items.ge_danjing > 0 && !f.ge_book_known && n.baicao?.known) return { key: 'zz:ge', text: '百草谷：葛雲蘅', why: '百草谷的谷主姓葛。孫掌櫃的師父葛老，是從中州來的。' };
+  // (1.1) 龍脊嶺: done what was asked, go and say so; 天劍宗: up the steps with the shard, and to the pool
+  if (f.lg_clear_sg && !f.lg_side) return { key: 'zz:vein', text: '上官商棧：告訴上官瑾', why: '謝家的人從礦底出來了。到官府替上官家作個證。' };
+  if (f.lg_clear_xie && !f.lg_side) return { key: 'zz:vein', text: '臨江城：找謝玄朗領賞', why: '上官家的礦工下山了。' };
+  if (f.ye_promise && f.sword_stele_read && s.player.items.broken_sword > 0 && !f.tj_ancestors_seen && s.npcs.ye_guhan?.alive) return { key: 'zz:ye2', text: '天劍宗山門：葉孤寒', why: '他說過，改天帶你上去看一樣東西。你讀過劍冢碑，懷裡有古劍殘片。' };
+  if (f.tj_ancestors_seen && s.player.items.broken_sword > 0 && !f.duantian_forged) return { key: 'zz:pool', text: '天劍宗：劍池', why: '闕老說，劍池還認得那截殘片。池裡的劍靈認了你，劍就接得回來。' };
   if (f.duel_notice && !f.duel_done && s.day <= DUEL_DAY) return { key: 'zz:duel', text: '九月十五：天劍宗山門外', why: '葉孤寒和林塵要在天劍宗山門外立生死狀論劍。牽頭的是謝家。那一天在山門外，就看得到。' };
   if (s.npcs.wang_er?.alive && !f.wanger_letter1 && s.day >= (s.vars.zz_first ?? Infinity) + 30) return { key: 'zz:letter', text: '鶴歸渡：老船夫找你', why: '老船夫從東荒回來了，懷裡揣著一封信。' };
   if (su?.alive && su.met && su.loc === 'linjiang' && !f.su_zz_met) return { key: 'zz:su', text: '臨江城的榜樓：蘇清瑤', why: '她說過：中州見。' };

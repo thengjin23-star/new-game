@@ -75,6 +75,13 @@ export const FEATS = [
   { id: 'stargazer', name: '看星的人', desc: '在舊觀星台的石縫裡，找到殘頁・星。', test: (s) => (s.sys.frags || []).includes('frag_star') },
   { id: 'yunmeng', name: '大澤之主', desc: '打倒雲夢大澤裡的蛟。', test: (s) => (s.vars.kills?.yunmeng_jiao || 0) > 0 },
   { id: 'letter', name: '豆花管夠', desc: '收到東荒捎來的信。', test: (s) => !!s.flags.wanger_letter1 },
+  // 1.1
+  { id: 'ontime', name: '一封準時的信', desc: '沈清歌的信，在九月十五以前送到了林塵手上。', test: (s) => !!(s.flags.shen_letter_given && s.flags.lin_warned) },
+  { id: 'duel', name: '第一戰', desc: '天劍宗山門外的生死約戰，你在場。', test: (s) => !!(s.flags.duel_done && (s.flags.lin_saved_duel || s.flags.xie_exposed || s.flags.lin_murdered || s.flags.duel_seen)) },
+  { id: 'vein', name: '靈脈之爭', desc: '龍脊嶺的靈脈，由你插手了結。', test: (s) => ['shangguan', 'xie', 'self', 'both'].includes(s.flags.lg_side) },
+  { id: 'ancestor', name: '三百年', desc: '打退出關的謝家老祖。', test: (s) => !!s.flags.xie_ancestor_beaten },
+  { id: 'duantian', name: '斷天', desc: '在天劍宗的劍池重鑄古劍，學會孤峰上的那一劍。', test: (s) => !!s.flags.duantian_forged },
+  { id: 'benming', name: '本命', desc: '本命法寶養到第三重。', test: (s) => (s.player.bm?.lv || 0) >= 3 },
   { id: 'reborn', name: '再世', desc: '輪迴轉世，又活了一次。', test: (s) => (s.meta?.life || 1) >= 2 },
 ];
 
