@@ -1,5 +1,6 @@
 import { SAVE_VERSION } from './state.js';
-import { levelFor, awaken } from '../world/system.js';
+import { EXITS } from '../world/map.js';
+import { levelFor, awaken, sixth } from '../world/system.js';
 import { hotbarState } from '../world/skills.js';
 import { NODES } from '../world/map.js';
 import { NAMED } from '../world/npcs.js';
@@ -83,6 +84,10 @@ export function migrate(s) {
   for (const id of Object.keys(NODES)) {
     s.nodes[id] ||= { known: !!NODES[id].start, visited: false, explore: 0 };
   }
+  // (1.2) the ways out of 東荒 are known to everyone from the start (the 白鶴渡, the passes south, west and north)
+  for (const id of EXITS) if (s.nodes[id]) s.nodes[id].known = true;
+  // (1.2) a save already past 1600 見聞: its 六級 remembering comes
+  if (s.sys.bound && s.sys.lv >= 6) sixth(s);
   for (const [id, d] of Object.entries(NAMED)) {
     s.npcs[id] ||= {
       id, name: d.name, title: d.title, gender: d.gender,

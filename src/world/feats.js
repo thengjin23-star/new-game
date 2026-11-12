@@ -5,6 +5,7 @@
 import { FOES } from '../content/foes.js';
 import { NODES, mapOf } from './map.js';
 import { rankOf } from './sect.js';
+import { rosterSummary } from './roster.js';
 
 const BOSSES = Object.entries(FOES).filter(([, f]) => f.boss).map(([k]) => k);
 const kills = (s) => Object.values(s.vars.kills || {}).reduce((a, b) => a + b, 0);
@@ -15,6 +16,13 @@ const XIMO_PLACES = Object.keys(NODES).filter((id) => NODES[id].at && mapOf(id) 
 const BEIYUAN_PLACES = Object.keys(NODES).filter((id) => NODES[id].at && mapOf(id) === 'beiyuan');
 
 /** The marks: name, what it took, and the test. */
+/** (1.2) Everyone on the 血月名冊 still in 東荒 has a plan written for them. */
+function rosterFull(s) {
+  if (!s.flags.ty_roster) return false;
+  const { done, of } = rosterSummary(s);
+  return of > 0 && done === of;
+}
+
 export const FEATS = [
   { id: 'qi', name: '引氣入體', desc: '成為煉氣修士。', test: (s) => s.player.realm >= 1 },
   { id: 'lianqi9', name: '煉氣圓滿', desc: '修到煉氣九層。', test: (s) => s.player.realm >= 2 || (s.player.realm === 1 && s.player.stage >= 8) },
@@ -82,6 +90,14 @@ export const FEATS = [
   { id: 'ancestor', name: '三百年', desc: '打退出關的謝家老祖。', test: (s) => !!s.flags.xie_ancestor_beaten },
   { id: 'duantian', name: '斷天', desc: '在天劍宗的劍池重鑄古劍，學會孤峰上的那一劍。', test: (s) => !!s.flags.duantian_forged },
   { id: 'benming', name: '本命', desc: '本命法寶養到第三重。', test: (s) => (s.player.bm?.lv || 0) >= 3 },
+  // (1.2) 天衍城
+  { id: 'capital', name: '天子腳下', desc: '到天衍城，看見玉指峰。', test: (s) => !!s.flags.ty_arrived },
+  { id: 'copybook', name: '照舊的抄', desc: '在欽天監的抄本閣，讀到東荒那一頁。', test: (s) => !!s.flags.ty_book_seen },
+  { id: 'nameless', name: '無名之物', desc: '打倒禁苑的白澤：牠叫得出天下每一種妖獸的名字，唯獨叫不出你的。', test: (s) => (s.vars.kills?.baize || 0) > 0 },
+  { id: 'founder', name: '多寫了一行', desc: '走進大衍皇陵的地宮，讀到殘頁・星被裁掉的下半截。', test: (s) => !!s.flags.hl_seen },
+  { id: 'inkless', name: '沾不上', desc: '在玉指峰頂碰一碰墨池裡的朱墨。', test: (s) => !!s.flags.yz_ink_touched },
+  { id: 'roster', name: '名冊', desc: '血月名冊上，東荒還在的人，每一個都有了去處。', test: (s) => rosterFull(s) },
+  { id: 'six', name: '墨跡未乾', desc: '問道系統升到六級。', test: (s) => (s.sys?.lv || 0) >= 6 },
   { id: 'reborn', name: '再世', desc: '輪迴轉世，又活了一次。', test: (s) => (s.meta?.life || 1) >= 2 },
 ];
 

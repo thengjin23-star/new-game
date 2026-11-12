@@ -26,6 +26,12 @@ import { lockOf } from '../src/world/skills.js';
 import { postings, WORK } from '../src/world/quests.js';
 import { canSecludeAt, nodeQi } from '../src/world/map.js';
 import * as CB from '../src/world/combat.js';
+import { EXITS } from '../src/world/map.js';
+import { nextGoal } from '../src/world/guide.js';
+import { storiesOf } from '../src/content/stories.js';
+import { annalsOf } from '../src/content/annals.js';
+import { FEATS } from '../src/world/feats.js';
+import { fateLine } from '../src/world/ending.js';
 import { heightAt } from '../src/world/height.js';
 import { flyBlocked } from '../src/world/air.js';
 import { FACTIONS } from '../src/world/factions.js';
@@ -37,7 +43,7 @@ const tick = (s) => E.step(s, 0.05, null);
 function over(seed, day = 8 * 360, more = {}) {
   const s = fresh(seed);
   s.flags.opening_done = true;
-  Object.assign(s.player, { realm: 2, stage: 6, hp: 99999 });
+  Object.assign(s.player, { realm: 2, stage: 2, hp: 99999 });
   waitUntil(s, day);
   Object.assign(s.flags, { chapter1_done: true, zhongzhou_crossed: true }, more);
   s.world.cross = 'crane_ferry';
@@ -600,6 +606,51 @@ test('what is out in the capital: the 皇陵\'s stone men only after dark; the �
     s.flags.huangcheng_pass = true;
     assert.ok(!out('hc_patrol_a'), 'not one with the token');
     assert.ok(FOES.baize.boss && FOES.bixi.boss && FOES.shiyong && FOES.jy_leopard && FOES.xingwei && FOES.jinjun);
+  } finally {
+    useMap('donghuang');
+  }
+});
+
+// ── what the 見聞 page and the goals say of it; and (1.2) the ways out of 東荒, known from the start ──
+
+test('東荒\'s four ways out are known from the start (and in an old save too); the map page lists them; the goals point at one you are ready for', () => {
+  const s = fresh(641);
+  for (const id of EXITS) assert.ok(s.nodes[id].known, `${id} known on a new life`);
+  const old = fresh(642);
+  for (const id of EXITS) old.nodes[id].known = false;
+  const t = SV.migrate(SV.parseSave(SV.serialize(old)));
+  for (const id of EXITS) assert.ok(t.nodes[id].known, `${id} known in an old save`);
+  assert.ok(Object.entries(CROSSINGS).filter(([from, way]) => mapOf(from) === 'donghuang' && s.nodes[from]?.known).length >= 4, 'the map page has a way to each');
+  // nothing else to do, and 煉氣: the way south
+  Object.assign(s.player, { realm: 1, stage: 3, xw: 0 });
+  for (const id of Object.keys(s.nodes)) if (s.nodes[id].known) s.nodes[id].visited = true;
+  const g = nextGoal(s);
+  assert.equal(g?.key, 'exit:nanling', JSON.stringify(g));
+  s.flags.nanling_crossed = true;
+  assert.notEqual(nextGoal(s)?.key, 'exit:nanling');
+});
+
+test('in the capital the goals lead on (the city, 蘇清瑤 at 欽天監, the 天驕閣, the roster, the 皇陵); the 見聞 page has its threads, histories and marks', () => {
+  const s = inCapital(643);
+  try {
+    s.player.xw = 0;
+    assert.equal(nextGoal(s)?.key, 'ty:city');
+    E.placeAt(s, ...NODES.waicheng.at);
+    finish(s);
+    assert.equal(nextGoal(s)?.key, 'ty:board', 'nobody bringing you: see the 天驕閣');
+    Object.assign(s.flags, { ty_book_seen: true, ty_truth: true, ty_roster: true, yz_ink_known: true });
+    assert.equal(nextGoal(s)?.key, 'ty:roster');
+    const threads = storiesOf(s).map((t) => t.id);
+    assert.ok(threads.includes('zz_capital') && threads.includes('zz_roster'), threads.join(' '));
+    const main2 = storiesOf(s).find((t) => t.id === 'main2');
+    assert.ok(main2.steps.some((x) => /抄本閣/.test(x.label)));
+    s.flags.hl_seen = true;
+    const { have } = annalsOf(s);
+    assert.ok(['founder', 'qintian_origin', 'yuzhi_ink', 'copying'].every((id) => have.some((a) => a.id === id)));
+    assert.ok(['capital', 'copybook', 'founder', 'six', 'roster', 'nameless', 'inkless'].every((id) => FEATS.some((x) => x.id === id)));
+    s.npcs.wei_changgeng.met = true;
+    s.sys.lv = 5;
+    assert.match(fateLine(s, 'wei_changgeng'), /玉指峰頂執筆/);
   } finally {
     useMap('donghuang');
   }

@@ -50,8 +50,14 @@ export function sysGain(s, n, report) {
     // 五級: it remembers who it was (in a moment, when nothing else is going on)
     if (s.sys.lv === 5) awaken(s);
     // (1.2) 六級: more of what it was — its forty years in 中州
-    if (s.sys.lv === 6 && !isScheduled(s, 'sys_six')) schedule(s, 'sys_six', 0, 1, { expire: 3600 });
+    if (s.sys.lv === 6) sixth(s);
   }
+}
+
+/** (1.2) The system at 六級, awake, not yet having remembered its years in 中州: set that to come (once). */
+export function sixth(s) {
+  if (!s.flags.sys_awakened || s.flags.sys_six_seen || isScheduled(s, 'sys_six')) return;
+  schedule(s, 'sys_six', 0, 1, { expire: 3600 });
 }
 
 /** The system at 五級, not yet having remembered: set its remembering to come (once). */

@@ -8,7 +8,7 @@
 import { FRAGMENT_TOTAL } from '../content/fragments.js';
 import { ORIGINS } from '../core/state.js';
 import { realmLabel, age } from '../core/cultivation.js';
-import { DAYS_PER_YEAR } from '../core/calendar.js';
+import { DAYS_PER_YEAR, dayAt } from '../core/calendar.js';
 import { FEATS } from './feats.js';
 
 const f = (s, k) => !!s.flags[k];
@@ -161,6 +161,9 @@ export function fateLine(s, id) {
       return '命簿：與林塵三戰，一勝、一負、一平。';
     case 'qian_banxian':
       return '命簿：他說的書，有一半是真的。';
+    // (1.2) 欽天監's 監正: what the book has him do
+    case 'wei_changgeng':
+      return s.day > dayAt(10, 7, 15) ? '命簿：天元三千零二十二年七月十五，於玉指峰頂執筆。——「執筆」二字底下，有一行很小的字：「未竟」。' : '命簿：天元三千零二十二年七月十五，於玉指峰頂執筆。';
     case 'zhao_hu':
       // (1.0) the one who pushes the millstone now: the end of the line is going pale
       return f(s, 'zhao_changed') ? '命簿：橫死街頭，無人收屍。——「無人收屍」四個字的墨淡了，像是快要寫不住了。' : '命簿：橫死街頭，無人收屍。';

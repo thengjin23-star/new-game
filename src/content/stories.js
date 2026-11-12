@@ -47,13 +47,19 @@ export const STORIES = [
       ['進了臨江城', (s) => visited(s, 'linjiang')],
       ['擂台上，查無此人', f('bang_beaten')],
       ['天驕榜的第一百零一名', f('bang_blank')],
+      // (1.2) 第三幕「天衍城」
+      ['到了天衍城，看見玉指峰', f('ty_arrived')],
+      ['欽天監的抄本閣：東荒那一頁', f('ty_book_seen')],
+      ['為那一夜，寫下名冊', (s) => Object.keys(s.vars.roster || {}).length > 0],
     ],
-    end: (s) => (s.flags.bang_blank ? '欽天監注意到你了。第二章第一幕「渡江」，完。' : null),
+    end: (s) => (s.flags.ty_truth && Object.keys(s.vars.roster || {}).length ? '天元三千零二十二年七月十五，欽天監要撕掉東荒那一頁。你知道了，也做了準備。' : null),
     next: (s) =>
       !s.flags.zhongzhou_crossed ? '到白鶴渡，坐老船夫的船過江。'
         : !visited(s, 'linjiang') ? '鶴歸渡往東北，是臨江城。'
           : !s.flags.bang_beaten ? '榜樓前的擂台上，榜上的人誰來挑戰都得接。'
-            : '過些日子，再去看看天驕榜。',
+            : !s.flags.ty_arrived ? '官道關往東三天，是天衍城：關上要令牌。臨江城的城主府旁邊，也有傳送陣。'
+              : !s.flags.ty_book_seen ? '天驕榜是從哪裡抄出來的？答案在欽天監的抄本閣裡。'
+                : '見聞裡的名冊：東荒的人，誰撤，誰躲，託給誰。',
   },
   // ── 人物 ──
   {
@@ -132,12 +138,29 @@ export const STORIES = [
       ['臨江城的榜樓', f('su_zz_met')],
       ['茶樓二樓：她在查那一夜是誰下的筆', f('su_zz_ally')],
       ['「然後，東荒就沒有了」', f('su_told_night')],
+      // (1.2) she found it
+      ['一塊腰牌：「我查到了」', f('su_token')],
+      ['抄本閣：她那一行的兩段字跡', f('su_archive')],
     ],
     end: (s) => (dead(s, 'su_qingyao') ? '她沒有活過這一世。' : null),
     next: (s) =>
       !s.flags.su_left ? null
         : !s.flags.zhongzhou_crossed ? '她去了中州。'
-          : !s.flags.su_zz_met ? '她在中州。臨江城的榜樓下，也許找得到她。' : null,
+          : !s.flags.su_zz_met ? '她在中州。臨江城的榜樓下，也許找得到她。'
+            : s.flags.su_token && !s.flags.su_archive ? '天衍城，欽天監，星官署。'
+              : s.flags.su_archive ? '那一夜，她在觀星台上。' : null,
+  },
+  // (1.2) 欽天監's 監正
+  {
+    id: 'wei', group: '人物', title: '衛長庚',
+    start: met('wei_changgeng'),
+    steps: [
+      ['欽天監監正', met('wei_changgeng')],
+      ['「撕掉一頁，救一本書」', f('wei_met')],
+      ['「找到了，告訴我」', f('wei_hand')],
+    ],
+    end: () => null,
+    next: () => '那一夜，他在玉指峰頂下筆。',
   },
   {
     id: 'hu', group: '人物', title: '胡三娘',
@@ -455,6 +478,50 @@ export const STORIES = [
     next: (s) =>
       !s.flags.ge_book_known ? (s.player.items.ge_danjing > 0 ? '把《葛氏丹經》給她看。' : '她哥哥的丹經，在東荒回春堂的孫掌櫃那裡。')
         : s.player.items.ge_invite > 0 ? '把信交給東荒回春堂的孫掌櫃。' : null,
+  },
+  // (1.2) 天衍城
+  {
+    id: 'zz_capital', group: '中州', title: '天衍城',
+    start: f('ty_arrived'),
+    steps: [
+      ['第一眼看見玉指峰', f('ty_arrived')],
+      ['上了御階', (s) => visited(s, 'huangcheng')],
+      ['欽天監的抄本閣', f('ty_book_seen')],
+      ['玉指峰為什麼封山', f('yz_ink_known')],
+      ['親眼看見峰裡滲出來的墨', f('yz_ink_seen')],
+      ['墨沾不上你的手', f('yz_ink_touched')],
+    ],
+    end: (s) => (s.flags.yz_ink_touched ? '朱筆劃不到你，墨也沾不上你。' : null),
+    next: (s) =>
+      !visited(s, 'huangcheng') ? '御階在外城的北門外。禁軍只認腰牌——或者夜裡的黑。'
+        : !s.flags.ty_book_seen ? '欽天監的抄本閣，三把鎖。'
+          : !s.flags.yz_ink_seen ? '峰背的柏樹林，夜裡有星衛提著罐子；峰頂只有飛得上去。' : '峰頂的墨池。',
+  },
+  {
+    id: 'zz_tomb', group: '中州', title: '大衍皇陵',
+    start: (s) => visited(s, 'huangling'),
+    steps: [
+      ['神道上的石人', (s) => visited(s, 'huangling')],
+      ['陵門前的贔屭', f('hl_open')],
+      ['梓宮上的半張紙', f('hl_seen')],
+      ['壁畫上少了一根指頭的手', f('hl_mural_seen')],
+    ],
+    end: (s) => (s.flags.hl_seen ? '開國皇帝是玄微的學生。他用玉指峰的墨，給自己寫了一行字。' : null),
+    next: (s) => (!s.flags.hl_open ? '陵門口的石龜，三千年沒讓人過去。' : '走下九十九級台階。'),
+  },
+  {
+    id: 'zz_roster', group: '中州', title: '血月名冊',
+    start: f('ty_roster'),
+    steps: [
+      ['一張東荒的名單', f('ty_roster')],
+      ['上官家的樓船', f('roster_boat')],
+      ['林塵回青石鎮', f('roster_lin')],
+      ['天劍宗的人過江', f('roster_tj')],
+      ['鬼市的散修過江', f('roster_xiao')],
+      ['狐仙廟護著三個人', f('roster_fox')],
+    ],
+    end: () => null,
+    next: (s) => (Object.keys(s.vars.roster || {}).length ? '名冊上寫的，那一夜見分曉。' : '見聞裡的名冊：一個一個寫上去。'),
   },
   {
     id: 'zz_xiaoqi', group: '中州', title: '鬼市的蕭七',

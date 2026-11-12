@@ -340,6 +340,15 @@ export function recurring(s) {
     s.vars.tideNotice = s.day;
     rumor(s, '坊市的老修士說，再過三天，天地靈氣要起潮了。趁那幾天閉關，事半功倍。', 'hint');
   }
+  // (1.2) the ways out of 東荒, told as you grow strong enough for them (the map shows them from the start)
+  if (s.player.realm >= 1 && !s.flags.exit_hint_south) {
+    s.flags.exit_hint_south = true;
+    rumor(s, '鎮上的獵戶說，鎮南丘陵裡有一道山隘，翻過去就是南嶺。煉氣的修士，才扛得住那邊的瘴氣。', 'hint');
+  }
+  if (s.player.realm >= 2 && !s.flags.exit_hint_far) {
+    s.flags.exit_hint_far = true;
+    rumor(s, '坊市的老散修說，築基以後，天下就大了：古戰場往西的西風口外是西漠，斷石門往北的雁回嶺外是北原，白鶴渡過了江是中州。', 'hint');
+  }
   if (bloodMoon(s, s.day) && !s.flags.bloodmoon_seen) {
     s.flags.bloodmoon_seen = true;
     rumor(s, '今夜的月亮是紅的。山裡的獵戶都早早關了門，說今夜的狼，眼睛也是紅的。', 'hint');

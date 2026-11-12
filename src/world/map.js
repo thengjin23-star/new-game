@@ -8,6 +8,9 @@ import { ARRAY } from '../content/crafts.js';
 import { LANDS } from './maps/index.js';
 import { RENT, rented } from './caves.js';
 
+/** (1.2) The ways out of 東荒, known to everyone from the start: across the river, and the passes south, west and north. */
+export const EXITS = ['crane_ferry', 'south_pass', 'west_pass', 'yanhui_pass'];
+
 export const NODES = {
   qingshi_town: {
     name: '青石鎮', kind: 'town', qi: 0.5, danger: 1, start: true, at: [2300, 3150],
@@ -46,7 +49,7 @@ export const NODES = {
     desc: '鎮外荒廢的小廟，供著一尊看不清面目的狐仙像。',
   },
   crane_ferry: {
-    name: '白鶴渡', kind: 'ferry', qi: 0.6, danger: 1, at: [4440, 3800], label: [4480, 3980],
+    name: '白鶴渡', kind: 'ferry', start: true, qi: 0.6, danger: 1, at: [4440, 3800], label: [4480, 3980],
     desc: '大江上的渡口。過了江，就是中州。',
   },
   hidden_cave: {
@@ -70,15 +73,15 @@ export const NODES = {
     desc: '東荒的盡頭。江的那一邊，是中州。',
   },
   south_pass: {
-    name: '南嶺山隘', kind: 'pass', qi: 0.6, danger: 1, at: [2580, 4300], label: [2620, 4200],
+    name: '南嶺山隘', kind: 'pass', start: true, qi: 0.6, danger: 1, at: [2580, 4300], label: [2620, 4200],
     desc: '鎮南丘陵間的一道山隘。翻過去，就是南嶺——瘴氣、蠱、說另一種話的人。鎮上的人一輩子也不往那邊去。',
   },
   west_pass: {
-    name: '西風口', kind: 'pass', qi: 0.6, danger: 2, at: [330, 560], label: [330, 430],
+    name: '西風口', kind: 'pass', start: true, qi: 0.6, danger: 2, at: [330, 560], label: [330, 430],
     desc: '古戰場往西，一條埋了一半的古道鑽進山裡。山口的風一年到頭往東吹，帶著沙。翻過去，就是西漠。',
   },
   yanhui_pass: {
-    name: '雁回嶺', kind: 'pass', qi: 0.7, danger: 2, at: [3040, 250], label: [3060, 330],
+    name: '雁回嶺', kind: 'pass', start: true, qi: 0.7, danger: 2, at: [3040, 250], label: [3060, 330],
     desc: '斷石門往北，古道貼著斷劍峰的腳下爬上山脊。嶺上的雪終年不化；秋天南飛的雁群飛到這裡，就折回頭去。翻過去，就是北原。',
   },
   // up where no road goes (air: you get there by flying, or leaping)

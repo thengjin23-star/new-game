@@ -142,6 +142,31 @@ function zhongzhouGoal(s) {
       ? { key: 'zz:star', text: '舊觀星台：石縫裡的那頁紙', why: '夜裡，星光照得進石縫的時候，才看得見。' }
       : { key: 'zz:star', text: '舊觀星台：夜裡上石台', why: '台邊的石獸夜裡才醒。打得過牠，才上得了台。' };
   if (n.tianjian?.known && !f.ye_zz_met && s.npcs.ye_guhan?.alive) return { key: 'zz:ye', text: '天劍宗山門', why: f.ye_lineage ? '葉孤寒說過：中州見。' : '城東北的劍山上，是天劍宗。' };
+  // (1.2) 天衍城: 蘇清瑤's token says where; papers for the pass; the 血月名冊 waiting on those who can say yes
+  if (f.su_token && !f.su_archive && su?.alive) return { key: 'zz:capital', text: '去天衍城：欽天監', why: '蘇清瑤說：天衍城，欽天監，星官署。她的腰牌過得了官道關，也上得了臨江城的傳送陣。' };
+  if (f.ty_pass_asked && !papersOf(s) && !f.ty_arrived)
+    return (s.rep?.linjiang || 0) >= 25
+      ? { key: 'zz:pass', text: '臨江城的城主府：通行令牌', why: '你在臨江城有些名號了。城主府的書吏辦令牌，兩百靈石。' }
+      : { key: 'zz:pass', text: '通行令牌', why: '城主府只給有名號的人辦令牌（懸賞堂揭幾張榜）；上官家押貨的牌子也算數；天劍宗的客卿報名號就行。或者，夜裡去官道關。' };
+  if (f.ty_roster && !f.roster_boat && f.sg_met) return { key: 'zz:boat', text: '上官商棧：樓船', why: '要把東荒的人撤過江，得有樓船。' };
+  return null;
+}
+
+/** (1.2) Papers for the capital (content/events/tianyan.js papers). */
+const papersOf = (s) => (s.player.items.tongxing_ling || 0) > 0 || (s.player.items.qintian_token || 0) > 0 || !!s.flags.tianjian_guest;
+
+/** (1.2) 天衍城: 欽天監 (with 蘇清瑤, or 衛長庚's summons from the 天驕閣), the 血月名冊, the 皇陵. */
+function tianyanGoal(s) {
+  const f = s.flags;
+  const n = s.nodes;
+  const su = s.npcs.su_qingyao;
+  if (!n.waicheng?.visited) return { key: 'ty:city', text: '進天衍城', why: '官道往東，過了十里亭就是西門。城裡禁空：別在城上飛。' };
+  if (f.su_token && !f.su_archive && su?.alive) return { key: 'ty:su', text: '欽天監：蘇清瑤', why: '她說：天衍城，欽天監，星官署。腰牌給禁軍看，御階在外城的北門外。' };
+  if (!f.ty_book_seen && !(su?.alive && (f.su_zz_ally || f.su_zz_beaten))) return { key: 'ty:board', text: '天衍城：天驕閣', why: '天驕榜是從哪裡抄出來的？去天驕閣看看天下的榜。' };
+  if (f.ty_roster && !Object.keys(s.vars.roster || {}).length) return { key: 'ty:roster', text: '見聞：血月名冊', why: '東荒的人，誰撤，誰躲，託給誰：一個一個寫上去。' };
+  if (n.huangling?.known && !n.huangling.visited) return { key: 'ty:tomb', text: '大衍皇陵', why: '城西北的山裡，開國皇帝的陵。神道從外城西門外往北。' };
+  if (n.huangling?.visited && !f.hl_open) return { key: 'ty:gate', text: '皇陵：陵門前的石龜', why: '陵門口趴著一隻石龜，三千年沒讓人過去。牠很強——金丹以後再去。' };
+  if (f.hl_open && !f.hl_seen) return { key: 'ty:coffin', text: '皇陵地宮：梓宮', why: '陵門後面，九十九級台階往下。' };
   return null;
 }
 
@@ -187,7 +212,7 @@ export function nextGoal(s) {
   }
   // where the stories of the land you are in stand
   if (away) {
-    const g = ({ ximo: ximoGoal, beiyuan: beiyuanGoal, zhongzhou: zhongzhouGoal }[s.world.map] || nanlingGoal)(s);
+    const g = ({ ximo: ximoGoal, beiyuan: beiyuanGoal, zhongzhou: zhongzhouGoal, tianyan: tianyanGoal }[s.world.map] || nanlingGoal)(s);
     if (g) return g;
   }
   // the work you took
@@ -221,6 +246,12 @@ export function nextGoal(s) {
   // somewhere you have heard of
   const go = nearestUnseen(s);
   if (go) return { key: `go:${go}`, text: `去看看：${NODES[go].name}`, why: `聽說過${NODES[go].name}，還沒去過。打開地圖，點它，選「走過去」。` };
+  // (1.2) a way out of 東荒 not yet taken, for one ready for it (nothing stops you sooner: each pass says what it costs)
+  if (!away) {
+    if (p.realm >= 1 && !s.flags.nanling_crossed) return { key: 'exit:nanling', text: '南嶺山隘：往南嶺', why: '鎮南丘陵的山隘翻過去，是南嶺：瘴氣、蠱、說另一種話的人。適合煉氣中期以後。' };
+    if (p.realm >= 2 && !s.flags.ximo_crossed) return { key: 'exit:ximo', text: '西風口：往西漠', why: '古戰場往西的山口，風一年到頭往東吹，帶著沙。翻過去是西漠。' };
+    if (p.realm >= 2 && !s.flags.beiyuan_crossed) return { key: 'exit:beiyuan', text: '雁回嶺：往北原', why: '斷石門往北，古道爬上雁回嶺。翻過去是北原，一年到頭都是冬天。' };
+  }
   return { key: 'free', text: '閉關，或四處走走', why: '找個靈氣濃的地方閉關（修煉頁看得到此地的靈氣），或去還沒探索完的地方走走，留意傳聞和「大事」。' };
 }
 
