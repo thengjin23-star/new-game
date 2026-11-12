@@ -282,7 +282,7 @@ test('龍脊嶺 for yourself: the 靈髓 taken while they fought; 謝家老祖 b
     pickText(s, '拔劍');
     resolvePending(s, (opts) => opts.find((c) => c.text.includes('靈髓')) || opts.find((c) => c.text.includes('拔劍')) || opts[0], 'won');
     assert.equal(s.flags.lg_side, 'self');
-    assert.ok(s.player.items.lingsui > 0);
+    assert.ok(s.player.items.longji_sui > 0);
     Object.assign(s.player, { realm: 2, stage: 3 });
     assert.ok(breakthroughInfo(s).parts.some(([n]) => n === '龍脊靈髓'));
   } finally {

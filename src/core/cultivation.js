@@ -342,7 +342,7 @@ export function breakthroughInfo(s, { pills = 0 } = {}) {
         parts.push(['龍脊靈眼', 0.1]);
         chance += 0.1;
       }
-      if (p.items.lingsui) {
+      if (p.items.longji_sui) {
         parts.push(['龍脊靈髓', 0.12]);
         chance += 0.12;
       }

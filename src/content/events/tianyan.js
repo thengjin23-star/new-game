@@ -31,6 +31,8 @@ const putAt = (x, X, Y) => {
   x.world.x = X;
   x.world.y = Y;
   x.world.region = null;
+  // (and whatever walk this broke into is over: world/explore.js resume)
+  x.world.moved = true;
 };
 
 /** Back down the 御階 to the plaza before it (午門外). */

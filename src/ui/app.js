@@ -56,7 +56,7 @@ import * as END from '../world/ending.js';
 import { refineLevel, refineMult } from '../core/refine.js';
 import * as BM from '../core/benming.js';
 
-const VERSION = '1.1';
+const VERSION = '1.2';
 const ITEM_ORDER = ['weapon', 'gear', 'flyer', 'tool', 'pill', 'talisman', 'herb', 'material', 'book', 'treasure', 'token', 'unknown'];
 /** How a way into another map is gone (world/atlas.js CROSSINGS by), and how long it takes, for the map page. */
 const WAY_BY = { boat: '坐船過去', road: '走官道過去', array: '坐傳送陣過去' };

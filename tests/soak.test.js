@@ -87,9 +87,25 @@ function soak(seed, steps, cultivated, away = null) {
     assert.equal(s.world.map, 'zhongzhou');
     delete s.vars.sky;
   }
+  if (away === 'tianyan') {
+    // (1.2) over the river and three days east to the capital: a 金丹 in 天衍城 in 3021, the peak sealed
+    s.flags.opening_done = true;
+    waitUntil(s, 9 * 360 + 60);
+    Object.assign(s.player, { realm: 3, stage: 0, hp: 99999 });
+    Object.assign(s.flags, { chapter1_done: true, zhongzhou_crossed: true, ty_roster: true });
+    s.world.cross = 'crane_ferry';
+    E.step(s, 0.05, null);
+    resolvePending(s);
+    s.world.cross = 'guandao_guan';
+    E.step(s, 0.05, null);
+    resolvePending(s);
+    assert.equal(s.world.map, 'tianyan');
+    delete s.vars.sky;
+  }
   if (cultivated) {
     // a 築基 cultivator with a sword, a few arts and things to burn: every kind of move gets thrown
-    Object.assign(s.player, { realm: away === 'zhongzhou_late' ? 3 : 2, stage: away === 'beiyuan' ? 2 : away === 'zhongzhou_late' ? 0 : 1, weapon: 'qinggang_sword' });
+    const core = away === 'zhongzhou_late' || away === 'tianyan';
+    Object.assign(s.player, { realm: core ? 3 : 2, stage: away === 'beiyuan' ? 2 : core ? 0 : 1, weapon: 'qinggang_sword' });
     s.player.items.qinggang_sword = 1;
     s.player.items.fire_talisman = 5;
     s.player.items.huichun_pill = 3;
@@ -205,6 +221,14 @@ test('長玩・中州：渡江之後的隨機遊玩（臨江城、鬼市、擂�
 test('長玩・中州 1.1：生死約戰那年的金丹在中州隨機遊玩（林塵、龍脊嶺、天劍宗、百草谷、本命、存讀檔），不出任何例外', () => {
   for (const seed of [32, 33]) {
     const run = soak(seed, 110, true, 'zhongzhou_late');
+    assert.equal(run.error, null, run.error || '');
+    assert.equal(mapOf(run.s.player.loc), run.s.world.map, 'where you are is on the map you are on');
+  }
+});
+
+test('長玩・天衍城 1.2：金丹在京城隨機遊玩（外城、御階與禁軍、欽天監、皇陵的石俑、禁苑、名冊、存讀檔），不出任何例外', () => {
+  for (const seed of [34, 35]) {
+    const run = soak(seed, 110, true, 'tianyan');
     assert.equal(run.error, null, run.error || '');
     assert.equal(mapOf(run.s.player.loc), run.s.world.map, 'where you are is on the map you are on');
   }

@@ -84,6 +84,13 @@ export function migrate(s) {
   for (const id of Object.keys(NODES)) {
     s.nodes[id] ||= { known: !!NODES[id].start, visited: false, explore: 0 };
   }
+  // (1.2) the 龍脊靈髓 taken from under 龍脊嶺 (1.1) was kept under 北原's 靈髓's id: one of them is the marrow
+  if (s.flags.lg_took_marrow && !s.flags.longji_sui_moved && (s.player.items.lingsui || 0) > 0) {
+    s.player.items.lingsui -= 1;
+    if (!s.player.items.lingsui) delete s.player.items.lingsui;
+    s.player.items.longji_sui = (s.player.items.longji_sui || 0) + 1;
+    s.flags.longji_sui_moved = true;
+  }
   // (1.2) the ways out of 東荒 are known to everyone from the start (the 白鶴渡, the passes south, west and north)
   for (const id of EXITS) if (s.nodes[id]) s.nodes[id].known = true;
   // (1.2) a save already past 1600 見聞: its 六級 remembering comes

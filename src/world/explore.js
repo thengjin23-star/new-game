@@ -897,6 +897,7 @@ function stopWalking(L) {
 /** After an event interrupted an auto-walk, carry on to where we were going. */
 export function resume(s) {
   const L = liveOf(s);
+  dropIfMoved(s, L);
   const r = L.resume;
   L.resume = null;
   if (!r || busy(s)) return false;
@@ -904,7 +905,17 @@ export function resume(s) {
 }
 
 export function canResume(s) {
-  return !!liveOf(s).resume;
+  const L = liveOf(s);
+  dropIfMoved(s, L);
+  return !!L.resume;
+}
+
+/** (1.2) A story that set you down somewhere else (world.moved) ends the walk it broke into: you do not set off back up the stair you were turned away from. */
+function dropIfMoved(s, L) {
+  if (!s.world?.moved) return;
+  delete s.world.moved;
+  L.resume = null;
+  stopWalking(L);
 }
 
 // ── places ──

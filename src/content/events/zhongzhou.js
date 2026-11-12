@@ -64,7 +64,7 @@ const ancestorsChoices = [
     text: '「劍池還認得它嗎？」',
     out: {
       text: '「認得。」闕老說，「劍池裡沉著三千年來天劍宗折了的劍。師祖的劍，是第一把。」\n\n「把它帶到劍池去。池裡的劍靈認了你，劍就接得回來——認不認，看你。」\n\n他從袖子裡取出一塊木牌，上面刻著一把劍：「從今天起，你是天劍宗的客卿。劍階、試劍崖、劍池、寶庫，隨你出入。」',
-      effects: [['flag', 'tj_ancestors_seen'], ['flag', 'tianjian_guest'], ['flag', 'qiao_met'], (x) => { x.world.x = 4600; x.world.y = 980; }, ['insight', 3], ['sysexp', 40], ['log', '天劍宗祖師堂：闕老說，祖訓的「指」是那根手指，落在中州，長成了玉指峰'], ['rumor', '天劍宗的祖師堂，鎖了六十年，開了。']],
+      effects: [['flag', 'tj_ancestors_seen'], ['flag', 'tianjian_guest'], ['flag', 'qiao_met'], (x) => { x.world.x = 4600; x.world.y = 980; x.world.region = null; x.world.moved = true; }, ['insight', 3], ['sysexp', 40], ['log', '天劍宗祖師堂：闕老說，祖訓的「指」是那根手指，落在中州，長成了玉指峰'], ['rumor', '天劍宗的祖師堂，鎖了六十年，開了。']],
     },
   },
 ];
@@ -931,7 +931,7 @@ export default [
         },
         fail: { text: '他的劍停在你喉前三寸。\n\n「再練練。」他說，「劍階就在這裡，又不會跑。」', effects: [['mind', -1]] },
       },
-      { text: '上劍階。', show: (s) => flag(s, 'tianjian_guest'), out: { text: '你一級一級往上走。三千級劍階，每一級的石面上都刻著一道劍痕，每一道都不一樣。走到頂上，你回頭看，臨江城小得像一塊棋盤。', effects: [(x) => { x.world.x = 4450; x.world.y = 1180; }, ['mind', 1]] } },
+      { text: '上劍階。', show: (s) => flag(s, 'tianjian_guest'), out: { text: '你一級一級往上走。三千級劍階，每一級的石面上都刻著一道劍痕，每一道都不一樣。走到頂上，你回頭看，臨江城小得像一塊棋盤。', effects: [(x) => { x.world.x = 4450; x.world.y = 1180; x.world.region = null; x.world.moved = true; }, ['mind', 1]] } },
       { text: '抬頭看那三千級劍階。', show: (s) => !flag(s, 'tianjian_guest'), out: { text: '劍階一級一級往上，沒進了雲裡。雲裡偶爾有劍光一閃，像是有人在上面練劍，練了三千年，還沒練完。', effects: [['flag', 'tj_gate_seen'], ['mind', 1]] } },
       { text: '走了。', out: { effects: [['flag', 'tj_gate_seen']] } },
     ],
@@ -1512,7 +1512,7 @@ export default [
           },
           {
             text: '趁亂挖走靈髓。',
-            out: { text: '你一矮身鑽到靈眼邊上，伸手探進那團光裡。冷——冷得像握住了一塊冰，又燙得像握住了一塊炭。\n\n你把靈髓揣進懷裡的時候，兩邊的人都愣住了。\n\n巷道裡，傳來一陣慢慢的腳步聲。', effects: [['item', 'lingsui', 1], ['flag', 'lg_took_marrow']], next: 'ancestor' },
+            out: { text: '你一矮身鑽到靈眼邊上，伸手探進那團光裡。冷——冷得像握住了一塊冰，又燙得像握住了一塊炭。\n\n你把靈髓揣進懷裡的時候，兩邊的人都愣住了。\n\n巷道裡，傳來一陣慢慢的腳步聲。', effects: [['item', 'longji_sui', 1], ['flag', 'lg_took_marrow']], next: 'ancestor' },
           },
           { text: '退出去。', out: { text: '你悄悄退了出去。身後，鎬頭一下一下地響著。' } },
         ],
@@ -1530,7 +1530,7 @@ export default [
             },
             fail: {
               text: (s) => `老人只出了三劍。第三劍，你就倒在了靈眼邊上。\n\n${s.flags.lg_took_marrow ? '他從你懷裡取回了靈髓，' : ''}他讓人把你抬出了礦口，扔在山坡上：「回去吧。東荒來的，不懂中州的規矩。」`,
-              effects: (s) => [['wound', 0.45], ...(s.flags.lg_took_marrow ? [['item', 'lingsui', -1], ['unflag', 'lg_took_marrow']] : []), ['unflag', 'lg_clear_sg']],
+              effects: (s) => [['wound', 0.45], ...(s.flags.lg_took_marrow ? [['item', 'longji_sui', -1], ['unflag', 'lg_took_marrow']] : []), ['unflag', 'lg_clear_sg']],
             },
           },
           {
@@ -1542,7 +1542,7 @@ export default [
             },
             fail: {
               text: (s) => `你沒跑出十步，一道劍氣就從背後打在了你身上。\n\n${s.flags.lg_took_marrow ? '老人從你懷裡取回了靈髓。' : ''}你醒過來的時候，躺在礦口外的山坡上。`,
-              effects: (s) => [['wound', 0.4], ...(s.flags.lg_took_marrow ? [['item', 'lingsui', -1], ['unflag', 'lg_took_marrow']] : []), ['unflag', 'lg_clear_sg']],
+              effects: (s) => [['wound', 0.4], ...(s.flags.lg_took_marrow ? [['item', 'longji_sui', -1], ['unflag', 'lg_took_marrow']] : []), ['unflag', 'lg_clear_sg']],
             },
           },
         ],

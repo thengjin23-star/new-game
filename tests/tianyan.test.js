@@ -655,3 +655,37 @@ test('in the capital the goals lead on (the city, 蘇清瑤 at 欽天監, the �
     useMap('donghuang');
   }
 });
+
+test('(fix) 北原\'s 靈髓 is a herb again (to take or sell, and for the 凝金丹); the 龍脊靈髓 has its own name — and an old save\'s marrow is moved over', () => {
+  assert.equal(ITEMS.lingsui.name, '靈髓');
+  assert.ok(ITEMS.lingsui.use && ITEMS.lingsui.sell > 0, 'taken, or sold');
+  assert.equal(ITEMS.longji_sui.name, '龍脊靈髓');
+  const s = fresh(651);
+  s.flags.lg_took_marrow = true;
+  s.player.items.lingsui = 3;
+  const t = SV.migrate(SV.parseSave(SV.serialize(s)));
+  assert.equal(t.player.items.longji_sui, 1, 'the one from under 龍脊嶺');
+  assert.equal(t.player.items.lingsui, 2, '北原\'s stay what they are');
+  const u = SV.migrate(SV.parseSave(SV.serialize(t)));
+  assert.equal(u.player.items.longji_sui, 1, 'moved once');
+});
+
+test('(fix) turned back down the 御階, you are not walked straight back up it: a story that moves you ends the walk it broke into', () => {
+  const s = inCapital(652);
+  try {
+    s.tod = 12;
+    E.placeAt(s, 2700, 2560);
+    finish(s);
+    assert.ok(E.walkTo(s, 2700, 2200), 'a walk up the stair');
+    for (let k = 0; k < 400 && !s.pending; k++) tick(s);
+    assert.equal(s.pending?.id, 'hc_guard');
+    pickText(s, '轉身下去');
+    finish(s);
+    assert.ok(!E.canResume(s), 'the walk is over');
+    for (let k = 0; k < 40; k++) tick(s);
+    assert.ok(!s.pending, 'and nobody stops you again');
+    assert.equal(regionIdAt(s.world.x, s.world.y), 'waicheng');
+  } finally {
+    useMap('donghuang');
+  }
+});
