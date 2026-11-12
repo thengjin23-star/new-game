@@ -393,11 +393,15 @@ const POIS = [
   { id: 'wc_post', region: 'waicheng', x: 1800, y: 3130, name: '驛館', verb: '歇腳', rest: true, text: '驛館的院子裡拴著十幾匹馬，驛丞坐在門口翻冊子。住一晚，要看令牌；沒有令牌的，加錢。' },
   { id: 'wc_board', region: 'waicheng', x: 2980, y: 2840, name: '天驕榜', verb: '看榜', crowd: (s) => s.tod >= 8 && s.tod < 19, text: '天驕閣的牆上貼著天下的天驕榜，比臨江城的那一張大三倍，榜頭的欽天監大印紅得發亮。' },
   { id: 'wc_yamen', region: 'waicheng', x: 2420, y: 2850, name: '京兆府', verb: '查看', text: '京兆府的門口站著兩排衙役。照壁上貼著告示：「京師戒嚴，凡入城者，驗看令牌。」' },
-  { id: 'wc_auction', region: 'waicheng', x: 2960, y: 3135, name: '拍賣行', verb: '看看', text: '拍賣行的門口掛著一塊牌子：「本月十五，拍凝金丹一枚。」門口排隊的人，從台階一直排到了街上。' },
-  { id: 'wc_market', region: 'waicheng', x: 2400, y: 3380, name: '坊市', verb: '逛逛', crowd: (s) => s.tod >= 7 && s.tod < 20, text: '坊市裡人擠著人，賣什麼的都有：符、丹、法器、妖獸的皮、不知道哪一朝的古錢。叫賣的口音天南地北。' },
+  { id: 'wc_auction', region: 'waicheng', x: 2960, y: 3135, name: '拍賣行', verb: '看看', action: 'shop', shop: 'ty_auction', text: '拍賣行的門口掛著一塊牌子：「本月十五，拍凝金丹一枚。」門口排隊的人，從台階一直排到了街上。' },
+  { id: 'wc_market', region: 'waicheng', x: 2400, y: 3380, name: '坊市', verb: '逛逛', action: 'shop', shop: 'ty_market', crowd: (s) => s.tod >= 7 && s.tod < 20, text: '坊市裡人擠著人，賣什麼的都有：符、丹、法器、妖獸的皮、不知道哪一朝的古錢。叫賣的口音天南地北。' },
   { id: 'wc_tavern', region: 'waicheng', x: 2900, y: 3455, name: '醉仙樓', verb: '打聽', action: 'inquire', glow: (s) => s.tod >= 17 || s.tod < 2 },
   { id: 'wc_inn', region: 'waicheng', x: 1820, y: 3452, name: '客棧', verb: '歇腳', rest: true, text: '客棧的掌櫃說：「京城的店錢，臨江城的兩倍。不還價。」' },
   { id: 'wc_temple', region: 'waicheng', x: 3500, y: 3455, name: '天衍觀', verb: '看看', action: 'shop', shop: 'ty_temple', text: '天衍觀的正殿裡供的不是三清，是一座白玉雕的小山，形如一指。香客跪在山前，求的都是同一件事：命好。' },
+  // (the 懸賞堂's board, the smith, the 洞府行: content/items.js SHOPS, world/quests.js, world/caves.js)
+  { id: 'wc_bounty', region: 'waicheng', x: 2350, y: 3740, name: '懸賞堂', verb: '看榜', action: 'board', board: 'tianyan', text: '京城的懸賞堂歸京兆府管，牆上的告示蓋著官印：某處出了妖獸，某人欠了債，皇陵的石人夜裡又走了出來。' },
+  { id: 'wc_smith', region: 'waicheng', x: 2880, y: 3708, name: '兵器鋪', verb: '購物', action: 'shop', shop: 'ty_smith' },
+  { id: 'wc_cave', region: 'waicheng', x: 1990, y: 3790, name: '洞府行', verb: '租洞府', text: '洞府行的牆上掛著一張京城的圖，城北靠山的地方，圈著一排小小的紅圈。' },
   { id: 'wc_lane', region: 'waicheng', x: 1780, y: 3690, name: '散修巷', verb: '查看', text: '京城也有散修巷，比臨江城的更窄、更擠。巷口的牆上寫著一行字，被人刷了三遍白灰，還是看得出來：「命不由天」。' },
   { id: 'wc_plaza', region: 'waicheng', x: 2700, y: 2560, name: '午門外', verb: '查看', text: '外城北門外是一片石板廣場，廣場盡頭，御階順著山壁一直往上，通到雲裡的午門。下馬碑上刻著：「文武官員至此下馬」。' },
   // 皇城
@@ -430,8 +434,29 @@ const POIS = [
   { id: 'jj_field', region: 'jingjiao', x: 2400, y: 4150, name: '皇莊', verb: '查看', text: '皇莊的田埂上立著一塊石牌：「御田」。田裡的佃戶彎著腰插秧，一行一行，像用尺量過。' },
 ];
 
-/** What roams (places.js BEASTS, for this map): 1.2's foes come with the content (content/foes.js). */
-const BEASTS = [];
+const dark = (s) => s.tod >= 19.5 || s.tod < 5;
+const killed = (s, kind) => (s.vars.kills?.[kind] || 0) > 0;
+/** One who is in the 皇城 without its token (got up the 御階 in the dark, or through the 禁軍). */
+const intruder = (s) => !s.flags.huangcheng_pass;
+/** The small blood moons began in the autumn of 3017: since then the peak has seeped, and 欽天監 has gathered what it seeps. */
+const seeping = (s) => s.day >= 5 * 360 + 8 * 30;
+
+/**
+ * What roams (places.js BEASTS, for this map): the stone men of the 神道 after dark; 禁苑's leopards, and its
+ * 白澤 on the lake; 劫修 on the roads into the capital; on the terrace and at 欽天監, the 禁軍 and the 星衛 —
+ * for one with no token to be there; under the peak's north face at night, the 星衛 with their jars.
+ */
+const BEASTS = [
+  { id: 'shiyong_a', kind: 'shiyong', n: 2, title: '皇陵石俑', x: 1230, y: 1620, r: 120, respawn: 30, power: 300, cond: dark },
+  { id: 'shiyong_b', kind: 'shiyong', n: 3, title: '皇陵石俑', x: 1200, y: 1280, r: 120, respawn: 30, power: 340, cond: dark },
+  { id: 'jy_leopards_a', kind: 'jy_leopard', n: 2, title: '禁苑金錢豹', x: 4300, y: 2600, r: 150, respawn: 30, power: 280 },
+  { id: 'jy_leopards_b', kind: 'jy_leopard', n: 2, title: '禁苑金錢豹', x: 4750, y: 1500, r: 150, respawn: 30, power: 300 },
+  { id: 'baize_a', kind: 'baize', title: '白澤', x: 4560, y: 1250, r: 140, respawn: 999, power: 480, cond: (s) => !killed(s, 'baize') },
+  { id: 'ty_robbers_a', kind: 'jie_xiu', n: 2, title: '劫修', x: 4500, y: 3800, r: 150, respawn: 40, power: 260 },
+  { id: 'hc_patrol_a', kind: 'jinjun', n: 2, title: '巡夜的禁軍', x: 2700, y: 1960, r: 160, respawn: 20, power: 300, cond: intruder },
+  { id: 'qt_patrol_a', kind: 'xingwei', n: 1, title: '欽天監星衛', x: 2780, y: 1640, r: 110, respawn: 20, power: 300, cond: intruder },
+  { id: 'yz_jars_a', kind: 'xingwei', n: 2, title: '提罐的星衛', x: 2600, y: 810, r: 140, respawn: 15, power: 320, cond: (s) => dark(s) && seeping(s) },
+];
 
 export const TIANYAN_PLACES = { STRUCTURES, POIS, BEASTS };
 

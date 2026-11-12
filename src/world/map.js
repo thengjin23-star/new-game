@@ -138,6 +138,11 @@ export function canSecludeAt(s, id) {
   if (id === 'xiejia') return '謝家莊不留外人。';
   if (id === 'tianjian' && !s.flags.tianjian_guest) return '天劍宗不收外人，山門外也不讓人閉關。';
   if (id === 'zz_river') return '這裡是江面。';
+  // (1.2) 天衍城: a cave in the capital is rented or there is none; the palace and 欽天監 are not places to sit
+  if (id === 'waicheng' && !rented(s, id)) return '京城寸土寸金，街上找不到能閉關的地方。要閉關，先到洞府行租一間洞府。';
+  if (id === 'huangcheng') return '皇城裡到處是禁軍，不是閉關的地方。';
+  if (id === 'qintianjian') return '欽天監的星官署不留外人過夜。';
+  if (id === 'ty_road') return '官道上車來人往，不宜閉關。';
   if (id === 'luoxia_market') return '坊市人來人往，找不到能閉關的清淨地方。';
   if (id === 'qingyun_sect' && !s.flags.sect_member) return '你不是青雲宗弟子，不能在山門內閉關。';
   if (id === 'lingxi_valley' && !s.flags.valley_safe) return '谷中那頭妖蟒還在，在這裡閉關無異於送死。';

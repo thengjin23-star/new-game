@@ -7,6 +7,7 @@ import { power } from '../../core/cultivation.js';
 import { dayAt } from '../../core/calendar.js';
 import { repOf } from '../../world/factions.js';
 import { moonTonight } from '../../world/weather.js';
+import { RENT, TERMS, rentCost, extendRent, rentUntil } from '../../world/caves.js';
 
 const TR = ['ty_road'];
 const WC = ['waicheng'];
@@ -862,6 +863,31 @@ export default [
     choices: [
       { text: '「躲到你山上的人，你護著？」', out: { text: '「護著。」她說，「三個。多了，我的山也藏不住。」\n\n她看著你，笑了：「你呢？你那一夜，在哪裡？」', effects: [['flag', 'roster_fox'], ['favor', 'hu_sanniang', 3], ['log', '胡三娘答應了：血月那一夜，狐仙廟護著三個人']] } },
       { text: '「再說。」', out: {} },
+    ],
+  },
+
+  // ── 租洞府 in the capital (world/caves.js RENT.waicheng): up against the foot of the peak, dear ──
+  {
+    id: 'wc_cave',
+    trigger: 'explore',
+    poi: 'wc_cave',
+    nodes: WC,
+    title: '洞府行',
+    text: (s) => {
+      const until = rentUntil(s, 'waicheng');
+      const head = `洞府行的掌櫃指著牆上的圖：「城北，靠著玉指峰的山腳那一排。地底下的靈氣是從峰裡滲出來的，天下沒有第二處。一個月，${RENT.waicheng.month} 塊靈石。」\n\n他壓低了聲音：「夜裡要是聽見山裡有動靜，別出門。」`;
+      return until ? `${head}\n\n（你租的洞府，還有 ${Math.ceil((until - s.day) / 30)} 個月左右到期。）` : head;
+    },
+    choices: [
+      ...TERMS.map(([months]) => ({
+        text: `${months === 1 ? '租一個月' : months === 6 ? '租半年' : '租一年'}（${rentCost('waicheng', months)} 靈石）。`,
+        need: (s) => (s.player.ls >= rentCost('waicheng', months) ? null : `靈石不足（需 ${rentCost('waicheng', months)}）`),
+        out: {
+          text: '掌櫃收了靈石，從抽屜裡摸出一塊白石牌：「城北，第三間。牌子是玉指峰的石頭磨的，門認牌。」',
+          effects: [['ls', -rentCost('waicheng', months)], (s) => { extendRent(s, 'waicheng', months); }, ['sysexp', 3]],
+        },
+      })),
+      { text: '不租了。', out: {} },
     ],
   },
 ];

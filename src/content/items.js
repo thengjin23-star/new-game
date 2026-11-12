@@ -589,6 +589,23 @@ export const ITEMS = {
     name: '通行令牌', kind: 'token', sell: 0, keep: true,
     desc: '一塊銅牌，正面鑄著「大衍」，背面刻著持牌人的名字。京師戒嚴以後，過官道關、上傳送陣，都要驗它。',
   },
+  // (1.2) 天衍城: what the 皇陵's stone men and 禁苑's 白澤 leave; the capital's best sword and robe (its 拍賣行, its smith)
+  shiyong_core: {
+    name: '石俑心', kind: 'material', sell: 70,
+    desc: '石俑胸口裡的一塊石頭，摸上去是溫的，像還在跳。煉器的人拿它鎮法器。',
+  },
+  baize_horn: {
+    name: '白澤角', kind: 'material', sell: 420,
+    desc: '白澤額上那隻光做的角，斷下來以後還亮了三天三夜。拿它養本命，本命會「認得」更多東西。',
+  },
+  yanguang_sword: {
+    name: '衍光劍', kind: 'weapon', price: 3400, sell: 1300, power: 0.95, strike: 'qinggang_sword',
+    desc: '京城兵器鋪的鎮店之寶，劍身裡嵌著一線玉指峰的白石，出鞘時有一道淡淡的光。據說是照著欽天監星衛的佩劍打的。',
+  },
+  xingdou_robe: {
+    name: '星斗袍', kind: 'gear', slot: 'robe', price: 2600, sell: 1000, stats: { hp: 0.16, def: 0.14, mpRegen: 0.6, sense: 0.1 },
+    desc: '拍賣行裡出來的法袍，深青色，袖口用銀線繡著二十八宿——跟欽天監的星官服，只差一個印。',
+  },
   // (1.2) 天衍觀's charm, for the 血月名冊 (world/roster.js): given to one of 東荒's people against the night
   hushen_fu: {
     name: '護身符', kind: 'token', price: 180, sell: 30,
@@ -720,6 +737,25 @@ export const SHOPS = {
     keeper: '管寶庫的執事',
     stock: ['qingfeng_sword', 'ningjin_pill', 'gold_talisman', 'wind_talisman', 'return_talisman'],
     share: () => 0.9,
+  },
+  // (1.2) 天衍城: the 拍賣行 (dear: the 凝金丹 for a 結丹, and the best of what comes up), the 坊市, the smith
+  ty_auction: {
+    name: '天衍拍賣行',
+    keeper: '拍賣行的朝奉',
+    stock: ['ningjin_pill', 'zhuji_pill', 'xingdou_robe', 'guiyuan_jade', 'jiaoxiao_robe'],
+    share: (s) => tyShare(s) * 1.15,
+  },
+  ty_market: {
+    name: '天衍坊市',
+    keeper: '坊市的攤主',
+    stock: ['heal_pill', 'juqi_pill', 'qingxin_pill', 'detox_pill', 'fire_talisman', 'gold_talisman', 'wind_talisman', 'return_talisman'],
+    share: (s) => tyShare(s),
+  },
+  ty_smith: {
+    name: '京城兵器鋪',
+    keeper: '打鐵的老師傅',
+    stock: ['yanguang_sword', 'qingfeng_sword', 'liuyun_robe'],
+    share: (s) => tyShare(s),
   },
   // (1.2) 天衍城: the 天衍觀, where the capital buys its luck
   ty_temple: {

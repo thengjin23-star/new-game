@@ -659,6 +659,41 @@ export const FOES = {
       cry: '{name}的劍上亮起了星光：「封山令在此，擅入者死。」', broke: '剩下的星衛退開了，有人點起了一盞信燈。',
     },
   },
+  // (1.2) 大衍皇陵's 神道: the stone men and stone horses along it, that get down off their plinths after dark
+  shiyong: {
+    name: '皇陵石俑', el: '土', hp: 1.45, atk: 1.2, loot: [[0.45, 'shiyong_core', 1], [0.2, 'star_stone', 1]],
+    rt: {
+      share: 1.3, tier: 2, speed: 112, walk: 0, sight: 190, lose: 400, loseT: 1.4, leash: 460, body: 15, bulk: 0.9, tall: 40,
+      notice: 0.9, moves: ['stonefist', 'stomp', 'bearcharge'], poise: 2.4, pack: true, tokens: 2, ring: 92,
+      warn: '神道兩邊的石人，影子好像比剛才短了。', cry: '石人從底座上走了下來，手裡的石笏、石刀，咯咯作響！',
+      scared: ['那尊石俑退回了底座上，一動不動。', '那些石俑退回了底座上，一動不動。'],
+    },
+  },
+  // (1.2) 禁苑: the leopards the emperors keep, gold with black coins on them; they come at you out of the long grass
+  jy_leopard: {
+    name: '禁苑金錢豹', el: '金', hp: 1.15, atk: 1.25, loot: [[0.45, 'beast_core', 1]],
+    rt: {
+      share: 1.4, tier: 2, speed: 210, walk: 30, sight: 170, lose: 420, loseT: 1.4, leash: 700, body: 12, bulk: 0.9, tall: 18,
+      notice: 0.2, moves: ['rake', 'snowpounce'], ambush: true, hop: 0.5, tokens: 1, ring: 96, poise: 1.3,
+      warn: '草叢裡一點聲音也沒有，靜得不對勁。', cry: '長草一分——一頭金錢豹撲了出來！',
+      scared: ['金錢豹鑽回了草叢裡。', '金錢豹鑽回了草叢裡。'],
+    },
+  },
+  // (1.2) 禁苑's 白澤: the beast that knows the name of every beast under heaven, kept on the island in the lake for
+  // three hundred years; white, a horn of light — it charges, it gores, it looks at you with the stars
+  baize: {
+    name: '白澤', el: '金', hp: 2.2, atk: 1.35, boss: true, loot: [[1, 'baize_horn', 1], [1, 'beast_core', 3], [1, 'star_stone', 2]],
+    rt: {
+      tier: 3, speed: 178, walk: 0, sight: 280, lose: 580, loseT: 2, leash: 520, body: 20, bulk: 0.7, tall: 44,
+      notice: 0.9, moves: ['qilinhorn', 'qilincharge', 'starbeam'],
+      phases: [
+        { at: 0.6, moves: ['qilinhorn', 'starbeam', 'qilincharge', 'stomp'], line: '白澤開口了，說的是人話——它叫出了你身邊每一隻蟲子的名字，唯獨叫不出你的。' },
+        { at: 0.28, enrage: true, line: '白澤額上的角亮得刺眼：「無名之物。」它說，「無名之物！」——牠發狂了！' },
+      ],
+      warn: '湖邊的白花，一朵一朵合上了。', cry: '一頭雪白的獸從湖心的島上踏水而來：獅子的身子，山羊的鬍子，額上一隻光做的角。',
+      scared: ['白澤退回了湖心的島上。', '白澤退回了湖心的島上。'],
+    },
+  },
   // (1.2) 大衍皇陵: the stone tortoise at the 陵門 with the blank stele on its back (贔屭), three thousand years on watch
   bixi: {
     name: '守陵贔屭', el: '土', hp: 2.3, atk: 1.3, boss: true, loot: [[1, 'beast_core', 3], [1, 'turtle_shell', 1], [1, 'star_stone', 2]],

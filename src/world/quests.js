@@ -16,6 +16,8 @@ export const BOARDS = {
   sect: { name: '任務堂', faction: 'sect', every: 7, size: 3, who: '任務堂的執事', poi: 'sect_task_hall', member: true },
   // 1.0 中州: 臨江城's 懸賞堂 (its work pays better, and is further off)
   linjiang: { name: '懸賞堂', faction: 'linjiang', every: 10, size: 3, who: '懸賞堂的管事', poi: 'lj_bounty' },
+  // 1.2 天衍城: the 京兆府's 懸賞堂 (the capital's work: the 皇陵's stone men, 禁苑's beasts got out, the roads in)
+  tianyan: { name: '京城懸賞堂', faction: 'tianyan', every: 10, size: 3, who: '京兆府的書辦', poi: 'wc_bounty' },
 };
 
 /**
@@ -53,6 +55,16 @@ export const WORK = {
     { id: 'z_heart', title: '收木精心', text: '天工坊的老師傅要木精心做劍柄。', kind: 'bring', item: 'mujing_heart', n: 1, ls: 80, rep: 6 },
     { id: 'z_longxu', title: '收龍鬚草', text: '丹鋪缺龍鬚草，價錢好說。', kind: 'bring', item: 'longxu_grass', n: 4, ls: 45, rep: 4 },
     { id: 'z_zizhi', title: '收紫芝', text: '城主府的老夫人要做壽，收三十年的紫芝。', kind: 'bring', item: 'zizhi', n: 1, ls: 110, rep: 8 },
+  ],
+  tianyan: [
+    { id: 't_statues', title: '皇陵石俑', text: '皇陵的石人夜裡又走下了神道，嚇壞了守陵的老兵。京兆府懸賞，打碎幾尊。', kind: 'slay', beasts: ['shiyong'], n: 3, ls: 180, rep: 10, realm: 2 },
+    { id: 't_leopards', title: '禁苑的豹子', text: '禁苑的金錢豹跑了出來，咬死了京郊皇莊的兩頭牛。行宮的老太監偷偷懸賞，別聲張。', kind: 'slay', beasts: ['jy_leopard'], n: 2, ls: 160, rep: 8 },
+    { id: 't_robbers', title: '京畿劫修', text: '進京的路上有劫修攔路，搶的都是沒有令牌、不敢報官的人。', kind: 'slay', beasts: ['jie_xiu'], whom: '劫修', n: 2, ls: 150, rep: 10 },
+    { id: 't_core', title: '收妖獸內丹', text: '拍賣行收妖獸內丹，成色好的另加錢。', kind: 'bring', item: 'beast_core', n: 2, ls: 130, rep: 6 },
+    { id: 't_star', title: '收星紋石', text: '欽天監收星紋石，有多少收多少，不問來路。', kind: 'bring', item: 'star_stone', n: 2, ls: 140, rep: 6 },
+    { id: 't_heart', title: '收石俑心', text: '京城兵器鋪的老師傅要石俑心鎮劍。', kind: 'bring', item: 'shiyong_core', n: 1, ls: 120, rep: 6 },
+    { id: 't_horn', title: '收白澤角', text: '拍賣行的朝奉悄悄說：誰拿得到禁苑的白澤角，價錢隨你開。', kind: 'bring', item: 'baize_horn', n: 1, ls: 700, rep: 12, realm: 3 },
+    { id: 't_zizhi', title: '收紫芝', text: '宮裡的太醫院收紫芝，給老太后配藥。', kind: 'bring', item: 'zizhi', n: 1, ls: 130, rep: 8 },
   ],
 };
 

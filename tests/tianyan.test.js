@@ -19,6 +19,13 @@ import { levelFor, sysGain, SYS_FEATURES } from '../src/world/system.js';
 import { fateWet, wetCount } from '../src/world/ending.js';
 import { rosterOpen, rosterOf, planBlocked, setPlan, rosterSummary, helpersOf } from '../src/world/roster.js';
 import { SHOPS, ITEMS } from '../src/content/items.js';
+import { FOES } from '../src/content/foes.js';
+import { MOVES } from '../src/content/moves.js';
+import { isSword } from '../src/world/air.js';
+import { lockOf } from '../src/world/skills.js';
+import { postings, WORK } from '../src/world/quests.js';
+import { canSecludeAt, nodeQi } from '../src/world/map.js';
+import * as CB from '../src/world/combat.js';
 import { heightAt } from '../src/world/height.js';
 import { flyBlocked } from '../src/world/air.js';
 import { FACTIONS } from '../src/world/factions.js';
@@ -534,6 +541,65 @@ test('those who can say yes: 上官瑾 lends the 樓船 to one she owes; 林塵 
     assert.ok(helpersOf(s).every((x) => x.yes || x.name === '清虛觀'));
     // 天衍觀 sells the charms
     assert.ok(SHOPS.ty_temple.stock.includes('hushen_fu') && ITEMS.hushen_fu.price > 0);
+  } finally {
+    useMap('donghuang');
+  }
+});
+
+// ── 1.2's foes, shops, work and caves in the capital ──
+
+test('the capital\'s shops (the 拍賣行\'s 凝金丹, the smith\'s 衍光劍 — a sword to fly on and fight with), its 懸賞堂, and a cave at the foot of the peak', () => {
+  const s = inCapital(631);
+  try {
+    assert.ok(SHOPS.ty_auction.stock.includes('ningjin_pill'), 'a 凝金丹 for a 結丹');
+    assert.ok(SHOPS.ty_smith.stock.includes('yanguang_sword'));
+    for (const id of [...SHOPS.ty_auction.stock, ...SHOPS.ty_market.stock, ...SHOPS.ty_smith.stock, ...SHOPS.ty_temple.stock]) assert.ok(ITEMS[id], id);
+    assert.ok(isSword('yanguang_sword'), 'stood on to fly');
+    s.player.items.yanguang_sword = 1;
+    s.player.weapon = 'yanguang_sword';
+    assert.equal(lockOf(s, MOVES.swordstep), null, 'the sword moves come with it');
+    const work = postings(s, 'tianyan');
+    assert.ok(work.length === 3 && work.every((w) => w.board === 'tianyan'));
+    for (const w of WORK.tianyan) {
+      if (w.kind === 'bring') assert.ok(ITEMS[w.item], w.id);
+      else for (const k of w.beasts) assert.ok(FOES[k], w.id);
+    }
+    // a cave: none in the street, one rented by the month
+    assert.ok(canSecludeAt(s, 'waicheng'), 'no seclusion in the street');
+    s.player.ls = 2000;
+    at(s, 'wc_cave', 'wc_cave');
+    pickText(s, '租一個月');
+    finish(s);
+    assert.equal(canSecludeAt(s, 'waicheng'), null);
+    assert.equal(nodeQi(s, 'waicheng'), 2.0);
+    assert.ok(canSecludeAt(s, 'huangcheng') && canSecludeAt(s, 'qintianjian'), 'the palace and 欽天監 are not for sitting in');
+  } finally {
+    useMap('donghuang');
+  }
+});
+
+test('what is out in the capital: the 皇陵\'s stone men only after dark; the 禁軍 and 星衛 on the terrace only for one without the token; 白澤 once', () => {
+  const s = inCapital(632);
+  try {
+    const out = (id) => {
+      tick(s);
+      return CB.beastsInWorld(s, 99999).some((b) => b.def.id === id);
+    };
+    s.tod = 12;
+    E.placeAt(s, 1240, 1900);
+    finish(s);
+    s.tod = 12;
+    assert.ok(!out('shiyong_a'), 'by day the stone men stand on their plinths');
+    s.tod = 22;
+    assert.ok(out('shiyong_a'), 'after dark they walk');
+    s.tod = 12;
+    s.flags.hc_in = true;
+    E.placeAt(s, 2700, 1980);
+    finish(s);
+    assert.ok(out('hc_patrol_a'), 'an intruder meets the 禁軍');
+    s.flags.huangcheng_pass = true;
+    assert.ok(!out('hc_patrol_a'), 'not one with the token');
+    assert.ok(FOES.baize.boss && FOES.bixi.boss && FOES.shiyong && FOES.jy_leopard && FOES.xingwei && FOES.jinjun);
   } finally {
     useMap('donghuang');
   }

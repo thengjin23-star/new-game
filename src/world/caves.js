@@ -11,6 +11,8 @@ import { DAYS_PER_MONTH } from '../core/calendar.js';
 export const RENT = {
   linjiang: { name: '城中洞府', qi: 1.9, month: 60 },
   guishi: { name: '鬼市後頭的洞府', qi: 1.45, month: 12 },
+  // (1.2) 天衍城: up against the foot of 玉指峰, where the 靈氣 the finger seeps comes up through the ground
+  waicheng: { name: '京中洞府', qi: 2.0, month: 90 },
 };
 
 /** The terms on offer: [months, the share of the monthly rent each month costs]. */

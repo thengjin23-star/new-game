@@ -65,12 +65,12 @@ export const MOVES = {
   },
   swordstep: {
     name: '劍影', school: '劍修', el: '金', aim: 'dash', mp: 8, cd: 7, cast: 0.05, range: 150, width: 36, mult: 1.5, fx: 'swordstep',
-    learn: ['qingyuan_sword'], weapon: ['qinggang_sword', 'hantie_sword', 'qingfeng_sword', 'duantian_sword'],
+    learn: ['qingyuan_sword'], weapon: ['qinggang_sword', 'hantie_sword', 'qingfeng_sword', 'duantian_sword', 'yanguang_sword'],
     desc: '人隨劍走，一閃而過，沿途的敵人各挨一劍。閃身之時，刀槍不入。',
   },
   feijian: {
     name: '飛劍', school: '劍修', el: '金', aim: 'line', mp: 10, cd: 4, cast: 0.15, range: 330, width: 22, speed: 720, mult: 1.3, pierce: true, back: true, fx: 'feijian', realm: 2,
-    weapon: ['qinggang_sword', 'hantie_sword', 'qingfeng_sword', 'duantian_sword'],
+    weapon: ['qinggang_sword', 'hantie_sword', 'qingfeng_sword', 'duantian_sword', 'yanguang_sword'],
     desc: '築基之後，劍能離手：飛劍直直射出，穿過途中所有敵人，再飛回你手上——回來的路上，再斬一次。',
   },
   // (1.1) your 本命法寶 at its third 重 (core/benming.js): it goes out by itself, and comes back
