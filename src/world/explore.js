@@ -692,7 +692,8 @@ function riverWatch(s, L, dt) {
 /**
  * (1.0) The sky over a walled city (the map's NO_FLY: 中州's 臨江城) belongs to its watch. Not a wall
  * in the air — fly over if you like; but stay up there and the watch on the walls calls out, and then
- * comes up after you and brings you down (content/events/zhongzhou.js lj_nofly: pay, fight, or run).
+ * comes up after you and brings you down (content/events/zhongzhou.js lj_nofly: pay, fight, or run;
+ * (1.2) a city may have its own: 天衍城's 禁軍, content/events/tianyan.js ty_nofly).
  */
 function cityWatch(s, L, dt) {
   const w = s.world;
@@ -713,8 +714,9 @@ function cityWatch(s, L, dt) {
   const spot = landingNear(s, w.x, w.y, 2000);
   if (spot) placeAt(s, spot[0], spot[1]);
   else w.fly = null;
-  if (s.pending) s.queue.push('lj_nofly');
-  else startEvent(s, 'lj_nofly');
+  const ev = NO_FLY.event || 'lj_nofly';
+  if (s.pending) s.queue.push(ev);
+  else startEvent(s, ev);
 }
 
 /** Flying on: the day goes by (slower than on foot), the clouds part wide, you pass over regions (what waits there waits till you land). */

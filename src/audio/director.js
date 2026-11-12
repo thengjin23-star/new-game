@@ -84,6 +84,10 @@ const SOUNDS = {
   docks: { beds: { wind: 0.3, river: 0.6, crowd: 0.8 }, day: { birds: 0.03 }, night: { clapper: 0.006 } },
   swordsect: { beds: { wind: 0.6, leaves: 0.15 }, day: { bell: 0.014 }, night: { bell: 0.006 } },
   nightmarket: { beds: { wind: 0.25, crowd: 0.35 }, day: { birds: 0.03 }, night: { clapper: 0.004 } },
+  // 天衍城 (1.2): the palace terrace hushed, the wind down off the peak, the 午門's bell; 欽天監 under the
+  // cliff, wind and a drone, a chime now and then as the hours are kept
+  palace: { beds: { wind: 0.55, crowd: 0.15 }, day: { bell: 0.01, birds: 0.02 }, night: { bell: 0.006 } },
+  starhall: { beds: { wind: 0.45, drone: 0.12 }, day: { chimes: 0.012 }, night: { chimes: 0.016 } },
   mine: { beds: { drone: 0.45 }, day: { drip: 0.25 }, night: { drip: 0.25 } },
   icesea: { beds: { wind: 0.75, drone: 0.18 }, day: {}, night: { howl: 0.005 } },
   tundra: { beds: { wind: 0.95, sand: 0.18 }, day: {}, night: { howl: 0.012 } },

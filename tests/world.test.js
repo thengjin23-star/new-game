@@ -76,11 +76,11 @@ test('up where no road goes: the summits and the sandbar stand apart, with room 
 });
 
 test('every place, person and beast stands somewhere reachable, in its region (on every map)', () => {
-  // (a place hidden until it is found — behind the falls, under the 觀星台 — reads as the region about it till then)
+  // (a place hidden until it is found — behind the falls, under the 觀星台, (1.2) down in the 皇陵's 地宮 — reads as the region about it till then)
   try {
     for (const map of Object.keys(MAPS)) {
       useMap(map);
-      const found = { flags: { falls_cave_found: true, palace_open: true } };
+      const found = { flags: { falls_cave_found: true, palace_open: true, hl_open: true } };
       for (const p of POIS) {
         assert.ok(NODES[p.region]?.air ? airStandable(p.x, p.y) : standable(p.x, p.y), `${p.id} can be walked up to`);
         assert.equal(regionAt(found, p.x, p.y), p.region, `${p.id} lies in ${p.region}`);

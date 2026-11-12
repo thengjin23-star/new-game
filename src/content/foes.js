@@ -632,6 +632,24 @@ export const FOES = {
       cry: '{name}喝道：「城上禁空！下來！」', broke: '剩下的巡城衛退開了，有人吹起了哨子。',
     },
   },
+  // (1.2) the men of 官道關 who walk the hills by night for those who would go round the gate
+  guan_bing: {
+    name: '關兵', hp: 1.1, atk: 1, loot: [],
+    rt: {
+      share: 1.2, tier: 2, person: true, look: 'guard', weapon: 'qinggang_sword', speed: 164, walk: 40, sight: 260, lose: 420, loseT: 1.5, leash: 700,
+      body: 11, tall: 38, notice: 0.4, moves: ['cleave', 'rush', 'qi'], tokens: 2, ring: 100, yield: 0.2,
+      cry: '{name}舉著火把喝道：「什麼人！」', broke: '剩下的關兵退開了，有人吹起了哨子。',
+    },
+  },
+  // (1.2) 天衍城's 禁軍: black armour, red tassels on their spears; they keep the gates, the 御階 and the sky (content/events/tianyan.js)
+  jinjun: {
+    name: '禁軍', hp: 1.4, atk: 1.2, loot: [],
+    rt: {
+      share: 1.3, tier: 2, person: true, look: 'guard', weapon: 'qinggang_sword', speed: 176, walk: 42, sight: 280, lose: 460, loseT: 1.6, leash: 760,
+      body: 12, tall: 40, notice: 0.45, moves: ['cleave', 'rush', 'qi'], tokens: 2, ring: 100, yield: 0.15,
+      cry: '{name}喝道：「拿下！」', broke: '剩下的禁軍退開了，城頭上的鼓響了起來。',
+    },
+  },
   // 舊觀星台: the stone beast that has crouched by the platform for three thousand years, starlight in its
   // eyes; it leaps, it brings its weight down, it looks at you with the stars — worn down, it brings the
   // sky down on you

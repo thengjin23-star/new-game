@@ -584,6 +584,16 @@ export const ITEMS = {
     name: '沈清歌的信', kind: 'token', sell: 0, keep: true,
     desc: '一封封了口的信，信封上寫著「林塵 親啟」，字很用力。她說：「別讓他喝謝家的東西。」',
   },
+  // (1.2) papers for the capital, since it was shut: 官道關 and the 傳送陣 ask for them (content/events/tianyan.js)
+  tongxing_ling: {
+    name: '通行令牌', kind: 'token', sell: 0, keep: true,
+    desc: '一塊銅牌，正面鑄著「大衍」，背面刻著持牌人的名字。京師戒嚴以後，過官道關、上傳送陣，都要驗它。',
+  },
+  // (1.2) 蘇清瑤's: a 欽天監 star officer's token — the papers of the capital, and the 皇城's stair (flag huangcheng_pass)
+  qintian_token: {
+    name: '欽天監腰牌', kind: 'token', sell: 0, keep: true,
+    desc: '一塊白玉腰牌，刻著北斗七星，背面是欽天監的印。禁軍見了它，會讓開御階；官道關見了它，不敢多問。',
+  },
   su_slip: {
     name: '蘇清瑤的玉簡', kind: 'token', sell: 0, keep: true,
     desc: '一枚溫潤的白玉簡，貼在額上，能看見她記下的事：中州幾個大宗門的山門與規矩，還有「天元三千零二十二年，血月」幾個字，刻得特別深。',

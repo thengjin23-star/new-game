@@ -155,7 +155,7 @@ export function flyBlocked(s, x, y, by) {
   const F = FLIGHT[by];
   if ((BORDER.west != null && x < BORDER.west + 40) || x < 20 || y < BORDER.north + 50 || y > BORDER.south - 40 || x > (BORDER.east ? BORDER.east - 40 : WORLD_W - 20)) return '再往外，是望不到頭的群山。';
   if (terrainAt(x, y) === T.VOID) return MIST_SAY;
-  if (!s.flags?.[SECT?.member || 'sect_member'] && sectAir(x, y)) return `一層看不見的光幕擋住了你：${SECT?.name || '宗門'}的護山大陣。`;
+  if (!s.flags?.[SECT?.member || 'sect_member'] && sectAir(x, y)) return `一層看不見的光幕擋住了你：${SECT?.name || '宗門'}的${SECT?.ward || '護山大陣'}。`;
   if (heightAt(x, y) + F.clear > F.ceil) return '山太高了，飛不上去。';
   return null;
 }

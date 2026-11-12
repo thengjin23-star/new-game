@@ -326,8 +326,8 @@ function build() {
     });
   }
 
-  // 青雲宗's gate
-  if (SECT) {
+  // 青雲宗's gate (a terrace whose stair is kept by people, not a gate, has none: 1.2 天衍城's 皇城)
+  if (SECT && SECT.gateX) {
     each((k, x, y) => {
       if (Math.abs(y - SECT.gateY) < 22 && x >= SECT.gateX[0] && x <= SECT.gateX[1] && terr[k] === T.ROAD) terr[k] = T.GATE;
     });

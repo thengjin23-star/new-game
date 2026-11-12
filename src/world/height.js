@@ -417,6 +417,8 @@ function buildHeights() {
   function sectPlateau() {
   const [px, py, prx, pry] = SECT.plateau;
   const massif = SECT.massif;
+  // (1.2) a map's terrace may stand lower than a sect's mountaintop (天衍城's 皇城)
+  const LV = SECT.level ?? LEVEL.sect;
   eachIn(px - prx * 3, py - pry * 3, px + prx * 3, py + pry * 3, (k, x, y) => {
     const e = Math.hypot((x - px) / prx, (y - py) / pry);
     let onPlateau = e < 1;
@@ -426,15 +428,15 @@ function buildHeights() {
       });
     }
     if (onPlateau) {
-      h[k] = LEVEL.sect + 4 * (vnoise(x / 80, y / 80, 77) - 0.5);
+      h[k] = LV + 4 * (vnoise(x / 80, y / 80, 77) - 0.5);
       return;
     }
     if (!insidePoly(massif, x, y) && e > 1.15) return;
     if (isWet(cellAt(x, y))) return;
     const north = smoothstep(0.3, -0.6, (y - py) / (pry * e)); // 1 behind the plateau, 0 in front
-    const cap = LEVEL.sect + 6 + (e - 1) * (north * 260 - (1 - north) * 50) + 30 * north * (vnoise(x / 110, y / 110, 79) - 0.3) * Math.min(1, e - 1);
+    const cap = LV + 6 + (e - 1) * (north * 260 - (1 - north) * 50) + 30 * north * (vnoise(x / 110, y / 110, 79) - 0.3) * Math.min(1, e - 1);
     if (h[k] > cap) h[k] = cap;
-    if (e < 1.35) h[k] = Math.max(h[k], LEVEL.sect + 2 + (e - 1) * 40 * north);
+    if (e < 1.35) h[k] = Math.max(h[k], LV + 2 + (e - 1) * 40 * north);
   });
   }
 
@@ -453,12 +455,15 @@ function buildHeights() {
     }
     profiles.push({ road: r, steps, prof, wet });
   }
-  const stair = SECT && profiles.find((p) => p.road.pts[p.road.pts.length - 1][1] === 1330);
+  // (which road is the stair, and where its foot is: 青雲宗's, unless the map says (1.2: 天衍城's 御階))
+  const STAIR = SECT?.stair || { endY: 1330, footY: 1800 };
+  const stair = SECT && profiles.find((p) => p.road.pts[p.road.pts.length - 1][1] === STAIR.endY);
   if (stair) {
-    const foot = Math.max(0, stair.steps.findIndex(([, y]) => y < 1800));
+    const foot = Math.max(0, stair.steps.findIndex(([, y]) => y < STAIR.footY));
     const top = stair.steps.length - 1;
     const h0 = stair.prof[foot];
-    for (let n = foot; n <= top; n++) stair.prof[n] = h0 + (LEVEL.sect - h0) * smoothstep(foot, top + 1, n + 1) ** 0.9;
+    const lv = SECT.level ?? LEVEL.sect;
+    for (let n = foot; n <= top; n++) stair.prof[n] = h0 + (lv - h0) * smoothstep(foot, top + 1, n + 1) ** 0.9;
   }
   const bridges = [];
   for (const p of profiles) {

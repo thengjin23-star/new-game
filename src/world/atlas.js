@@ -34,6 +34,12 @@ export const CROSSINGS = {
   // (1.0) over the 大江 by the old ferryman's boat: 白鶴渡 ↔ 鶴歸渡 (by: how the map page says it is gone)
   crane_ferry: { to: 'zhongzhou', at: [800, 3900], hours: 8, by: 'boat' },
   heguidu: { to: 'donghuang', at: [4440, 3800], hours: 8, by: 'boat' },
+  // (1.2) the 官道 east from 官道關 to 天衍城, three days on the road (papers at the pass: content/events/zhongzhou.js gd_gate)
+  guandao_guan: { to: 'tianyan', at: [330, 2930], hours: 72, by: 'road' },
+  ty_road: { to: 'zhongzhou', at: [4700, 2700], hours: 72, by: 'road' },
+  // (1.2) the 傳送陣 between 臨江城 and 天衍城's 外城: a moment, for 靈石 (and, the capital being shut, papers going in)
+  linjiang: { to: 'tianyan', at: [2430, 3150], hours: 1, by: 'array' },
+  waicheng: { to: 'zhongzhou', at: [1380, 2630], hours: 1, by: 'array' },
 };
 
 let current = 'donghuang';

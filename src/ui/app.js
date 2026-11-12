@@ -57,6 +57,9 @@ import * as BM from '../core/benming.js';
 
 const VERSION = '1.1';
 const ITEM_ORDER = ['weapon', 'gear', 'flyer', 'tool', 'pill', 'talisman', 'herb', 'material', 'book', 'treasure', 'token', 'unknown'];
+/** How a way into another map is gone (world/atlas.js CROSSINGS by), and how long it takes, for the map page. */
+const WAY_BY = { boat: '坐船過去', road: '走官道過去', array: '坐傳送陣過去' };
+const wayTime = (hours) => (hours < 2 ? '片刻就到' : hours < 24 ? `約 ${hours / 2} 個時辰` : `約 ${Math.round(hours / 24)} 天`);
 const ITEM_KIND = { pill: '丹藥', food: '飲食', herb: '靈草', material: '材料', book: '典籍', weapon: '兵器', gear: '裝備', flyer: '飛行法器', tool: '工具', treasure: '寶物', talisman: '符籙', token: '信物', unknown: '未知' };
 const DOCK = [
   ['map', '地圖'],
@@ -3234,7 +3237,7 @@ export function startApp(root, { speed = 1, view = null } = {}) {
           ways.length
             ? h('div.map-places.map-ways',
                 h('h3', '往別處去'),
-                ways.map(([from, way]) => h('p.small', `往${MAPS[way.to].name}（適合${MAPS[way.to].realm || '任何人'}）：從${NODES[from].name}${way.by === 'boat' ? '坐船過去' : '翻過去'}，約 ${way.hours / 2} 個時辰。`)))
+                ways.map(([from, way]) => h('p.small', `往${MAPS[way.to].title || MAPS[way.to].name}（適合${MAPS[way.to].realm || '任何人'}）：從${NODES[from].name}${WAY_BY[way.by] || '翻過去'}，${wayTime(way.hours)}。`)))
             : null,
         ),
       ),

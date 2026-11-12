@@ -88,6 +88,11 @@ export const CUES = {
   'swordsect:night': { lead: 'guqin', bells: 'qing', mode: 'yu', root: 47, bpm: 46, reg: [59, 83], rhythm: { 1.5: 2, 2: 3, 3: 2 }, harm: 0.4, rest: [4, 8], play: [60, 90], pause: [60, 110] },
   'nightmarket:day': { lead: 'xun', pad: true, mode: 'yu', root: 45, bpm: 44, reg: [57, 76], rhythm: { 2: 3, 3: 2 }, rest: [5, 9], play: [50, 80], pause: [70, 120] },
   'nightmarket:night': { lead: 'pipa', second: 'xiao', pulse: 'pipa', mode: 'jue', root: 50, bpm: 72, reg: [62, 84], bassReg: [38, 50], rhythm: { 0.5: 3, 1: 4, 1.5: 2 }, trem: 0.3, rest: [2, 4], play: [70, 100], pause: [50, 90] },
+  // 天衍城 (1.2): the palace in 宮調 on the 古琴 and 箏 with the 鐘, stately and slow; 欽天監 in 羽調, the 簫
+  // over a pad and the 磬, as if it were counting
+  'palace:day': { lead: 'guqin', second: 'zheng', bells: 'zhong', pad: true, mode: 'gong', root: 50, bpm: 52, reg: [62, 84], bassReg: [38, 50], rhythm: { 1: 3, 1.5: 1, 2: 3 }, slide: 0.25, rest: [2, 5] },
+  'palace:night': { lead: 'xiao', bells: 'qing', pad: true, mode: 'yu', root: 47, bpm: 44, reg: [59, 81], rhythm: { 1.5: 2, 2: 3, 3: 2 }, harm: 0.4, rest: [4, 8], play: [60, 90], pause: [60, 110] },
+  'starhall:day': { lead: 'xiao', pad: true, bells: 'qing', mode: 'yu', root: 45, bpm: 40, reg: [60, 84], rhythm: { 2: 3, 3: 2 }, harm: 0.6, rest: [4, 8], play: [60, 90], pause: [60, 110] },
   sky: { lead: 'dizi', second: 'xiao', pad: true, mode: 'gong', root: 55, bpm: 70, reg: [67, 88], rhythm: { 0.5: 2, 1: 4, 2: 2 }, rest: [1, 3], play: [90, 140], pause: [20, 40] },
   secl: { lead: 'guqin', pad: true, mode: 'gong', root: 48, bpm: 36, reg: [64, 88], rhythm: { 2: 3, 3: 3 }, harm: 0.8, rest: [6, 12], play: [150, 240], pause: [30, 60] },
   realm: { lead: 'xun', pad: true, mode: 'jue', root: 44, bpm: 42, reg: [56, 76], rhythm: { 2: 3, 3: 2 }, rest: [4, 8], play: [90, 150], pause: [30, 60] },

@@ -344,6 +344,8 @@ const STRUCTURES = [
   { x: 1550, y: 2550, w: 240, h: 150, paint: T.PAVED },
   { x: 1550, y: 2540, w: 170, h: 90, sprite: 'bighall', name: '城主府', landmark: true },
   { x: 1550, y: 2620, w: 80, h: 10, sprite: 'paifang', block: false },
+  // (1.2) beside it, the 傳送陣 the 皇朝 keeps to the capital (two black stone pillars, the ring of the array between)
+  { x: 1380, y: 2560, w: 50, h: 12, sprite: 'skygate', block: false, name: '傳送陣' },
   { x: 1260, y: 2530, w: 70, h: 44, sprite: 'house' },
   { x: 1270, y: 2780, w: 70, h: 44, sprite: 'house' },
   { x: 1550, y: 2780, w: 90, h: 50, sprite: 'hall' },
@@ -428,6 +430,8 @@ const POIS = [
   // 臨江城
   { id: 'lj_board', region: 'linjiang', x: 1790, y: 2850, name: '天驕榜', verb: '看榜', crowd: (s) => s.tod >= 8 && s.tod < 19, text: '榜樓的牆上貼著一張大榜，從第一名一直排到一百名。榜頭蓋著欽天監的大印。' },
   { id: 'lj_lord', region: 'linjiang', x: 1550, y: 2600, name: '城主府', verb: '查看', text: '城主府門口站著兩排衛兵，門前的石階擦得發亮。門房說，城主不見閒人。' },
+  // (1.2) to 天衍城 in a moment, for 靈石 and papers (content/events/tianyan.js lj_array; world/atlas.js CROSSINGS.linjiang)
+  { id: 'lj_array', region: 'linjiang', x: 1380, y: 2600, name: '傳送陣', verb: '坐陣', glow: () => true, text: '城主府旁邊的空地上立著兩根黑石柱子，柱子中間的地上刻著陣紋。陣師說：往天衍城，一百五十塊靈石，還要看令牌。' },
   { id: 'lj_tea', region: 'linjiang', x: 1850, y: 3100, name: '茶樓', verb: '打聽', action: 'inquire', glow: (s) => s.tod >= 17 || s.tod < 2 },
   { id: 'lj_teller', region: 'linjiang', x: 1810, y: 3080, name: '說書人', verb: '聽書', text: '茶樓裡的說書人一拍醒木：「上回說到，劍仙一劍斷天河……」' },
   { id: 'lj_inn', region: 'linjiang', x: 1270, y: 3060, name: '客棧', verb: '歇腳', rest: true, text: '客棧的掌櫃看了你一眼：「住店？中州的店錢，可比東荒貴。」' },

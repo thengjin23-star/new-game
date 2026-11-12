@@ -6,12 +6,14 @@
 // tells 錢半仙's tale the other way round; the old observatory and the page
 // of 玄微's that was left there; a letter from 王二; and, on 七月十五 of 3022,
 // the moon (only an omen, until the night itself is written: 1.3).
-import { flag, night, variant, alive, met, favor, has } from '../helpers.js';
+import { flag, night, variant, alive, met, favor, has, needLs } from '../helpers.js';
 import { dayAt } from '../../core/calendar.js';
 import { power } from '../../core/cultivation.js';
 import { FRAGMENTS } from '../fragments.js';
 import { RENT, TERMS, rentCost, extendRent, rentUntil } from '../../world/caves.js';
 import { resolveDuel, duelOf } from '../../world/duel.js';
+import { repOf } from '../../world/factions.js';
+import { papers, paperName, passHint } from './tianyan.js';
 
 const HG = ['heguidu'];
 const LJ = ['linjiang'];
@@ -478,6 +480,34 @@ export default [
     ],
   },
 
+  // (1.2) papers for the capital: for one the 懸賞堂 knows, and the fee
+  {
+    id: 'lj_pass',
+    trigger: 'explore',
+    poi: 'lj_lord',
+    nodes: LJ,
+    // (once the 城主府 has been seen to — registered or not: papers are a matter of a name, not of the book)
+    cond: (s) => !!s.seen.lj_lord && !has(s, 'tongxing_ling'),
+    title: '城主府',
+    text: (s) =>
+      `照壁上新貼了一張告示：「京師戒嚴。凡往天衍城者，須持通行令牌。令牌由本府核發，名額有限。」\n\n書吏抬起頭：${
+        repOf(s, 'linjiang') >= 25 ? '「你啊——懸賞堂的管事說起過你。辦令牌？兩百塊靈石，工本費。」' : '「辦令牌？你在臨江城是什麼人？懸賞堂裡有你的名號嗎？沒有？那就等有了再來。」'
+      }`,
+    choices: [
+      {
+        text: '辦一塊（兩百塊靈石）。',
+        show: (s) => repOf(s, 'linjiang') >= 25,
+        need: needLs(200),
+        out: {
+          text: '書吏收了靈石，從抽屜裡摸出一塊銅牌，拿刻刀在背面刻你的名字。刻到一半，刀停了——他對著那本深青色的冊子看了半天。\n\n「……冊子上還是沒有你。」他搖了搖頭，把名字刻完，「算了，令牌認刻上去的字，不認冊子。」',
+          effects: [['ls', -200], ['item', 'tongxing_ling', 1], ['sysexp', 5], ['log', '在臨江城的城主府辦了一塊通行令牌']],
+        },
+      },
+      { text: '「怎麼才算有名號？」', show: (s) => repOf(s, 'linjiang') < 25, out: { text: '書吏用筆桿指了指東市的方向：「懸賞堂。揭幾張榜，辦幾樁事。城裡的人記住你了，再來。」' } },
+      { text: '走了。', out: {} },
+    ],
+  },
+
   {
     id: 'lj_lane',
     trigger: 'explore',
@@ -695,6 +725,22 @@ export default [
   },
 
   // ── 上官商棧 ──
+  // (1.2) once you have been turned back at 官道關: the papers 上官家's convoys carried to the capital
+  {
+    id: 'sg_pass',
+    trigger: 'visit',
+    npc: 'shangguan_jin',
+    nodes: SG,
+    once: true,
+    priority: 6,
+    cond: (s) => flag(s, 'sg_met') && (flag(s, 'sg_boat_owed') || favor(s, 'shangguan_jin') >= 30) && !has(s, 'tongxing_ling') && flag(s, 'ty_pass_asked'),
+    title: '上官瑾',
+    text: (s) =>
+      `上官瑾在帳房裡撥著算盤，看見你，把算盤一推：「聽說你在官道關碰了釘子？」\n\n她從袖子裡摸出一塊銅牌，放在桌上推過來：「上官家往京城押貨的令牌。樓船這一年不往天衍城開了——戒嚴，連水門都封了——牌子留著也是留著。」\n\n${
+        flag(s, 'sg_boat_owed') ? '她笑了笑：「上官家欠你的那一回，不算這個。」' : '她笑了笑：「生意人，交的是朋友。」'
+      }`,
+    choices: [{ text: '收下。', out: { effects: [['item', 'tongxing_ling', 1], ['favor', 'shangguan_jin', 2], ['log', '上官瑾給了一塊上官家押貨的通行令牌']] } }],
+  },
   {
     id: 'shangguan_talk',
     trigger: 'visit',
@@ -1642,18 +1688,74 @@ export default [
       { text: '走開。', out: { effects: [['flag', 'river_eye_stone']] } },
     ],
   },
+  // (1.2) 官道關: papers, and through — or, by night, money or the hills, and no papers in the capital after
   {
     id: 'gd_gate',
     trigger: 'explore',
     poi: 'gd_gate',
     nodes: GG,
-    cooldown: 10,
     title: '官道關',
-    text: (s) =>
-      s.day >= dayAt(9, 1)
-        ? '關門緊閉，關樓上的兵丁比從前多了一倍。「天衍城戒嚴，」守關的校尉說，「欽天監的令：天象有變，關上只出不進。」\n\n「什麼天象？」\n\n他看了你一眼：「我要是知道，就不在這裡守關了。」'
-        : '關樓上插著大衍皇朝的旗。關門開著，卻沒有人往東走——過關要通行令牌。\n\n「令牌？」守關的校尉說，「城主府發的。這兩年不發了。」他朝東邊努了努嘴，「天衍城那邊的意思。說是欽天監算出來，天象要變。」',
-    choices: [{ text: '往東看了一眼。', out: { text: '官道往東，鑽進了兩座山之間。山那頭，是天衍城。', effects: [['flag', 'gg_seen']] } }],
+    steps: {
+      start: {
+        text: (s) =>
+          (s.day >= dayAt(9, 1)
+            ? '關門緊閉，關樓上的兵丁比從前多了一倍。「天衍城戒嚴，」守關的校尉說，「欽天監的令：天象有變，往東去的，一律驗看令牌。」\n\n「什麼天象？」\n\n他看了你一眼：「我要是知道，就不在這裡守關了。」'
+            : '關樓上插著大衍皇朝的旗。關門開著，往東走的人卻不多——過關要驗通行令牌。\n\n「令牌？」守關的校尉說，「城主府發的。這兩年發得少了。」他朝東邊努了努嘴，「天衍城那邊的意思。說是欽天監算出來，天象要變。」') +
+          (papers(s) ? `\n\n你摸了摸懷裡——${paperName(s)}。` : night(s) ? '\n\n天黑了，關樓上換了一班崗。守夜的校尉靠在門洞裡，一下一下地掂著腰上的錢袋。' : ''),
+        choices: [
+          {
+            text: (s) => `報上${paperName(s)}，過關。`,
+            show: papers,
+            out: {
+              text: (s) =>
+                has(s, 'qintian_token')
+                  ? '校尉一看見那塊白玉腰牌，腰就彎了下去：「星官大人。」\n\n他親自把你送出了關門。官道往東，三天的路。'
+                  : has(s, 'tongxing_ling')
+                    ? '校尉接過令牌看了看，又看了看你，在冊子上找你的名字。找了半天，他皺著眉頭把令牌還給你：「冊子上沒有……算了，令牌是真的。過。」\n\n官道往東，三天的路。'
+                    : '你報上天劍宗客卿的名號。校尉的臉色變了變，沒有再要牌子：「天劍宗的人，請。」\n\n官道往東，三天的路。',
+              effects: [['flag', 'gg_seen'], ['cross', 'guandao_guan']],
+            },
+          },
+          { text: '「令牌怎麼辦？」', show: (s) => !papers(s), out: { text: (s) => `${passHint(s)}${night(s) ? '' : '\n\n他壓低了聲音：「再不然……夜裡來。夜裡守關的，不是我。」'}`, effects: [['flag', 'gg_seen'], ['flag', 'ty_pass_asked']] } },
+          {
+            text: '塞給守夜的校尉三百塊靈石。',
+            show: (s) => !papers(s) && night(s),
+            need: needLs(300),
+            out: {
+              text: '守夜的校尉掂了掂錢袋，往門洞裡一努嘴：「我什麼也沒看見。」\n\n他沒有在冊子上記你的名字。往後在京城，要是有人問起你的令牌，你可拿不出來。\n\n官道往東，三天的路。',
+              effects: [['ls', -300], ['flag', 'gg_seen'], ['flag', 'ty_nopass'], ['cross', 'guandao_guan']],
+            },
+          },
+          {
+            text: '夜裡從關旁的山上繞過去。',
+            show: (s) => !papers(s) && night(s),
+            check: { kind: 'jiyuan', diff: 6 },
+            ok: {
+              text: '你貼著山壁往上爬，在亂石裡摸黑走了半夜。天快亮的時候，你翻過了山脊——腳底下，官道又從兩座山之間鑽了出來，關樓在你身後。\n\n多走了一天的山路。往後在京城，你可拿不出令牌。',
+              effects: [['flag', 'gg_seen'], ['flag', 'ty_nopass'], ['hours', 24], ['cross', 'guandao_guan']],
+            },
+            fail: { text: '你爬到半山腰，腳下的石頭一滑，嘩啦啦滾了下去。\n\n山腰上一聲哨響。', next: 'caught' },
+          },
+          { text: '算了。', out: { effects: [['flag', 'gg_seen']] } },
+        ],
+      },
+      caught: {
+        text: '巡山的關兵。火把一支一支亮起來，從山腰上往你這邊圍過來。\n\n「什麼人！」',
+        choices: [
+          {
+            text: '拔劍，衝過去。',
+            check: { kind: 'power', diff: (s) => Math.max(180, Math.round(power(s) * 0.85)) },
+            fight: { foes: [['guan_bing', 3]], close: true },
+            ok: {
+              text: '關兵倒了一地。你沒有停下來，翻過山脊，一路往東。身後的哨子聲，追了你半夜。\n\n往後在京城，你可拿不出令牌——臨江城那邊，也會記著這一筆。',
+              effects: [['rep', 'linjiang', -10], ['flag', 'ty_nopass'], ['flag', 'gg_fought'], ['hours', 24], ['cross', 'guandao_guan'], ['log', '夜裡在官道關的山上打倒了巡山的關兵，翻了過去']],
+            },
+            fail: { text: '你被打下了山，滾了一身的石頭和土。關兵沒有追下來——他們不用追，你也過不去了。', effects: [['wound', 0.2], ['rep', 'linjiang', -4]] },
+          },
+          { text: '往回跑。', out: { text: '你轉身就往山下跑，跑回了關這一邊。身後的火把在山腰上晃了很久，才一支一支熄了。', effects: [['wound', 0.05]] } },
+        ],
+      },
+    },
   },
 
   // ── 天元三千零二十二年七月十五 (1.0–1.2: only the omen — the stroke does not fall) ──

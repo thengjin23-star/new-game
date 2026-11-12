@@ -55,6 +55,20 @@ export const FACTIONS = {
       [140, '臨江貴客', '打八五折。'],
     ],
   },
+  // 1.2 天衍城: the capital — its shops and its 懸賞堂, and the 禁軍 who keep its gates and its sky (shown once you have been)
+  tianyan: {
+    name: '天衍城',
+    who: '京城的商家、懸賞堂與禁軍',
+    desc: '大衍皇朝的都城。京城的人只認令牌和名號；名號是一樁一樁事情做出來的。',
+    show: (s) => !!s.flags.ty_arrived,
+    tiers: [
+      [-999, '京城的通緝', '禁軍盯著你，掌櫃們的東西都貴一成。'],
+      [-20, '外地來的', ''],
+      [25, '京城熟客', '天衍城的東西打九五折。'],
+      [70, '京城名號', '打九折。'],
+      [140, '天子腳下的貴客', '打八五折。'],
+    ],
+  },
 };
 
 const RANGE = [-200, 300];

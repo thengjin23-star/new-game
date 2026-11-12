@@ -229,7 +229,7 @@ export let RIVER_REGION = 'great_river';
 /** (1.0) Which side of the map the river edge is on (the mist lies beyond it), and what you are told if you would fly into it. */
 export let EDGE_SIDE = 'east';
 export let MIST_SAY = '江那邊雲霧太濃，辨不清方向。要過江，得到白鶴渡坐船。';
-/** (1.0) The sky over a walled city that is not to be flown ({ region, name }: 中州's 臨江城; world/explore.js cityWatch). */
+/** (1.0) The sky over a walled city that is not to be flown ({ region, name, event? }: 中州's 臨江城, 天衍城; world/explore.js cityWatch). */
 export let NO_FLY = null;
 /** (1.0) A map's own colours for what it builds (art/gl/buildings.js COL names → [r, g, b]): 中州's white stone, deep tile. */
 export let BUILD_PALETTE = null;
