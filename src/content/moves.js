@@ -65,13 +65,19 @@ export const MOVES = {
   },
   swordstep: {
     name: '劍影', school: '劍修', el: '金', aim: 'dash', mp: 8, cd: 7, cast: 0.05, range: 150, width: 36, mult: 1.5, fx: 'swordstep',
-    learn: ['qingyuan_sword'], weapon: ['qinggang_sword', 'hantie_sword'],
+    learn: ['qingyuan_sword'], weapon: ['qinggang_sword', 'hantie_sword', 'qingfeng_sword', 'duantian_sword'],
     desc: '人隨劍走，一閃而過，沿途的敵人各挨一劍。閃身之時，刀槍不入。',
   },
   feijian: {
     name: '飛劍', school: '劍修', el: '金', aim: 'line', mp: 10, cd: 4, cast: 0.15, range: 330, width: 22, speed: 720, mult: 1.3, pierce: true, back: true, fx: 'feijian', realm: 2,
-    weapon: ['qinggang_sword', 'hantie_sword'],
+    weapon: ['qinggang_sword', 'hantie_sword', 'qingfeng_sword', 'duantian_sword'],
     desc: '築基之後，劍能離手：飛劍直直射出，穿過途中所有敵人，再飛回你手上——回來的路上，再斬一次。',
+  },
+  // (1.1) the stroke on the lone peak, learned at 天劍宗's sword pool with the old sword made whole again
+  duantian: {
+    name: '斷天', school: '劍修', el: '金', aim: 'line', mp: 22, cd: 14, cast: 0.45, range: 520, width: 34, speed: 1100, mult: 3.2, pierce: true, fx: 'swordqi', realm: 2,
+    learn: ['duantian'],
+    desc: '孤峰上的那一劍：一道很長、很直的劍光，斬過途中的一切。古劍在劍池重鑄以後，才學得會。',
   },
   jianzhen: {
     name: '劍陣', school: '劍修', el: '金', aim: 'self', mp: 18, cd: 16, cast: 0.3, swords: 6, radius: 70, last: 6, mult: 0.45, fx: 'jianzhen', realm: 2,
@@ -341,6 +347,9 @@ export const BEAST_MOVES = {
   // stand (smash); the stone guards called up
   halberd: { shape: 'fan', reach: 84, arc: 2.4, windup: 0.7, recover: 0.9, cd: 3.6, mult: 1.6, lunge: 8, fx: 'cut' },
   starbeam: { shape: 'shot', min: 60, max: 340, range: 380, windup: 0.9, speed: 720, width: 26, recover: 0.6, cd: 5, mult: 1.45, fx: 'star' },
+  // (1.1) the 劍靈 of 天劍宗's sword pool: a cut with a blade of light; the pool's swords rained down where you stand
+  jl_cut: { shape: 'fan', reach: 74, arc: 1.6, windup: 0.45, recover: 0.5, cd: 1.6, mult: 1.3, lunge: 18, fx: 'cut' },
+  jl_rain: { shape: 'zone', min: 0, max: 600, radius: 46, windup: 1.1, recover: 0.4, cd: 4.5, mult: 1.3, count: 5, scatter: 200, fx: 'cut' },
   // (1.1) 謝家老祖 calls up his house's men
   xie_call: { shape: 'call', windup: 1.1, recover: 0.7, cd: 22, first: 6, fx: 'howl', call: { kind: 'xie_guard', n: 2, max: 2, share: 0.3, line: '謝家老祖一拂袖。兩個謝家的護衛，從石頭後面跳了出來。' } },
   stonecall: { shape: 'call', windup: 1.1, recover: 0.7, cd: 22, first: 6, fx: 'howl', call: { kind: 'stone_puppet', n: 2, max: 2, share: 0.3, line: '石翁仲把戟往地上一頓。兩旁的石傀，眼裡亮起了光。' } },

@@ -69,8 +69,9 @@ test('every fight in the stories is fought where you stand: those in it exist an
   // 南嶺's: 阿水 in the 白絲洞; 西漠's: 沙盜 on the caravan road, 禿鷲 in his fort, the 石翁仲 at the 星門;
   // and 北原's: the 冰麟 on the knot of the veins; 中州's (1.0): three on the 天驕榜's 擂台, 蘇清瑤's reckoning,
   // the stone beast of the old observatory, the watch that brings you down out of the sky over 臨江城;
-  // 1.1: 龍脊嶺's mine — what crawls in the gallery, either house's men at the 靈眼, and 謝家老祖)
-  assert.equal(n, 49);
+  // 1.1: 龍脊嶺's mine — what crawls in the gallery, either house's men at the 靈眼, and 謝家老祖; 天劍宗's
+  // gatekeeper for a 客卿, the 試劍崖, and the 劍靈 of the sword pool)
+  assert.equal(n, 52);
   for (const f of Object.values(FOES)) for (const [, item] of f.loot || []) assert.ok(ITEMS[item], `loot ${item}`);
 });
 

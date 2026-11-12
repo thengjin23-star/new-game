@@ -32,6 +32,13 @@ export const PASSIVES = {
     needs: { learn: ['qingyuan_sword', 'jianzhen'] },
     stats: { dmg: { school: { 劍修: 0.12 } }, crit: 0.03 },
   },
+  // (1.1) what 天劍宗's sword has in it, learned on the 試劍崖
+  jianyi: {
+    name: '劍意', school: '劍修',
+    desc: '天劍宗的劍意：劍修招式傷害 +10%，劍氣與斷天冷卻 −20%，暴擊 +4%。',
+    needs: { learn: ['tianjian_sword'] },
+    stats: { dmg: { school: { 劍修: 0.1 } }, cd: { id: { swordqi: -0.2, duantian: -0.2 } }, crit: 0.04 },
+  },
   huohou: {
     name: '火候', school: '法修',
     desc: '烈焰訣的火候：火系招式傷害 +15%，靈力消耗 −10%。',

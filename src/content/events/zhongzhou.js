@@ -46,6 +46,27 @@ const qingyun = (s) => flag(s, 'sect_member');
 /** The night of the blood moon (1.0–1.2: only the omen; the night itself is 1.3's). */
 export const BLOOD_DAY = dayAt(10, 7, 15); // (world/arcs.js WINDOWS.bloodMoon)
 
+/**
+ * (1.1) 天劍宗's 祖師堂, opened for one who has read the 劍冢碑 and carries the old sword's shard: 闕老, who keeps
+ * the sect's swords, and what the founder's rule meant. by: whether 葉孤寒 brought you up.
+ */
+function ancestorsText(s, by) {
+  return `${by ? '' : '你走到祖師堂門前，門上的鏽鎖自己開了。\n\n'}殿裡很暗。正中供著一把斷劍，只剩劍柄和三寸劍身——跟你懷裡那塊殘片，是一樣的寒光。\n\n斷劍前坐著一個老人，瞎了一隻眼。他用那隻好眼睛看著你，又看著你懷裡。\n\n「闕某守了這把劍六十年。」他說，「今天，它的另一半回來了。」\n\n「三千年前，祖師是那位劍仙的弟子。師父在東荒的孤峰上，斬了天外那隻手一指。劍折了，人不知所終。祖師收了斷劍，在古戰場立了碑，然後一路往西，過了大江。」\n\n「他是追著那根手指來的。」\n\n「指頭落在中州的腹地，落地的地方長出了一座山，白得像玉——玉指峰。大衍的開國皇帝，把都城建在了它的山腳下。祖師在這裡開了天劍宗，留下一句話：指在一日，劍不入鞘。」\n\n他笑了一下：「三千年了，宗裡的人都說那是劍指的手訣。只有守劍的人知道：指，是那根手指。劍，是用來看著它的。」\n\n「宗裡如今分了兩派。一派說，三千年了，指頭沒動過，祖訓可以收起來了。一派說，劍不入鞘。」他摸了摸膝上的劍，「我是後一派。我們這一派的人，越來越少了。」${
+    awake(s) ? '\n\n腦子裡，玄微很久沒有說話。\n\n「他追到了中州，」他終於說，「我也到了中州。我們在同一片天底下，誰也不知道誰。」' : ''
+  }`;
+}
+
+/** What you say to 闕老 at the end of it (the same however you came up): the pool is yours to go to, and the sect's guest's token. */
+const ancestorsChoices = [
+  {
+    text: '「劍池還認得它嗎？」',
+    out: {
+      text: '「認得。」闕老說，「劍池裡沉著三千年來天劍宗折了的劍。師祖的劍，是第一把。」\n\n「把它帶到劍池去。池裡的劍靈認了你，劍就接得回來——認不認，看你。」\n\n他從袖子裡取出一塊木牌，上面刻著一把劍：「從今天起，你是天劍宗的客卿。劍階、試劍崖、劍池、寶庫，隨你出入。」',
+      effects: [['flag', 'tj_ancestors_seen'], ['flag', 'tianjian_guest'], ['flag', 'qiao_met'], (x) => { x.world.x = 4600; x.world.y = 980; }, ['insight', 3], ['sysexp', 40], ['log', '天劍宗祖師堂：闕老說，祖訓的「指」是那根手指，落在中州，長成了玉指峰'], ['rumor', '天劍宗的祖師堂，鎖了六十年，開了。']],
+    },
+  },
+];
+
 /** The 天驕榜 as it hangs today. */
 function boardText(s) {
   const lin = linRank(s);
@@ -841,17 +862,127 @@ export default [
     trigger: 'explore',
     poi: 'tj_gate',
     nodes: TJ,
-    cooldown: 10,
+    cooldown: 3,
     title: '山門',
     text: (s) =>
-      qingyun(s) && !flag(s, 'tj_gate_seen')
-        ? '山門下站著兩個守門的弟子，劍都沒有出鞘，人卻像兩把劍。\n\n「青雲宗？」一個弟子看了看你腰上的令牌，「東荒那個？」他把令牌還給你，客客氣氣地說：「本宗不收外宗的弟子，也不見外宗的客。請回。」'
-        : `山門下站著兩個守門的弟子，劍都沒有出鞘，人卻像兩把劍。\n\n「本宗不收外人為徒。」一個弟子說，「金丹以上的散修，可以掛名做客卿——${
-            s.player.realm >= 3 ? '你是金丹？' : '你還不是金丹。'
-          }長老閉關，今年不見客。」`,
+      flag(s, 'tianjian_guest')
+        ? '守門的弟子看見你，抱劍行了一禮：「客卿請。」'
+        : qingyun(s) && !flag(s, 'tj_gate_seen')
+          ? '山門下站著兩個守門的弟子，劍都沒有出鞘，人卻像兩把劍。\n\n「青雲宗？」一個弟子看了看你腰上的令牌，「東荒那個？」他把令牌還給你，客客氣氣地說：「本宗不收外宗的弟子。掛名的客卿倒是收——金丹以上。」'
+          : `山門下站著兩個守門的弟子，劍都沒有出鞘，人卻像兩把劍。\n\n「本宗不收外人為徒。」一個弟子說，「金丹以上的散修，可以掛名做客卿——${
+              s.player.realm >= 3 ? '按規矩，先過守門師兄的劍。' : '你還不是金丹。'
+            }」`,
     choices: [
-      { text: '抬頭看那三千級劍階。', out: { text: '劍階一級一級往上，沒進了雲裡。雲裡偶爾有劍光一閃，像是有人在上面練劍，練了三千年，還沒練完。', effects: [['flag', 'tj_gate_seen'], ['mind', 1]] } },
+      // (1.1) 客卿: a 金丹 散修 who gets past the gatekeeper's sword (not a disciple: still nobody's but your own)
+      {
+        text: '「我想掛名做客卿。」',
+        show: (s) => s.player.realm >= 3 && !flag(s, 'tianjian_guest'),
+        check: { kind: 'power', diff: (s) => Math.max(380, Math.round(power(s) * 0.95)) },
+        fight: { foes: [['tj_disciple', 1, { name: '守門的師兄', tier: 3, rank: '金丹初期' }]], spar: true },
+        ok: {
+          text: '最後一招，他的劍停在你肩頭三寸，你的劍停在他喉前一寸。\n\n他收了劍，笑了：「客卿請。」\n\n他給了你一塊木牌，上面刻著一把劍：「劍階、試劍崖、劍池、寶庫，憑牌出入。宗裡的事，不必你管；宗裡的劍，隨你看。」',
+          effects: [['flag', 'tianjian_guest'], ['sysexp', 25], ['log', '過了天劍宗守門師兄的劍，在天劍宗掛名做了客卿']],
+        },
+        fail: { text: '他的劍停在你喉前三寸。\n\n「再練練。」他說，「劍階就在這裡，又不會跑。」', effects: [['mind', -1]] },
+      },
+      { text: '上劍階。', show: (s) => flag(s, 'tianjian_guest'), out: { text: '你一級一級往上走。三千級劍階，每一級的石面上都刻著一道劍痕，每一道都不一樣。走到頂上，你回頭看，臨江城小得像一塊棋盤。', effects: [(x) => { x.world.x = 4450; x.world.y = 1180; }, ['mind', 1]] } },
+      { text: '抬頭看那三千級劍階。', show: (s) => !flag(s, 'tianjian_guest'), out: { text: '劍階一級一級往上，沒進了雲裡。雲裡偶爾有劍光一閃，像是有人在上面練劍，練了三千年，還沒練完。', effects: [['flag', 'tj_gate_seen'], ['mind', 1]] } },
       { text: '走了。', out: { effects: [['flag', 'tj_gate_seen']] } },
+    ],
+  },
+  // (1.1) what 葉孤寒 meant to show you: up the steps, to the 祖師堂 and its keeper
+  {
+    id: 'ye_climb',
+    trigger: 'visit',
+    npc: 'ye_guhan',
+    nodes: TJ,
+    priority: 8,
+    once: true,
+    cond: (s) => flag(s, 'ye_promise') && flag(s, 'sword_stele_read') && has(s, 'broken_sword') && !flag(s, 'tj_ancestors_seen'),
+    title: '葉孤寒',
+    steps: {
+      start: {
+        text: '葉孤寒站起來，看了看你懷裡露出來的那一截寒光。\n\n「今天可以了。」他說，「跟我來。」\n\n他帶你走上三千級劍階。守門的弟子看見他，一句話也沒有問。',
+        choices: [{ text: '跟他上去。', out: { text: '劍階的盡頭是一片平台，平台的東邊有一座舊殿，殿門上掛著一把生了鏽的鎖。葉孤寒伸手一推，鎖自己開了。', next: 'hall' } }],
+      },
+      hall: { text: (s) => ancestorsText(s, true), choices: ancestorsChoices },
+    },
+  },
+  {
+    id: 'tj_ancestors',
+    trigger: 'explore',
+    poi: 'tj_ancestors',
+    nodes: TJ,
+    title: '祖師堂',
+    text: (s) =>
+      flag(s, 'tj_ancestors_seen')
+        ? variant(s, ['祖師堂裡，闕老坐在斷劍前打盹。聽見腳步聲，他睜開那隻好眼睛：「劍池去過了沒有？」', '祖師堂裡沒有人。斷劍前的香爐裡，一炷香剛剛點上。'])
+        : flag(s, 'sword_stele_read') && has(s, 'broken_sword')
+          ? ancestorsText(s, false)
+          : '祖師堂的門緊閉著，門上掛著一把生了鏽的鎖。\n\n路過的弟子說：「祖師堂不見外人。闕長老說，什麼時候有人帶著師祖的劍來，什麼時候開門。」',
+    choices: [
+      ...ancestorsChoices.map((c) => ({ ...c, show: (s) => !flag(s, 'tj_ancestors_seen') && flag(s, 'sword_stele_read') && has(s, 'broken_sword') })),
+      { text: '走了。', out: {} },
+    ],
+  },
+  // the sword pool: the 古劍殘片 made whole, and what keeps the pool
+  {
+    id: 'tj_pool',
+    trigger: 'explore',
+    poi: 'tj_pool',
+    nodes: TJ,
+    title: '劍池',
+    text: (s) =>
+      flag(s, 'duantian_forged')
+        ? '劍池的水黑得像墨。你走近的時候，水面上浮起一個光做的人影，對你彎了彎腰，又沉了下去。'
+        : flag(s, 'tj_ancestors_seen') && has(s, 'broken_sword')
+          ? '亭子底下是一池黑水，池底插滿了劍，有的完好，有的只剩半截，三千年來天劍宗折了的劍，都在這裡。\n\n懷裡的古劍殘片，震得越來越厲害，像是要自己跳進水裡。\n\n闕老說過：劍池還認得它。'
+          : '亭子底下是一池黑水，池底插滿了劍。池邊的石頭上刻著：「劍有靈，折而不死。」',
+    choices: [
+      {
+        text: '把古劍殘片放進劍池。',
+        show: (s) => flag(s, 'tj_ancestors_seen') && has(s, 'broken_sword') && !flag(s, 'duantian_forged'),
+        check: { kind: 'power', diff: 500 },
+        fight: { foes: [['jianling', 1, { name: '劍池劍靈', tier: 3, rank: '劍靈' }]], close: true },
+        ok: {
+          text: (s) =>
+            `劍靈身上的光一點一點暗了下去。它看著你，看了很久，然後伸出手，從池底拔起了那三寸殘片。\n\n池水沸了起來。三千年來沉在池底的斷劍，一把一把浮起來，碎成鐵屑，裹著那塊殘片，一層一層地長成了一把劍。\n\n劍靈把劍放在你手裡，退回了水裡。\n\n劍身上有一道細細的紋，是斷口，也是新生。你握住它的那一刻，看見了一座孤峰，峰頂上有一個人，仰頭，對著天，拔劍——\n\n你學會了那一劍。${
+              awake(s) ? '\n\n「斷天。」玄微低聲說，「那一夜，我只看見了手。原來，這一劍是這樣的。」' : '\n\n叮——習得：斷天。'
+            }`,
+          effects: [['item', 'broken_sword', -1], ['item', 'duantian_sword', 1], (x) => { x.player.arts = [...new Set([...(x.player.arts || []), 'duantian'])]; }, ['flag', 'duantian_forged'], ['insight', 4], ['sysexp', 60], ['log', '在天劍宗的劍池重鑄古劍，得了斷天劍，學會了「斷天」'], ['rumor', '天劍宗的劍池三千年來頭一回沸了。聽說有人拿著一截斷劍下了池，上來的時候，手裡是一把整劍。']],
+        },
+        fail: { text: '劍靈的劍雨落了下來。你被逼退到池邊，一身是血。\n\n池水靜了下來。懷裡的殘片還在，安安靜靜的，像是在等你下一回。', effects: [['wound', 0.4]] },
+      },
+      { text: '看了一會兒。', out: { effects: [['mind', 1]] } },
+    ],
+  },
+  // the 試劍崖 by the great hall: a 客卿 may 論劍 with the sect's disciples (a month apart); three won, and you have its sword
+  {
+    id: 'tj_hall',
+    trigger: 'explore',
+    poi: 'tj_hall',
+    nodes: TJ,
+    title: '試劍崖',
+    text: (s) =>
+      flag(s, 'tianjian_guest')
+        ? `天劍殿後頭就是試劍崖，崖邊的石台上，天天有人論劍。${(s.vars.tj_spars || 0) >= 3 ? '弟子們看見你，都抱劍行禮：「客卿。」' : '一個弟子看見你腰上的客卿牌，抱劍行了一禮：「請賜教。」'}`
+        : '天劍殿前的廣場上，幾百個弟子在練劍，劍光像下雨一樣。',
+    choices: [
+      {
+        text: '上試劍崖，論劍。',
+        show: (s) => flag(s, 'tianjian_guest') && s.day >= (s.vars.tj_spar_day ?? -99) + 30,
+        check: { kind: 'power', diff: (s) => Math.max(300, Math.round(power(s) * 0.95)) },
+        fight: { foes: [['tj_disciple', 1, { name: '天劍宗弟子', tier: 3, rank: '金丹初期' }]], spar: true },
+        ok: {
+          text: (s) =>
+            (s.vars.tj_spars || 0) + 1 >= 3 && !(s.player.arts || []).includes('tianjian_sword')
+              ? '他退了三步，收劍：「承讓。」\n\n這是你在試劍崖上贏的第三場。三場打下來，天劍宗的劍是怎麼走的，你看懂了一些——那不是招，是一股意思：劍出了鞘，就不回頭。\n\n叮——習得：天劍訣。'
+              : '他退了三步，收劍：「承讓。」台下有人叫好。',
+          effects: (s) => [(x) => { x.vars.tj_spars = (x.vars.tj_spars || 0) + 1; x.vars.tj_spar_day = x.day; if (x.vars.tj_spars >= 3) x.player.arts = [...new Set([...(x.player.arts || []), 'tianjian_sword'])]; }, ['insight', 2], ['ls', 40], ['sysexp', 6]],
+        },
+        fail: { text: '他的劍停在你喉前三寸：「客卿承讓。」', effects: [(x) => { x.vars.tj_spar_day = x.day; }, ['insight', 1]] },
+      },
+      { text: '看他們練劍。', out: { text: '劍光一道一道地亮起來，又一道一道地暗下去。看久了，你覺得那些劍光像是在寫字。', effects: [['mind', 1]] } },
     ],
   },
   {

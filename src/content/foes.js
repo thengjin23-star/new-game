@@ -682,6 +682,29 @@ export const FOES = {
       cry: '{name}從洞口走進來，背著手：「年輕人，這條脈，謝家要了三百年。」',
     },
   },
+  // 天劍宗's disciples, on the 試劍崖 and at the gate: sparring, as the sect's guests are taught (論劍)
+  tj_disciple: {
+    name: '天劍宗弟子', hp: 1, atk: 1.05,
+    rt: {
+      share: 1.2, tier: 2, person: true, look: 'disciple', weapon: 'qinggang_sword', speed: 180, walk: 40, sight: 260, lose: 400, loseT: 1.5, leash: 700,
+      body: 10, tall: 37, notice: 0.4, moves: ['slash', 'qi', 'rush'], keep: [110, 210], dodge: 0.35,
+      low: { at: 0.35, mode: 'wary', line: '{name}退開半步，劍尖換了個方向，盯著你的破綻。' },
+    },
+  },
+  // 天劍宗's sword pool: the 劍靈 that keeps it, a man made of light and the pool's swords going round him;
+  // it cuts, rains the pool's swords down where you stand, throws a ring of blades off; worn down, lances of light
+  jianling: {
+    name: '劍池劍靈', el: '金', hp: 1.8, atk: 1.25, boss: true, spirit: true, loot: [[1, 'star_stone', 2]],
+    rt: {
+      tier: 3, speed: 165, walk: 0, sight: 320, lose: 600, loseT: 2, leash: 380, body: 14, bulk: 0.6, tall: 44,
+      notice: 0.9, moves: ['jl_cut', 'jl_rain'], dodge: 0.25,
+      phases: [
+        { at: 0.6, moves: ['jl_cut', 'jl_rain', 'whirl', 'starbeam'], line: '劍池裡的劍一齊嗡嗡作響，一把一把飛了起來！' },
+        { at: 0.28, enrage: true, line: '劍靈身上的光一下子亮得刺眼——池底三千年的劍，全醒了！' },
+      ],
+      cry: '池水一動。水面上站起來一個人，是光做的，四周繞著六把劍。',
+    },
+  },
   // 雲夢大澤: the 蛟 that has lived three hundred years in the deep of the marsh — its jaws, its tail, water
   // shot at you; worn down, the marsh turns about it in whirlpools
   yunmeng_jiao: {

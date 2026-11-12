@@ -228,7 +228,8 @@ export const ITEMS = {
     use: { text: '丹藥一下肚，一團火就在丹田裡燒起來，熱氣順著經脈一直走到手指頭、腳趾頭。你身上冒起了白氣。', effects: [['buff', 'nuanshen', 3], ['shade']] },
   },
   ningjin_pill: {
-    name: '凝金丹', kind: 'pill', sell: 0, keep: true,
+    // (1.1: 天劍宗's vault sells it to its 客卿, dear)
+    name: '凝金丹', kind: 'pill', price: 700, sell: 0, keep: true,
     desc: '以靈髓為主藥、雪蓮為引煉成的丹，金色，圓得像一顆小小的太陽。衝擊金丹時服下，助你把一身真元凝成一顆金丹（每顆加成功率一成五，最多兩顆）。',
   },
   shaodaozi: {
@@ -363,6 +364,11 @@ export const ITEMS = {
   hantie_sword: {
     name: '寒鐵劍', kind: 'weapon', price: 520, sell: 200, power: 0.55, strike: 'qinggang_sword',
     desc: '寒鐵鍛的劍，劍身泛著冷光，已摸到了法器的門檻。',
+  },
+  // (1.1) the 古劍殘片, made whole in 天劍宗's sword pool
+  duantian_sword: {
+    name: '斷天劍', kind: 'weapon', sell: 0, keep: true, power: 0.95, strike: 'qinggang_sword',
+    desc: '三千年前斬向天外的那把劍，斷了三千年，在天劍宗的劍池裡又接了回來。劍身上有一道細細的紋，是斷口，也是新生。握著它，你聽得見孤峰上的風。',
   },
   // 1.0 中州
   qingfeng_sword: {
@@ -680,6 +686,13 @@ export const SHOPS = {
     recipes: ['jiaoxiao_robe', 'xingwen_pendant'],
     made: '{keeper}把東西拿在手裡掂了掂，點點頭，進了後頭的爐房。第二天一早，學徒把一件{item}捧了出來，老師傅在後頭打著呵欠：「中州的手藝，不比東荒差吧？」',
     share: (s) => zzShare(s),
+  },
+  // (1.1) 天劍宗's vault, for its 客卿
+  tianjian: {
+    name: '天劍宗寶庫',
+    keeper: '管寶庫的執事',
+    stock: ['qingfeng_sword', 'ningjin_pill', 'gold_talisman', 'wind_talisman', 'return_talisman'],
+    share: () => 0.9,
   },
   guishi: {
     name: '鬼市',

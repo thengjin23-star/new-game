@@ -454,6 +454,8 @@ const POIS = [
   { id: 'tj_hall', region: 'tianjian', x: 4450, y: 1042, name: '天劍殿', verb: '查看', text: '天劍宗的正殿。殿前的廣場上，幾百個弟子在練劍，劍光像下雨一樣。' },
   { id: 'tj_pool', region: 'tianjian', x: 4650, y: 1140, name: '劍池', verb: '查看', text: '亭子底下是一池水，水是黑的，池底插滿了劍。池邊的石頭上刻著：「劍有靈，人有心。」' },
   { id: 'tj_ancestors', region: 'tianjian', x: 4600, y: 920, name: '祖師堂', verb: '查看', text: '祖師堂的門緊閉著，門上掛著一把生了鏽的鎖。' },
+  // (1.1) its vault, for its 客卿 (content/items.js SHOPS.tianjian)
+  { id: 'tj_vault', region: 'tianjian', x: 4330, y: 1080, name: '寶庫', verb: '看看', action: 'shop', shop: 'tianjian', show: (s) => !!s.flags.tianjian_guest, text: '寶庫的執事坐在門口，膝上橫著一把劍。' },
   // 龍脊嶺
   { id: 'lg_mine', region: 'longji', x: 3820, y: 2430, name: '靈石礦', verb: '查看', text: '礦口上架著木頭框，框上貼著兩張封條，一張蓋著謝家的印，一張蓋著上官家的印。' },
   // 官道關

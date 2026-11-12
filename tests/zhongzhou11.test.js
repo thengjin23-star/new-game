@@ -15,6 +15,12 @@ import { nextGoal } from '../src/world/guide.js';
 import { continueEvent } from '../src/core/events.js';
 import { POI_BY_ID } from '../src/world/places.js';
 import { breakthroughInfo } from '../src/core/cultivation.js';
+import { canSecludeAt } from '../src/world/map.js';
+import { shopHere, priceOf } from '../src/core/actions.js';
+import { SHOPS } from '../src/content/items.js';
+import { lockOf } from '../src/world/skills.js';
+import { MOVES } from '../src/content/moves.js';
+import { PASSIVES } from '../src/content/passives.js';
 import { fresh, resolvePending, pickText, finish, waitUntil } from './helpers.js';
 
 const tick = (s) => E.step(s, 0.05, null);
@@ -292,4 +298,83 @@ test('nobody takes a hand in it: 謝家 has the vein by 3021; one who played bot
   waitUntil(t, WINDOWS.veinDone + 2);
   assert.ok(t.flags.lg_both_found);
   assert.ok(t.npcs.shangguan_jin.favor < before);
+});
+
+// ── 天劍宗 ──
+
+test('天劍宗\'s 客卿: a 金丹 who gets past the gatekeeper\'s sword is let up the steps (its vault, its 結丹洞, a place to sit)', () => {
+  const s = overAt(521, 30);
+  try {
+    Object.assign(s.player, { realm: 3, stage: 0 });
+    E.placeAt(s, ...NODES.tianjian.at);
+    finish(s);
+    goToPoiAt(s, 'tj_gate');
+    for (let k = 0; k < 4 && s.pending?.id !== 'tj_gate'; k++) {
+      finish(s);
+      E.interact(s, { kind: 'poi', id: 'tj_gate' });
+    }
+    pickText(s, '掛名做客卿');
+    resolvePending(s, (o) => o[0], 'won');
+    assert.ok(s.flags.tianjian_guest);
+    assert.equal(canSecludeAt(s, 'tianjian'), null, 'a guest may sit there');
+    goToPoiAt(s, 'tj_vault');
+    assert.equal(shopHere(s), SHOPS.tianjian);
+    assert.ok(SHOPS.tianjian.stock.includes('ningjin_pill') && priceOf(s, 'ningjin_pill') > 0, '凝金丹, for its guests');
+    // a 築基 sitting at its gate for 金丹: the 結丹洞 counts
+    Object.assign(s.player, { realm: 2, stage: 3 });
+    s.player.loc = 'tianjian';
+    assert.ok(breakthroughInfo(s).parts.some(([n]) => n === '天劍宗結丹洞'));
+  } finally {
+    useMap('donghuang');
+  }
+});
+
+test('葉孤寒 takes one who read the 劍冢碑 and carries the shard up to the 祖師堂; at the pool the 劍靈 gives the sword back whole, and 斷天 with it', () => {
+  const s = overAt(522, 30, { ye_promise: true, sword_stele_read: true, ye_zz_met: true });
+  try {
+    s.player.items.broken_sword = 1;
+    A.visit(s, 'ye_guhan', { near: true });
+    assert.equal(s.pending?.id, 'ye_climb');
+    goOn(s, '跟他上去');
+    assert.match(s.pending.text, /玉指峰/, 'the founder\'s rule: the finger, fallen in 中州');
+    pickText(s, '劍池還認得它嗎');
+    finish(s);
+    assert.ok(s.flags.tj_ancestors_seen && s.flags.tianjian_guest);
+    assert.ok(s.world.y < 1200, 'up on the plateau');
+    goToPoiAt(s, 'tj_pool');
+    for (let k = 0; k < 4 && s.pending?.id !== 'tj_pool'; k++) {
+      finish(s);
+      E.interact(s, { kind: 'poi', id: 'tj_pool' });
+    }
+    pickText(s, '古劍殘片放進劍池');
+    resolvePending(s, (o) => o[0], 'won');
+    assert.ok(s.flags.duantian_forged);
+    assert.ok(s.player.items.duantian_sword > 0 && !(s.player.items.broken_sword > 0));
+    assert.ok(s.player.arts.includes('duantian'));
+    assert.equal(lockOf(s, MOVES.duantian), null, '斷天 is yours');
+  } finally {
+    useMap('donghuang');
+  }
+});
+
+test('the 試劍崖: a month apart, three bouts won, and 天劍訣 is learned (its 心法 劍意 with it)', () => {
+  const s = overAt(523, 30, { tianjian_guest: true });
+  try {
+    Object.assign(s.player, { realm: 3, stage: 1 });
+    for (let k = 0; k < 3; k++) {
+      goToPoiAt(s, 'tj_hall');
+      for (let j = 0; j < 4 && s.pending?.id !== 'tj_hall'; j++) {
+        finish(s);
+        E.interact(s, { kind: 'poi', id: 'tj_hall' });
+      }
+      pickText(s, '論劍');
+      resolvePending(s, (o) => o[0], 'won');
+      s.day += 31;
+    }
+    assert.equal(s.vars.tj_spars, 3);
+    assert.ok(s.player.arts.includes('tianjian_sword'));
+    assert.ok(PASSIVES.jianyi.needs.learn.includes('tianjian_sword'));
+  } finally {
+    useMap('donghuang');
+  }
 });

@@ -94,6 +94,21 @@ export const TECHS = {
     power: 0.35,
     desc: '山腹洞府中前輩留下的劍訣，一劍青光，三丈之內斬妖除魔。',
   },
+  // (1.1) 天劍宗
+  duantian: {
+    name: '斷天',
+    kind: 'combat',
+    grade: '地品下',
+    power: 0.4,
+    desc: '三千年前，劍仙在東荒的孤峰上斬向天外的那一劍。古劍殘片在天劍宗的劍池裡重鑄，劍靈認了你，你才學會。',
+  },
+  tianjian_sword: {
+    name: '天劍訣',
+    kind: 'combat',
+    grade: '玄品上',
+    power: 0.3,
+    desc: '天劍宗的劍訣。在試劍崖上和天劍宗的弟子論劍，論得多了，劍意也就學到了一些。',
+  },
   jianzhen: {
     name: '小周天劍陣',
     kind: 'combat',
