@@ -1258,8 +1258,10 @@ export function startApp(root, { speed = 1, view = null } = {}) {
     const list = CB.beastsInWorld(s, 900).filter((b) => b.side !== 'ally' && b.aggro && b.armed && !['dead', 'gone', 'vanish'].includes(b.state));
     const foe = list.find((b) => b.uid === me.target) || list[0] || null;
     const pressed = list.some((b) => b.gap > 0);
-    set($('.cbt-state'), 'textContent', C.trial ? '試煉' : me.poison ? '中毒' : pressed ? '境界壓制' : on ? '戰鬥中' : '');
-    $('.cbt-state').classList.toggle('bad', pressed || !!me.poison);
+    // (1.3) a watch of the blood moon's night
+    const watch = CB.nightFight(s);
+    set($('.cbt-state'), 'textContent', C.trial ? '試煉' : watch ? `血月・${watch.name}` : me.poison ? '中毒' : pressed ? '境界壓制' : on ? '戰鬥中' : '');
+    $('.cbt-state').classList.toggle('bad', pressed || !!me.poison || !!watch);
     hpBar.classList.toggle('poison', !!me.poison);
     const boss = on ? CB.bossOf(s) : null;
     const bossEl = $('.cbt-boss');

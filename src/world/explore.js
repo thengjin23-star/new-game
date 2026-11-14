@@ -18,9 +18,10 @@ import { updateWild, wildNow, spawnCritter } from './wildlife.js';
 import { sysGain } from './system.js';
 import { ITEMS, displayItem } from '../content/items.js';
 import { pickEvent, startEvent, takeDue, notice } from '../core/events.js';
-import { updateCombat, beastTargets, strikeAt, FIGHT_HOURS, combatOf, inCombat, leaveMap } from './combat.js';
+import { updateCombat, beastTargets, strikeAt, FIGHT_HOURS, combatOf, inCombat, leaveMap, nightFight } from './combat.js';
 import { bodyArt, leapLanding, leapTo, leapShape, leapRules, FLIGHT, flyMeans, flyBlocked, landingNear, flyCost } from './air.js';
 import { weatherNow, frigid } from './weather.js';
+import { nightWants, openNight, missNight } from './night.js';
 import { TECHS } from '../content/techniques.js';
 import { inquire, visit } from '../core/actions.js';
 import { spendHours, newReport } from '../core/time.js';
@@ -257,6 +258,17 @@ export function step(s, dt, input) {
     w.cross = null;
     crossTo(s, id);
     L.moving = false;
+    return;
+  }
+  // (1.3) the night of the blood moon (world/night.js): at dusk on its day it opens, wherever you are; slept or
+  // rested through, its dawn is told (and if the clock ran past it some other way, dawn is reckoned)
+  const night = nightWants(s);
+  if (night && (night !== 'dawn' || !nightFight(s))) {
+    stopWalking(L);
+    L.moving = false;
+    if (night === 'rise') openNight(s);
+    if (night === 'missed') missNight(s, 'slept');
+    startEvent(s, night === 'rise' ? 'night_rise' : 'night_dawn');
     return;
   }
   updatePeople(s, L, dt);

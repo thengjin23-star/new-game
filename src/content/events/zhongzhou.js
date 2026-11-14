@@ -4,8 +4,8 @@
 // where whoever you beat, the 星官 cannot find you in the book; 蘇清瑤 at the
 // 榜樓 in a 星官's robe, 葉孤寒 at the gate of his sect; the storyteller who
 // tells 錢半仙's tale the other way round; the old observatory and the page
-// of 玄微's that was left there; a letter from 王二; and, on 七月十五 of 3022,
-// the moon (only an omen, until the night itself is written: 1.3).
+// of 玄微's that was left there; a letter from 王二. (The night of 七月十五 of 3022
+// is content/events/bloodnight.js, 1.3.)
 import { flag, night, variant, alive, met, favor, has, needLs } from '../helpers.js';
 import { dayAt } from '../../core/calendar.js';
 import { power } from '../../core/cultivation.js';
@@ -45,7 +45,7 @@ const suRival = (s) => flag(s, 'su_rival_end') || flag(s, 'su_rival') || flag(s,
 const boardStar = (s) => (suHere(s) && suStar(s) ? 'su' : 'other');
 /** A 青雲宗 disciple — 中州 has not heard of it. */
 const qingyun = (s) => flag(s, 'sect_member');
-/** The night of the blood moon (1.0–1.2: only the omen; the night itself is 1.3's). */
+/** The night of the blood moon (world/night.js: for a save that came to 1.3 past it, the night is put off). */
 export const BLOOD_DAY = dayAt(10, 7, 15); // (world/arcs.js WINDOWS.bloodMoon)
 
 /**
@@ -1758,27 +1758,5 @@ export default [
     },
   },
 
-  // ── 天元三千零二十二年七月十五 (1.0–1.2: only the omen — the stroke does not fall) ──
-  {
-    id: 'blood_moon_omen',
-    trigger: 'scheduled',
-    once: true,
-    // (world/arcs.js recurring schedules it for 子時 that night, wherever you are)
-    cond: (s) => s.day === BLOOD_DAY + 1 && s.tod < 5,
-    title: '血月',
-    text: (s) =>
-      [
-        '子時，月亮升到了頭頂。月亮是紅的。',
-        '不是邊上帶一圈紅——是整個兒的紅，紅得像一隻浸在血裡的眼睛。四下裡的蟲聲一下子停了，連風都停了。',
-        (s.world?.map || 'donghuang') === 'zhongzhou'
-          ? '天上裂開了一道縫，在西邊，在大江那頭，在東荒的頭頂上。縫裡亮了一下，像有人提起了一支筆。'
-          : '天上裂開了一道縫，就在頭頂上。縫裡亮了一下，像有人提起了一支筆。',
-        '你等著。所有人都在等著。',
-        '那一筆，沒有落下來。',
-        awake(s)
-          ? '縫慢慢合上了。月亮一點一點地白了回去。\n\n「……停住了。」玄微說。他的聲音很輕，像怕驚動了什麼，「這一回，停住了。」'
-          : '縫慢慢合上了。月亮一點一點地白了回去。\n\n叮——偵測到天象異常。\n\n叮——異常已消失。原因：不明。',
-      ].join('\n\n'),
-    choices: [{ text: '看著天，直到天亮。', out: { effects: [['flag', 'blood_moon_omen'], ['insight', 2], ['sysexp', 30], ['log', '天元三千零二十二年七月十五，月亮紅了；天上的那一筆，沒有落下來']] } }],
-  },
+  // (the night of 天元三千零二十二年七月十五 itself: content/events/bloodnight.js, 1.3)
 ];

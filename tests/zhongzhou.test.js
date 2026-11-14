@@ -312,25 +312,26 @@ test('those who went to 中州 before there was one live there now (an old save)
   assert.equal(migrate(JSON.parse(serialize(t))).npcs.su_qingyao.loc, 'luoxia_market');
 });
 
-test('天元三千零二十二年七月十五: the moon is red; at 子時 the omen comes wherever you are — and if you slept through it, you hear of it', () => {
+test('天元三千零二十二年七月十五: the moon is red; at dusk the night opens wherever you are — and if you slept through it, you hear of it', () => {
   const s = fresh(408);
   s.flags.opening_done = true;
   assert.ok(bloodMoon(s, BLOOD_DAY), 'that night the moon is red, whatever the dice say');
   waitUntil(s, BLOOD_DAY);
-  assert.ok(s.sched.some((x) => x.ev === 'blood_moon_omen' && x.due === BLOOD_DAY + 1), 'its hour is set');
-  // seen: at 子時 that night
-  const seen = JSON.parse(JSON.stringify(s));
-  seen.day = BLOOD_DAY + 1;
-  seen.tod = 0.5;
-  assert.ok(EVENTS.blood_moon_omen.cond(seen));
-  startEvent(seen, 'blood_moon_omen');
-  assert.match(seen.pending.text, /那一筆，沒有落下來/);
-  finish(seen);
-  assert.ok(seen.flags.blood_moon_omen);
-  // slept through (a seclusion): only the rumor
+  assert.ok(!EVENTS.blood_moon_omen, 'the old omen is gone: the night itself comes (content/events/bloodnight.js)');
+  // seen: at dusk that night
+  const seen = parseSave(serialize(s));
+  seen.tod = 19.5;
+  tick(seen);
+  assert.equal(seen.pending?.id, 'night_rise');
+  assert.match(seen.pending.text, /紅的/);
+  // slept through: dawn, and the rumor
   waitUntil(s, BLOOD_DAY + 5);
-  assert.ok(!EVENTS.blood_moon_omen.cond(s), 'gone by');
-  assert.ok(s.rumors.some((r) => r.text.includes('提起了筆')));
+  tick(s);
+  assert.equal(s.pending?.id, 'night_dawn');
+  assert.match(s.pending.text, /天已經亮了/);
+  finish(s);
+  assert.ok(s.flags.blood_night_done);
+  assert.ok(s.rumors.some((r) => r.text.includes('朱紅的筆')));
 });
 
 test('王二\'s letter comes over with the ferryman a month after you do; you can write back', () => {

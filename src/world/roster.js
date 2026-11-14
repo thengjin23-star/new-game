@@ -7,11 +7,9 @@
 // to the night. The list opens once you know what the night is for (content/events/tianyan.js: ty_roster).
 // Kept in s.vars.roster: { person: plan }.
 
-import { dayAt } from '../core/calendar.js';
 import { mapOf } from './map.js';
+import { nightDay } from './night.js';
 
-/** The night the list is for (world/arcs.js WINDOWS.bloodMoon). */
-const NIGHT = dayAt(10, 7, 15);
 
 const f = (s, k) => !!s.flags?.[k];
 const npc = (s, id) => s.npcs?.[id];
@@ -140,7 +138,7 @@ export function helpersOf(s) {
 }
 
 /** Days left to the night (0 once it has come). */
-export const daysLeft = (s) => Math.max(0, NIGHT - s.day);
+export const daysLeft = (s) => Math.max(0, nightDay(s) - s.day);
 
 /** In a word: how many of those still on the page have something written for them. */
 export function rosterSummary(s) {

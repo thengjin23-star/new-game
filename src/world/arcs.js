@@ -2,6 +2,7 @@ import { dayAt, DAYS_PER_YEAR } from '../core/calendar.js';
 import { schedule } from '../core/schedule.js';
 import { rumor } from './rumors.js';
 import { inTide, bloodMoon } from './weather.js';
+import { nightDay, nightDone } from './night.js';
 import { SECRET_REALMS } from './realms.js';
 import { tideNight, omensOf, OMEN_WHERE } from './happenings.js';
 import { resolveDuel } from './duel.js';
@@ -353,14 +354,9 @@ export function recurring(s) {
     s.flags.bloodmoon_seen = true;
     rumor(s, '今夜的月亮是紅的。山裡的獵戶都早早關了門，說今夜的狼，眼睛也是紅的。', 'hint');
   }
-  // (1.0) 天元三千零二十二年七月十五: the blood moon. Until 1.3 writes the night itself, only the omen — at 子時, wherever you
-  // are (content/events/zhongzhou.js blood_moon_omen); slept or sat through, it is told after
-  if (s.day === WINDOWS.bloodMoon && !s.flags.blood_moon_omen) schedule(s, 'blood_moon_omen', 1, 1, { expire: 0 });
+  // (1.3) the night of the blood moon (world/night.js; content/events/bloodnight.js): three days before, the warning
+  if (!nightDone(s) && s.day === nightDay(s) - 3 && !s.flags.night_warned) schedule(s, 'night_warn', 0, 0, { expire: 3 });
   zhongzhouYears(s);
-  if (s.day === WINDOWS.bloodMoon + 2 && !s.flags.blood_moon_told) {
-    s.flags.blood_moon_told = true;
-    rumor(s, '天元三千零二十二年七月十五那一夜，月亮紅得像血。有人說，看見天上裂開了一道縫，縫裡亮了一下，像有人提起了筆——又什麼也沒有落下來。', 'arc');
-  }
   // (0.25) 孫掌櫃, three months after his master's letter came back to him: out of seclusion, a layer up
   if (s.flags.sun_master_done && !s.flags.sun_out && s.day >= (s.vars.sun_secl_day ?? Infinity) + 90) {
     s.flags.sun_out = true;

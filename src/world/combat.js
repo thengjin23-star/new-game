@@ -33,6 +33,7 @@ import { jieOver } from '../core/jie.js';
 import { newReport, spendHours } from '../core/time.js';
 import { rand } from '../core/rng.js';
 import { weatherNow, moonTonight } from './weather.js';
+import { watchOn, nightOf, fieldOf, pastNight, WATCH_NAME, WATCH_SECONDS, WATCHES } from './night.js';
 import { onBeaten, banditsHostile } from './factions.js';
 
 /** Blood a wound holds back: 輕傷 leaves you three quarters of it, and so on. */
@@ -114,7 +115,7 @@ export function combatOf(s) {
   if (!C) {
     C = {
       on: false, t: 0, me: null, beasts: null, shots: [], fx: [], pops: [], pools: [], hits: [], preview: null, notes: [], signals: [],
-      beaten: 0, foes: new Set(), quiet: 0, outcome: null, trial: null, jie: null, rt: null, heard: {}, told: {}, uid: 0,
+      beaten: 0, foes: new Set(), quiet: 0, outcome: null, trial: null, jie: null, night: null, rt: null, heard: {}, told: {}, uid: 0,
     };
     LIVE.set(s, C);
   }
@@ -849,8 +850,12 @@ function fell(s, C, b, io) {
   Object.assign(b, { hp: 0, state: 'dead', st: 0, burn: null, moving: false, aggro: false, token: false });
   C.beaten += 1;
   untarget(C, b);
+  if (b.phantom && b.def.nightPack) {
+    io.feed('good', `${b.name}倒下了。`);
+    return;
+  }
   if (b.phantom) {
-    io.feed('good', b.def.cloud ? '最後一道雷落下，劫雲散了。' : `${b.name}散成了一縷青煙。`);
+    io.feed('good', b.def.night ? `${WATCH_NAME[b.def.night]}過去了。天上的書，翻過了一頁。` : b.def.cloud ? '最後一道雷落下，劫雲散了。' : `${b.name}散成了一縷青煙。`);
     return;
   }
   if (b.summon) {
@@ -962,6 +967,7 @@ function fallen(s, C, b, io) {
   io.signal({ combat: 'fell' });
   if (C.jie) return endJie(s, C, io, 'fell');
   if (C.trial) return endTrial(s, C, io, 'fell');
+  if (C.night) return nightFell(s, C, io);
   hero(s, C);
   me.hp = Math.max(1, Math.round(me.cap * 0.5));
   me.mp = Math.round(me.maxMp * 0.5);
@@ -1041,6 +1047,7 @@ function finish(s, C, io) {
   Object.assign(C.me, { auto: false, hold: false, press: 0, target: null, steer: null });
   io.signal({ combat: C.outcome });
   if (C.jie) return endJie(s, C, io, C.outcome);
+  if (C.night) return endNight(s, C, io);
   if (C.trial) return endTrial(s, C, io, C.outcome);
   if (C.rt) {
     // a moment to see how it ended (on his knees, the rest of them running) before the story picks up
@@ -1257,6 +1264,11 @@ export function updateCombat(s, dt, io) {
   // begins where you stand, once you are on the ground (and if the game was closed in the middle of one,
   // it begins again)
   if (s.jie && !C.jie && !C.on && !s.pending && !s.rtFight && !s.secl && !w.fly) beginJie(s, C, io);
+  // (1.3) the night of the blood moon: a watch of it where you stand (world/night.js); if the game was closed in the
+  // middle of one, that watch begins again
+  if (!C.night && watchOn(s) && !C.on && !s.pending && !s.rtFight && !s.secl && !w.fly && !s.jie) beginNight(s, C, io);
+  if (C.night) nightTick(s, C, dt, io);
+  if (s.pending || s.dead) return STILL;
   const steering = !!(io.input && (io.input.x || io.input.y));
   me.press = Math.max(0, me.press - dt);
   // taking the stick yourself ends walking up to someone
@@ -1353,7 +1365,8 @@ function think(s, C, b, dt, io) {
     phaseUp(s, C, b, io);
     if (b.hp <= 0) return fell(s, C, b, io);
     const dd = Math.hypot(w.x - b.x, w.y - b.y);
-    if (dd > 520) {
+    // (the 劫雲 keeps over you; the book of the blood moon, over the place it is writing on)
+    if (dd > 520 && !b.def.fixed) {
       b.x = w.x + ((b.x - w.x) / dd) * 420;
       b.y = w.y + ((b.y - w.y) / dd) * 420;
     }
@@ -3005,6 +3018,141 @@ function endJie(s, C, io, how) {
     me.hp = me.cap;
     me.mp = me.maxMp;
   } else me.hp = Math.max(1, Math.min(me.hp, Math.round(me.cap * 0.25)));
+}
+
+// ── (1.3) the night of the blood moon (world/night.js; content/events/bloodnight.js) ──
+
+/** How far from the middle of the field you may go before you have left it (the night goes on without you). */
+const FIELD_R = 900;
+/** Seconds between the packs that come down out of the hills, by watch; and how many come in each. */
+const WAVE_EVERY = [null, 17, 14, 11];
+const WAVE_SIZE = [null, 2, 3, 3];
+/** What comes down on each place (the red-eyed beasts of 東荒). */
+const NIGHT_KINDS = { qingshi: ['wolf', 'demon_wolf'], qingxu: ['wolf', 'demon_wolf'], fox: ['wolf', 'demon_wolf'], luoxia: ['demon_wolf', 'wolf'], ferry: ['wolf', 'demon_wolf'] };
+
+/**
+ * A watch begins: the book is open over the field (a sky you cannot strike, as the 劫雲 is; its blood is the
+ * time left in the watch), and the first of what comes down out of the hills is on its way.
+ */
+function beginNight(s, C, io) {
+  const n = nightOf(s);
+  const F = fieldOf(s);
+  const me = hero(s, C);
+  const phase = n.phase;
+  C.night = { phase, next: C.t + 2.5, waves: 0, ending: false, fled: false, seed: ((s.seed | 0) * 31 + phase * 977 + 7) % 2147483647 || 1 };
+  Object.assign(me, { poison: null, held: null });
+  const book = spawn(s, { id: `night_${++C.uid}`, kind: 'mingbu', name: `${WATCH_NAME[phase]}・天上的書`, title: WATCH_NAME[phase], x: F.at[0], y: F.at[1] - 60, r: 40, power: Math.max(4, Math.round(me.P)), tier: s.player.realm, phantom: true, cloud: WATCH_SECONDS, fixed: true, night: phase });
+  beastsOf(s, C).push(book);
+  arm(s, C, book);
+  Object.assign(book, { state: 'chase', st: 0, aggro: true, lostT: 0 });
+  engage(s, C, book, io, phase === 1 ? '天上的書攤開了。月亮紅得像血——山裡的東西，紅著眼睛下來了！' : `${WATCH_NAME[phase]}。天上的書又翻開了一頁。`);
+}
+
+/** A watch goes on: packs out of the hills, and whether you are still on the field. */
+function nightTick(s, C, dt, io) {
+  const N = C.night;
+  const n = nightOf(s);
+  const F = fieldOf(s);
+  const w = s.world;
+  const me = hero(s, C);
+  if (!n || N.ending) return;
+  // dawn came in the middle of it (a watch begun late): the book closes
+  if (pastNight(s)) {
+    N.dawn = true;
+    closeWatch(s, C);
+    return;
+  }
+  const book = beastsOf(s, C).find((b) => b.def.night && b.def.night === N.phase);
+  // you left the field: the night goes on without you
+  if (Math.hypot(w.x - F.at[0], w.y - F.at[1]) > FIELD_R) {
+    N.fled = true;
+    closeWatch(s, C);
+    io.feed('bad', '你離開了戰場。身後，天上的筆一筆一筆落下去，沒有人擋。');
+    return;
+  }
+  // the book has turned its page: what is still out there goes back up into the hills
+  if (!book || !alive(book)) {
+    closeWatch(s, C);
+    return;
+  }
+  if (C.t < N.next) return;
+  N.next = C.t + WAVE_EVERY[N.phase];
+  N.waves += 1;
+  const kinds = NIGHT_KINDS[n.place] || NIGHT_KINDS.qingshi;
+  const size = WAVE_SIZE[N.phase];
+  N.seed = (N.seed * 16807) % 2147483647;
+  const a = (N.seed / 2147483647) * Math.PI * 2;
+  let at = null;
+  for (let k = 0; k < 12 && !at; k++) {
+    const r = 380 + k * 10;
+    const x = F.at[0] + Math.cos(a + k * 0.5) * r;
+    const y = F.at[1] + Math.sin(a + k * 0.5) * r;
+    if (isReachable(x, y) && !collides(s, x, y, 16)) at = [x, y];
+  }
+  if (!at) return;
+  const def = { id: `nightpack_${++C.uid}`, kinds: Array.from({ length: size }, (_, k) => kinds[k % kinds.length]), n: size, title: '紅眼的獸', x: at[0], y: at[1], r: 90, power: Math.max(8, Math.round(me.P * (0.55 + 0.12 * (N.phase - 1)))), phantom: true, nightPack: true };
+  const pack = Array.from({ length: size }, (_, k) => spawn(s, def, k));
+  for (const b of pack) beastsOf(s, C).push(b);
+  for (const b of pack) {
+    arm(s, C, b);
+    Object.assign(b, { state: 'chase', st: 0, aggro: true, lostT: 0 });
+  }
+  engage(s, C, pack[0], io, N.waves === 1 ? '山坡上一雙一雙紅色的眼睛亮了起來——狼群衝下來了！' : '又一群紅了眼的東西，從黑暗裡撲了出來！');
+}
+
+/** The watch is over (the page turned, or you left the field): all of it that is the night's goes. */
+function closeWatch(s, C) {
+  C.night.ending = true;
+  for (const b of beastsOf(s, C)) {
+    if (!b.phantom || (!b.def.night && !b.def.nightPack) || b.state === 'dead' || b.state === 'vanished') continue;
+    Object.assign(b, { state: 'vanish', st: 0, aggro: false, moving: false, move: null, token: false });
+    untarget(C, b);
+  }
+  C.shots = [];
+  C.pools = [];
+}
+
+/** The watch is done with: the card between watches (or dawn), or — you left — the night without you. */
+function endNight(s, C, io) {
+  const N = C.night;
+  C.night = null;
+  const me = hero(s, C);
+  Object.assign(me, { shield: 0, shieldT: 0, poison: null, ward: null });
+  const n = nightOf(s);
+  if (!n) return;
+  if (N.fled) {
+    n.fled = true;
+    startEvent(s, 'night_fled');
+    return;
+  }
+  n.held[N.phase] = true;
+  startEvent(s, N.dawn || N.phase >= WATCHES ? 'night_dawn' : 'night_watch');
+}
+
+/** You went down in the middle of a watch: the rest of the night goes on without you (you come to at dawn, hurt). */
+function nightFell(s, C, io) {
+  const N = C.night;
+  closeWatch(s, C);
+  C.night = null;
+  const me = hero(s, C);
+  me.hp = Math.max(1, Math.round(me.cap * 0.5));
+  me.mp = Math.round(me.maxMp * 0.5);
+  const n = nightOf(s);
+  if (!n) return;
+  n.fled = true;
+  n.fell = N.phase;
+  const report = newReport();
+  applyEffects(s, [['hurt', 2]], {}, report);
+  if (s.dead) return;
+  hero(s, C);
+  me.hp = Math.max(1, Math.round(me.cap * 0.5));
+  startEvent(s, 'night_fell');
+}
+
+/** Is a watch of the blood moon's night being fought now (for the screen)? */
+export function nightFight(s) {
+  const C = combatOf(s);
+  return C.night ? { phase: C.night.phase, name: WATCH_NAME[C.night.phase] } : null;
 }
 
 function endTrial(s, C, io, how) {

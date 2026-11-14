@@ -1,0 +1,296 @@
+// 血月那一夜 (1.3「血月」), its bones (world/night.js; the watches in world/combat.js; the cards in
+// content/events/bloodnight.js): the night's day (and a save past it, put off a year); three days' warning,
+// that wakes you out of a seclusion; dusk, wherever you are; three watches, each a fight with a card between
+// (and a place to stand if the game is closed); leaving the field, going down in it; dawn.
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import * as E from '../src/world/explore.js';
+import * as C from '../src/world/combat.js';
+import * as A from '../src/core/actions.js';
+import { serialize, parseSave, migrate } from '../src/core/save.js';
+import { startEvent, continueEvent, takeDue } from '../src/core/events.js';
+import { DAYS_PER_YEAR } from '../src/core/calendar.js';
+import {
+  BLOOD_DAY, DAWN, PLACES, nightDay, postponed, nightOf, nightDone, openNight, placeOf, watchNow, nightDate,
+} from '../src/world/night.js';
+import { fresh, resolvePending, pickText, finish, waitUntil, goTo } from './helpers.js';
+
+const DT = 0.1;
+
+/** The world takes steps (brain: what you do each one; done: stop when it says so). */
+function play(s, secs, brain = () => null, done = () => false) {
+  for (let k = 0; k < secs / DT; k++) {
+    E.step(s, DT, brain(s));
+    if (done(s)) return true;
+  }
+  return false;
+}
+
+/** What is on screen, played through without choosing (a result, a notice). */
+function onward(s) {
+  for (let k = 0; k < 10 && (s.pending?.result || s.pending?.notice); k++) continueEvent(s);
+}
+
+/** One who stands and strikes, and is kept on their feet (the watch is what is being tested, not the fighting). */
+function stand(x) {
+  x.player.hp = C.hero(x).cap;
+  if (C.inCombat(x)) C.attackCmd(x);
+  return null;
+}
+
+/** 金丹, on the night's day, in the middle of 青石鎮, a little before dusk. */
+function onTheNight(seed, region = 'qingshi_town') {
+  const s = fresh(seed);
+  s.flags.opening_done = true;
+  Object.assign(s.player, { realm: 3, stage: 1, xw: 0, injury: 0, weapon: 'qinggang_sword' });
+  waitUntil(s, BLOOD_DAY);
+  resolvePending(s);
+  s.sched = [];
+  goTo(s, region);
+  resolvePending(s);
+  s.tod = 18.9;
+  return s;
+}
+
+/** Dusk comes (the clock runs as you go about: here, it is put on): the moon rises. */
+function dusk(s) {
+  play(s, 1);
+  assert.ok(!s.pending, 'not yet');
+  s.tod = 19.05;
+  play(s, 1, () => null, (x) => !!x.pending);
+  assert.equal(s.pending?.id, 'night_rise', 'the moon rises');
+}
+
+test('the night\'s day: 天元三千零二十二年七月十五 for a new life; a save that comes to 1.3 past it has it put off to a 七月十五 a month off at the least, and is told so', () => {
+  const s = fresh(501);
+  assert.equal(nightDay(s), BLOOD_DAY);
+  assert.ok(!postponed(s));
+  assert.equal(nightDate(s), '天元三千零二十二年七月十五');
+  // a save from before 1.3, forty days past the night (the stroke never fell: 「未竟。墨不足。」)
+  const old = JSON.parse(serialize(s));
+  old.day = BLOOD_DAY + 40;
+  delete old.vars.bloodNight;
+  old.sched.push({ ev: 'blood_moon_omen', due: BLOOD_DAY + 1, node: null, expire: null, data: null });
+  const back = migrate(old);
+  assert.equal(nightDay(back), BLOOD_DAY + DAYS_PER_YEAR, 'the next 七月十五');
+  assert.ok(postponed(back));
+  assert.ok(!back.sched.some((x) => x.ev === 'blood_moon_omen'), 'the old omen is not waited on');
+  assert.equal(back.sched.filter((x) => x.ev === 'night_delayed').length, 1, 'told, once');
+  const due = takeDue(back, back.player.loc);
+  assert.equal(due?.id, 'night_delayed');
+  startEvent(back, due.id);
+  assert.match(back.pending.text, /三千零二十三年七月十五/);
+  finish(back);
+  assert.ok(back.flags.night_delay_told);
+  assert.ok(!migrate(JSON.parse(serialize(back))).sched.some((x) => x.ev === 'night_delayed'), 'and not again');
+  // ten days short of the next one: a year on from that (a month's notice at the least)
+  const near = JSON.parse(serialize(s));
+  near.day = BLOOD_DAY + DAYS_PER_YEAR - 10;
+  delete near.vars.bloodNight;
+  const later = migrate(near);
+  assert.equal(nightDay(later), BLOOD_DAY + 2 * DAYS_PER_YEAR);
+  assert.ok(nightDay(later) - later.day >= 30);
+  // closed in the small hours of that very night (and the old omen not yet come): it is still that night
+  const mid = JSON.parse(serialize(s));
+  mid.day = BLOOD_DAY + 1;
+  mid.tod = 2;
+  delete mid.vars.bloodNight;
+  assert.equal(nightDay(migrate(mid)), BLOOD_DAY);
+  // and a save from before it, well before: as it was
+  const before = JSON.parse(serialize(s));
+  delete before.vars.bloodNight;
+  assert.equal(nightDay(migrate(before)), BLOOD_DAY);
+});
+
+test('three days before, the system wakes you out of a seclusion; sit down again and you sit through it — and come out to hear of it', () => {
+  const s = fresh(502);
+  s.flags.opening_done = true;
+  waitUntil(s, BLOOD_DAY - 20);
+  resolvePending(s);
+  s.sched = [];
+  A.startSeclusion(s, 60, 0);
+  assert.ok(s.secl, 'sat down');
+  A.tickSeclusion(s, 1e12);
+  assert.equal(s.secl, null);
+  assert.equal(s.day, BLOOD_DAY - 3, 'woken three days before');
+  assert.ok(s.flags.night_warned);
+  assert.equal(s.pending?.title, '出關');
+  assert.match(s.pending.text, /天象異常/);
+  assert.match(s.pending.text, /被迫中止/);
+  continueEvent(s);
+  assert.equal(s.pending?.id, 'night_warn', 'and what it is, after');
+  assert.match(s.pending.text, /三日後|三天以後/);
+  finish(s);
+  // sit down again: no waking this time
+  A.startSeclusion(s, 30, 0);
+  assert.ok(s.secl);
+  A.tickSeclusion(s, 1e12);
+  assert.equal(s.secl, null);
+  assert.ok(s.day > BLOOD_DAY + 1, 'sat through it');
+  assert.equal(nightOf(s)?.place, 'secl');
+  finish(s);
+  play(s, 1);
+  assert.equal(s.pending?.id, 'night_dawn');
+  assert.match(s.pending.text, /出關的時候/);
+  finish(s);
+  assert.ok(nightDone(s));
+  assert.ok(s.flags.blood_night_done);
+});
+
+test('dusk on 青石鎮: the moon rises; you stand, and three watches are fought (the book\'s blood is the time left, wolves out of the hills), with a card between — then dawn', () => {
+  const s = onTheNight(503);
+  assert.equal(placeOf(s), 'qingshi');
+  dusk(s);
+  assert.match(s.pending.text, /紅的/);
+  assert.match(s.pending.text, /紅色的眼睛/);
+  pickText(s, '守住青石鎮');
+  onward(s);
+  assert.equal(nightOf(s).phase, 1);
+  let wolves = 0;
+  const seen = new Set();
+  const count = (x) => {
+    for (const b of C.combatOf(x).beasts || []) if (b.def.nightPack && !seen.has(b.uid)) {
+      seen.add(b.uid);
+      wolves++;
+    }
+    return stand(x);
+  };
+  play(s, 3, count);
+  assert.deepEqual(C.nightFight(s), { phase: 1, name: '一更' });
+  const book = C.combatOf(s).beasts.find((b) => b.def.night === 1);
+  assert.ok(book, 'the book is over the field');
+  assert.ok(!C.beastsInWorld(s, 5000).includes(book), 'the sky, not a thing to strike');
+  assert.match(C.bossOf(s)?.name || '', /天上的書/, 'its bar is the time left in the watch');
+  const hp0 = book.hp;
+  play(s, 2, count);
+  assert.ok(book.hp < hp0, 'it runs down');
+  // the first watch, to its end
+  play(s, 120, count, (x) => !!x.pending);
+  assert.equal(s.pending?.id, 'night_watch');
+  assert.equal(s.pending.title, '一更過去了');
+  assert.ok(wolves >= 4, `the hills came down on the town (${wolves})`);
+  assert.ok(nightOf(s).held[1]);
+  assert.ok(!C.combatOf(s).beasts.some((b) => b.def.nightPack && b.state !== 'dead' && b.state !== 'vanished' && b.state !== 'vanish'), 'what was left went back up into the hills');
+  pickText(s, '接著守');
+  onward(s);
+  assert.equal(nightOf(s).phase, 2);
+  assert.equal(watchNow(s), 2, 'the clock is at 亥時: the second watch');
+  play(s, 120, count, (x) => !!x.pending);
+  assert.equal(s.pending?.title, '二更過去了');
+  pickText(s, '接著守');
+  onward(s);
+  assert.equal(nightOf(s).phase, 3);
+  play(s, 120, count, (x) => !!x.pending);
+  assert.equal(s.pending?.id, 'night_dawn', 'the third watch over: dawn');
+  finish(s);
+  assert.ok(nightDone(s));
+  assert.deepEqual(nightOf(s).held, { 1: true, 2: true, 3: true });
+  assert.equal(s.day, BLOOD_DAY + 1);
+  assert.ok(s.tod >= DAWN - 1e-6, 'dawn by the clock');
+  assert.equal(C.nightFight(s), null);
+  // and the world goes on
+  play(s, 2);
+  assert.ok(!s.pending || !s.pending.id?.startsWith('night_'));
+});
+
+test('the game closed in the middle of a watch: that watch begins again (the card between watches is a place to stand)', () => {
+  const s = onTheNight(504);
+  dusk(s);
+  pickText(s, '守住');
+  onward(s);
+  play(s, 20, stand);
+  assert.equal(C.nightFight(s)?.phase, 1);
+  const back = parseSave(serialize(s));
+  assert.ok(back);
+  assert.equal(nightOf(back).phase, 1);
+  assert.equal(C.nightFight(back), null, 'nothing of the fight is saved');
+  play(back, 1, stand);
+  assert.equal(C.nightFight(back)?.phase, 1, 'the watch begins again');
+  const book = C.combatOf(back).beasts.find((b) => b.def.night === 1);
+  assert.ok(book.hp > book.maxHp * 0.9, 'its full time again');
+  // closed with the card between watches up: it is there again
+  play(back, 120, stand, (x) => !!x.pending);
+  assert.equal(back.pending?.id, 'night_watch');
+  const again = parseSave(serialize(back));
+  assert.equal(again.pending?.id, 'night_watch');
+  pickText(again, '接著守');
+  onward(again);
+  play(again, 1, stand);
+  assert.equal(C.nightFight(again)?.phase, 2);
+});
+
+test('leave the field in the middle of a watch and the night goes on without you; go down in it, and you come to at dawn', () => {
+  const s = onTheNight(505);
+  dusk(s);
+  pickText(s, '守住');
+  onward(s);
+  play(s, 5, stand);
+  assert.ok(C.nightFight(s));
+  const F = PLACES.qingshi;
+  // away over the fields, far past the edge of the town
+  E.placeAt(s, F.at[0] - 1300, F.at[1] + 200);
+  play(s, 3, () => null, (x) => !!x.pending);
+  assert.equal(s.pending?.id, 'night_fled');
+  assert.equal(C.nightFight(s), null);
+  finish(s);
+  assert.ok(nightDone(s));
+  assert.ok(nightOf(s).fled);
+  assert.ok(!nightOf(s).held[1], 'the first watch was not held');
+  assert.ok(s.tod >= DAWN - 1e-6 && s.day === BLOOD_DAY + 1);
+
+  // down in the middle of a watch
+  const t = onTheNight(506);
+  dusk(t);
+  pickText(t, '守住');
+  onward(t);
+  play(t, 60, (x) => {
+    x.player.hp = Math.min(x.player.hp, 1);
+    return null;
+  }, (x) => !!x.pending);
+  assert.equal(t.pending?.id, 'night_fell');
+  assert.ok(!t.dead);
+  finish(t);
+  assert.ok(nightDone(t));
+  assert.equal(nightOf(t).fell, 1);
+  assert.ok(t.tod >= DAWN && t.day === BLOOD_DAY + 1);
+});
+
+test('where you stand at dusk decides the night: elsewhere in 東荒 you may run to 青石鎮; far away you can only watch; come to it late, and you come into the watch the clock is in', () => {
+  // the wilds: run to the town (an hour), or hide
+  const s = onTheNight(507, 'wilds');
+  assert.equal(placeOf(s), 'east');
+  dusk(s);
+  assert.match(s.pending.text, /青石鎮/);
+  pickText(s, '趕去青石鎮');
+  onward(s);
+  assert.equal(nightOf(s).place, 'qingshi');
+  assert.ok(nightOf(s).late);
+  assert.equal(nightOf(s).phase, 1);
+  play(s, 1, stand);
+  assert.equal(C.nightFight(s)?.phase, 1, 'fought at the town');
+  assert.ok(Math.hypot(s.world.x - PLACES.qingshi.at[0], s.world.y - PLACES.qingshi.at[1]) < 300);
+
+  // somewhere else (another map): the crack is over 東荒, and all there is to do is watch
+  const t = onTheNight(508);
+  t.tod = 20;
+  openNight(t, 'away');
+  startEvent(t, 'night_rise');
+  assert.match(t.pending.text, /搆不著/);
+  assert.deepEqual(t.pending.choices.filter((c) => !c.disabled).map((c) => c.text), ['看著天，直到天亮。']);
+  finish(t);
+  assert.ok(nightDone(t));
+  assert.ok(t.tod >= DAWN && t.day === BLOOD_DAY + 1);
+
+  // come to it late (an hour before midnight): into the second watch
+  const u = onTheNight(509);
+  u.tod = 23;
+  play(u, 1, () => null, (x) => !!x.pending);
+  assert.equal(u.pending?.id, 'night_rise');
+  assert.ok(nightOf(u).late);
+  pickText(u, '守住');
+  onward(u);
+  assert.equal(nightOf(u).phase, 2);
+
+  // no seclusion while it is on
+  assert.match(A.seclusionBlocker(u) || '', /血月當空/);
+});

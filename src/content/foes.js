@@ -573,6 +573,12 @@ export const FOES = {
       ],
     },
   },
+  // (1.3) the 命簿, open across the sky on the night of the blood moon (world/night.js): a sky you cannot strike,
+  // as the 劫雲 is — its blood is what is left of a watch (world/combat.js beginNight)
+  mingbu: {
+    name: '天上的書', hp: 1, atk: 1, boss: true,
+    rt: { tier: 1, speed: 0, walk: 0, sight: 4000, lose: 99999, loseT: 99, leash: 99999, body: 12, tall: 60, notice: 0, moves: [], phases: [] },
+  },
   // ── 1.0 中州・臨江一帶 (二階: 築基初期 along the river, 築基中期 in the old wood, 築基後期 out in the 大澤) ──
   // 江堤蘆蕩: green pythons that lie in the reeds and come up out of the water at you; they wrap you, and spit
   reed_python: {

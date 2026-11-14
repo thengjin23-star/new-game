@@ -77,4 +77,4 @@ export const BEAST_NOTES = {
 };
 
 /** Who is not a foe of yours (幫手) or never alone (分身): not in the book. */
-export const NOT_IN_BOOK = new Set(['escort', 'fox_phantom', 'xinmo', 'xinmo_shade', 'jieyun']);
+export const NOT_IN_BOOK = new Set(['escort', 'fox_phantom', 'xinmo', 'xinmo_shade', 'jieyun', 'mingbu']);

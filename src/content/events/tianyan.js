@@ -8,6 +8,7 @@ import { dayAt } from '../../core/calendar.js';
 import { repOf } from '../../world/factions.js';
 import { moonTonight } from '../../world/weather.js';
 import { RENT, TERMS, rentCost, extendRent, rentUntil } from '../../world/caves.js';
+import { nightDone, nightDate } from '../../world/night.js';
 
 const TR = ['ty_road'];
 const WC = ['waicheng'];
@@ -47,7 +48,7 @@ const JAIL = {
 /** The note pinned to 東荒's page, in 衛長庚's red (and, the night gone by without the stroke, what was added under it). */
 const noteText = (s) =>
   `「東荒一頁，字跡錯亂，腐自此始。天元三千零二十二年七月十五，玉指峰朱墨足，當除此頁。——監正　衛長庚」${
-    s.day > BLOOD ? '\n\n紙條底下，又添了一行新的朱字：「未竟。墨不足。」' : ''
+    s.day > BLOOD && !nightDone(s) ? `\n\n紙條底下，又添了一行新的朱字：「未竟。墨不足。改於${nightDate(s)}。」` : ''
   }`;
 
 /** What the copy of three thousand years ago and this year's say, side by side; and what the system makes of it. */

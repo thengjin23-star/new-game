@@ -1,5 +1,7 @@
 import { SAVE_VERSION } from './state.js';
 import { EXITS } from '../world/map.js';
+import { nightDay, nightDone, postponed } from '../world/night.js';
+import { schedule } from './schedule.js';
 import { levelFor, awaken, sixth } from '../world/system.js';
 import { hotbarState } from '../world/skills.js';
 import { NODES } from '../world/map.js';
@@ -90,6 +92,14 @@ export function migrate(s) {
     if (!s.player.items.lingsui) delete s.player.items.lingsui;
     s.player.items.longji_sui = (s.player.items.longji_sui || 0) + 1;
     s.flags.longji_sui_moved = true;
+  }
+  // (1.3) the night of the blood moon: its day worked out for this save — one that comes here with it already
+  // behind it (in a build where the stroke never fell) has it put off to the next 七月十五, and is told so; the
+  // old omen is no longer waited on
+  s.sched = s.sched.filter((x) => x.ev !== 'blood_moon_omen');
+  if (s.vars.bloodNight == null) {
+    nightDay(s);
+    if (postponed(s) && !nightDone(s) && !s.flags.night_delay_told && !s.sched.some((x) => x.ev === 'night_delayed')) schedule(s, 'night_delayed', 0, 0);
   }
   // (1.2) the ways out of 東荒 are known to everyone from the start (the 白鶴渡, the passes south, west and north)
   for (const id of EXITS) if (s.nodes[id]) s.nodes[id].known = true;

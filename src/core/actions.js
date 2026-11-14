@@ -13,6 +13,7 @@ import { rand, randInt, chance, pick, pickWeighted } from './rng.js';
 import { fmtDuration, cnNum } from './calendar.js';
 import { checkChance } from './checks.js';
 import { priceShare } from '../world/factions.js';
+import { nightDay, nightDone, nightOf, pastNight, missNight } from '../world/night.js';
 
 export const MS_PER_DAY = 3000;
 
@@ -101,6 +102,8 @@ export function seclusionBlocker(s) {
   if (s.secl) return '已在閉關中。';
   // (0.26) a 劫 waiting on you
   if (s.jie) return '劫在等你。渡過去之前，閉不了關。';
+  // (1.3) the night of the blood moon, under way
+  if (s.vars?.night && !nightDone(s)) return '血月當空，閉不了關。';
   return canSecludeAt(s, s.player.loc);
 }
 
@@ -129,9 +132,20 @@ export function tickSeclusion(s, now) {
   const target = Math.min(x.days, Math.floor((now - x.start) / x.msPerDay));
   while (x.done < target && !s.dead && !x.interrupt) {
     const toBoundary = 30 - (x.done % 30);
-    const chunk = Math.min(target - x.done, toBoundary);
+    let chunk = Math.min(target - x.done, toBoundary);
+    // (1.3) three days before the blood moon the system wakes you (once: sit on after that, and you sit through it)
+    const warnAt = nightDay(s) - 3;
+    const wake = !nightDone(s) && !s.flags.night_warned && s.day + chunk >= warnAt && s.day <= nightDay(s);
+    if (wake) chunk = Math.max(0, warnAt - s.day);
     const report = newReport();
-    advance(s, chunk, 'seclusion', report);
+    if (chunk > 0) advance(s, chunk, 'seclusion', report);
+    if (wake) {
+      s.flags.night_warned = true;
+      x.interrupt = 'bloodmoon';
+      x.lines.push('叮——天象異常。本系統建議宿主：出關。');
+    }
+    // sat through it: the night went by without you
+    if (!nightOf(s) && !nightDone(s) && pastNight(s)) missNight(s, 'secl');
     x.done += chunk;
     x.xw += report.xw;
     x.stageUps.push(...report.stageUps);

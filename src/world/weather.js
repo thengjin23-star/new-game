@@ -7,6 +7,7 @@
 import { seasonOf, dateOf, dayAt, DAYS_PER_YEAR } from '../core/calendar.js';
 import { NODES } from './map.js';
 import { landTable } from './maps/index.js';
+import { nightDay } from './night.js';
 
 /**
  * Kinds of weather. walk: how fast you go on foot in it; see: how far you
@@ -156,12 +157,12 @@ export function inTide(day) {
 
 /** Is the full moon tonight a blood moon? (Only now and then, and only from the sixth year: a sign of what is to come.) */
 export function bloodMoon(s, day = s.day) {
-  // (1.0) 天元三千零二十二年七月十五 (world/arcs.js WINDOWS.bloodMoon): red, whatever else is so
-  if (day === dayAt(10, 7, 15)) return true;
+  // (1.0) 天元三千零二十二年七月十五 (world/night.js; a save that came to 1.3 past it: the next 七月十五): red, whatever else is so
+  if (day === nightDay(s)) return true;
   if (day < dayAt(5, 9) || dateOf(day).day !== 15) return false;
   // (1.2) 欽天監 trying its brush: the nearer 3022 comes, the oftener (one month in five in 3017; by 3022, three in four)
   const y = Math.floor(day / DAYS_PER_YEAR);
-  const odds = y <= 5 ? 0.2 : y >= 10 ? (day < dayAt(10, 7, 15) ? 0.75 : 0.3) : [0.25, 0.32, 0.42, 0.58][y - 6];
+  const odds = y <= 5 ? 0.2 : y >= 10 ? (day < nightDay(s) ? 0.75 : 0.3) : [0.25, 0.32, 0.42, 0.58][y - 6];
   return h1((s.seed | 0) + 77, Math.floor(day / 30)) < odds;
 }
 
