@@ -13,7 +13,9 @@ import { DAYS_PER_YEAR } from '../src/core/calendar.js';
 import {
   BLOOD_DAY, DAWN, PLACES, MARKS, INK_MAX, nightDay, postponed, nightOf, nightDone, openNight, placeOf, watchNow, nightDate, landedAt, helpersAt,
 } from '../src/world/night.js';
-import { setPlan, planBlocked } from '../src/world/roster.js';
+import { setPlan, planBlocked, starWatch, setStarWatch } from '../src/world/roster.js';
+import { useMap } from '../src/world/atlas.js';
+import { FRAGMENTS } from '../src/content/fragments.js';
 import { collides } from '../src/world/terrain.js';
 import { fresh, resolvePending, pickText, finish, waitUntil, goTo } from './helpers.js';
 
@@ -584,4 +586,150 @@ test('a life whose seed is past 2³¹ (as a new game\'s may be) has its brush al
     return null;
   });
   assert.ok(Object.values(nightOf(s).landed).reduce((a, b) => a + b, 0) >= 1);
+});
+
+// ── 白鶴渡、天衍城、殘頁・月、觀星台 (V4) ──
+
+test('白鶴渡: met the old man on the 江心洲, and the old one under the river wakes that night — it swallows strokes as they come over the water; not met, it sleeps', () => {
+  for (const met of [true, false]) {
+    const s = onTheNight(531, 'crane_ferry');
+    if (met) s.flags.isle_fisher_met = true;
+    assert.equal(placeOf(s), 'ferry');
+    dusk(s);
+    pickText(s, '守住白鶴渡');
+    onward(s);
+    play(s, 120, (x) => {
+      x.player.hp = C.hero(x).cap;
+      x.world.x = PLACES.ferry.at[0] - 250;
+      x.world.y = PLACES.ferry.at[1] - 150;
+      return null;
+    }, (x) => !!x.pending);
+    const n = nightOf(s);
+    const fell = landedAt(s, 'ferry');
+    if (met) {
+      assert.ok(n.eaten >= 1, `swallowed (${n.eaten}), and ${fell} came down`);
+      assert.ok(C.combatOf(s).fx.some((f) => f.kind === 'gulp') || n.eaten >= 1);
+    } else {
+      assert.equal(n.eaten, 0, 'asleep');
+      assert.ok(fell >= 1);
+    }
+  }
+});
+
+/** 金丹 in 天衍城 (over the river, the 官道), on the night's day, in the 外城, a little before dusk. */
+function onThePeak(seed, more = {}) {
+  const s = fresh(seed);
+  s.flags.opening_done = true;
+  Object.assign(s.player, { realm: 3, stage: 1, xw: 0, injury: 0, weapon: 'qinggang_sword', hp: 99999 });
+  waitUntil(s, BLOOD_DAY - 8);
+  resolvePending(s);
+  Object.assign(s.flags, { chapter1_done: true, zhongzhou_crossed: true, night_warned: true }, more);
+  s.world.cross = 'crane_ferry';
+  E.step(s, 0.05, null);
+  finish(s);
+  s.world.cross = 'guandao_guan';
+  finish(s);
+  E.step(s, 0.05, null);
+  finish(s);
+  assert.equal(s.world.map, 'tianyan');
+  assert.ok(s.day < BLOOD_DAY);
+  waitUntil(s, BLOOD_DAY);
+  s.sched = [];
+  resolvePending(s);
+  E.placeAt(s, 2700, 3240);
+  resolvePending(s);
+  s.tod = 19.05;
+  return s;
+}
+
+test('天衍城 that night: up 玉指峰 — the 御階, 欽天監, the 天梯 — and at its top 衛長庚 stops the brush (the sooner there, the sooner it stops); 蘇清瑤 up there is not alone', () => {
+  const s = onThePeak(532, { su_archive: true });
+  try {
+    s.npcs.su_qingyao.alive = true;
+    play(s, 1, () => null, (x) => !!x.pending);
+    assert.equal(s.pending?.id, 'night_rise');
+    assert.equal(nightOf(s).place, 'peak');
+    assert.match(s.pending.text, /玉指峰的峰頂/);
+    pickText(s, '闖上玉指峰');
+    onward(s);
+    assert.equal(s.pending?.id, 'night_climb');
+    assert.match(s.pending.text, /御階/);
+    // fight up it, every fight won
+    resolvePending(s, (o) => o[0], 'won');
+    const n = nightOf(s);
+    assert.ok(s.flags.night_summit, 'at the top');
+    assert.ok(n.stoppedAt >= 1 && n.stoppedAt <= 3, `the brush stopped in the watch you came up in (${n.stoppedAt})`);
+    assert.ok(s.flags.su_star_kept, '蘇清瑤 was not alone');
+    assert.ok(nightDone(s));
+    assert.ok(s.sys.frags.includes('frag_moon'), '殘頁・月 found you');
+    assert.ok(Math.hypot(s.world.x - 2700, s.world.y - 1280) < 60, 'on the 觀星台');
+  } finally {
+    useMap('donghuang');
+  }
+});
+
+test('the climb is fought, and can be lost: thrown down, you may go at it again (an hour gone each time) or watch till dawn', () => {
+  const s = onThePeak(533);
+  try {
+    play(s, 1, () => null, (x) => !!x.pending);
+    pickText(s, '闖上玉指峰');
+    onward(s);
+    let tries = 0;
+    resolvePending(s, (o) => {
+      if (o[0].text === '再闖一次。') tries++;
+      return o[0];
+    }, 'lost');
+    // (thrown each time, and up again each time — an hour gone each time — until the last watch is out)
+    assert.ok(tries >= 3, `went at it again (${tries})`);
+    assert.ok(nightDone(s));
+    assert.ok(!s.flags.night_summit, 'never got to the top');
+    assert.equal(nightOf(s).stoppedAt, null);
+    assert.equal(s.day, BLOOD_DAY + 1);
+    assert.ok(s.tod >= DAWN - 1e-6, 'dawn');
+  } finally {
+    useMap('donghuang');
+  }
+});
+
+test('殘頁・月: at 子時 a page drifts down out of the book (after the second watch) — and one who slept through it finds it on the pillow', () => {
+  const s = intoWatch(534);
+  play(s, 120, stand, (x) => !!x.pending);
+  pickText(s, '接著守');
+  onward(s);
+  assert.ok(!s.sys.frags.includes('frag_moon'), 'not yet');
+  play(s, 1, stand);
+  play(s, 120, stand, (x) => !!x.pending);
+  assert.equal(s.pending?.title, '二更過去了');
+  assert.match(s.pending.text, /子時/);
+  pickText(s, '接著守');
+  assert.ok(s.sys.frags.includes('frag_moon'));
+  assert.match(FRAGMENTS.frag_moon.text, /墨不夠了/);
+  // slept through
+  const t = fresh(535);
+  t.flags.opening_done = true;
+  waitUntil(t, BLOOD_DAY + 2);
+  play(t, 1);
+  assert.equal(t.pending?.id, 'night_dawn');
+  assert.match(t.pending.text, /枕邊/);
+  finish(t);
+  assert.ok(t.sys.frags.includes('frag_moon'));
+});
+
+test('the 名冊\'s 觀星台: 葉孤寒 can be asked to stand with 蘇清瑤 up there that night — and then 天劍宗\'s people do not go over the river', () => {
+  const s = fresh(536);
+  assert.equal(starWatch(s).open, false, 'not a thing to think of before you know what the night is for');
+  Object.assign(s.flags, { su_archive: true });
+  s.npcs.su_qingyao.alive = true;
+  assert.equal(starWatch(s).open, true);
+  assert.match(setStarWatch(s, true), /葉孤寒/, 'he has to have said yes first');
+  s.flags.roster_tj = true;
+  s.npcs.ye_guhan.alive = true;
+  assert.equal(setStarWatch(s, true), null);
+  assert.ok(s.flags.roster_ye_star);
+  assert.ok(!helpersAt(s, 'qingshi').some((h) => h.kind === 'tj_disciple'), '天劍宗 stays this side of the river');
+  assert.equal(setStarWatch(s, false), null);
+  assert.ok(helpersAt(s, 'qingshi').some((h) => h.kind === 'tj_disciple'));
+  // once the night has come, nothing more can be arranged
+  openNight(s, 'away');
+  assert.ok(setStarWatch(s, true));
 });

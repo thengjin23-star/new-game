@@ -8,7 +8,9 @@
 // Kept in s.vars.roster: { person: plan }.
 
 import { mapOf } from './map.js';
-import { nightDay } from './night.js';
+import { nightDay, nightOf } from './night.js';
+
+export { nightDate } from './night.js';
 
 
 const f = (s, k) => !!s.flags?.[k];
@@ -143,6 +145,26 @@ export function helpersOf(s) {
 
 /** Days left to the night (0 once it has come). */
 export const daysLeft = (s) => Math.max(0, nightDay(s) - s.day);
+
+/**
+ * (1.3) 觀星台: that night 蘇清瑤 is up on the top of 玉指峰, where the brush is (if she knows what the night is for,
+ * and is 欽天監's). 葉孤寒 can be asked to stand there with her — and then 天劍宗's people do not go over the river.
+ * { open: whether it is a thing to be thought of; can: whether he can be asked; on: whether he has been; why }
+ */
+export function starWatch(s) {
+  const su = alive(s, 'su_qingyao') && f(s, 'su_archive');
+  const ye = alive(s, 'ye_guhan') && f(s, 'roster_tj');
+  return { open: su, can: su && ye && !nightOf(s), on: f(s, 'roster_ye_star'), why: !su ? null : !ye ? '要先請葉孤寒答應（天劍宗）' : nightOf(s) ? '那一夜已經來了' : null };
+}
+
+/** Ask 葉孤寒 to stand with her on the 觀星台 (or not). */
+export function setStarWatch(s, on) {
+  const w = starWatch(s);
+  if (!w.can) return w.why || '不行';
+  if (on) s.flags.roster_ye_star = true;
+  else delete s.flags.roster_ye_star;
+  return null;
+}
 
 /** (1.3) Those down to go over the river who will be on the boat on 七月十三 (alive, still in 東荒, willing). */
 export function boatOf(s) {

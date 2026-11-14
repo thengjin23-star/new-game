@@ -2785,7 +2785,7 @@ export function startApp(root, { speed = 1, view = null } = {}) {
     const sum = ROSTER.rosterSummary(s);
     const list = ROSTER.rosterOf(s);
     return h('div.roster',
-      h('p.muted.pad', left > 0 ? `天元三千零二十二年七月十五，血月。還有 ${left} 天。東荒的 ${sum.of} 個人裡，安排了 ${sum.done} 個。` : '血月那一夜，已經過去了。名冊上寫的，還在。'),
+      h('p.muted.pad', left > 0 ? `${ROSTER.nightDate(s)}，血月。還有 ${left} 天。東荒的 ${sum.of} 個人裡，安排了 ${sum.done} 個。` : '血月那一夜，已經過去了。名冊上寫的，還在。'),
       h('ul.people-list.roster-list', list.map((r) =>
         h('li' + (r.alive && !r.away ? '' : '.dead'),
           seal(r.name[0], r.alive ? '' : 'grey'),
@@ -2801,8 +2801,22 @@ export function startApp(root, { speed = 1, view = null } = {}) {
         ))),
       h('h3.story-group', '誰答應了'),
       h('ul.roster-helpers', ROSTER.helpersOf(s).map((x) => h('li.small', h('b', x.name), '：', x.yes ? `${x.who}答應了。` : `還沒有——去問${x.who}。`))),
+      ...starPart(s),
       h('p.muted.small.pad', '護身符在天衍城的天衍觀。名冊上寫的，那一夜見分曉。'),
     );
+  }
+
+  /** (1.3) 觀星台 on the 名冊: 蘇清瑤 up there that night, and whether 葉孤寒 stands with her. */
+  function starPart(s) {
+    const w = ROSTER.starWatch(s);
+    if (!w.open) return [];
+    return [
+      h('h3.story-group', '觀星台'),
+      h('p.small.pad', w.on ? '那一夜，葉孤寒會在玉指峰頂的觀星台上，陪著蘇清瑤。天劍宗的弟子，就不過江了。' : '那一夜，蘇清瑤在玉指峰頂的觀星台上。沒有人陪她。'),
+      w.can
+        ? h('div.roster-opts.pad', h('button.btn.small' + (w.on ? '.primary' : ''), { onclick: () => act((x) => ROSTER.setStarWatch(x, !w.on)) }, w.on ? '託葉孤寒陪她（取消）' : '託葉孤寒陪她'))
+        : w.why ? h('p.small.muted.pad', w.why) : null,
+    ];
   }
 
   function logFrags() {

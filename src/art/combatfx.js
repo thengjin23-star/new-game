@@ -1847,6 +1847,22 @@ function drawFx(ctx, proj, px, f, now) {
       }
       break;
     }
+    case 'gulp': {
+      // (1.3) the old one under the river: the water heaves up in a ring, a dark mouth opens, and shuts
+      const [gx, gy] = proj(f.x, f.y, 0);
+      const q = Math.min(1, p * 1.6);
+      const open = Math.sin(Math.min(1, p * 1.4) * Math.PI);
+      ctx.strokeStyle = `rgba(150,196,226,${0.85 * (1 - p)})`;
+      ctx.lineWidth = 3 * px * Math.max(1, k);
+      ctx.beginPath();
+      ctx.ellipse(gx, gy, f.r * k * (0.6 + q * 0.9), f.r * k * (0.3 + q * 0.45), 0, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.fillStyle = `rgba(16,30,40,${0.75 * open})`;
+      ctx.beginPath();
+      ctx.ellipse(gx, gy, f.r * k * 0.7 * open, f.r * k * 0.32 * open, 0, 0, Math.PI * 2);
+      ctx.fill();
+      break;
+    }
     case 'zhubi_cut': {
       // (1.3) cut in the air: the stroke's two halves flung apart, a white line where the sword went through
       const [mx, my] = proj(f.x, f.y, 200);

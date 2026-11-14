@@ -72,8 +72,9 @@ test('every fight in the stories is fought where you stand: those in it exist an
   // 1.1: 龍脊嶺's mine — what crawls in the gallery, either house's men at the 靈眼, and 謝家老祖; 天劍宗's
   // gatekeeper for a 客卿, the 試劍崖, and the 劍靈 of the sword pool; 1.2: the 關兵 on the hills round 官道關,
   // the 禁軍 who bring you down out of the capital's sky, the 禁軍 on the 御階 (through them, or caught by them in
-  // the dark), the 星衛 at the 抄本閣 and at the top of the peak, the 皇陵's 贔屭, the 京兆府's men asking for papers)
-  assert.equal(n, 60);
+  // the dark), the 星衛 at the 抄本閣 and at the top of the peak, the 皇陵's 贔屭, the 京兆府's men asking for papers;
+  // 1.3: up 玉指峰 on the night of the blood moon — the 禁軍 on the 御階, the 星衛 and a 朱墨傀 before 欽天監, the 星衛 on the 天梯)
+  assert.equal(n, 63);
   for (const f of Object.values(FOES)) for (const [, item] of f.loot || []) assert.ok(ITEMS[item], `loot ${item}`);
 });
 

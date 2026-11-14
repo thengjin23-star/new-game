@@ -3209,6 +3209,8 @@ const STROKE_WARN = 0.6;
 const STROKE_R = 44;
 /** The ink full, the book has begun to write you: a stroke you stand in finds a word now — yours. This much of your blood. */
 const INK_HURT = 0.3;
+/** (白鶴渡) How many of the strokes the old one under the river swallows as they come over the water. */
+const EATEN = 0.5;
 
 /** The brush: a ring reddening on a mark, then the stroke; stood in, it finds no word and is gone (at the cost of ink). */
 function strokeTick(s, C, N, n, book, io) {
@@ -3236,10 +3238,21 @@ function strokeTick(s, C, N, n, book, io) {
   N.strokes = N.strokes.filter((k) => !k.done);
 }
 
-/** A stroke comes down: on you, standing in its way; else on the page. */
+/** A stroke comes down: over the river, the old one under it may swallow it first; on you, standing in its way; else on the page. */
 function strokeFalls(s, C, n, k, book, io) {
   const w = s.world;
   const me = hero(s, C);
+  // (白鶴渡) the old one under the river, woken (you met the old man on the 江心洲): a mouthful, over the water
+  if (n.place === 'ferry' && s.flags.isle_fisher_met) {
+    const N = C.night;
+    N.seed = (N.seed * 16807) % 2147483647;
+    if (N.seed / 2147483647 < EATEN) {
+      n.eaten += 1;
+      C.fx.push({ kind: 'gulp', x: k.x, y: k.y, r: k.r, t0: C.t, dur: 1.1 });
+      io.feed('good', n.eaten === 1 ? '江面上翻起一個漩渦——江底的老前輩張開嘴，把那一筆吞了下去。' : '江底的老前輩又吞了一筆。');
+      return;
+    }
+  }
   if (!w.fly && Math.hypot(w.x - k.x, w.y - k.y) <= k.r + PLAYER_R * 0.5) {
     n.blocked += 1;
     if (n.ink < INK_MAX) {

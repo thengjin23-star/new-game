@@ -277,6 +277,14 @@ export function missNight(s, why = 'slept') {
   return n;
 }
 
+/** Up 玉指峰 that night (content/events/bloodnight.js night_climb): you came to its top, and the brush stopped with the watch you came up in. */
+export function stopBrush(s) {
+  const n = nightOf(s);
+  if (!n) return null;
+  n.stoppedAt = Math.max(1, Math.min(WATCHES + 1, watchNow(s)));
+  return n.stoppedAt;
+}
+
 /** Dawn: what came of it (1.3 reckons each of 東荒's people from this: world/night.js settle). */
 export function settle(s) {
   const n = nightOf(s);
