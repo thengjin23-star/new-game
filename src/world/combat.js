@@ -33,7 +33,7 @@ import { jieOver } from '../core/jie.js';
 import { newReport, spendHours } from '../core/time.js';
 import { rand } from '../core/rng.js';
 import { weatherNow, moonTonight } from './weather.js';
-import { watchOn, nightOf, fieldOf, pastNight, WATCH_NAME, WATCH_SECONDS, WATCHES } from './night.js';
+import { watchOn, nightOf, fieldOf, pastNight, watchBegins, strokeLanded, MARKS, INK_MAX, WATCH_NAME, WATCH_SECONDS, WATCHES } from './night.js';
 import { onBeaten, banditsHostile } from './factions.js';
 
 /** Blood a wound holds back: 輕傷 leaves you three quarters of it, and so on. */
@@ -2319,7 +2319,7 @@ function release(s, C, a, io) {
   if (k.aim === 'line') {
     shoot(C, {
       kind: k.fx, x: w.x + a.ux * 12, y: w.y + a.uy * 12, ux: a.ux, uy: a.uy, speed: k.speed, left: k.range, r: k.width / 2, dmg: me.atk * k.mult * boost,
-      pierce: !!k.pierce, hurt: k.holy ? 'holy' : 'spirit', stun: k.stun || 0, el, back: !!k.back, chill: k.chill || null,
+      pierce: !!k.pierce, hurt: k.holy ? 'holy' : 'spirit', stun: k.stun || 0, el, back: !!k.back, chill: k.chill || null, cuts: !!k.cuts,
     });
   } else if (k.aim === 'ground') {
     const dx = a.pt[0] - w.x;
@@ -2526,6 +2526,8 @@ function flyShots(s, C, dt, io) {
         if (s.pending || s.dead) return;
         continue;
       }
+      // (1.3) 斷天 through a ring of the red brush: the stroke cut in the air
+      if (sh.cuts && C.night) cutStrokes(s, C, sh, io);
       for (const b of list) {
         if (sh.done || !alive(b) || !foe(b) || b.def.cloud || !present(s, b) || sh.hit.has(b.uid)) continue;
         if (Math.hypot(b.x - sh.x, b.y - sh.y) > sh.r + b.R.body) continue;
@@ -3039,7 +3041,11 @@ function beginNight(s, C, io) {
   const F = fieldOf(s);
   const me = hero(s, C);
   const phase = n.phase;
-  C.night = { phase, next: C.t + 2.5, waves: 0, ending: false, fled: false, seed: ((s.seed | 0) * 31 + phase * 977 + 7) % 2147483647 || 1 };
+  watchBegins(s);
+  C.night = {
+    phase, next: C.t + 2.5, waves: 0, ending: false, fled: false, seed: ((s.seed | 0) * 31 + phase * 977 + 7) % 2147483647 || 1,
+    strokes: [], nextStroke: C.t + STROKE_FIRST, warn: (s.sys?.lv || 0) >= 6,
+  };
   Object.assign(me, { poison: null, held: null });
   const book = spawn(s, { id: `night_${++C.uid}`, kind: 'mingbu', name: `${WATCH_NAME[phase]}・天上的書`, title: WATCH_NAME[phase], x: F.at[0], y: F.at[1] - 60, r: 40, power: Math.max(4, Math.round(me.P)), tier: s.player.realm, phantom: true, cloud: WATCH_SECONDS, fixed: true, night: phase });
   beastsOf(s, C).push(book);
@@ -3075,6 +3081,8 @@ function nightTick(s, C, dt, io) {
     closeWatch(s, C);
     return;
   }
+  strokeTick(s, C, N, n, book, io);
+  if (s.pending || s.dead || N.ending) return;
   if (C.t < N.next) return;
   N.next = C.t + WAVE_EVERY[N.phase];
   N.waves += 1;
@@ -3103,6 +3111,8 @@ function nightTick(s, C, dt, io) {
 /** The watch is over (the page turned, or you left the field): all of it that is the night's goes. */
 function closeWatch(s, C) {
   C.night.ending = true;
+  // (the page turned: what was gathering on it is gone)
+  C.night.strokes = [];
   for (const b of beastsOf(s, C)) {
     if (!b.phantom || (!b.def.night && !b.def.nightPack) || b.state === 'dead' || b.state === 'vanished') continue;
     Object.assign(b, { state: 'vanish', st: 0, aggro: false, moving: false, move: null, token: false });
@@ -3129,6 +3139,89 @@ function endNight(s, C, io) {
   startEvent(s, N.dawn || N.phase >= WATCHES ? 'night_dawn' : 'night_watch');
 }
 
+// ── 朱筆: where it comes down, standing in its way, the ink, the stroke cut in the air ──
+
+/** Seconds between strokes on the field, by watch (the first a few seconds in); how long a ring reddens before the stroke falls, and how much sooner the system's 朱筆預警 shows it. */
+const STROKE_EVERY = [null, 12, 8.5, 6.5];
+const STROKE_FIRST = 6;
+const STROKE_WIND = 2;
+const STROKE_WARN = 0.6;
+const STROKE_R = 44;
+/** The ink full, the book has begun to write you: a stroke you stand in finds a word now — yours. This much of your blood. */
+const INK_HURT = 0.3;
+
+/** The brush: a ring reddening on a mark, then the stroke; stood in, it finds no word and is gone (at the cost of ink). */
+function strokeTick(s, C, N, n, book, io) {
+  const marks = MARKS[n.place] || [];
+  if (!marks.length) return;
+  if (C.t >= N.nextStroke) {
+    N.seed = (N.seed * 16807) % 2147483647;
+    const r1 = N.seed / 2147483647;
+    N.seed = (N.seed * 16807) % 2147483647;
+    const r2 = N.seed / 2147483647;
+    // (not on a mark that is reddening already)
+    const free = marks.filter((m) => !N.strokes.some((k) => k.mark === m.id));
+    const pool = free.length ? free : marks;
+    const m = pool[Math.min(pool.length - 1, Math.floor(r1 * pool.length))];
+    const wind = STROKE_WIND + (N.warn ? STROKE_WARN : 0);
+    N.strokes.push({ id: ++C.uid, mark: m.id, name: m.name, x: m.at[0], y: m.at[1], r: STROKE_R, t0: C.t, at: C.t + wind, wind, done: false });
+    N.nextStroke = C.t + STROKE_EVERY[N.phase] * (0.75 + 0.5 * r2);
+  }
+  for (const k of N.strokes) {
+    if (k.done || C.t < k.at) continue;
+    k.done = true;
+    strokeFalls(s, C, n, k, book, io);
+    if (s.pending || s.dead) return;
+  }
+  N.strokes = N.strokes.filter((k) => !k.done);
+}
+
+/** A stroke comes down: on you, standing in its way; else on the page. */
+function strokeFalls(s, C, n, k, book, io) {
+  const w = s.world;
+  const me = hero(s, C);
+  if (!w.fly && Math.hypot(w.x - k.x, w.y - k.y) <= k.r + PLAYER_R * 0.5) {
+    n.blocked += 1;
+    if (n.ink < INK_MAX) {
+      n.ink += 1;
+      C.fx.push({ kind: 'zhubi', x: k.x, y: k.y, r: k.r, t0: C.t, dur: 0.7, held: true });
+      pop(C, w.x, w.y, `墨 ${n.ink}/${INK_MAX}`, 'status', 56);
+      if (n.ink >= INK_MAX) io.feed('bad', '那一筆在你身上停了一停。叮——墨滿。……命簿上，開始有你的名字了。');
+      else io.feed('good', `那一筆落在你身上，找不到字，散了。${k.name}，保住了。（沾墨 ${n.ink}／${INK_MAX}）`);
+      return;
+    }
+    // the book has begun to write you: it finds a word now
+    C.fx.push({ kind: 'zhubi', x: k.x, y: k.y, r: k.r, t0: C.t, dur: 0.8, held: true, onMe: true });
+    io.feed('bad', `朱筆落在你身上——這一回，它找到了字。${k.name}，保住了。`);
+    hurtMe(s, C, book, (me.cap * INK_HURT) / Math.max(1, book.dmg), io, null);
+    return;
+  }
+  // nobody in its way: it falls on the page
+  strokeLanded(s, n.place, k.mark);
+  C.fx.push({ kind: 'zhubi', x: k.x, y: k.y, r: k.r, t0: C.t, dur: 0.9 });
+  C.fx.push({ kind: 'zhumo', x: k.x, y: k.y, r: k.r * 0.85, t0: C.t, dur: 45 });
+  io.feed('bad', `朱筆落在${k.name}。`);
+}
+
+/** 斷天's light passing through a ring that has not yet come down: the stroke is cut in the air (no ink). */
+function cutStrokes(s, C, sh, io) {
+  const N = C.night;
+  const n = nightOf(s);
+  if (!N || !n || N.ending) return;
+  for (const k of N.strokes) {
+    if (k.done || Math.hypot(k.x - sh.x, k.y - sh.y) > k.r + sh.r) continue;
+    k.done = true;
+    n.cut += 1;
+    C.fx.push({ kind: 'zhubi_cut', x: k.x, y: k.y, r: k.r, t0: C.t, dur: 0.8, ux: sh.ux, uy: sh.uy });
+    io.feed('good', `劍光穿過紅圈——那一筆在半空斷了。${k.name}，保住了。`);
+  }
+}
+
+/** The rings reddening on the field now (for the screen: the ground, the map; with the system's 朱筆預警, sooner). */
+export function strokesOf(s) {
+  return (combatOf(s).night?.strokes || []).filter((k) => !k.done);
+}
+
 /** You went down in the middle of a watch: the rest of the night goes on without you (you come to at dawn, hurt). */
 function nightFell(s, C, io) {
   const N = C.night;
@@ -3152,7 +3245,9 @@ function nightFell(s, C, io) {
 /** Is a watch of the blood moon's night being fought now (for the screen)? */
 export function nightFight(s) {
   const C = combatOf(s);
-  return C.night ? { phase: C.night.phase, name: WATCH_NAME[C.night.phase] } : null;
+  if (!C.night) return null;
+  const n = nightOf(s);
+  return { phase: C.night.phase, name: WATCH_NAME[C.night.phase], ink: n?.ink || 0, inkMax: INK_MAX, warn: !!C.night.warn };
 }
 
 function endTrial(s, C, io, how) {

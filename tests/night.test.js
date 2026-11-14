@@ -11,8 +11,9 @@ import { serialize, parseSave, migrate } from '../src/core/save.js';
 import { startEvent, continueEvent, takeDue } from '../src/core/events.js';
 import { DAYS_PER_YEAR } from '../src/core/calendar.js';
 import {
-  BLOOD_DAY, DAWN, PLACES, nightDay, postponed, nightOf, nightDone, openNight, placeOf, watchNow, nightDate,
+  BLOOD_DAY, DAWN, PLACES, MARKS, INK_MAX, nightDay, postponed, nightOf, nightDone, openNight, placeOf, watchNow, nightDate, landedAt,
 } from '../src/world/night.js';
+import { collides } from '../src/world/terrain.js';
 import { fresh, resolvePending, pickText, finish, waitUntil, goTo } from './helpers.js';
 
 const DT = 0.1;
@@ -156,7 +157,8 @@ test('dusk on 青石鎮: the moon rises; you stand, and three watches are fought
     return stand(x);
   };
   play(s, 3, count);
-  assert.deepEqual(C.nightFight(s), { phase: 1, name: '一更' });
+  assert.equal(C.nightFight(s)?.phase, 1);
+  assert.equal(C.nightFight(s)?.name, '一更');
   const book = C.combatOf(s).beasts.find((b) => b.def.night === 1);
   assert.ok(book, 'the book is over the field');
   assert.ok(!C.beastsInWorld(s, 5000).includes(book), 'the sky, not a thing to strike');
@@ -293,4 +295,141 @@ test('where you stand at dusk decides the night: elsewhere in 東荒 you may run
 
   // no seclusion while it is on
   assert.match(A.seclusionBlocker(u) || '', /血月當空/);
+});
+
+// ── 朱筆 (V2) ──
+
+/** Stand at dusk and into the first watch; then the world steps until the brush has a ring reddening. */
+function intoWatch(seed, lv = 1) {
+  const s = onTheNight(seed);
+  s.sys.lv = lv;
+  dusk(s);
+  pickText(s, '守住');
+  onward(s);
+  play(s, 1, stand);
+  assert.ok(C.nightFight(s));
+  return s;
+}
+
+/** Steps until a ring of the brush is on the ground (keeping you on your feet, not striking). */
+function untilRing(s, secs = 20) {
+  play(s, secs, (x) => {
+    x.player.hp = C.hero(x).cap;
+    return null;
+  }, (x) => C.strokesOf(x).length > 0);
+  const k = C.strokesOf(s)[0];
+  assert.ok(k, 'a ring reddens');
+  return k;
+}
+
+test('the red brush: a ring reddens on a door of the town (never on you), and two seconds on the stroke falls on the page', () => {
+  const s = intoWatch(511);
+  const k = untilRing(s);
+  const mark = MARKS.qingshi.find((m) => m.id === k.mark);
+  assert.ok(mark, 'on one of the marks of 青石鎮');
+  assert.deepEqual([k.x, k.y], mark.at);
+  assert.ok(Math.abs(k.wind - 2) < 1e-9, 'two seconds');
+  // keep well away from it
+  s.world.x = k.x + 300;
+  s.world.y = k.y;
+  play(s, 2.5, (x) => {
+    x.player.hp = C.hero(x).cap;
+    return null;
+  }, (x) => !C.strokesOf(x).some((y) => y.id === k.id));
+  assert.equal(landedAt(s, 'qingshi', k.mark), 1, 'it came down on the page');
+  assert.equal(nightOf(s).ink, 0);
+  assert.ok(C.combatOf(s).fx.some((f) => f.kind === 'zhumo'), 'a blot of red where it fell');
+  // every mark of every place stands on open ground (you can get into its ring)
+  for (const [place, list] of Object.entries(MARKS)) {
+    for (const m of list) assert.ok(!collides(s, m.at[0], m.at[1], 12), `${place}.${m.id} on open ground`);
+  }
+});
+
+test('stand in the ring and the stroke finds no word: it is gone, at a drop of ink — eight, and the book begins to write you; after that, it hurts', () => {
+  const s = intoWatch(512);
+  const n = nightOf(s);
+  const me = C.hero(s);
+  let blocks = 0;
+  let hurt = 0;
+  for (let guard = 0; guard < 400 && blocks < INK_MAX + 1; guard++) {
+    // (a watch over: on into the next)
+    if (s.pending?.id === 'night_watch') {
+      pickText(s, '接著守');
+      onward(s);
+      play(s, 1, stand);
+    }
+    play(s, 30, (x) => {
+      x.player.hp = C.hero(x).cap;
+      return null;
+    }, (x) => !!x.pending || C.strokesOf(x).length > 0);
+    if (s.pending) continue;
+    const k = C.strokesOf(s)[0];
+    s.world.x = k.x;
+    s.world.y = k.y;
+    const ink = n.ink;
+    s.player.hp = me.cap;
+    const before = s.player.hp;
+    play(s, 3, () => {
+      s.world.x = k.x;
+      s.world.y = k.y;
+      return null;
+    }, (x) => !C.strokesOf(x).some((y) => y.id === k.id));
+    blocks++;
+    assert.equal(landedAt(s, 'qingshi', k.mark), 0, `${k.name}: nothing came down`);
+    if (ink < INK_MAX) {
+      assert.equal(n.ink, ink + 1, 'a drop of ink');
+    } else {
+      assert.equal(n.ink, INK_MAX);
+      hurt = before - s.player.hp;
+    }
+    // (the rest of this watch, kept clear of the wolves' teeth: only the brush is being tested)
+    for (const b of C.combatOf(s).beasts) if (b.def.nightPack) Object.assign(b, { state: 'dead', hp: 0 });
+  }
+  assert.equal(blocks, INK_MAX + 1, 'nine stood in');
+  assert.equal(n.blocked, INK_MAX + 1);
+  assert.ok(hurt >= me.cap * 0.15, `the ninth hurt (${hurt} of ${me.cap})`);
+  assert.ok(!s.flags.night_ink_full, 'kept only once the night is over');
+});
+
+test('斷天 through a ring that has not come down: the stroke is cut in the air — no ink', () => {
+  const s = intoWatch(513);
+  Object.assign(s.player, { realm: 3, stage: 1 });
+  s.player.arts = [...new Set([...(s.player.arts || []), 'duantian'])];
+  C.setKit(s, ['duantian']);
+  const k = untilRing(s);
+  s.world.x = k.x - 200;
+  s.world.y = k.y;
+  s.player.mp = C.hero(s).maxMp;
+  assert.ok(C.castCmd(s, 'duantian', [k.x, k.y]), 'cast');
+  play(s, 1.5, (x) => {
+    x.player.hp = C.hero(x).cap;
+    return null;
+  }, (x) => nightOf(x).cut > 0);
+  const n = nightOf(s);
+  assert.equal(n.cut, 1, 'cut');
+  assert.equal(n.ink, 0, 'no ink');
+  assert.equal(landedAt(s, 'qingshi', k.mark), 0);
+  assert.ok(!C.strokesOf(s).some((y) => y.id === k.id));
+});
+
+test('朱筆預警 (系統六級): the ring reddens sooner; and a watch begun again after the game was closed starts from where the night stood when it began', () => {
+  const s = intoWatch(514, 6);
+  assert.ok(C.nightFight(s).warn);
+  const k = untilRing(s);
+  assert.ok(Math.abs(k.wind - 2.6) < 1e-9, 'six tenths of a second sooner');
+  // let a few come down, then close the game
+  s.world.x = PLACES.qingshi.at[0] - 600;
+  play(s, 25, (x) => {
+    x.player.hp = C.hero(x).cap;
+    return null;
+  });
+  const n = nightOf(s);
+  const fell = Object.values(n.landed).reduce((a, b) => a + b, 0);
+  assert.ok(fell >= 1, 'some came down');
+  const back = parseSave(serialize(s));
+  assert.equal(Object.values(nightOf(back).landed).reduce((a, b) => a + b, 0), fell, 'saved as it stood');
+  play(back, 1, stand);
+  assert.equal(C.nightFight(back)?.phase, 1);
+  assert.deepEqual(nightOf(back).landed, {}, 'the watch begun again: what came down in it, undone');
+  assert.equal(nightOf(back).ink, 0);
 });

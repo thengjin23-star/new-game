@@ -81,9 +81,9 @@ export const MOVES = {
   },
   // (1.1) the stroke on the lone peak, learned at 天劍宗's sword pool with the old sword made whole again
   duantian: {
-    name: '斷天', school: '劍修', el: '金', aim: 'line', mp: 22, cd: 14, cast: 0.45, range: 520, width: 34, speed: 1100, mult: 3.2, pierce: true, fx: 'swordqi', realm: 2,
+    name: '斷天', school: '劍修', el: '金', aim: 'line', mp: 22, cd: 14, cast: 0.45, range: 520, width: 34, speed: 1100, mult: 3.2, pierce: true, fx: 'swordqi', realm: 2, cuts: true,
     learn: ['duantian'],
-    desc: '孤峰上的那一劍：一道很長、很直的劍光，斬過途中的一切。古劍在劍池重鑄以後，才學得會。',
+    desc: '孤峰上的那一劍：一道很長、很直的劍光，斬過途中的一切——連天上還沒落下來的東西也斬得斷。古劍在劍池重鑄以後，才學得會。',
   },
   jianzhen: {
     name: '劍陣', school: '劍修', el: '金', aim: 'self', mp: 18, cd: 16, cast: 0.3, swords: 6, radius: 70, last: 6, mult: 0.45, fx: 'jianzhen', realm: 2,

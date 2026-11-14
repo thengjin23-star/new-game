@@ -9,8 +9,10 @@
 //
 // s.vars.bloodNight: the night's day for this life (3022/7/15; a save already past it when 1.3 came: the
 // next 七月十五 at least 30 days off — docs/1.3血月做法.md). s.vars.night: { day, phase, place, ink, landed,
-// blocked, cut, eaten, stoppedAt, fled, fell, held, late, done } (phase 0: not begun; 1–3: the watch; 4: past
-// the last of them; done once dawn is reckoned). held: the watches you stood through to their end.
+// blocked, cut, eaten, stoppedAt, fled, fell, held, from, late, done } (phase 0: not begun; 1–3: the watch; 4:
+// past the last of them; done once dawn is reckoned). held: the watches you stood through to their end. landed:
+// the strokes that came down on the page, by place and mark ('qingshi.wanger'); ink: what you took on standing in
+// the way of them (0–8); from: where the night stood when this watch began (a watch begun again starts from it).
 
 import { dayAt, DAYS_PER_YEAR, START_YEAR } from '../core/calendar.js';
 
@@ -19,6 +21,8 @@ export const BLOOD_DAY = dayAt(10, 7, 15);
 /** The moon rises at 戌時; the night is over at 寅時. */
 export const DUSK = 19;
 export const DAWN = 5;
+/** Ink you can take on, standing in the way of the brush, before the book begins to write you. */
+export const INK_MAX = 8;
 /** The three watches: 一更、二更、三更 (the hours each ends at, from the night's day: 22:00, 1:00, 4:00). */
 export const WATCHES = 3;
 export const WATCH_END = [null, 22, 25, 28];
@@ -39,6 +43,75 @@ export const PLACES = {
   ferry: { region: 'crane_ferry', name: '白鶴渡', at: [4440, 3800] },
 };
 const BY_REGION = Object.fromEntries(Object.entries(PLACES).map(([id, p]) => [p.region, id]));
+
+/**
+ * Where the brush comes down at each place: never on you (you are not in the book), but on 東荒's people and its
+ * places — the doors of its houses, the temple's and the shrine's gates, the town's tree and its shrine, the stalls
+ * of the market, the pier. who: whose door it is (the reckoning at dawn: world/night.js).
+ */
+export const MARKS = {
+  qingshi: [
+    { id: 'wanger', name: '王二家', at: [2545, 3375], who: 'wang_er' },
+    { id: 'huichun', name: '回春堂', at: [2215, 3220], who: 'sun_zg' },
+    { id: 'shen', name: '沈家', at: [2475, 3098], who: 'shen_qingge' },
+    { id: 'zhaohu', name: '趙虎家', at: [2330, 2992], who: 'zhao_hu' },
+    { id: 'lin', name: '林家', at: [2010, 3096] },
+    { id: 'tudi', name: '土地廟', at: [2000, 3332] },
+    { id: 'huaishu', name: '老槐樹', at: [2420, 3220] },
+    { id: 'tofu', name: '豆花攤', at: [2305, 3162] },
+  ],
+  qingxu: [
+    { id: 'guan', name: '清虛觀', at: [1060, 3190], who: 'song_he' },
+    { id: 'jing', name: '古井', at: [1150, 3142] },
+    { id: 'yuan', name: '觀裡的庭院', at: [1000, 3226] },
+  ],
+  fox: [
+    { id: 'miao', name: '狐仙廟', at: [3110, 3035], who: 'hu_sanniang' },
+    { id: 'jie', name: '廟前的石階', at: [3020, 3090] },
+    { id: 'dong', name: '狐狸洞', at: [3200, 3080] },
+  ],
+  luoxia: [
+    { id: 'banxian', name: '錢半仙的攤子', at: [4100, 2560], who: 'qian_banxian' },
+    { id: 'lukou', name: '坊市路口', at: [3960, 2630] },
+    { id: 'chalou', name: '茶樓', at: [4090, 2526] },
+    { id: 'baicao', name: '百草堂', at: [3820, 2534] },
+    { id: 'jubao', name: '聚寶閣', at: [4220, 2471] },
+    { id: 'jiusi', name: '酒肆', at: [3690, 2484] },
+  ],
+  ferry: [
+    { id: 'dukou', name: '白鶴渡口', at: [4590, 3980] },
+    { id: 'chuanjia', name: '船家的屋子', at: [4380, 3900] },
+    { id: 'liu', name: '江邊的老柳', at: [4480, 4050] },
+  ],
+};
+
+/** A stroke came down on the page (at a place, on a mark). */
+export function strokeLanded(s, place, mark) {
+  const n = nightOf(s);
+  if (!n) return 0;
+  const key = `${place}.${mark}`;
+  n.landed[key] = (n.landed[key] || 0) + 1;
+  return n.landed[key];
+}
+
+/** How many came down at a place (or on one mark of it). */
+export function landedAt(s, place, mark = null) {
+  const n = nightOf(s);
+  if (!n) return 0;
+  if (mark) return n.landed[`${place}.${mark}`] || 0;
+  return Object.entries(n.landed).filter(([k]) => k.startsWith(`${place}.`)).reduce((a, [, v]) => a + v, 0);
+}
+
+/**
+ * A watch begins: where the night stands is kept; and if this watch was begun before (the game was closed in the
+ * middle of it), the night goes back to where it stood then, and the watch is fought again from there.
+ */
+export function watchBegins(s) {
+  const n = nightOf(s);
+  if (!n) return;
+  if (n.from?.phase === n.phase) Object.assign(n, { landed: { ...n.from.landed }, ink: n.from.ink, blocked: n.from.blocked, cut: n.from.cut, eaten: n.from.eaten });
+  else n.from = { phase: n.phase, landed: { ...n.landed }, ink: n.ink, blocked: n.blocked, cut: n.cut, eaten: n.eaten };
+}
 
 /** The night's day for this life (worked out once; a save past it when this came, the next 七月十五 at least a month off). */
 export function nightDay(s) {
@@ -177,6 +250,8 @@ export function settle(s) {
   n.phase = WATCHES + 1;
   n.done = true;
   s.flags.blood_night_done = true;
+  // (the book began to write you: kept, for what is to come)
+  if (n.ink >= INK_MAX) s.flags.night_ink_full = true;
   return n;
 }
 

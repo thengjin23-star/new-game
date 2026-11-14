@@ -1260,7 +1260,7 @@ export function startApp(root, { speed = 1, view = null } = {}) {
     const pressed = list.some((b) => b.gap > 0);
     // (1.3) a watch of the blood moon's night
     const watch = CB.nightFight(s);
-    set($('.cbt-state'), 'textContent', C.trial ? '試煉' : watch ? `血月・${watch.name}` : me.poison ? '中毒' : pressed ? '境界壓制' : on ? '戰鬥中' : '');
+    set($('.cbt-state'), 'textContent', C.trial ? '試煉' : watch ? `血月・${watch.name}・墨 ${watch.ink}/${watch.inkMax}` : me.poison ? '中毒' : pressed ? '境界壓制' : on ? '戰鬥中' : '');
     $('.cbt-state').classList.toggle('bad', pressed || !!me.poison || !!watch);
     hpBar.classList.toggle('poison', !!me.poison);
     const boss = on ? CB.bossOf(s) : null;
@@ -1665,8 +1665,11 @@ export function startApp(root, { speed = 1, view = null } = {}) {
     const cv = $('.minimap');
     if (!cv) return;
     const w = s.world;
-    const key = `${Math.round(w.x / 50)}|${Math.round(w.y / 50)}|${ui.thumbKey}`;
-    if (!force && (ui.hudKeys.mini === key || performance.now() - (ui.miniAt || 0) < 600)) return;
+    // (1.3) with the system's 朱筆預警, the rings of the red brush show on the map, near or far
+    const watch = CB.nightFight(s);
+    const rings = watch?.warn ? CB.strokesOf(s) : [];
+    const key = `${Math.round(w.x / 50)}|${Math.round(w.y / 50)}|${ui.thumbKey}|${rings.map((k) => k.id).join(',')}`;
+    if (!force && (ui.hudKeys.mini === key || performance.now() - (ui.miniAt || 0) < (rings.length ? 250 : 600))) return;
     ui.hudKeys.mini = key;
     ui.miniAt = performance.now();
     const g = cv.getContext('2d');
@@ -1709,6 +1712,17 @@ export function startApp(root, { speed = 1, view = null } = {}) {
       g.fillStyle = sc.def.bubble === '！' ? 'rgba(168,50,42,0.85)' : 'rgba(176,132,60,0.9)';
       g.beginPath();
       g.arc(px, py, 4.5, 0, Math.PI * 2);
+      g.fill();
+    }
+    for (const r of rings) {
+      const px = Math.max(5, Math.min(cv.width - 5, (r.x - x0) * k));
+      const py = Math.max(5, Math.min(cv.height - 5, (r.y - y0) * k));
+      g.strokeStyle = 'rgba(196,36,30,0.95)';
+      g.lineWidth = 2.5;
+      g.beginPath();
+      g.arc(px, py, 7, 0, Math.PI * 2);
+      g.stroke();
+      g.fillStyle = 'rgba(196,36,30,0.35)';
       g.fill();
     }
     // you

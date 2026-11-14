@@ -37,6 +37,8 @@ const WATER = [60, 120, 175];
 const ICE_DEEP = [70, 130, 190];
 /** 掌心雷: the white-blue of a bolt, and the blue round it. */
 const BOLT = [214, 228, 255];
+/** (1.3) 朱: the red of the brush on the night of the blood moon. */
+const VERMILION = [196, 36, 30];
 const BOLT_DEEP = [86, 118, 210];
 /** The light a move gathers into as you cast it. */
 const GLOW = { fire: FIRE, shield: [120, 170, 230], foeqi: FOE_QI, foxfire: FOX, mend: LEAF, iron: GOLD, sweep: GOLD, charge: GOLD, bloodqi: BLOOD, bloodring: BLOOD, blink: FOX, mirror: [246, 232, 170], bell: GOLD, feijian: QI, jianzhen: QI, vine: LEAF, frost: ICE, thunder: BOLT_DEEP, spikes: DUST, sandring: [196, 164, 110], sun: [250, 200, 90], icespike: ICE };
@@ -393,6 +395,21 @@ export function drawGroundMarks(g, s, C, kit, u = 1) {
   const now = C.t;
   const w = s.world;
   const lw = (n) => n / u;
+  // (1.3) where the red brush will come down: a ring reddening, faint to deep, until the stroke falls
+  for (const k of C.night?.strokes || []) {
+    if (k.done) continue;
+    const p = Math.min(1, Math.max(0, (now - k.t0) / k.wind));
+    g.fillStyle = rgba(VERMILION, 0.08 + 0.14 * p);
+    ring(g, k.x, k.y, k.r);
+    g.fill();
+    g.fillStyle = rgba(VERMILION, 0.2 + 0.3 * p);
+    ring(g, k.x, k.y, k.r * p);
+    g.fill();
+    g.strokeStyle = rgba(VERMILION, 0.45 + 0.5 * p);
+    g.lineWidth = lw(1.6 + 1.6 * p);
+    ring(g, k.x, k.y, k.r);
+    g.stroke();
+  }
   // a coming blow: the whole of it faint, filling from the one striking out as it gathers itself
   for (const b of C.beasts || []) {
     if ((b.state !== 'windup' && b.state !== 'leap') || b.side === 'ally') continue;
@@ -663,6 +680,19 @@ export function drawGroundMarks(g, s, C, kit, u = 1) {
   // scorch where a fireball burst; dust where a leap came down; green where the vines hold
   for (const f of C.fx) {
     const p = (now - f.t0) / f.dur;
+    // (1.3) where a stroke of the red brush came down on the page: a blot of red, drying
+    if (f.kind === 'zhumo') {
+      const a = 0.42 * (1 - p * p);
+      g.fillStyle = rgba(VERMILION, a);
+      ring(g, f.x, f.y, f.r);
+      g.fill();
+      g.fillStyle = rgba(VERMILION, a * 0.8);
+      for (let n = 0; n < 6; n++) {
+        const q = (n / 6) * Math.PI * 2 + f.x * 0.01;
+        ring(g, f.x + Math.cos(q) * f.r * 1.15, f.y + Math.sin(q) * f.r * 0.9, f.r * (0.12 + 0.06 * (n % 3)));
+        g.fill();
+      }
+    }
     if (f.kind === 'vines') {
       g.fillStyle = rgba(LEAF, 0.16 * (1 - p));
       ring(g, f.x, f.y, f.r);
@@ -1079,6 +1109,16 @@ export function drawCombatOverlay(ctx, proj, px, s, C, look, t, font) {
   for (const sh of C.shots) drawShot(ctx, proj, px, sh, now);
   // blows, bursts, cries
   for (const f of C.fx) drawFx(ctx, proj, px, f, now);
+  // (1.3) whose door each ring of the red brush is on
+  if (C.night?.strokes?.length) {
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    for (const k of C.night.strokes) {
+      if (k.done) continue;
+      const [x, y] = proj(k.x, k.y - k.r - 10, 0);
+      nameTag(ctx, x, y, k.name, 'rgba(176,28,24,1)', px, font);
+    }
+  }
   // your shield, a pale bubble
   if (me?.shield > 0) {
     const [cx, cy] = proj(w.x, w.y, 17);
@@ -1219,6 +1259,8 @@ export function drawCombatOverlay(ctx, proj, px, s, C, look, t, font) {
   ctx.textBaseline = 'middle';
   for (const b of C.beasts || []) {
     if (b.state === 'gone' || b.state === 'vanished' || b.state === 'dead' || (b.fade || 0) > 0.5) continue;
+    // (1.3) the book open across the sky: its bar is the one at the top of the screen, not a thing in the street
+    if (b.def.night) continue;
     const near = Math.hypot(b.x - w.x, b.y - w.y);
     if (b.state === 'hide') {
       // something in the long grass: it stirs as you come near (your 神識 has found it: marked)
@@ -1760,6 +1802,60 @@ function drawFx(ctx, proj, px, f, now) {
   const p = Math.min(1, (now - f.t0) / f.dur);
   const k = unitAt(proj, f.x, f.y);
   switch (f.kind) {
+    case 'zhubi': {
+      // (1.3) the red brush: one broad stroke out of the sky, tapering, and where it meets the ground a splash
+      // (held: it found you there, and no word — it breaks up into red dust)
+      const [gx, gy] = proj(f.x, f.y, 0);
+      const [tx, ty] = proj(f.x - 30, f.y, 420);
+      const fall = Math.min(1, p * 3.2);
+      const fade = p < 0.3 ? 1 : 1 - (p - 0.3) / 0.7;
+      const ex = tx + (gx - tx) * fall;
+      const ey = ty + (gy - ty) * fall;
+      ctx.lineCap = 'round';
+      for (const [wd, col] of [[16, `rgba(196,36,30,${0.25 * fade})`], [9, `rgba(196,36,30,${0.85 * fade})`], [3, `rgba(255,190,170,${0.6 * fade})`]]) {
+        ctx.strokeStyle = col;
+        ctx.lineWidth = wd * px * Math.max(1, k);
+        ctx.beginPath();
+        ctx.moveTo(tx, ty);
+        ctx.quadraticCurveTo((tx + ex) / 2 + 18 * px * k, (ty + ey) / 2, ex, ey);
+        ctx.stroke();
+      }
+      if (fall >= 1) {
+        const q = (p - 0.31) / 0.69;
+        const r = f.r * k * (f.held ? 0.5 + q * 1.1 : 0.7 + q * 0.5);
+        ctx.fillStyle = f.held ? `rgba(220,90,80,${0.5 * (1 - q)})` : `rgba(196,36,30,${0.7 * (1 - q)})`;
+        for (let n = 0; n < (f.held ? 10 : 7); n++) {
+          const a = (n / (f.held ? 10 : 7)) * Math.PI * 2 + f.t0;
+          const d = r * (f.held ? 1 : 0.6 + (n % 3) * 0.2);
+          ctx.beginPath();
+          ctx.arc(gx + Math.cos(a) * d, gy + Math.sin(a) * d * 0.5, (f.held ? 2.2 : 4) * px * Math.max(1, k) * (1 - q * 0.5), 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+      break;
+    }
+    case 'zhubi_cut': {
+      // (1.3) cut in the air: the stroke's two halves flung apart, a white line where the sword went through
+      const [mx, my] = proj(f.x, f.y, 200);
+      const fade = 1 - p;
+      const sep = 26 * px * Math.max(1, k) * Math.min(1, p * 2.5);
+      ctx.lineCap = 'round';
+      ctx.strokeStyle = `rgba(196,36,30,${0.85 * fade})`;
+      ctx.lineWidth = 8 * px * Math.max(1, k);
+      ctx.beginPath();
+      ctx.moveTo(mx - 10 * px * k, my - 90 * px * k - sep);
+      ctx.lineTo(mx - 2 * px * k, my - 8 * px * k - sep);
+      ctx.moveTo(mx + 2 * px * k, my + 8 * px * k + sep);
+      ctx.lineTo(mx + 12 * px * k, my + 70 * px * k + sep * 1.6);
+      ctx.stroke();
+      ctx.strokeStyle = `rgba(255,255,250,${0.9 * fade})`;
+      ctx.lineWidth = 2.4 * px * Math.max(1, k);
+      ctx.beginPath();
+      ctx.moveTo(mx - (f.ux || 1) * 60 * px * k, my - (f.uy || 0) * 30 * px * k);
+      ctx.lineTo(mx + (f.ux || 1) * 60 * px * k, my + (f.uy || 0) * 30 * px * k);
+      ctx.stroke();
+      break;
+    }
     case 'cut':
     case 'slash': {
       // the blade's arc sweeping across, bright, then gone (theirs edged in red)
