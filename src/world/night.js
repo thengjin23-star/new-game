@@ -15,6 +15,8 @@
 // the way of them (0–8); from: where the night stood when this watch began (a watch begun again starts from it).
 
 import { dayAt, DAYS_PER_YEAR, START_YEAR } from '../core/calendar.js';
+import { mapOf } from './map.js';
+import { rumor } from './rumors.js';
 
 /** The night (world/arcs.js WINDOWS.bloodMoon). */
 export const BLOOD_DAY = dayAt(10, 7, 15);
@@ -29,6 +31,18 @@ export const WATCH_END = [null, 22, 25, 28];
 export const WATCH_NAME = [null, '一更', '二更', '三更'];
 /** A watch, fought: about a minute and a half. */
 export const WATCH_SECONDS = 85;
+/** The brush on a field: seconds between strokes by watch (a place thick with names: 青石鎮; thinner, fewer), the first a few seconds in. */
+export const STROKE_EVERY = [null, 12, 8.5, 6.5];
+export const STROKE_FIRST = 6;
+export const DENSITY = { qingshi: 1, luoxia: 0.5, qingxu: 0.15, fox: 0.2, ferry: 0.2 };
+/** How many strokes come down on a place in a watch, with nobody there to stand in the way. */
+export function strokesIn(place, phase) {
+  return Math.round(1 + ((WATCH_SECONDS - STROKE_FIRST) * (DENSITY[place] || 0.4)) / STROKE_EVERY[phase]);
+}
+/** (狐仙廟) 胡三娘's hill: 「三百年沒讓那支筆碰過」 — half the strokes that come down on it are turned aside, while she keeps it. */
+export const hillHolds = (s) => !!s.npcs?.hu_sanniang?.alive && !s.flags?.fox_betrayed;
+/** (白鶴渡) the old one under the river, woken (you met the old man on the 江心洲): half the strokes over the water, swallowed. */
+export const oldOneWakes = (s) => !!s.flags?.isle_fisher_met;
 /** Days of warning a postponed night gives at the least. */
 const NOTICE = 30;
 /** (the clock is hours added up: what lands a hair short of the hour is on it) */
@@ -120,10 +134,10 @@ export function watchBegins(s) {
  * 松鶴道人 at his temple; 胡三娘's foxes on her hill. One who went down in a watch is not in the next.
  * [{ id, kind, who: an npc id, or { name } }]
  */
-export function helpersAt(s, place) {
+export function helpersAt(s, place, all = false) {
   const f = (k) => !!s.flags?.[k];
   const alive = (id) => !!s.npcs?.[id]?.alive;
-  const down = nightOf(s)?.down || {};
+  const down = all ? {} : nightOf(s)?.down || {};
   const out = [];
   const add = (id, kind, who) => {
     if (!down[id]) out.push({ id, kind, who });
@@ -285,7 +299,7 @@ export function stopBrush(s) {
   return n.stoppedAt;
 }
 
-/** Dawn: what came of it (1.3 reckons each of 東荒's people from this: world/night.js settle). */
+/** Dawn: what came of it — the strokes where nobody stood, then each of 東荒's people (reckon). */
 export function settle(s) {
   const n = nightOf(s);
   if (!n || n.done) return n;
@@ -294,7 +308,189 @@ export function settle(s) {
   s.flags.blood_night_done = true;
   // (the book began to write you: kept, for what is to come)
   if (n.ink >= INK_MAX) s.flags.night_ink_full = true;
+  reckon(s);
+  applyNight(s);
   return n;
+}
+
+// ── dawn: the reckoning ──
+
+/** Where each of the 名冊's people lives (the mark on their door). */
+const HOME = {};
+for (const [place, list] of Object.entries(MARKS)) for (const m of list) if (m.who) HOME[m.who] = { place, mark: m.id };
+/** The people of the 名冊 (world/roster.js ROSTER), in its order. */
+export const NIGHT_PEOPLE = ['wang_er', 'sun_zg', 'song_he', 'hu_sanniang', 'shen_qingge', 'zhao_hu', 'qian_banxian'];
+/** Strokes on one's own mark: from this many, one does not live; from one, one is hurt. */
+const DEADLY = 3;
+
+/**
+ * Where one of them is that night: over the river (上官家's boat on 七月十三), or gone from 東荒 already (null);
+ * in a shelter on the 名冊 (清虛觀's courtyard, the fox's den on 胡三娘's hill); else at home.
+ */
+export function nightSpot(s, id) {
+  const p = s.npcs?.[id];
+  if (!p?.alive) return null;
+  if ((s.vars.night_evac || []).includes(id)) return null;
+  if (p.loc && mapOf(p.loc) !== 'donghuang') return null;
+  const plan = s.vars.roster?.[id];
+  if (plan === 'qingxu') return { place: 'qingxu', mark: 'yuan' };
+  if (plan === 'fox') return { place: 'fox', mark: 'dong' };
+  return HOME[id] || null;
+}
+
+/** The night's own dice for the reckoning (a life's seed, kept positive). */
+function dice(s) {
+  let seed = ((s.seed >>> 0) % 2147483646) + 1;
+  return () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+}
+
+/** Was a watch at a place stood through by you (and so its strokes came down as you saw them)? */
+const heldThere = (n, place, k) => n.place === place && !!n.held?.[k];
+
+/**
+ * The strokes where nobody stood: every place of 東荒, every watch you were not there to see (up to the one the
+ * brush stopped in, if you got to the top of 玉指峰) — less what 胡三娘's hill turned aside and what the old one
+ * under the river swallowed. Then each of the 名冊's people, and those who fought at your side.
+ */
+export function reckon(s) {
+  const n = nightOf(s);
+  if (!n || n.reckoned) return n;
+  n.reckoned = true;
+  const roll = dice(s);
+  n.turned ||= 0;
+  for (const place of Object.keys(PLACES)) {
+    const marks = MARKS[place];
+    for (let k = 1; k <= WATCHES; k++) {
+      if (n.stoppedAt && k > n.stoppedAt) continue;
+      if (heldThere(n, place, k)) continue;
+      let count = strokesIn(place, k);
+      // (a watch left in the middle: only what was still to come of it)
+      if (n.left?.place === place && n.left.phase === k) count = Math.round(count * n.left.frac);
+      for (let i = 0; i < count; i++) {
+        const m = marks[Math.min(marks.length - 1, Math.floor(roll() * marks.length))];
+        if (place === 'ferry' && oldOneWakes(s) && roll() < 0.5) {
+          n.eaten += 1;
+          continue;
+        }
+        if (place === 'fox' && hillHolds(s) && roll() < 0.5) {
+          n.turned += 1;
+          continue;
+        }
+        strokeLanded(s, place, m.id);
+        // (those who said they would be in 青石鎮, there without you: in the book, the brush can find them)
+        if (place === 'qingshi' && roll() < 0.12) {
+          const hs = helpersAt(s, 'qingshi');
+          if (hs.length) {
+            const h = hs[Math.min(hs.length - 1, Math.floor(roll() * hs.length))];
+            (n.inked ||= {})[h.id] = (n.inked[h.id] || 0) + 1;
+          }
+        }
+      }
+    }
+  }
+  n.fates = {};
+  for (const id of NIGHT_PEOPLE) {
+    const p = s.npcs?.[id];
+    if (!p?.alive) continue;
+    n.fates[id] = fateOfNight(s, n, id, roll);
+  }
+  // those at your side in 青石鎮
+  for (const h of helpersAt(s, 'qingshi', true)) {
+    const hits = n.inked?.[h.id] || 0;
+    n.fates[`helper:${h.id}`] = { fate: hits >= 2 ? 'dead' : hits || n.down?.[h.id] ? 'hurt' : 'fine', strokes: hits, helper: true, who: h.who };
+  }
+  // 蘇清瑤 on the 觀星台
+  if (suOnTop(s)) n.fates.su_qingyao = { fate: s.flags.su_star_kept || s.flags.roster_ye_star ? 'fine' : 'dead', place: 'peak', with: s.flags.su_star_kept ? 'you' : s.flags.roster_ye_star ? 'ye' : null };
+  n.total = Object.values(n.landed).reduce((a, b) => a + b, 0);
+  return n;
+}
+
+/** Above this many strokes on the page in all, the crack in the sky over 東荒 does not close. */
+const CRACK_OPEN = 30;
+/** A place struck this hard: for a year after, what lives about it is fiercer. */
+const SCARRED = 10;
+/** The names of the places, for what is said of them. */
+const PLACE_NAME = Object.fromEntries(Object.entries(PLACES).map(([id, p]) => [id, p.name]));
+/** What each of them is called on the 名冊. */
+const ROSTER_NAME = { wang_er: '王二一家', sun_zg: '孫掌櫃', song_he: '松鶴道人', hu_sanniang: '胡三娘', shen_qingge: '沈家', zhao_hu: '趙虎', qian_banxian: '錢半仙' };
+
+/**
+ * Dawn come and reckoned: those it took are gone (and the 命簿 has their page torn out), those it hurt are hurt;
+ * the crack in the sky closes, or does not; the places struck hardest are wild for a year; and it is talked of.
+ */
+export function applyNight(s) {
+  const n = nightOf(s);
+  if (!n?.fates || n.applied) return n;
+  n.applied = true;
+  for (const [id, F] of Object.entries(n.fates)) {
+    if (F.helper) continue;
+    const p = s.npcs[id];
+    if (!p) continue;
+    if (F.fate === 'dead') {
+      p.alive = false;
+      p.diedDay = s.day;
+      p.nightTorn = true;
+      s.flags[`night_dead_${id}`] = true;
+      rumor(s, id === 'su_qingyao' ? '天衍城的人說，七月十五那一夜，欽天監的蘇星官從觀星台上下來以後，就再也沒有醒過來。' : `東荒的人說，七月十五那一夜，${ROSTER_NAME[id] || p.name}沒有熬過去。`, 'arc', id);
+    } else if (F.fate === 'hurt') {
+      s.flags[`night_hurt_${id}`] = true;
+    }
+  }
+  const lin = n.fates['helper:lin_chen'];
+  if (lin?.fate === 'dead' && s.npcs.lin_chen?.alive) {
+    s.npcs.lin_chen.alive = false;
+    s.npcs.lin_chen.diedDay = s.day;
+    s.npcs.lin_chen.nightTorn = true;
+    s.flags.night_dead_lin_chen = true;
+    rumor(s, '青石鎮的人說，七月十五那一夜，林家少爺守在鎮口，一直守到天亮。天亮的時候，他倒在那裡，再也沒有起來。', 'arc', 'lin_chen');
+  }
+  // the crack in the sky
+  s.vars.night_crack = n.total > CRACK_OPEN ? 'open' : 'closed';
+  rumor(s, s.vars.night_crack === 'open'
+    ? '東荒的夜空裡多了一道紅痕，像一道沒有長好的疤。老人們說，那是天上那本書，撕了一半。'
+    : '七月十五那一夜，天上裂開的那道縫，天亮的時候合上了。只是月亮，從此有一點點紅。', 'arc');
+  // the places struck hardest: wild for a year
+  s.vars.night_scar = {};
+  for (const place of Object.keys(PLACES)) {
+    const k = landedAt(s, place);
+    if (k >= SCARRED) {
+      s.vars.night_scar[place] = s.day + DAYS_PER_YEAR;
+      rumor(s, `${PLACE_NAME[place]}那一夜落了${k}筆。山裡的東西，一年之內都紅著眼睛。`, 'hint');
+    }
+  }
+  return n;
+}
+
+/** Is (x, y) near a place struck hard that night, within the year after (its beasts are fiercer)? */
+export function scarredAt(s, x, y) {
+  const scar = s.vars?.night_scar;
+  if (!scar || (s.world?.map || 'donghuang') !== 'donghuang') return false;
+  for (const [place, until] of Object.entries(scar)) {
+    if (s.day >= until) continue;
+    const P = PLACES[place];
+    if (Math.hypot(x - P.at[0], y - P.at[1]) < 1500) return true;
+  }
+  return false;
+}
+
+/** 蘇清瑤 is up on the 觀星台 that night (she found it out, and is back at 欽天監). */
+export const suOnTop = (s) => !!s.npcs?.su_qingyao?.alive && (!!s.flags?.su_archive || !!s.flags?.su_token);
+
+/** One of them, by what came down on them and who was with them. */
+function fateOfNight(s, n, id, roll) {
+  const spot = nightSpot(s, id);
+  const plan = s.vars.roster?.[id] || null;
+  if (!spot) return { fate: 'safe', plan };
+  let strokes = landedAt(s, spot.place, spot.mark);
+  // a 護身符 takes the first that finds them
+  const charm = plan === 'charm' && strokes > 0;
+  if (charm) strokes -= 1;
+  const out = { place: spot.place, mark: spot.mark, strokes, charm, plan };
+  if (strokes >= DEADLY) return { ...out, fate: 'dead' };
+  if (strokes >= 1) return { ...out, fate: 'hurt' };
+  // nothing came down on them: what came down out of the hills is another matter, with nobody keeping it off
+  const kept = !!plan && plan !== 'charm' || n.place === spot.place || helpersAt(s, spot.place, true).length > 0 || id === 'song_he' || id === 'hu_sanniang';
+  return { ...out, fate: !kept && roll() < 0.5 ? 'hurt' : 'fine', beasts: !kept };
 }
 
 // ── words ──

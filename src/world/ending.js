@@ -102,15 +102,19 @@ export function chapterSystem(s) {
  * (1.2) 命簿全頁 (系統六級): whose line you have changed — the ink on it still wet. Each named person, and
  * what about them is not as the 命簿 first wrote it.
  */
+/** (1.3) Came through the night of the blood moon, when 東荒's whole page was to be torn out: their line goes on, where it was not to. */
+const throughNight = (s, id) => !!s.flags?.blood_night_done && ['safe', 'fine', 'hurt'].includes(s.vars.night?.fates?.[id]?.fate) && !!s.vars.roster?.[id];
 const WET = {
+  wang_er: (s) => throughNight(s, 'wang_er'),
+  qian_banxian: (s) => throughNight(s, 'qian_banxian'),
   song_he: (s) => f(s, 'songhe_saved'),
   lin_chen: (s) => f(s, 'lin_ruined') || f(s, 'lin_warned') || f(s, 'roster_lin'),
   shen_qingge: (s) => (f(s, 'shen_letter_given') && f(s, 'lin_warned')) || f(s, 'shen_zhuji') || f(s, 'shen_own_path'),
-  sun_zg: (s) => f(s, 'sun_to_baicao') || f(s, 'sun_master_done'),
+  sun_zg: (s) => f(s, 'sun_to_baicao') || f(s, 'sun_master_done') || throughNight(s, 'sun_zg'),
   su_qingyao: (s) => f(s, 'su_farewell') || f(s, 'su_zz_ally') || f(s, 'su_archive'),
   hu_sanniang: (s) => f(s, 'fox_betrayed'),
   ye_guhan: (s) => s.vars?.duel === 'draw' || s.vars?.duel === 'lin_dead',
-  zhao_hu: (s) => f(s, 'zhao_changed'),
+  zhao_hu: (s) => f(s, 'zhao_changed') || throughNight(s, 'zhao_hu'),
 };
 
 /** Is this person's line one you have changed (命簿全頁, 系統六級)? */
@@ -128,7 +132,8 @@ export function fateLine(s, id) {
   if (s.sys.lv < 5) return null;
   const n = s.npcs[id];
   if (!n?.named) return null;
-  if (!n.alive) return '命簿：這一頁，已經寫完了。';
+  // (1.3) taken on the night of the blood moon: torn out, not finished
+  if (!n.alive) return n.nightTorn ? '命簿：這一頁，被撕掉了。' : '命簿：這一頁，已經寫完了。';
   switch (id) {
     case 'lin_chen':
       // (1.1) after the 生死約戰: as the 命簿 had it, or not
@@ -145,11 +150,15 @@ export function fateLine(s, id) {
     case 'song_he':
       return f(s, 'songhe_saved') ? '命簿：這一筆被人改過。墨跡還是濕的。' : '命簿：天元三千零一十六年，坐化於清虛觀。';
     case 'wang_er':
+      // (1.3) over the river on 上官家's boat, and alive after the night that was to tear his page out
+      if (throughNight(s, 'wang_er')) return '命簿：平安終老。臨終前，一直望著門口。——這一行原本在七月十五就該被撕掉。墨跡是濕的。';
       return '命簿：平安終老。臨終前，一直望著門口。';
     case 'sun_zg':
       // (1.1) 百草谷 has written to him: he means to close it himself
       return f(s, 'sun_to_baicao') ? '命簿：回春堂會在血月那年關門。——關門的那隻手，是他自己的。' : '命簿：回春堂會在血月那年關門。';
     case 'su_qingyao':
+      // (1.3) through the night of the blood moon: the old line (「歿」) has dried, and gone pale
+      if (s.flags.blood_night_done && s.vars.night?.fates?.su_qingyao?.fate === 'fine') return '命簿：這一頁有兩段字跡疊在一起。——舊的那一段，淡得快看不見了。';
       return '命簿：這一頁有兩段字跡疊在一起，看不清哪一段才是真的。';
     case 'hu_sanniang':
       return f(s, 'fox_betrayed') ? '命簿：記仇三百年。' : '命簿：再修行一百年，渡雷劫。';
@@ -163,6 +172,8 @@ export function fateLine(s, id) {
       return '命簿：他說的書，有一半是真的。';
     // (1.2) 欽天監's 監正: what the book has him do
     case 'wei_changgeng':
+      // (1.3) the night come and gone: the stroke fell, or he put the brush down halfway
+      if (s.flags.blood_night_done) return s.vars.night?.stoppedAt ? '命簿：天元三千零二十二年七月十五，於玉指峰頂執筆。——「執筆」二字底下：「中途擱筆」。下一筆，還沒有寫。' : '命簿：天元三千零二十二年七月十五，於玉指峰頂執筆。——這一筆，落下去了。下一筆，還沒有寫。';
       return s.day > dayAt(10, 7, 15) ? '命簿：天元三千零二十二年七月十五，於玉指峰頂執筆。——「執筆」二字底下，有一行很小的字：「未竟」。' : '命簿：天元三千零二十二年七月十五，於玉指峰頂執筆。';
     case 'zhao_hu':
       // (1.0) the one who pushes the millstone now: the end of the line is going pale

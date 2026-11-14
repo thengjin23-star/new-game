@@ -7,7 +7,7 @@ import { flag, has, alive } from '../helpers.js';
 import { power } from '../../core/cultivation.js';
 import { ROSTER } from '../../world/roster.js';
 import {
-  nightOf, nightDate, nextWatch, leaveField, hoursToWatchEnd, hoursToDawn, settle, fieldOf, stopBrush, watchNow, PLACES, WATCH_NAME, WATCHES, nightDay,
+  nightOf, nightDate, nextWatch, leaveField, hoursToWatchEnd, hoursToDawn, settle, fieldOf, stopBrush, watchNow, PLACES, WATCH_NAME, WATCHES, nightDay, NIGHT_PEOPLE,
 } from '../../world/night.js';
 
 /** The system has woken and remembers its name: it speaks as 玄微. */
@@ -41,6 +41,100 @@ const suUp = (s) => alive(s, 'su_qingyao') && flag(s, 'su_archive');
 /** 殘頁・月: at 子時, a page drifts down out of the book and finds you, wherever you are. */
 const MOON_PAGE = ['frag', 'frag_moon'];
 const hasMoonPage = (s) => (s.sys?.frags || []).includes('frag_moon');
+
+/** What became of each of them, as you hear it (or see it) after dawn: by who, and how it went. */
+const AFTER = {
+  wang_er: {
+    safe: '王二一家在臨江城。王二託人捎了話來：「家裡的雞，記得幫我餵。」',
+    fine: '王二一家都在。王二的娘坐在門檻上，說她一夜沒睡，聽了一夜的狼叫。',
+    hurt: '王二家的門板上有一道紅痕。王二的胳膊纏著布；他媳婦抱著孩子，一句話也不說。',
+    dead: '王二家的門板上落了好幾道紅痕。鄰居推開門的時候，屋裡很安靜，灶上的粥還溫著。',
+  },
+  sun_zg: {
+    safe: '孫掌櫃在江那邊。回春堂的門，關得好好的。',
+    fine: '回春堂的門開了，孫掌櫃在門口掃地，掃得很慢。',
+    hurt: '回春堂的藥櫃倒了一半。孫掌櫃坐在一地的藥材裡，額頭上纏著布，說：「不礙事。」',
+    dead: '回春堂的門再也沒有開。藥櫃上的抽屜一個一個都拉開著，像是有人找了一夜的藥。',
+  },
+  song_he: {
+    safe: '松鶴道人不在東荒。清虛觀的門，虛掩著。',
+    fine: '松鶴道人在掃院子。院子裡的松針落了一地，他一根一根地掃。',
+    hurt: '松鶴道人坐在觀門口，道袍上全是血，人還坐得很直：「觀還在。」',
+    dead: '松鶴道人坐在觀門口，閉著眼睛，坐得很直。他守了這座觀一百年。',
+  },
+  hu_sanniang: {
+    safe: '胡三娘不在她的山上。狐仙廟的燈，滅著。',
+    fine: '狐仙廟的燈亮了一夜。天亮的時候，胡三娘坐在廟頂上梳頭髮。',
+    hurt: '胡三娘的尾巴禿了一塊。她說：「三百年了，頭一回。」',
+    dead: '狐仙廟的燈滅了。廟前的石階上，落著一撮白色的狐毛。',
+  },
+  shen_qingge: {
+    safe: '沈家的人在江那邊。沈家大宅的門，上了鎖。',
+    fine: '沈家大宅的門開著，沈青歌站在門口，看著鎮口的方向。',
+    hurt: '沈家的大門塌了半邊。沈青歌的手上纏著布，還在指揮家丁收拾。',
+    dead: '沈家大宅的匾額摔在地上，裂成了兩半。',
+  },
+  zhao_hu: {
+    safe: '趙虎在江那邊。聽說他在臨江城的碼頭上扛大包。',
+    fine: '趙虎蹲在他的街角，臉上全是灰：「老子……老子活下來了。」',
+    hurt: '趙虎躺在他的街角，一條腿腫得老粗，還在罵罵咧咧。',
+    dead: '趙虎倒在他的街角。命簿上說他橫死街頭、無人收屍——鎮上的人，把他埋了。',
+  },
+  qian_banxian: {
+    safe: '錢半仙在臨江城的茶樓裡說書，說的就是那一夜。',
+    fine: '錢半仙在坊市路口擺攤，說他早就算到了。',
+    hurt: '錢半仙的攤子塌了，扇子斷成了兩截。他說：「天機不可洩漏——洩漏了，就是這個下場。」',
+    dead: '錢半仙的攤子還擺在那裡，沒有人說書了。',
+  },
+};
+
+/** Those who fought in 青石鎮 that night at your side (or without you). */
+function helpersAfter(n) {
+  const lines = [];
+  const lin = n.fates['helper:lin_chen'];
+  if (lin) {
+    lines.push({
+      fine: '林塵在鎮口坐了一夜，劍橫在膝上。看見你，他點了點頭。',
+      hurt: '林塵靠在鎮口的石橋上，渾身是傷：「我答應過的。」',
+      dead: '林塵倒在鎮口。他守了一夜，一步也沒有退。',
+    }[lin.fate]);
+  }
+  for (const [ids, who] of [[['tj1', 'tj2'], '天劍宗的兩個弟子'], [['xiao1', 'xiao2'], '鬼市的兩個散修']]) {
+    const F = ids.map((id) => n.fates[`helper:${id}`]).filter(Boolean);
+    if (!F.length) continue;
+    const dead = F.filter((x) => x.fate === 'dead').length;
+    const hurt = F.filter((x) => x.fate === 'hurt').length;
+    lines.push(dead === F.length ? `${who}，一個也沒有回去。` : dead ? `${who}，回去的只有一個。` : hurt ? `${who}帶著傷，過江回去了。` : `${who}過江回去了，一個不少。`);
+  }
+  return lines;
+}
+
+/** The night as it was told after dawn: who came through it, who did not; how many strokes, and the sky. */
+function afterText(s) {
+  const n = nightOf(s);
+  if (!n?.fates) return '天亮了。';
+  const there = PLACES[n.place];
+  const lines = [there ? '天亮以後，你一家一家地走過去。' : '天亮以後，消息一個一個地傳過來。'];
+  for (const id of NIGHT_PEOPLE) {
+    const F = n.fates[id];
+    if (!F) continue;
+    lines.push(AFTER[id][F.fate] + (F.charm ? '（那張護身符，碎成了兩半。）' : ''));
+  }
+  lines.push(...helpersAfter(n));
+  const su = n.fates.su_qingyao;
+  if (su) {
+    lines.push(su.fate === 'dead'
+      ? '天衍城傳來消息：蘇星官從觀星台上下來，就再也沒有醒過來。命簿上她那一行舊的字，留下來了——「天元三千零二十二年七月十五，蘇清瑤，歿。」'
+      : su.with === 'you' ? '蘇清瑤在觀星台上看著天亮。她說：「那一行舊的，墨乾了。」' : '葉孤寒在觀星台上守了一夜。蘇清瑤沒事。');
+  }
+  const parts = [`你擋下${n.blocked}筆`];
+  if (n.cut) parts.push(`斬斷${n.cut}筆`);
+  if (n.eaten) parts.push(`江底的老前輩吞了${n.eaten}筆`);
+  if (n.turned) parts.push(`胡三娘的山撥開了${n.turned}筆`);
+  lines.push(`這一夜，東荒的紙上一共落了${n.total}筆。${parts.join('，')}${n.stoppedAt ? `；你闖上峰頂，那支筆在${WATCH_NAME[n.stoppedAt]}停了` : ''}。`);
+  lines.push(s.vars.night_crack === 'open' ? '天上那道縫，沒有合上。' : '天上那道縫，合上了。');
+  return lines.join('\n\n');
+}
 
 /** Into the next watch; come to it after the last is over (late), dawn is next. */
 function onward(x) {
@@ -331,6 +425,16 @@ export default [
     choices: [{ text: '……', out: { effects: (x) => [...toDawn(x), (y) => { y.queue.push('night_dawn'); }] } }],
   },
 
+  // ── after dawn: who came through it ──
+  {
+    id: 'night_after',
+    trigger: 'scheduled',
+    once: true,
+    title: '天亮以後',
+    text: (s) => afterText(s),
+    choices: [{ text: '……', out: { effects: [['log', '血月那一夜的天亮以後']] } }],
+  },
+
   // ── dawn ──
   {
     id: 'night_dawn',
@@ -362,6 +466,7 @@ export default [
             ['sysexp', 40],
             ['log', '血月那一夜，過去了'],
             ['rumor', '七月十五那一夜，月亮紅得像血，天上攤開了一本書，有一支朱紅的筆一筆一筆往下落。', 'arc'],
+            (y) => { y.queue.push('night_after'); },
           ],
         },
       },

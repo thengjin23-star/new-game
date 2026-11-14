@@ -12,8 +12,11 @@ import { startEvent, continueEvent, takeDue } from '../src/core/events.js';
 import { DAYS_PER_YEAR } from '../src/core/calendar.js';
 import {
   BLOOD_DAY, DAWN, PLACES, MARKS, INK_MAX, nightDay, postponed, nightOf, nightDone, openNight, placeOf, watchNow, nightDate, landedAt, helpersAt,
+  strokesIn, scarredAt,
 } from '../src/world/night.js';
-import { setPlan, planBlocked, starWatch, setStarWatch } from '../src/world/roster.js';
+import { setPlan, planBlocked, starWatch, setStarWatch, rosterOf } from '../src/world/roster.js';
+import { fateLine } from '../src/world/ending.js';
+import { storiesOf } from '../src/content/stories.js';
 import { useMap } from '../src/world/atlas.js';
 import { FRAGMENTS } from '../src/content/fragments.js';
 import { collides } from '../src/world/terrain.js';
@@ -732,4 +735,115 @@ test('the 名冊\'s 觀星台: 葉孤寒 can be asked to stand with 蘇清瑤 up
   // once the night has come, nothing more can be arranged
   openNight(s, 'away');
   assert.ok(setStarWatch(s, true));
+});
+
+// ── 天亮以後 (V5) ──
+
+/** A life slept through the night (in 東荒, where it is), with what more is so, reckoned at dawn. */
+function sleptThrough(seed, more = {}, also = () => {}) {
+  const s = fresh(seed);
+  s.flags.opening_done = true;
+  Object.assign(s.flags, more);
+  also(s);
+  waitUntil(s, BLOOD_DAY + 2);
+  play(s, 1);
+  assert.equal(s.pending?.id, 'night_dawn');
+  finish(s);
+  return s;
+}
+
+test('dawn reckons every place of 東荒: where nobody stood, every watch\'s strokes came down — less what 胡三娘\'s hill turned aside and the old one swallowed; got to the top of 玉指峰, and the watches after it never came', () => {
+  const s = sleptThrough(541, { isle_fisher_met: true });
+  const n = nightOf(s);
+  assert.ok(n.reckoned && n.done);
+  for (const place of Object.keys(PLACES)) {
+    const want = [1, 2, 3].reduce((a, k) => a + strokesIn(place, k), 0);
+    const got = landedAt(s, place);
+    if (place === 'ferry') assert.equal(got, want - n.eaten, `the old one swallowed ${n.eaten} at the ferry`);
+    // (胡三娘 keeps her hill — if she was alive that night: she may not be, after it)
+    else if (place === 'fox' && n.turned) assert.equal(got, want - n.turned, `the hill turned ${n.turned} aside`);
+    else assert.equal(got, want, `${place}: all ${want}`);
+  }
+  assert.ok(n.eaten >= 1);
+  assert.equal(n.total, Object.values(n.landed).reduce((a, b) => a + b, 0));
+  // the summit in the first watch: only its strokes
+  const t = fresh(542);
+  t.flags.opening_done = true;
+  waitUntil(t, BLOOD_DAY);
+  t.tod = 20;
+  openNight(t, 'peak');
+  nightOf(t).stoppedAt = 1;
+  missNightAndSettle(t);
+  assert.equal(landedAt(t, 'qingshi'), strokesIn('qingshi', 1));
+});
+
+/** (the night left to itself, then dawn) */
+function missNightAndSettle(s) {
+  nightOf(s).fled = true;
+  s.day = BLOOD_DAY + 1;
+  s.tod = 6;
+  play(s, 1);
+  assert.equal(s.pending?.id, 'night_dawn');
+  finish(s);
+  assert.ok(nightDone(s));
+}
+
+test('each on the 名冊: over the river, safe; at home, what came down on their door decides it — three strokes and they are gone, one and they are hurt — a 護身符 takes the first; with nobody keeping the beasts off, the beasts may hurt them', () => {
+  const s = sleptThrough(543, { ty_roster: true, roster_boat: true }, (x) => {
+    x.player.items.hushen_fu = 1;
+    assert.equal(setPlan(x, 'shen_qingge', 'evacuate'), null);
+    assert.equal(setPlan(x, 'qian_banxian', 'charm'), null);
+  });
+  const n = nightOf(s);
+  assert.equal(n.fates.shen_qingge?.fate, 'safe', 'over the river');
+  for (const [id, F] of Object.entries(n.fates)) {
+    if (id.startsWith('helper:') || F.fate === 'safe' || id === 'su_qingyao') continue;
+    const raw = landedAt(s, F.place, F.mark);
+    assert.equal(F.strokes, raw - (F.charm ? 1 : 0), `${id}: strokes on their door`);
+    const want = F.strokes >= 3 ? 'dead' : F.strokes >= 1 ? 'hurt' : null;
+    if (want) assert.equal(F.fate, want, `${id}: ${F.strokes} strokes`);
+    else assert.ok(['fine', 'hurt'].includes(F.fate));
+    if (F.fate === 'dead') {
+      assert.ok(!s.npcs[id].alive, `${id} is gone`);
+      assert.ok(s.flags[`night_dead_${id}`]);
+    }
+  }
+  // the 命簿 (系統五級 and up): a page torn out
+  s.sys.lv = 6;
+  const gone = Object.entries(n.fates).find(([id, F]) => F.fate === 'dead' && s.npcs[id]?.named);
+  if (gone) assert.equal(fateLine(s, gone[0]), '命簿：這一頁，被撕掉了。');
+});
+
+test('after dawn: a card of who came through it; the 名冊 shows it; the story of the night; the crack in the sky and the places struck hardest, wild for a year', () => {
+  const s = sleptThrough(544, { ty_roster: true });
+  const n = nightOf(s);
+  assert.equal(s.pending?.id, undefined);
+  assert.ok(s.seen.night_after, 'the card after dawn was shown');
+  const list = rosterOf(s).filter((r) => n.fates[r.id]);
+  assert.ok(list.length >= 1);
+  for (const r of list) assert.equal(r.fate, n.fates[r.id].fate);
+  const story = storiesOf(s).find((t) => t.id === 'zz_bloodnight');
+  assert.ok(story?.done, 'the night has its story');
+  assert.match(story.end, /落了\d+筆/);
+  assert.equal(story.steps[1].label, '睡過去了');
+  // nobody in the way anywhere: the crack stays open, and 青石鎮 is struck hard enough to be wild for a year
+  assert.ok(n.total > 30);
+  assert.equal(s.vars.night_crack, 'open');
+  assert.ok(s.vars.night_scar.qingshi > s.day);
+  assert.ok(scarredAt(s, PLACES.qingshi.at[0] + 600, PLACES.qingshi.at[1]));
+  assert.ok(!scarredAt(s, 200, 200), 'far from it, as ever');
+  assert.ok(s.rumors.some((r) => r.text.includes('紅痕')));
+});
+
+test('蘇清瑤 on the 觀星台 that night: alone, she does not come through it (the old line stands); with 葉孤寒 there, she does', () => {
+  for (const ye of [false, true]) {
+    const s = sleptThrough(545 + (ye ? 1 : 0), { su_archive: true, ty_roster: true, roster_tj: true }, (x) => {
+      x.npcs.su_qingyao.alive = true;
+      x.npcs.ye_guhan.alive = true;
+      if (ye) assert.equal(setStarWatch(x, true), null);
+    });
+    const F = nightOf(s).fates.su_qingyao;
+    assert.equal(F.fate, ye ? 'fine' : 'dead');
+    assert.equal(s.npcs.su_qingyao.alive, ye);
+  }
 });

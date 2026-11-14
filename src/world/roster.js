@@ -8,7 +8,7 @@
 // Kept in s.vars.roster: { person: plan }.
 
 import { mapOf } from './map.js';
-import { nightDay, nightOf } from './night.js';
+import { nightDay, nightOf, nightDone } from './night.js';
 
 export { nightDate } from './night.js';
 
@@ -125,11 +125,16 @@ export function rosterOf(s) {
       plan: planOf(s, r.id),
       planName: PLAN_NAME[planOf(s, r.id)] || '不管',
       refuse: here ? r.go(s) : null,
-      options: here ? PLANS.map(([id, name, desc]) => ({ id, name, desc, why: planBlocked(s, r.id, id) })) : [],
+      options: here && !nightOf(s) ? PLANS.map(([id, name, desc]) => ({ id, name, desc, why: planBlocked(s, r.id, id) })) : [],
       met: !!n?.met,
+      // (1.3) after the night: what became of them
+      fate: nightDone(s) ? nightOf(s).fates?.[r.id]?.fate || null : null,
     };
   });
 }
+
+/** (1.3) What the 名冊 says of one of them, after the night. */
+export const FATE_WORD = { safe: '在江那邊，平安', fine: '平安', hurt: '受了傷', dead: '沒有熬過去' };
 
 /** Who has said yes (and what is still to be asked). */
 export function helpersOf(s) {

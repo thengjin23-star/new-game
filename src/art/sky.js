@@ -96,6 +96,27 @@ export function drawSkyVeil(ctx, s, W, H, t) {
     ctx.fillStyle = 'rgba(150,30,20,0.09)';
     ctx.fillRect(0, 0, W, H);
   }
+  // (1.3) the crack the night of the blood moon left over 東荒, never closed: a red seam across the top of the dark
+  if (s.vars?.night_crack === 'open' && (s.world?.map || 'donghuang') === 'donghuang' && (s.tod >= 19 || s.tod < 5)) {
+    const a = 0.22 + 0.06 * Math.sin(t * 0.0009);
+    const u = Math.max(1, W / 900);
+    const pts = [];
+    for (let i = 0; i <= 14; i++) {
+      const q = i / 14;
+      pts.push([W * (0.1 + 0.8 * q), H * (0.02 + 0.13 * q) + Math.sin(i * 2.3 + 0.7) * H * 0.012 * (1 - Math.abs(q - 0.5))]);
+    }
+    ctx.save();
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    for (const [wd, col] of [[12, `rgba(160,18,14,${a * 0.3})`], [3.2, `rgba(196,36,30,${a})`], [1.1, `rgba(255,176,156,${a * 0.9})`]]) {
+      ctx.strokeStyle = col;
+      ctx.lineWidth = wd * u;
+      ctx.beginPath();
+      pts.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)));
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
   // lightning: now and then in a storm, and when it strikes near you
   let flash = 0;
   if (w.thunder) {

@@ -2790,7 +2790,7 @@ export function startApp(root, { speed = 1, view = null } = {}) {
         h('li' + (r.alive && !r.away ? '' : '.dead'),
           seal(r.name[0], r.alive ? '' : 'grey'),
           h('div',
-            h('div.person-head', h('b', r.name), h('span.muted.small', !r.alive ? '已經不在了' : r.away ? '不在東荒' : r.plan ? r.planName : '還沒安排')),
+            h('div.person-head', h('b', r.name), h('span.muted.small', r.fate ? ROSTER.FATE_WORD[r.fate] : !r.alive ? '已經不在了' : r.away ? '不在東荒' : r.plan ? r.planName : '還沒安排')),
             r.plan ? h('p.small', ROSTER.PLANS.find(([id]) => id === r.plan)[2]) : null,
             r.refuse && s.flags.roster_boat ? h('p.small.muted', r.refuse) : null,
             r.options.length

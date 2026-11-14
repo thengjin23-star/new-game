@@ -33,7 +33,7 @@ import { jieOver } from '../core/jie.js';
 import { newReport, spendHours } from '../core/time.js';
 import { rand } from '../core/rng.js';
 import { weatherNow, moonTonight } from './weather.js';
-import { watchOn, nightOf, fieldOf, pastNight, watchBegins, strokeLanded, helpersAt, MARKS, INK_MAX, WATCH_NAME, WATCH_SECONDS, WATCHES } from './night.js';
+import { watchOn, nightOf, fieldOf, pastNight, watchBegins, strokeLanded, helpersAt, scarredAt, hillHolds, MARKS, INK_MAX, WATCH_NAME, WATCH_SECONDS, WATCHES, STROKE_EVERY, STROKE_FIRST, DENSITY } from './night.js';
 import { onBeaten, banditsHostile } from './factions.js';
 
 /** Blood a wound holds back: 輕傷 leaves you three quarters of it, and so on. */
@@ -423,6 +423,12 @@ function arm(s, C, b) {
   b.dmg = ((((me.baseHp ?? me.maxHp) / BITES) * rel * K.atk) / shape) * (gap > 0 ? 1 + 0.6 * gap : Math.pow(0.85, -gap));
   // under a blood moon, everything out there has red eyes
   if (!b.story && moonTonight(s, 'bloodmoon')) b.dmg *= 1.15;
+  // (1.3) about a place struck hard on the night of the blood moon, for a year after: red-eyed still
+  if (!b.story && !b.phantom && scarredAt(s, b.home[0], b.home[1])) {
+    b.dmg *= 1.2;
+    b.maxHp = Math.round(b.maxHp * 1.15);
+    b.hp = Math.max(1, Math.round(b.maxHp * frac));
+  }
   b.speed = R.speed * (gap > 0 ? 1 + 0.08 * gap : 1);
   b.taken = gap > 0 ? Math.pow(0.45, gap) : 1 + 0.15 * -gap;
   b.armed = true;
@@ -3123,6 +3129,7 @@ function nightTick(s, C, dt, io) {
     N.out = (N.out || 0) + dt;
     if (N.out >= FIELD_GRACE) {
       N.fled = true;
+      leftAt(s, C, N);
       closeWatch(s, C);
       io.feed('bad', '你離開了戰場。身後，天上的筆一筆一筆落下去，沒有人擋。');
       return;
@@ -3201,9 +3208,7 @@ function endNight(s, C, io) {
 
 // ── 朱筆: where it comes down, standing in its way, the ink, the stroke cut in the air ──
 
-/** Seconds between strokes on the field, by watch (the first a few seconds in); how long a ring reddens before the stroke falls, and how much sooner the system's 朱筆預警 shows it. */
-const STROKE_EVERY = [null, 12, 8.5, 6.5];
-const STROKE_FIRST = 6;
+/** How long a ring reddens before the stroke falls, and how much sooner the system's 朱筆預警 shows it (how often they come: world/night.js STROKE_EVERY, by the place's DENSITY). */
 const STROKE_WIND = 2;
 const STROKE_WARN = 0.6;
 const STROKE_R = 44;
@@ -3227,7 +3232,7 @@ function strokeTick(s, C, N, n, book, io) {
     const m = pool[Math.min(pool.length - 1, Math.floor(r1 * pool.length))];
     const wind = STROKE_WIND + (N.warn ? STROKE_WARN : 0);
     N.strokes.push({ id: ++C.uid, mark: m.id, name: m.name, x: m.at[0], y: m.at[1], r: STROKE_R, t0: C.t, at: C.t + wind, wind, done: false });
-    N.nextStroke = C.t + STROKE_EVERY[N.phase] * (0.75 + 0.5 * r2);
+    N.nextStroke = C.t + (STROKE_EVERY[N.phase] / (DENSITY[n.place] || 1)) * (0.75 + 0.5 * r2);
   }
   for (const k of N.strokes) {
     if (k.done || C.t < k.at) continue;
@@ -3242,6 +3247,17 @@ function strokeTick(s, C, N, n, book, io) {
 function strokeFalls(s, C, n, k, book, io) {
   const w = s.world;
   const me = hero(s, C);
+  // (狐仙廟) 胡三娘's hill: half of what comes down on it turned aside
+  if (n.place === 'fox' && hillHolds(s)) {
+    const N = C.night;
+    N.seed = (N.seed * 16807) % 2147483647;
+    if (N.seed / 2147483647 < 0.5) {
+      n.turned = (n.turned || 0) + 1;
+      C.fx.push({ kind: 'zhubi_cut', x: k.x, y: k.y, r: k.r, t0: C.t, dur: 0.8, ux: 0.7, uy: -0.7 });
+      io.feed('good', n.turned === 1 ? '那一筆落到半空，被什麼東西撥了一下，偏開了——胡三娘的山，三百年沒讓那支筆碰過。' : '胡三娘的山，又撥開了一筆。');
+      return;
+    }
+  }
   // (白鶴渡) the old one under the river, woken (you met the old man on the 江心洲): a mouthful, over the water
   if (n.place === 'ferry' && s.flags.isle_fisher_met) {
     const N = C.night;
@@ -3336,6 +3352,13 @@ function cutStrokes(s, C, sh, io) {
   }
 }
 
+/** You left the field in the middle of a watch: how much of it was still to come (the dawn reckons the rest without you). */
+function leftAt(s, C, N) {
+  const n = nightOf(s);
+  const book = beastsOf(s, C).find((b) => b.def.night && b.def.night === N.phase);
+  if (n) n.left = { place: n.place, phase: N.phase, frac: book && book.maxHp ? Math.max(0, Math.min(1, book.hp / book.maxHp)) : 1 };
+}
+
 /** The rings reddening on the field now (for the screen: the ground, the map; with the system's 朱筆預警, sooner). */
 export function strokesOf(s) {
   return (combatOf(s).night?.strokes || []).filter((k) => !k.done);
@@ -3344,6 +3367,7 @@ export function strokesOf(s) {
 /** You went down in the middle of a watch: the rest of the night goes on without you (you come to at dawn, hurt). */
 function nightFell(s, C, io) {
   const N = C.night;
+  leftAt(s, C, N);
   closeWatch(s, C);
   C.night = null;
   const me = hero(s, C);

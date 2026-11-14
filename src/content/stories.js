@@ -16,6 +16,11 @@ const visited = (s, id) => !!s.nodes[id]?.visited;
 const STELES = ['stele_city', 'stele_ferry', 'stele_star', 'stele_break', 'stele_farewell'];
 const steles = (s) => STELES.filter((id) => s.flags[`read_${id}`]).length;
 const TALES = ['banxian_tale_nl', 'banxian_tale_xm', 'banxian_tale_by'];
+/** (1.3) where you were that night, as the story has it */
+const NIGHT_WHERE = {
+  qingshi: '守在青石鎮', qingxu: '守在清虛觀', fox: '守在狐仙廟', luoxia: '守在落霞坊市', ferry: '守在白鶴渡',
+  peak: '在天衍城，闖玉指峰', away: '在遠處，看著天', slept: '睡過去了', secl: '在閉關，坐過去了', east: '在東荒的野地裡',
+};
 
 export const GROUPS = ['主線', '人物', '東荒', '南嶺', '西漠', '北原', '中州'];
 
@@ -519,9 +524,33 @@ export const STORIES = [
       ['天劍宗的人過江', f('roster_tj')],
       ['鬼市的散修過江', f('roster_xiao')],
       ['狐仙廟護著三個人', f('roster_fox')],
+      ['葉孤寒上觀星台', f('roster_ye_star')],
+      ['七月十三，樓船過江', f('night_boat')],
     ],
-    end: () => null,
+    end: (s) => (s.flags.blood_night_done ? '名冊上寫的，見分曉了。' : null),
     next: (s) => (Object.keys(s.vars.roster || {}).length ? '名冊上寫的，那一夜見分曉。' : '見聞裡的名冊：一個一個寫上去。'),
+  },
+  // (1.3) the night itself
+  {
+    id: 'zz_bloodnight', group: '中州', title: '血月那一夜',
+    start: (s) => !!s.vars.night,
+    steps: [
+      ['月亮紅了，天上的書攤開了', (s) => !!s.vars.night],
+      [(s) => NIGHT_WHERE[s.vars.night?.place] || '那一夜', (s) => !!s.vars.night],
+      ['站進紅圈，擋下一筆', (s) => (s.vars.night?.blocked || 0) > 0],
+      ['斷天，斬斷一筆', (s) => (s.vars.night?.cut || 0) > 0],
+      ['墨滿：命簿開始寫你的名字', f('night_ink_full')],
+      ['闖上玉指峰頂，朱筆停了', f('night_summit')],
+      ['子時：殘頁・月', (s) => (s.sys?.frags || []).includes('frag_moon')],
+      ['天亮', f('blood_night_done')],
+    ],
+    end: (s) => {
+      const n = s.vars.night;
+      if (!n?.done || !n.fates) return null;
+      const lost = Object.entries(n.fates).filter(([id, F]) => !id.startsWith('helper:') && F.fate === 'dead').length;
+      return `東荒的紙上落了${n.total}筆。${lost ? `名冊上，${lost}個人沒有熬過去。` : '名冊上的人，都熬過去了。'}`;
+    },
+    next: (s) => (s.vars.night && !s.vars.night.done ? '天亮以前，那一夜還沒有完。' : null),
   },
   {
     id: 'zz_xiaoqi', group: '中州', title: '鬼市的蕭七',
