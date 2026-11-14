@@ -109,8 +109,42 @@ export function landedAt(s, place, mark = null) {
 export function watchBegins(s) {
   const n = nightOf(s);
   if (!n) return;
-  if (n.from?.phase === n.phase) Object.assign(n, { landed: { ...n.from.landed }, ink: n.from.ink, blocked: n.from.blocked, cut: n.from.cut, eaten: n.from.eaten });
-  else n.from = { phase: n.phase, landed: { ...n.landed }, ink: n.ink, blocked: n.blocked, cut: n.cut, eaten: n.eaten };
+  const keep = (x) => ({ landed: { ...x.landed }, ink: x.ink, blocked: x.blocked, cut: x.cut, eaten: x.eaten, kills: x.kills || 0, down: { ...(x.down || {}) }, inked: { ...(x.inked || {}) } });
+  if (n.from?.phase === n.phase) Object.assign(n, keep(n.from));
+  else n.from = { phase: n.phase, ...keep(n) };
+}
+
+/**
+ * Those who said they would be there that night, at the place you stand, and fight at your side (and are in the
+ * book: the brush can find them): 林塵, 天劍宗's disciples and 蕭七's 散修 in 青石鎮 (the 名冊: world/roster.js);
+ * 松鶴道人 at his temple; 胡三娘's foxes on her hill. One who went down in a watch is not in the next.
+ * [{ id, kind, who: an npc id, or { name } }]
+ */
+export function helpersAt(s, place) {
+  const f = (k) => !!s.flags?.[k];
+  const alive = (id) => !!s.npcs?.[id]?.alive;
+  const down = nightOf(s)?.down || {};
+  const out = [];
+  const add = (id, kind, who) => {
+    if (!down[id]) out.push({ id, kind, who });
+  };
+  if (place === 'qingshi') {
+    if (f('roster_lin') && alive('lin_chen')) add('lin_chen', 'cultivator', 'lin_chen');
+    if (f('roster_tj') && !f('roster_ye_star')) {
+      add('tj1', 'tj_disciple', { name: '天劍宗弟子' });
+      add('tj2', 'tj_disciple', { name: '天劍宗弟子' });
+    }
+    if (f('roster_xiao')) {
+      add('xiao1', 'cultivator', { name: '鬼市的散修' });
+      add('xiao2', 'cultivator', { name: '鬼市的散修' });
+    }
+  }
+  if (place === 'qingxu' && alive('song_he') && s.npcs.song_he.loc === 'qingxu_temple') add('song_he', 'cultivator', 'song_he');
+  if (place === 'fox' && f('roster_fox') && alive('hu_sanniang') && !f('fox_betrayed')) {
+    add('fox1', 'fox_phantom', { name: '狐影' });
+    add('fox2', 'fox_phantom', { name: '狐影' });
+  }
+  return out;
 }
 
 /** The night's day for this life (worked out once; a save past it when this came, the next 七月十五 at least a month off). */

@@ -143,7 +143,12 @@ export function paintBeast(ctx, b, t, now, { tint = true, pic = null } = {}) {
   else figure(ctx, b, t, now, p);
   if (tint) {
     ctx.globalCompositeOperation = 'source-atop';
-    if (b.phantom) {
+    // (1.3) the night's beasts, those at your side that night, are flesh and blood, not phantoms; what came up out of
+    // the ink is ink
+    if (b.kind === 'zhumo_kui') {
+      ctx.fillStyle = 'rgba(150,22,18,0.72)';
+      ctx.fillRect(-70, -90, 140, 100);
+    } else if (b.phantom && !b.def.nightPack && !b.def.nightAlly) {
       ctx.fillStyle = mirrorOf(b) ? 'rgba(16,12,20,0.62)' : 'rgba(120,170,235,0.42)';
       ctx.fillRect(-70, -90, 140, 100);
     }
@@ -171,6 +176,14 @@ function figure(ctx, b, t, now, p) {
   if (b.R.person) return personOf(ctx, b, tt, now, p);
   if (b.kind === 'wolf') return drawWolf(ctx, 0, 0, { t: tt, moving, face });
   if (b.kind === 'snake') return drawSnake(ctx, 0, 0, { t: st === 'windup' ? tt * 3 : tt, face });
+  // (1.3) 朱墨傀: a great slow lump of ink in a man's shape
+  if (b.kind === 'zhumo_kui') {
+    ctx.save();
+    ctx.scale(1.4, 1.4);
+    drawGhost(ctx, 0, 0, { t: tt * 0.5, face });
+    ctx.restore();
+    return;
+  }
   if (b.kind === 'ghost') {
     drawGhost(ctx, 0, 0, { t: tt, face });
     // cold gathering in its hands
@@ -490,7 +503,7 @@ export function drawGroundMarks(g, s, C, kit, u = 1) {
   // ground that hurts: venom spat, fire, blood (fading in, and out as it ends)
   for (const pl of C.pools || []) {
     const a = Math.min(1, (now - pl.t0) / 0.25) * Math.max(0, Math.min(1, (pl.until - now) / 0.6));
-    const col = pl.kind === 'venom' ? VENOM : pl.kind === 'blood' ? BLOOD : pl.kind === 'water' ? WATER : pl.kind === 'sand' ? SAND : pl.kind === 'ice' ? ICE : FIRE;
+    const col = pl.kind === 'venom' ? VENOM : pl.kind === 'blood' ? BLOOD : pl.kind === 'water' ? WATER : pl.kind === 'sand' ? SAND : pl.kind === 'ice' ? ICE : pl.kind === 'ink' ? VERMILION : FIRE;
     const fl = pl.kind === 'fire' ? 0.06 * Math.sin(now * 13 + pl.x * 0.3) : 0.03 * Math.sin(now * 4 + pl.y);
     g.fillStyle = rgba(col, (pl.kind === 'fire' ? 0.3 : 0.34) * a);
     ring(g, pl.x, pl.y, pl.r * (1 + fl));

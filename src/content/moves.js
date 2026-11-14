@@ -288,6 +288,9 @@ export const BEAST_MOVES = {
   // 玄龜: a snap of the beak; water spat in jets (three, later five, fanned out); a whirlpool where you
   // stand that drags at your feet; a wave all round it
   shellbite: { shape: 'fan', reach: 58, arc: 1.3, windup: 0.6, recover: 0.7, cd: 2.2, mult: 1.5, lunge: 8, fx: 'bite' },
+  // (1.3) 朱墨傀: a heavy arm of ink brought down; a gob of ink thrown at your feet (it spreads, and drags at you)
+  inkslam: { shape: 'fan', reach: 62, arc: 1.7, windup: 0.95, recover: 0.9, cd: 2.6, mult: 1.7, lunge: 6, fx: 'claw' },
+  inkspit: { shape: 'zone', min: 80, max: 300, radius: 46, windup: 1.1, recover: 0.7, cd: 6, first: 2.5, mult: 0.9, fx: 'quake', pool: { kind: 'ink', secs: 4, dps: 0.16, r: 40 } },
   jet: { shape: 'shot', min: 60, max: 300, range: 330, windup: 0.7, speed: 420, width: 20, recover: 0.5, cd: 3.2, mult: 1.05, count: 3, spread: 0.26, fx: 'water' },
   jetfan: { shape: 'shot', min: 50, max: 300, range: 330, windup: 0.8, speed: 420, width: 20, recover: 0.55, cd: 5, mult: 1, count: 5, spread: 0.24, fx: 'water' },
   whirlpool: { shape: 'zone', min: 0, max: 280, radius: 48, windup: 1, recover: 0.6, cd: 5.5, mult: 0.9, fx: 'whirl', pool: { secs: 4.5, r: 48, dps: 0.25, kind: 'water' } },

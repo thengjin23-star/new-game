@@ -4,6 +4,7 @@
 // the watches, a card (and a place to stand, if the game is closed); dawn. A save that came to 1.3 with the
 // night already behind it (the stroke never fell) is told the night is put off to the next 七月十五.
 import { flag } from '../helpers.js';
+import { ROSTER } from '../../world/roster.js';
 import {
   nightOf, nightDate, nextWatch, leaveField, hoursToWatchEnd, hoursToDawn, settle, fieldOf, PLACES, WATCH_NAME, WATCHES, nightDay,
 } from '../../world/night.js';
@@ -77,6 +78,23 @@ export default [
         awake(s) ? `玄微說：「上一回，墨不夠。他們在等墨滿。」他停了停，「下一回，是${nightDate(s)}。」` : `叮——偵測到：天象將再度異常。預計：${nightDate(s)}。`
       }`,
     choices: [{ text: '記下了。', out: { effects: [['flag', 'night_delay_told']] } }],
+  },
+
+  // ── two days before (七月十三): 上官家's boat goes over the river with those on the 名冊 for it ──
+  {
+    id: 'night_boat',
+    trigger: 'scheduled',
+    once: true,
+    title: '七月十三・白鶴渡',
+    text: (s) => {
+      const who = (s.vars.night_evac || []).map((id) => ROSTER.find((r) => r.id === id)?.name).filter(Boolean);
+      return [
+        '天還沒亮，上官家的樓船就從白鶴渡開走了。',
+        `船上有${who.join('、')}。${who.includes('王二一家') ? '王二抱著他娘，他媳婦抱著孩子，站在船尾，一直望著青石鎮的方向。' : ''}`,
+        '上官瑾留了話：「人送到臨江城，住處都安排好了。七月十五那一夜，他們在江這邊。」',
+      ].join('\n\n');
+    },
+    choices: [{ text: '好。', out: { effects: [['log', '七月十三，上官家的樓船載著名冊上的人過了江']] } }],
   },
 
   // ── dusk: the moon rises, wherever you are ──

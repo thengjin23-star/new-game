@@ -11,8 +11,9 @@ import { serialize, parseSave, migrate } from '../src/core/save.js';
 import { startEvent, continueEvent, takeDue } from '../src/core/events.js';
 import { DAYS_PER_YEAR } from '../src/core/calendar.js';
 import {
-  BLOOD_DAY, DAWN, PLACES, MARKS, INK_MAX, nightDay, postponed, nightOf, nightDone, openNight, placeOf, watchNow, nightDate, landedAt,
+  BLOOD_DAY, DAWN, PLACES, MARKS, INK_MAX, nightDay, postponed, nightOf, nightDone, openNight, placeOf, watchNow, nightDate, landedAt, helpersAt,
 } from '../src/world/night.js';
+import { setPlan, planBlocked } from '../src/world/roster.js';
 import { collides } from '../src/world/terrain.js';
 import { fresh, resolvePending, pickText, finish, waitUntil, goTo } from './helpers.js';
 
@@ -229,9 +230,12 @@ test('leave the field in the middle of a watch and the night goes on without you
   play(s, 5, stand);
   assert.ok(C.nightFight(s));
   const F = PLACES.qingshi;
-  // away over the fields, far past the edge of the town
+  // away over the fields, far past the edge of the town: a moment out there is not leaving (a chase can carry you
+  // over the edge); a few seconds is
   E.placeAt(s, F.at[0] - 1300, F.at[1] + 200);
-  play(s, 3, () => null, (x) => !!x.pending);
+  play(s, 2, () => null, (x) => !!x.pending);
+  assert.ok(!s.pending && C.nightFight(s), 'not yet');
+  play(s, 4, () => null, (x) => !!x.pending);
   assert.equal(s.pending?.id, 'night_fled');
   assert.equal(C.nightFight(s), null);
   finish(s);
@@ -432,4 +436,152 @@ test('朱筆預警 (系統六級): the ring reddens sooner; and a watch begun ag
   assert.equal(C.nightFight(back)?.phase, 1);
   assert.deepEqual(nightOf(back).landed, {}, 'the watch begun again: what came down in it, undone');
   assert.equal(nightOf(back).ink, 0);
+});
+
+// ── 東荒的戰場 (V3) ──
+
+test('the night\'s beasts are the place\'s own, red-eyed and fiercer; never more than eight on the field; killing them teaches, but gives no spoils', () => {
+  const s = intoWatch(521);
+  const own = new Set(['wolf', 'demon_wolf', 'snake', 'zhumo_kui']);
+  const xw = s.player.xw;
+  let most = 0;
+  const seen = new Set();
+  play(s, 70, (x) => {
+    const list = C.combatOf(x).beasts.filter((b) => b.def.nightPack && b.hp > 0 && !['dead', 'vanish', 'vanished'].includes(b.state));
+    most = Math.max(most, list.length);
+    for (const b of list) seen.add(b);
+    return stand(x);
+  }, (x) => !!x.pending);
+  assert.ok(seen.size >= 4, `they came (${seen.size})`);
+  for (const b of seen) {
+    assert.ok(own.has(b.kind), `${b.kind}: 青石鎮's own`);
+    if (b.kind !== 'zhumo_kui') assert.ok(b.enraged, `${b.kind}: red-eyed`);
+  }
+  assert.ok(most <= 8, `no more than eight at once (${most})`);
+  const n = nightOf(s);
+  assert.ok(n.kills >= 1, `some went down (${n.kills})`);
+  assert.ok(s.player.xw > xw, 'what a fight teaches');
+});
+
+test('朱墨傀: a stroke come down on the page may bring one up out of the ink — slow, hard, ink where it walks; gone when the page turns', () => {
+  const s = intoWatch(522);
+  const F = PLACES.qingshi;
+  let kui = null;
+  for (let guard = 0; guard < 6 && !kui; guard++) {
+    if (s.pending?.id === 'night_watch') {
+      pickText(s, '接著守');
+      onward(s);
+    }
+    // out of the way of the brush (it comes down on the page), at the edge of the town
+    play(s, 100, (x) => {
+      x.player.hp = C.hero(x).cap;
+      x.world.x = F.at[0];
+      x.world.y = F.at[1] + 420;
+      return null;
+    }, (x) => !!x.pending || C.combatOf(x).beasts.some((b) => b.kind === 'zhumo_kui' && b.hp > 0));
+    kui = C.combatOf(s).beasts.find((b) => b.kind === 'zhumo_kui' && b.hp > 0) || null;
+  }
+  assert.ok(kui, 'up out of the ink');
+  assert.ok(kui.speed < 100, `slow (${kui.speed})`);
+  const wolf = C.combatOf(s).beasts.find((b) => b.kind === 'wolf' && b.def.nightPack);
+  assert.ok(!wolf || kui.maxHp > wolf.maxHp * 1.5, `hard (${kui.maxHp} against a wolf's ${wolf?.maxHp})`);
+  play(s, 6, stand);
+  assert.ok(C.combatOf(s).pools.some((p) => p.kind === 'ink'), 'ink where it walked');
+  play(s, 120, (x) => {
+    x.player.hp = C.hero(x).cap;
+    return null;
+  }, (x) => !!x.pending);
+  assert.ok(['night_watch', 'night_dawn'].includes(s.pending?.id), 'the page turned');
+  assert.ok(!C.combatOf(s).beasts.some((b) => b.kind === 'zhumo_kui' && b.hp > 0 && !['vanish', 'vanished', 'dead'].includes(b.state)), 'back into the ink');
+});
+
+test('the 名冊 that night: 林塵, 天劍宗\'s and 蕭七\'s people at your side in 青石鎮 (松鶴 at his temple, 胡三娘\'s foxes on her hill) — and a stroke that finds one of them hurts them badly', () => {
+  const s = onTheNight(523);
+  Object.assign(s.flags, { roster_lin: true, roster_tj: true, roster_xiao: true, roster_fox: true });
+  assert.ok(s.npcs.lin_chen?.alive);
+  // (ten years on, 松鶴 may be gone; here he keeps his temple still)
+  Object.assign(s.npcs.song_he, { alive: true, loc: 'qingxu_temple' });
+  assert.deepEqual(helpersAt(s, 'qingshi').map((h) => h.id), ['lin_chen', 'tj1', 'tj2', 'xiao1', 'xiao2']);
+  assert.deepEqual(helpersAt(s, 'qingxu').map((h) => h.id), ['song_he']);
+  assert.deepEqual(helpersAt(s, 'fox').map((h) => h.id), ['fox1', 'fox2']);
+  assert.deepEqual(helpersAt(s, 'luoxia'), []);
+  dusk(s);
+  pickText(s, '守住');
+  onward(s);
+  play(s, 1, stand);
+  const allies = C.combatOf(s).beasts.filter((b) => b.side === 'ally' && b.def.nightAlly);
+  assert.equal(allies.length, 5, 'five at your side');
+  assert.ok(allies.some((a) => a.npcId === 'lin_chen'));
+  assert.ok(allies.filter((a) => a.name === '天劍宗弟子').length === 2);
+  // a ring, and one of them in it when it comes down
+  const k = untilRing(s, 40);
+  const a = allies.find((x) => x.hp > 0);
+  const hp0 = a.hp;
+  s.world.x = k.x + 200;
+  s.world.y = k.y;
+  play(s, 3, (x) => {
+    x.player.hp = C.hero(x).cap;
+    a.x = k.x;
+    a.y = k.y;
+    return null;
+  }, (x) => !C.strokesOf(x).some((y) => y.id === k.id));
+  assert.equal(nightOf(s).inked[a.helper], 1, 'it found them');
+  assert.ok(a.hp <= hp0 - a.maxHp * 0.4 || a.state === 'down', `badly hurt (${hp0} → ${a.hp} of ${a.maxHp})`);
+  // one who goes down is not in the next watch
+  a.hp = 0;
+  a.state = 'down';
+  play(s, 120, (x) => {
+    x.player.hp = C.hero(x).cap;
+    x.world.x = PLACES.qingshi.at[0];
+    x.world.y = PLACES.qingshi.at[1];
+    return null;
+  }, (x) => !!x.pending);
+  assert.equal(s.pending?.id, 'night_watch');
+  const down = nightOf(s).down;
+  assert.ok(down[a.helper]);
+  pickText(s, '接著守');
+  onward(s);
+  play(s, 1, stand);
+  const second = C.combatOf(s).beasts.filter((b) => b.side === 'ally' && b.def.nightAlly && !['vanish', 'vanished'].includes(b.state));
+  assert.equal(second.length, 5 - Object.keys(down).length, 'those still on their feet');
+  assert.ok(!second.some((b) => b.helper === a.helper), `${a.name} is not`);
+});
+
+test('七月十三: 上官家\'s boat goes over the river with those down for it on the 名冊 — and after that, nobody gets on or off', () => {
+  const s = fresh(524);
+  s.flags.opening_done = true;
+  Object.assign(s.flags, { ty_roster: true, roster_boat: true });
+  assert.equal(setPlan(s, 'shen_qingge', 'evacuate'), null);
+  assert.equal(setPlan(s, 'qian_banxian', 'evacuate'), null);
+  waitUntil(s, BLOOD_DAY - 3);
+  resolvePending(s);
+  assert.ok(!s.flags.night_boat);
+  waitUntil(s, BLOOD_DAY - 2);
+  assert.ok(s.flags.night_boat, 'the boat went');
+  assert.deepEqual(s.vars.night_evac, ['shen_qingge', 'qian_banxian']);
+  const due = takeDue(s, s.player.loc);
+  assert.ok(due?.id === 'night_boat' || due?.id === 'night_warn');
+  if (due.id !== 'night_boat') {
+    s.sched = s.sched.filter((x) => x.ev !== 'night_warn');
+  }
+  s.sched = s.sched.filter((x) => x.ev === 'night_boat');
+  startEvent(s, 'night_boat');
+  assert.match(s.pending.text, /沈家/);
+  assert.match(s.pending.text, /錢半仙/);
+  finish(s);
+  assert.equal(planBlocked(s, 'zhao_hu', 'evacuate'), '樓船已經開走了');
+  assert.equal(setPlan(s, 'shen_qingge', null), '人已經在船上了');
+  assert.equal(s.vars.roster.shen_qingge, 'evacuate');
+});
+
+test('a life whose seed is past 2³¹ (as a new game\'s may be) has its brush all the same: the night\'s dice never come up negative', () => {
+  const s = intoWatch(3_000_000_123);
+  assert.ok(s.seed > 2 ** 31);
+  const k = untilRing(s);
+  assert.ok(MARKS.qingshi.some((m) => m.id === k.mark));
+  play(s, 30, (x) => {
+    x.player.hp = C.hero(x).cap;
+    return null;
+  });
+  assert.ok(Object.values(nightOf(s).landed).reduce((a, b) => a + b, 0) >= 1);
 });

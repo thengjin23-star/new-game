@@ -33,7 +33,7 @@ import { jieOver } from '../core/jie.js';
 import { newReport, spendHours } from '../core/time.js';
 import { rand } from '../core/rng.js';
 import { weatherNow, moonTonight } from './weather.js';
-import { watchOn, nightOf, fieldOf, pastNight, watchBegins, strokeLanded, MARKS, INK_MAX, WATCH_NAME, WATCH_SECONDS, WATCHES } from './night.js';
+import { watchOn, nightOf, fieldOf, pastNight, watchBegins, strokeLanded, helpersAt, MARKS, INK_MAX, WATCH_NAME, WATCH_SECONDS, WATCHES } from './night.js';
 import { onBeaten, banditsHostile } from './factions.js';
 
 /** Blood a wound holds back: 輕傷 leaves you three quarters of it, and so on. */
@@ -851,6 +851,11 @@ function fell(s, C, b, io) {
   C.beaten += 1;
   untarget(C, b);
   if (b.phantom && b.def.nightPack) {
+    // (no spoils off the night's beasts: what is learned of a fight is all)
+    const report = newReport();
+    applyEffects(s, [['xw', Math.max(1, Math.round(b.D * 0.25))]], {}, report);
+    const n = nightOf(s);
+    if (n) n.kills = (n.kills || 0) + 1;
     io.feed('good', `${b.name}倒下了。`);
     return;
   }
@@ -1299,6 +1304,8 @@ export function updateCombat(s, dt, io) {
     // chilled (玄冰): it moves, and gathers itself, at a crawl a while
     if (b.chill && (b.chill.left -= dt) <= 0) b.chill = null;
     think(s, C, b, b.chill ? dt * b.chill.k : dt, io);
+    // (1.3) a 朱墨傀 leaves ink where it walks
+    if (b.R.inkTrail && alive(b) && b.aggro) inkTrail(C, b);
     if (dt > 0) {
       b.vx += ((b.x - x0) / dt - b.vx) * Math.min(1, dt * 8);
       b.vy += ((b.y - y0) / dt - b.vy) * Math.min(1, dt * 8);
@@ -2008,7 +2015,7 @@ function poolsTick(s, C, dt, io) {
     }
     if (!C.on || me.dash || me.inv > 0 || Math.hypot(w.x - p.x, w.y - p.y) > p.r + PLAYER_R * 0.5) continue;
     // (a whirlpool, quicksand: dragged at)
-    if (p.kind === 'water' || p.kind === 'sand' || p.kind === 'ice') me.slow = Math.max(me.slow || 0, 0.7);
+    if (p.kind === 'water' || p.kind === 'sand' || p.kind === 'ice' || p.kind === 'ink') me.slow = Math.max(me.slow || 0, 0.7);
     hurtMe(s, C, p.by, p.mult, io, null, p.kind === 'fire' ? { fire: true } : p.kind === 'venom' ? { venom: true, poison: p.poison } : p.poison ? { poison: p.poison } : null);
     if (s.pending || s.dead) return;
   }
@@ -3026,11 +3033,24 @@ function endJie(s, C, io, how) {
 
 /** How far from the middle of the field you may go before you have left it (the night goes on without you). */
 const FIELD_R = 900;
+/** Seconds out past the field's edge before it counts as leaving it. */
+const FIELD_GRACE = 4;
 /** Seconds between the packs that come down out of the hills, by watch; and how many come in each. */
 const WAVE_EVERY = [null, 17, 14, 11];
 const WAVE_SIZE = [null, 2, 3, 3];
-/** What comes down on each place (the red-eyed beasts of 東荒). */
-const NIGHT_KINDS = { qingshi: ['wolf', 'demon_wolf'], qingxu: ['wolf', 'demon_wolf'], fox: ['wolf', 'demon_wolf'], luoxia: ['demon_wolf', 'wolf'], ferry: ['wolf', 'demon_wolf'] };
+/** What comes down on each place: the beasts of its own hills, red-eyed (青石山's wolves and snakes, the 妖狼 of the wilds). */
+const NIGHT_KINDS = {
+  qingshi: ['wolf', 'demon_wolf', 'snake'], qingxu: ['wolf', 'snake', 'wolf'], fox: ['demon_wolf', 'snake', 'wolf'],
+  luoxia: ['demon_wolf', 'wolf'], ferry: ['wolf', 'snake', 'demon_wolf'],
+};
+/** No more of the night's beasts on the field at once than this (朱墨傀 counted). */
+const NIGHT_MAX = 8;
+/** Red-eyed, they do not lose you, nor go home. */
+const NIGHT_RT = { lose: 99999, loseT: 99, leash: 99999, sight: 1200 };
+/** A stroke come down on the page: what the chance is that something crawls up out of the ink. */
+const KUI_CHANCE = 0.5;
+/** A stroke come down on one at your side: this much of their blood (they are in the book). */
+const ALLY_INK = 0.45;
 
 /**
  * A watch begins: the book is open over the field (a sky you cannot strike, as the 劫雲 is; its blood is the
@@ -3043,7 +3063,8 @@ function beginNight(s, C, io) {
   const phase = n.phase;
   watchBegins(s);
   C.night = {
-    phase, next: C.t + 2.5, waves: 0, ending: false, fled: false, seed: ((s.seed | 0) * 31 + phase * 977 + 7) % 2147483647 || 1,
+    // (its own dice: a life's seed may be any 32 bits — kept positive, or the dice come up negative)
+    phase, next: C.t + 2.5, waves: 0, ending: false, fled: false, seed: (((s.seed >>> 0) * 31 + phase * 977 + 7) % 2147483647) || 1,
     strokes: [], nextStroke: C.t + STROKE_FIRST, warn: (s.sys?.lv || 0) >= 6,
   };
   Object.assign(me, { poison: null, held: null });
@@ -3052,6 +3073,32 @@ function beginNight(s, C, io) {
   arm(s, C, book);
   Object.assign(book, { state: 'chase', st: 0, aggro: true, lostT: 0 });
   engage(s, C, book, io, phase === 1 ? '天上的書攤開了。月亮紅得像血——山裡的東西，紅著眼睛下來了！' : `${WATCH_NAME[phase]}。天上的書又翻開了一頁。`);
+  // those who said they would be there, at your side
+  const helpers = helpersAt(s, n.place);
+  if (helpers.length) {
+    const who = helpers.map((h) => {
+      const p = typeof h.who === 'string' ? s.npcs?.[h.who] : null;
+      return p ? { name: p.met ? p.name : p.title, rank: npcRealm(p), tier: p.realm, npcId: p.id } : h.who;
+    });
+    const w = s.world;
+    const adef = {
+      id: `night_allies_${++C.uid}`, side: 'ally', kinds: helpers.map((h) => h.kind), who, n: helpers.length, title: '並肩的人', x: w.x, y: w.y, r: 110,
+      power: Math.max(8, Math.round(me.P * 0.75)), phantom: true, nightAlly: true,
+    };
+    const made = helpers.map((h, k) => Object.assign(spawn(s, adef, k), { helper: h.id }));
+    for (const a of made) {
+      if (collides(s, a.x, a.y, 12)) [a.x, a.y] = nearestOpen(s, a.x, a.y, 6) || [w.x, w.y];
+      beastsOf(s, C).push(a);
+      arm(s, C, a);
+      Object.assign(a, { state: 'chase', st: 0, aggro: true });
+    }
+    if (phase === 1) io.feed('good', `${[...new Set(made.map((a) => a.name))].join('、')}在你身邊。`);
+  }
+}
+
+/** The night's beasts on the field now (the red-eyed, and what crawled up out of the ink). */
+function nightFoes(s, C) {
+  return beastsOf(s, C).filter((b) => b.def.nightPack && alive(b) && b.state !== 'vanish').length;
 }
 
 /** A watch goes on: packs out of the hills, and whether you are still on the field. */
@@ -3069,13 +3116,18 @@ function nightTick(s, C, dt, io) {
     return;
   }
   const book = beastsOf(s, C).find((b) => b.def.night && b.def.night === N.phase);
-  // you left the field: the night goes on without you
+  // you left the field (a few seconds out past its edge: a chase that carried you over it is not leaving): the
+  // night goes on without you
   if (Math.hypot(w.x - F.at[0], w.y - F.at[1]) > FIELD_R) {
-    N.fled = true;
-    closeWatch(s, C);
-    io.feed('bad', '你離開了戰場。身後，天上的筆一筆一筆落下去，沒有人擋。');
-    return;
-  }
+    if (!N.out) io.feed('bad', `再往外走，就離開${F.name}了。`);
+    N.out = (N.out || 0) + dt;
+    if (N.out >= FIELD_GRACE) {
+      N.fled = true;
+      closeWatch(s, C);
+      io.feed('bad', '你離開了戰場。身後，天上的筆一筆一筆落下去，沒有人擋。');
+      return;
+    }
+  } else N.out = 0;
   // the book has turned its page: what is still out there goes back up into the hills
   if (!book || !alive(book)) {
     closeWatch(s, C);
@@ -3085,9 +3137,10 @@ function nightTick(s, C, dt, io) {
   if (s.pending || s.dead || N.ending) return;
   if (C.t < N.next) return;
   N.next = C.t + WAVE_EVERY[N.phase];
-  N.waves += 1;
   const kinds = NIGHT_KINDS[n.place] || NIGHT_KINDS.qingshi;
-  const size = WAVE_SIZE[N.phase];
+  const size = Math.min(WAVE_SIZE[N.phase], NIGHT_MAX - nightFoes(s, C));
+  if (size <= 0) return;
+  N.waves += 1;
   N.seed = (N.seed * 16807) % 2147483647;
   const a = (N.seed / 2147483647) * Math.PI * 2;
   let at = null;
@@ -3098,12 +3151,17 @@ function nightTick(s, C, dt, io) {
     if (isReachable(x, y) && !collides(s, x, y, 16)) at = [x, y];
   }
   if (!at) return;
-  const def = { id: `nightpack_${++C.uid}`, kinds: Array.from({ length: size }, (_, k) => kinds[k % kinds.length]), n: size, title: '紅眼的獸', x: at[0], y: at[1], r: 90, power: Math.max(8, Math.round(me.P * (0.55 + 0.12 * (N.phase - 1)))), phantom: true, nightPack: true };
+  const off = N.waves % kinds.length;
+  const def = {
+    id: `nightpack_${++C.uid}`, kinds: Array.from({ length: size }, (_, k) => kinds[(k + off) % kinds.length]), n: size, title: '紅眼的獸', x: at[0], y: at[1], r: 90,
+    power: Math.max(8, Math.round(me.P * (0.55 + 0.12 * (N.phase - 1)))), phantom: true, nightPack: true, rt: NIGHT_RT,
+  };
   const pack = Array.from({ length: size }, (_, k) => spawn(s, def, k));
   for (const b of pack) beastsOf(s, C).push(b);
   for (const b of pack) {
     arm(s, C, b);
-    Object.assign(b, { state: 'chase', st: 0, aggro: true, lostT: 0 });
+    // red-eyed: fiercer than they ever are
+    Object.assign(b, { state: 'chase', st: 0, aggro: true, lostT: 0, enraged: true });
   }
   engage(s, C, pack[0], io, N.waves === 1 ? '山坡上一雙一雙紅色的眼睛亮了起來——狼群衝下來了！' : '又一群紅了眼的東西，從黑暗裡撲了出來！');
 }
@@ -3114,7 +3172,9 @@ function closeWatch(s, C) {
   // (the page turned: what was gathering on it is gone)
   C.night.strokes = [];
   for (const b of beastsOf(s, C)) {
-    if (!b.phantom || (!b.def.night && !b.def.nightPack) || b.state === 'dead' || b.state === 'vanished') continue;
+    if (!b.phantom || (!b.def.night && !b.def.nightPack && !b.def.nightAlly) || b.state === 'dead' || b.state === 'vanished') continue;
+    // (one at your side who went down: hurt, and not in the next watch)
+    if (b.def.nightAlly && b.state === 'down' && nightOf(s)) (nightOf(s).down ||= {})[b.helper] = true;
     Object.assign(b, { state: 'vanish', st: 0, aggro: false, moving: false, move: null, token: false });
     untarget(C, b);
   }
@@ -3201,6 +3261,52 @@ function strokeFalls(s, C, n, k, book, io) {
   C.fx.push({ kind: 'zhubi', x: k.x, y: k.y, r: k.r, t0: C.t, dur: 0.9 });
   C.fx.push({ kind: 'zhumo', x: k.x, y: k.y, r: k.r * 0.85, t0: C.t, dur: 45 });
   io.feed('bad', `朱筆落在${k.name}。`);
+  // those at your side are in the book: it finds them
+  for (const a of beastsOf(s, C)) {
+    if (a.side !== 'ally' || !alive(a) || Math.hypot(a.x - k.x, a.y - k.y) > k.r + a.R.body * 0.5) continue;
+    inkOnAlly(s, C, a, io);
+  }
+  // something crawls up out of the ink
+  const N = C.night;
+  N.seed = (N.seed * 16807) % 2147483647;
+  if (N.seed / 2147483647 < KUI_CHANCE && nightFoes(s, C) < NIGHT_MAX) kuiRises(s, C, k, io);
+}
+
+/** A stroke came down on one at your side (林塵, a 天劍宗 disciple…): they are in the book, and it finds them. */
+function inkOnAlly(s, C, a, io) {
+  const dmg = Math.max(1, Math.round(a.maxHp * ALLY_INK));
+  a.hp -= dmg;
+  a.flashT = C.t;
+  pop(C, a.x, a.y, String(dmg), 'ally', a.R.tall);
+  const n = nightOf(s);
+  if (n) (n.inked ||= {})[a.helper] = ((n.inked ||= {})[a.helper] || 0) + 1;
+  io.feed('bad', `朱筆落在${a.name}身上——命簿上有他的名字。`);
+  if (a.hp > 0) return;
+  a.hp = 0;
+  Object.assign(a, { state: 'down', st: 0, moving: false, move: null, token: false, burn: null });
+  io.feed('bad', `${a.name}倒下了！`);
+}
+
+/** 朱墨傀: up out of the ink where a stroke came down — slow, hard, leaving ink where it walks. */
+function kuiRises(s, C, k, io) {
+  const me = hero(s, C);
+  const N = C.night;
+  const [x, y] = nearestOpen(s, k.x, k.y, 6) || [k.x, k.y];
+  const def = { id: `zhumo_${++C.uid}`, kind: 'zhumo_kui', n: 1, x, y, r: 40, power: Math.max(8, Math.round(me.P * (0.6 + 0.1 * (N.phase - 1)))), phantom: true, nightPack: true, rt: NIGHT_RT };
+  const b = spawn(s, def, 0);
+  beastsOf(s, C).push(b);
+  arm(s, C, b);
+  Object.assign(b, { state: 'chase', st: 0, aggro: true, lostT: 0, pause: 0.8 });
+  C.foes.add(b.uid);
+  C.fx.push({ kind: 'zhumo', x, y, r: 30, t0: C.t, dur: 8 });
+  io.feed('bad', `${k.name}的朱墨裡，爬出了一個東西。`);
+}
+
+/** Where a 朱墨傀 has walked: a smear of ink on the ground, that drags at you and stings. */
+function inkTrail(C, b) {
+  if (b.inkAt && Math.hypot(b.x - b.inkAt[0], b.y - b.inkAt[1]) < 26) return;
+  b.inkAt = [b.x, b.y];
+  pool(C, b, b.x, b.y, b.R.inkTrail, b.R.inkTrail.r);
 }
 
 /** 斷天's light passing through a ring that has not yet come down: the stroke is cut in the air (no ink). */

@@ -65,6 +65,9 @@ export function planBlocked(s, id, plan) {
   const entry = ROSTER.find((r) => r.id === id);
   if (!entry || !alive(s, id)) return '已經不在了';
   if (planOf(s, id) === plan) return null;
+  // (1.3) the boat has gone (七月十三): who is on it is on it, and nobody else is
+  if (f(s, 'night_boat') && planOf(s, id) === 'evacuate') return '人已經在船上了';
+  if (f(s, 'night_boat') && plan === 'evacuate') return '樓船已經開走了';
   if (countOf(s, plan) >= ROOM[plan]) return '人已經滿了';
   switch (plan) {
     case 'evacuate': {
@@ -93,6 +96,7 @@ export function planBlocked(s, id, plan) {
 /** Put someone down for a plan (null to take them off). A 護身符 is given when you write it, and given back if you change it. */
 export function setPlan(s, id, plan) {
   if (plan && planBlocked(s, id, plan)) return planBlocked(s, id, plan);
+  if (!plan && f(s, 'night_boat') && planOf(s, id) === 'evacuate') return '人已經在船上了';
   s.vars.roster ||= {};
   const was = s.vars.roster[id] || null;
   if (was === plan) return null;
@@ -139,6 +143,12 @@ export function helpersOf(s) {
 
 /** Days left to the night (0 once it has come). */
 export const daysLeft = (s) => Math.max(0, nightDay(s) - s.day);
+
+/** (1.3) Those down to go over the river who will be on the boat on 七月十三 (alive, still in 東荒, willing). */
+export function boatOf(s) {
+  if (!f(s, 'roster_boat')) return [];
+  return ROSTER.filter((r) => planOf(s, r.id) === 'evacuate' && alive(s, r.id) && onThePage(s, r.id) && !r.go(s));
+}
 
 /** In a word: how many of those still on the page have something written for them. */
 export function rosterSummary(s) {

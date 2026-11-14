@@ -3,6 +3,7 @@ import { schedule } from '../core/schedule.js';
 import { rumor } from './rumors.js';
 import { inTide, bloodMoon } from './weather.js';
 import { nightDay, nightDone } from './night.js';
+import { boatOf } from './roster.js';
 import { SECRET_REALMS } from './realms.js';
 import { tideNight, omensOf, OMEN_WHERE } from './happenings.js';
 import { resolveDuel } from './duel.js';
@@ -356,6 +357,12 @@ export function recurring(s) {
   }
   // (1.3) the night of the blood moon (world/night.js; content/events/bloodnight.js): three days before, the warning
   if (!nightDone(s) && s.day === nightDay(s) - 3 && !s.flags.night_warned) schedule(s, 'night_warn', 0, 0, { expire: 3 });
+  // two days before (七月十三): 上官家's boat goes over the river with whoever is down for it on the 名冊
+  if (!nightDone(s) && s.day === nightDay(s) - 2 && !s.flags.night_boat && boatOf(s).length) {
+    s.flags.night_boat = true;
+    s.vars.night_evac = boatOf(s).map((r) => r.id);
+    schedule(s, 'night_boat', 0, 0, { expire: 2 });
+  }
   zhongzhouYears(s);
   // (0.25) 孫掌櫃, three months after his master's letter came back to him: out of seclusion, a layer up
   if (s.flags.sun_master_done && !s.flags.sun_out && s.day >= (s.vars.sun_secl_day ?? Infinity) + 90) {

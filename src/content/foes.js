@@ -579,6 +579,16 @@ export const FOES = {
     name: '天上的書', hp: 1, atk: 1, boss: true,
     rt: { tier: 1, speed: 0, walk: 0, sight: 4000, lose: 99999, loseT: 99, leash: 99999, body: 12, tall: 60, notice: 0, moves: [], phases: [] },
   },
+  // (1.3) 朱墨傀: up out of the ink where a stroke of the red brush came down on the page — slow, hard, and ink
+  // where it has walked (world/combat.js kuiRises)
+  zhumo_kui: {
+    name: '朱墨傀', el: '水', hp: 2.4, atk: 1.15,
+    rt: {
+      tier: 1, speed: 62, walk: 30, sight: 1200, lose: 99999, loseT: 99, leash: 99999, body: 17, bulk: 1.6, tall: 44, notice: 0,
+      moves: ['inkslam', 'inkspit'], inkTrail: { kind: 'ink', secs: 5, dps: 0.16, r: 20 },
+      cry: '朱墨裡爬出了一個東西！',
+    },
+  },
   // ── 1.0 中州・臨江一帶 (二階: 築基初期 along the river, 築基中期 in the old wood, 築基後期 out in the 大澤) ──
   // 江堤蘆蕩: green pythons that lie in the reeds and come up out of the water at you; they wrap you, and spit
   reed_python: {
