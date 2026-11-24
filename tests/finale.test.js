@@ -196,3 +196,37 @@ test('the climb can wait (no hurry, and no way round them): beaten by the beast,
     useMap('donghuang');
   }
 });
+
+test('the chapter\'s end: the finger seen to, 第二章「中州」 is done — the ending screen\'s lines (you, those you knew after the night and the peak, the sky over 東荒, the system) and its last line, as the finger was left; the 成就, the stories, the 史冊', async () => {
+  const { chapter2Self, chapter2Fates, chapter2Next } = await import('../src/world/ending.js');
+  const { checkFeats, FEATS } = await import('../src/world/feats.js');
+  const { storiesOf } = await import('../src/content/stories.js');
+  const { annalsOf } = await import('../src/content/annals.js');
+  const s = afterTheNight(805);
+  try {
+    for (const id of ['lin_chen', 'su_qingyao', 'ye_guhan', 'wang_er', 'song_he']) if (s.npcs[id]) s.npcs[id].met = true;
+    upAndThrough(s);
+    pickText(s, '帶走');
+    finish(s);
+    assert.ok(s.flags.chapter2_done && s.flags.chapter2_ending, 'the ending screen comes up');
+    const me = chapter2Self(s);
+    assert.match(me.line, /歲/);
+    assert.match(me.more, /在中州 \d+ 年/);
+    const fates = chapter2Fates(s);
+    const who = fates.map(([w]) => w);
+    assert.ok(who.includes('衛長庚') && who.includes('東荒'), who.join('、'));
+    assert.match(fates.find(([w]) => w === '衛長庚')[1], /不再上峰/);
+    assert.match(fates.find(([w]) => w === '東荒')[1], /落了 \d+ 筆/);
+    assert.match(chapter2Next(s), /那隻手轉了過來/);
+    // 成就
+    checkFeats(s);
+    assert.ok(s.vars.feats.finger !== undefined, '指');
+    for (const id of ['night_block', 'night_cut', 'night_burp', 'night_ink', 'night_summit', 'night_all', 'finger']) assert.ok(FEATS.some((x) => x.id === id), id);
+    // the main line's close; the 史冊
+    assert.equal(storiesOf(s).find((t) => t.id === 'main2')?.end, '第二章「中州」，完。');
+    const got = annalsOf(s).have.map((a) => a.id);
+    assert.ok(got.includes('hand') && got.includes('bloodnight'), got.join(' '));
+  } finally {
+    useMap('donghuang');
+  }
+});

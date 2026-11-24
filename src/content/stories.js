@@ -56,15 +56,19 @@ export const STORIES = [
       ['到了天衍城，看見玉指峰', f('ty_arrived')],
       ['欽天監的抄本閣：東荒那一頁', f('ty_book_seen')],
       ['為那一夜，寫下名冊', (s) => Object.keys(s.vars.roster || {}).length > 0],
+      // (1.3) 第四幕「血月」
+      ['血月那一夜', f('blood_night_done')],
+      ['上玉指峰，了結那根手指', f('finger_done')],
     ],
-    end: (s) => (s.flags.ty_truth && Object.keys(s.vars.roster || {}).length ? '天元三千零二十二年七月十五，欽天監要撕掉東荒那一頁。你知道了，也做了準備。' : null),
+    end: (s) => (s.flags.finger_done ? '第二章「中州」，完。' : null),
     next: (s) =>
       !s.flags.zhongzhou_crossed ? '到白鶴渡，坐老船夫的船過江。'
         : !visited(s, 'linjiang') ? '鶴歸渡往東北，是臨江城。'
           : !s.flags.bang_beaten ? '榜樓前的擂台上，榜上的人誰來挑戰都得接。'
             : !s.flags.ty_arrived ? '官道關往東三天，是天衍城：關上要令牌。臨江城的城主府旁邊，也有傳送陣。'
               : !s.flags.ty_book_seen ? '天驕榜是從哪裡抄出來的？答案在欽天監的抄本閣裡。'
-                : '見聞裡的名冊：東荒的人，誰撤，誰躲，託給誰。',
+                : !s.flags.blood_night_done ? '見聞裡的名冊：東荒的人，誰撤，誰躲，託給誰。那一夜你在哪裡，就在哪裡。'
+                  : '玉指峰頂：欽天監後面的天梯開了，衛長庚在等你。',
   },
   // ── 人物 ──
   {

@@ -559,7 +559,7 @@ export function startApp(root, { speed = 1, view = null } = {}) {
 
   /** The 3D world where the device can draw it (and the player has not asked for the flat map). */
   function makeView(canvas) {
-    const opts = { onFrame, idle: () => !!(ui.s && (ui.s.pending || ui.sheet || ui.s.dead || ui.s.flags.chapter1_ending)) };
+    const opts = { onFrame, idle: () => !!(ui.s && (ui.s.pending || ui.sheet || ui.s.dead || ui.s.flags.chapter1_ending || ui.s.flags.chapter2_ending)) };
     if (viewMode() === '3d') {
       try {
         let chosen = null;
@@ -639,7 +639,7 @@ export function startApp(root, { speed = 1, view = null } = {}) {
   function onFrame(dt) {
     const s = ui.s;
     if (!s || !ui.shell) return;
-    const paused = !!(s.pending || s.dead || s.secl || ui.sheet || s.flags.chapter1_ending);
+    const paused = !!(s.pending || s.dead || s.secl || ui.sheet || s.flags.chapter1_ending || s.flags.chapter2_ending);
     if (!paused) {
       const input = currentInput();
       const before = [s.world.x, s.world.y];
@@ -682,7 +682,7 @@ export function startApp(root, { speed = 1, view = null } = {}) {
 
   function layerKeyOf(s) {
     if (s.dead && !s.pending) return 'dead';
-    if (s.flags.chapter1_ending && !s.pending) return 'ending';
+    if ((s.flags.chapter1_ending || s.flags.chapter2_ending) && !s.pending) return s.flags.chapter2_ending ? 'ending2' : 'ending';
     if (s.pending) {
       const p = s.pending;
       return `ev:${p.id || p.title}:${p.step}:${p.result ? 1 : 0}:${p.notice ? 1 : 0}`;
@@ -1841,6 +1841,7 @@ export function startApp(root, { speed = 1, view = null } = {}) {
     el.classList.remove('dim');
     if (s.pending) el.appendChild(eventSheet());
     else if (s.dead) el.appendChild(deathScreen());
+    else if (s.flags.chapter2_ending) el.appendChild(ending2Screen());
     else if (s.flags.chapter1_ending) el.appendChild(endingScreen());
     else if (ui.sheet) {
       el.appendChild(ui.sheet === 'map' ? mapSheet() : panelSheet(ui.sheet));
@@ -2739,6 +2740,8 @@ export function startApp(root, { speed = 1, view = null } = {}) {
       h('p.muted.pad', `${s.player.name}，${ORIGINS[s.player.origin].name}，第 ${s.meta.life} 世。走了 ${Math.round((s.world?.walked || 0) / 1000)} 里路。`),
       // (the chapter's end, once you have come to it: to read again)
       s.flags.chapter1_done ? h('div.pad', h('button.btn.small', { onclick: () => act((x) => { x.flags.chapter1_ending = true; }) }, '再看一次第一章的結局')) : null,
+      // (1.3) and the second's
+      s.flags.chapter2_done ? h('div.pad', h('button.btn.small', { onclick: () => act((x) => { x.flags.chapter2_ending = true; }) }, '再看一次第二章的結局')) : null,
       h('h3.pad', `成就　${FEATS.filter((f) => got[f.id] !== undefined).length} / ${FEATS.length}`),
       h('ul.feats', FEATS.map((f) => h('li' + (got[f.id] !== undefined ? '.got' : ''),
         h('b', f.name),
@@ -3101,6 +3104,28 @@ export function startApp(root, { speed = 1, view = null } = {}) {
           ? h('p.muted.small', '第二章「中州」。對岸的城池與劍光，在等你。想回東荒的時候，鶴歸渡的老船夫隨時載你回去。')
           : h('p.muted.small', '第二章「中州」。白鶴渡與鶴歸渡之間，老船夫隨時載你來回。'),
         h('button.btn.primary.wide', { onclick: () => act((x) => { delete x.flags.chapter1_ending; }) }, going ? '踏上中州' : `回到${MAPS[s.world?.map || 'donghuang']?.name || '東荒'}`),
+      ),
+    );
+  }
+
+  /** (1.3) 第二章 完: you, those you knew after the night and the peak, the system; the last line, as the finger was left. The world goes on after. */
+  function ending2Screen() {
+    const s = ui.s;
+    const me = END.chapter2Self(s);
+    const sys = END.chapterSystem(s);
+    return h('div.death.ending',
+      h('div.death-inner',
+        h('p.muted.small', '第二章'),
+        h('h2', '中州'),
+        h('p.ending-seal', '完'),
+        h('p.epitaph', me.line),
+        h('p.muted', me.more),
+        h('ul.fates', END.chapter2Fates(s).map(([who, line]) => h('li', h('b', who), h('span', line)))),
+        h('p.small', sys.line),
+        h('p.small.muted', sys.truth),
+        h('p.ending-next', END.chapter2Next(s)),
+        h('p.muted.small', '世界照樣往前走。第九頁天機殘頁，還在某個地方。'),
+        h('button.btn.primary.wide', { onclick: () => act((x) => { delete x.flags.chapter2_ending; }) }, `回到${MAPS[s.world?.map || 'donghuang']?.name || '東荒'}`),
       ),
     );
   }

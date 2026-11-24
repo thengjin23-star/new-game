@@ -28,7 +28,7 @@ const open = (s) => nightDone(s) && !flag(s, 'finger_done');
 const suHere = (s) => alive(s, 'su_qingyao') && (flag(s, 'su_archive') || flag(s, 'su_token'));
 
 /** What is done with the finger, whichever: the page in the pool, the chapter's last stroke. */
-const DONE = [['flag', 'finger_done'], ['frag', 'frag_finger'], ['sysexp', 120], (x) => { x.vars.finger_day = x.day; }];
+const DONE = [['flag', 'finger_done'], ['frag', 'frag_finger'], ['sysexp', 120], (x) => { x.vars.finger_day = x.day; }, ['flag', 'chapter2_done'], ['flag', 'chapter2_ending'], ['log', '第二章「中州」，完']];
 
 /** The two fights, as strong as the one who comes up (the 監正 is 元嬰; his stars are aimed by the 命簿). */
 const BEAST = { kind: 'power', diff: (s) => Math.max(420, Math.round(power(s) * 1.05)) };
@@ -152,7 +152,7 @@ export default [
                 ['rep', 'tianyan', -20],
                 ['log', '毀了玉指峰的手指。再也沒有朱筆了'],
                 ['rumor', '天衍城的人說，玉指峰頂那團常年不散的紅光，滅了。皇城裡的禁軍一夜之間少了一半，沒有人說得清是怎麼回事。', 'arc'],
-                ['rumor', '天劍宗祖師堂裡的祖訓，有人添了一行小字：「已了。」', 'arc'],
+                ['rumor', '天劍宗門規碑上的最後一條：「指在一日，劍不入鞘。」天劍宗的人說，劍，可以入鞘了。', 'arc'],
                 (x) => { x.npcs.wei_changgeng && (x.npcs.wei_changgeng.loc = 'yuzhi'); },
               ],
             },
@@ -160,7 +160,7 @@ export default [
           {
             text: '封回去，交給天劍宗。',
             out: {
-              text: (s) => `你把手指按回池子裡。池底的墨合上了，像一隻閉上的眼睛。\n\n三天以後，${alive(s, 'ye_guhan') ? '葉孤寒' : '天劍宗的長老'}帶著天劍宗的人上了峰。祖師堂的祖訓上那一行——「玉指峰，不可不守」——今天，有人照著做了。\n\n衛長庚把監正的印放在池邊，一個人下了山。欽天監，散了。\n\n手指底下的池子裡，躺著一頁紙。`,
+              text: (s) => `你把手指按回池子裡。池底的墨合上了，像一隻閉上的眼睛。\n\n三天以後，${alive(s, 'ye_guhan') ? '葉孤寒' : '天劍宗的長老'}帶著天劍宗的人上了峰。天劍宗門規碑上的最後一條：「指在一日，劍不入鞘。」——指還在，劍就守著它。\n\n衛長庚把監正的印放在池邊，一個人下了山。欽天監，散了。\n\n手指底下的池子裡，躺著一頁紙。`,
               effects: [
                 ...DONE,
                 ['flag', 'finger_sealed'],

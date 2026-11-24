@@ -23,6 +23,14 @@ function rosterFull(s) {
   return of > 0 && done === of;
 }
 
+/** (1.3) The night over, and everyone on the 名冊 who was alive at dusk still alive at dawn (蘇清瑤 too, if she was up there). */
+function nightAll(s) {
+  const F = s.vars.night?.done ? s.vars.night.fates : null;
+  if (!F) return false;
+  const list = Object.entries(F).filter(([id]) => !id.startsWith('helper:'));
+  return list.length > 0 && list.every(([, x]) => x.fate !== 'dead');
+}
+
 export const FEATS = [
   { id: 'qi', name: '引氣入體', desc: '成為煉氣修士。', test: (s) => s.player.realm >= 1 },
   { id: 'lianqi9', name: '煉氣圓滿', desc: '修到煉氣九層。', test: (s) => s.player.realm >= 2 || (s.player.realm === 1 && s.player.stage >= 8) },
@@ -98,6 +106,14 @@ export const FEATS = [
   { id: 'inkless', name: '沾不上', desc: '在玉指峰頂碰一碰墨池裡的朱墨。', test: (s) => !!s.flags.yz_ink_touched },
   { id: 'roster', name: '名冊', desc: '血月名冊上，東荒還在的人，每一個都有了去處。', test: (s) => rosterFull(s) },
   { id: 'six', name: '墨跡未乾', desc: '問道系統升到六級。', test: (s) => (s.sys?.lv || 0) >= 6 },
+  // (1.3) 血月
+  { id: 'night_block', name: '擋下一筆', desc: '血月那一夜，站進紅圈，替東荒擋下一筆朱筆。', test: (s) => (s.vars.night?.blocked || 0) >= 1 },
+  { id: 'night_cut', name: '一劍斷筆', desc: '用斷天，在半空斬斷一筆朱筆。', test: (s) => (s.vars.night?.cut || 0) >= 1 },
+  { id: 'night_burp', name: '打了個飽嗝', desc: '血月那一夜，江底的老前輩吞了三筆以上。', test: (s) => (s.vars.night?.eaten || 0) >= 3 },
+  { id: 'night_ink', name: '有名有姓', desc: '沾滿八點墨：命簿開始寫你的名字。', test: (s) => !!s.flags.night_ink_full },
+  { id: 'night_summit', name: '中途擱筆', desc: '血月那一夜闖上玉指峰頂，讓那支筆停下來。', test: (s) => !!s.flags.night_summit },
+  { id: 'night_all', name: '一個也不少', desc: '血月那一夜過去，名冊上的人都還活著。', test: (s) => nightAll(s) },
+  { id: 'finger', name: '指', desc: '在玉指峰頂，了結天外那隻手的指頭。', test: (s) => !!s.flags.finger_done },
   { id: 'reborn', name: '再世', desc: '輪迴轉世，又活了一次。', test: (s) => (s.meta?.life || 1) >= 2 },
 ];
 

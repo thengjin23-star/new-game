@@ -141,6 +141,22 @@ export const ANNALS = [
     got: (s) => !!s.flags.tj_motto_read,
     text: '天劍宗九條門規的最後一條，字比前八條都大：「指在一日，劍不入鞘。」碑下的小字註著：指，劍指也。',
   },
+  // (1.3) what 衛長庚 said on the top of the peak, and what 玄微 remembered of the first stroke
+  {
+    id: 'hand', era: '天河斷絕', title: '斬手', where: '中州・玉指峰頂，衛長庚',
+    got: (s) => !!s.flags.fz_told,
+    text: '衛長庚說：三千年前，天外伸進來一隻手，要把天河掐斷。東邊孤峰上的劍仙拔了劍；天河還是斷了，那隻手縮回去的時候，卻少了一根指頭。指頭掉在中州，砸出了玉指峰，山裡滲的，是寫命簿的墨。說書的說他一劍斷了天河——他斬的是手。',
+  },
+  {
+    id: 'firststroke', era: '三千年來', title: '劃掉一個村子', where: '天機殘頁・月',
+    got: (s) => !!s.sys?.frags?.includes('frag_moon'),
+    text: '玄微記得：第一次看見那支筆落下來，是一個七月十五。欽天監拿著那根手指，在命簿上劃掉了一個村子。他們說：墨不夠了，要寫新的，就得劃掉舊的。',
+  },
+  {
+    id: 'bloodnight', era: '近世', title: '血月那一夜', where: '東荒',
+    got: (s) => !!s.flags.blood_night_done,
+    text: '天元三千零二十二年七月十五，欽天監要用玉指峰的墨，撕掉東荒那一頁。那一夜月亮紅得像血，天上攤開了一本書，一支朱紅的筆一筆一筆往下落。東荒的那一頁，沒有被撕掉。',
+  },
   {
     id: 'legend2', era: '三千年來', title: '另一個版本', where: '中州・臨江城的茶樓',
     got: (s) => !!(s.flags.zz_tale_stele || s.flags.zz_tale_banxian),

@@ -87,6 +87,67 @@ export function chapterFates(s) {
   return out;
 }
 
+// ── (1.3) 第二章「中州」, done (the finger on 玉指峰 seen to: content/events/finale.js) ──
+
+/** What the night came to for one of 東荒's people (world/night.js reckon), in a few words. */
+const NIGHT_WORDS = { safe: '那一夜在江這邊，平安', fine: '熬過了那一夜', hurt: '那一夜受了傷，人還在', dead: '沒有熬過那一夜' };
+const NIGHT_PEOPLE = [['wang_er', '王二一家'], ['sun_zg', '孫掌櫃'], ['song_he', '松鶴道人'], ['hu_sanniang', '胡三娘'], ['shen_qingge', '沈家'], ['zhao_hu', '趙虎'], ['qian_banxian', '錢半仙']];
+
+/** You, as the second chapter leaves you. */
+export function chapter2Self(s) {
+  const p = s.player;
+  const since = Math.max(0, s.day - (s.vars.zz_first ?? s.day));
+  const years = Math.max(1, Math.round(since / DAYS_PER_YEAR));
+  const feats = Object.keys(s.vars.feats || {}).length;
+  return {
+    line: `${p.name}，${Math.floor(age(s))} 歲，${realmLabel(p)}。`,
+    more: `在中州 ${years} 年。命簿上，你改過 ${wetCount(s)} 個人的那一行。得了 ${feats} / ${FEATS.length} 個成就。`,
+  };
+}
+
+/** What became of each of them, after the night and the peak: [who, how it stands]. */
+export function chapter2Fates(s) {
+  const out = [];
+  const n = s.vars.night;
+  const fates = n?.fates || {};
+  // 東荒's people, as the night left them (those you came to know)
+  for (const [id, name] of NIGHT_PEOPLE) {
+    const F = fates[id];
+    if (!F || !npc(s, id).met) continue;
+    out.push([name, `${NIGHT_WORDS[F.fate]}。${F.fate !== 'dead' && WET[id]?.(s) ? '命簿上這一行，是你改過的。' : ''}`]);
+  }
+  // 林塵
+  const L = npc(s, 'lin_chen');
+  if (L.met) {
+    const night = fates['helper:lin_chen'];
+    out.push(['林塵', !L.alive ? (L.nightTorn ? '血月那一夜，守在青石鎮口，沒有退。' : '死在了天劍宗山門外。') : night ? `血月那一夜，他回了青石鎮${night.fate === 'hurt' ? '，帶著一身傷回來' : ''}。他說：「我答應過的。」` : '在中州。他手上那枚黑戒指，你一直沒看懂。']);
+  }
+  // 蘇清瑤
+  const S = npc(s, 'su_qingyao');
+  if (S.met) {
+    const F = fates.su_qingyao;
+    out.push(['蘇清瑤', !S.alive ? (S.nightTorn ? '她那一行舊的字，留了下來。' : '不在了。') : F ? (F.with === 'you' ? '那一夜，你上了峰頂，她不是一個人。她那一行舊的字，淡得快看不見了。' : '那一夜，葉孤寒在觀星台上陪著她。') : '重活一世的人。這一世，她活過了血月。']);
+  }
+  // 葉孤寒
+  const Y = npc(s, 'ye_guhan');
+  if (Y.met && Y.alive) out.push(['葉孤寒', f(s, 'finger_sealed') ? '天劍宗的劍子。玉指峰頂那一池合上的墨，他帶著師弟們守著。' : f(s, 'finger_destroyed') ? '天劍宗的劍子。門規碑上那一條「指在一日，劍不入鞘」——劍，可以入鞘了。' : '天劍宗的劍子。']);
+  // 衛長庚
+  if (npc(s, 'wei_changgeng').met || f(s, 'wei_beaten')) {
+    out.push(['衛長庚', f(s, 'finger_destroyed') ? '留在玉指峰頂，看著風把那捧灰吹乾淨。' : f(s, 'finger_sealed') ? '把監正的印放在池邊，一個人下了山。欽天監散了。' : f(s, 'finger_taken') ? '還是欽天監的監正，只是不再上峰。' : '官復原職。']);
+  }
+  // the sky over 東荒
+  if (n?.done) out.push(['東荒', `那一夜，東荒的紙上落了 ${n.total} 筆。${s.vars.night_crack === 'open' ? '天上那道縫沒有合上，夜裡看得見一道紅痕。' : '天上那道縫合上了。'}`]);
+  return out;
+}
+
+/** The chapter's last line: as the finger was left (what is to come). */
+export function chapter2Next(s) {
+  if (f(s, 'finger_destroyed')) return '天外，那隻少了一根指頭的手，停了下來。';
+  if (f(s, 'finger_sealed')) return '玉指峰頂，一池合上的墨。天外，那隻手在等。';
+  if (f(s, 'finger_taken')) return '你的手腕上有一點紅，洗不掉。天外，那隻手轉了過來。';
+  return '月亮還會紅。下一頁，不知道輪到哪裡。';
+}
+
 /** The system, as it stands at the end of the chapter. */
 export function chapterSystem(s) {
   const frags = (s.sys.frags || []).length;
