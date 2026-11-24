@@ -295,7 +295,8 @@ export default [
     choices: [
       {
         text: '接著守。',
-        out: { effects: (x) => [...(nightOf(x).phase === 2 ? [MOON_PAGE] : []), ['hours', hoursToWatchEnd(x, nightOf(x).phase)], (y) => { onward(y); }] },
+        // (the lull between watches: a breath, and some of your blood and 靈力 back)
+        out: { effects: (x) => [...(nightOf(x).phase === 2 ? [MOON_PAGE] : []), ['hours', hoursToWatchEnd(x, nightOf(x).phase)], ['hp', 0.6], ['mp', 0.6], (y) => { onward(y); }] },
       },
       {
         text: '走。',

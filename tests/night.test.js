@@ -445,7 +445,7 @@ test('朱筆預警 (系統六級): the ring reddens sooner; and a watch begun ag
 
 // ── 東荒的戰場 (V3) ──
 
-test('the night\'s beasts are the place\'s own, red-eyed and fiercer; never more than eight on the field; killing them teaches, but gives no spoils', () => {
+test('the night\'s beasts are the place\'s own, red-eyed; never more than six on the field, a wave at a time; killing them teaches, but gives no spoils', () => {
   const s = intoWatch(521);
   const own = new Set(['wolf', 'demon_wolf', 'snake', 'zhumo_kui']);
   const xw = s.player.xw;
@@ -460,9 +460,9 @@ test('the night\'s beasts are the place\'s own, red-eyed and fiercer; never more
   assert.ok(seen.size >= 4, `they came (${seen.size})`);
   for (const b of seen) {
     assert.ok(own.has(b.kind), `${b.kind}: 青石鎮's own`);
-    if (b.kind !== 'zhumo_kui') assert.ok(b.enraged, `${b.kind}: red-eyed`);
+    if (b.kind !== 'zhumo_kui') assert.ok(b.redEyes, `${b.kind}: red-eyed`);
   }
-  assert.ok(most <= 8, `no more than eight at once (${most})`);
+  assert.ok(most <= 6, `no more than six at once (${most})`);
   const n = nightOf(s);
   assert.ok(n.kills >= 1, `some went down (${n.kills})`);
   assert.ok(s.player.xw > xw, 'what a fight teaches');

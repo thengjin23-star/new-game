@@ -948,6 +948,8 @@ function stagger(b, secs, push = null) {
  * the rest give up and run; a pack that loses one of its own turns savage.
  */
 function morale(s, C, b, io) {
+  // (1.3) red-eyed on the night of the blood moon: they do not break, and they do not run
+  if (b.def.nightPack) return;
   const rest = groupOf(s, C, b).filter((x) => x !== b && alive(x) && x.aggro);
   if (!rest.length) return;
   if (b.lead || (b.R.pack && rest.length * 2 < (b.def.n || 1))) {
@@ -3046,19 +3048,22 @@ const FIELD_R = 900;
 /** Seconds out past the field's edge before it counts as leaving it. */
 const FIELD_GRACE = 4;
 /** Seconds between the packs that come down out of the hills, by watch; and how many come in each. */
-const WAVE_EVERY = [null, 17, 14, 11];
+const WAVE_EVERY = [null, 20, 16, 13];
 const WAVE_SIZE = [null, 2, 3, 3];
+/** A wave waits while more than this many of the last are still on the field. */
+const WAVE_ROOM = 2;
 /** What comes down on each place: the beasts of its own hills, red-eyed (青石山's wolves and snakes, the 妖狼 of the wilds). */
 const NIGHT_KINDS = {
   qingshi: ['wolf', 'demon_wolf', 'snake'], qingxu: ['wolf', 'snake', 'wolf'], fox: ['demon_wolf', 'snake', 'wolf'],
   luoxia: ['demon_wolf', 'wolf'], ferry: ['wolf', 'snake', 'demon_wolf'],
 };
 /** No more of the night's beasts on the field at once than this (朱墨傀 counted). */
-const NIGHT_MAX = 8;
+const NIGHT_MAX = 6;
 /** Red-eyed, they do not lose you, nor go home. */
 const NIGHT_RT = { lose: 99999, loseT: 99, leash: 99999, sight: 1200 };
-/** A stroke come down on the page: what the chance is that something crawls up out of the ink. */
+/** A stroke come down on the page: what the chance is that something crawls up out of the ink (no more than two of them about at once). */
 const KUI_CHANCE = 0.5;
+const KUI_MAX = 2;
 /** A stroke come down on one at your side: this much of their blood (they are in the book). */
 const ALLY_INK = 0.45;
 
@@ -3146,10 +3151,12 @@ function nightTick(s, C, dt, io) {
   }
   strokeTick(s, C, N, n, book, io);
   if (s.pending || s.dead || N.ending) return;
-  if (C.t < N.next) return;
+  // one wave after another: the next comes down when its time is up, and only once most of the last are down
+  const left = nightFoes(s, C);
+  if (C.t < N.next || left > WAVE_ROOM) return;
   N.next = C.t + WAVE_EVERY[N.phase];
   const kinds = NIGHT_KINDS[n.place] || NIGHT_KINDS.qingshi;
-  const size = Math.min(WAVE_SIZE[N.phase], NIGHT_MAX - nightFoes(s, C));
+  const size = Math.min(WAVE_SIZE[N.phase], NIGHT_MAX - left);
   if (size <= 0) return;
   N.waves += 1;
   N.seed = (N.seed * 16807) % 2147483647;
@@ -3165,14 +3172,14 @@ function nightTick(s, C, dt, io) {
   const off = N.waves % kinds.length;
   const def = {
     id: `nightpack_${++C.uid}`, kinds: Array.from({ length: size }, (_, k) => kinds[(k + off) % kinds.length]), n: size, title: '紅眼的獸', x: at[0], y: at[1], r: 90,
-    power: Math.max(8, Math.round(me.P * (0.55 + 0.12 * (N.phase - 1)))), phantom: true, nightPack: true, rt: NIGHT_RT,
+    power: Math.max(8, Math.round(me.P * (0.45 + 0.08 * (N.phase - 1)))), phantom: true, nightPack: true, rt: NIGHT_RT,
   };
   const pack = Array.from({ length: size }, (_, k) => spawn(s, def, k));
   for (const b of pack) beastsOf(s, C).push(b);
   for (const b of pack) {
     arm(s, C, b);
-    // red-eyed: fiercer than they ever are
-    Object.assign(b, { state: 'chase', st: 0, aggro: true, lostT: 0, enraged: true });
+    // red-eyed (the blood moon makes them bite harder already: world/combat.js arm)
+    Object.assign(b, { state: 'chase', st: 0, aggro: true, lostT: 0, redEyes: true });
   }
   engage(s, C, pack[0], io, N.waves === 1 ? '山坡上一雙一雙紅色的眼睛亮了起來——狼群衝下來了！' : '又一群紅了眼的東西，從黑暗裡撲了出來！');
 }
@@ -3302,7 +3309,8 @@ function strokeFalls(s, C, n, k, book, io) {
   // something crawls up out of the ink
   const N = C.night;
   N.seed = (N.seed * 16807) % 2147483647;
-  if (N.seed / 2147483647 < KUI_CHANCE && nightFoes(s, C) < NIGHT_MAX) kuiRises(s, C, k, io);
+  const kuis = beastsOf(s, C).filter((b) => b.kind === 'zhumo_kui' && alive(b) && b.state !== 'vanish').length;
+  if (N.seed / 2147483647 < KUI_CHANCE && kuis < KUI_MAX && nightFoes(s, C) < NIGHT_MAX) kuiRises(s, C, k, io);
 }
 
 /** A stroke came down on one at your side (林塵, a 天劍宗 disciple…): they are in the book, and it finds them. */
@@ -3325,7 +3333,7 @@ function kuiRises(s, C, k, io) {
   const me = hero(s, C);
   const N = C.night;
   const [x, y] = nearestOpen(s, k.x, k.y, 6) || [k.x, k.y];
-  const def = { id: `zhumo_${++C.uid}`, kind: 'zhumo_kui', n: 1, x, y, r: 40, power: Math.max(8, Math.round(me.P * (0.6 + 0.1 * (N.phase - 1)))), phantom: true, nightPack: true, rt: NIGHT_RT };
+  const def = { id: `zhumo_${++C.uid}`, kind: 'zhumo_kui', n: 1, x, y, r: 40, power: Math.max(8, Math.round(me.P * (0.42 + 0.06 * (N.phase - 1)))), phantom: true, nightPack: true, rt: NIGHT_RT };
   const b = spawn(s, def, 0);
   beastsOf(s, C).push(b);
   arm(s, C, b);

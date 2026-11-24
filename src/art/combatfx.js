@@ -152,8 +152,9 @@ export function paintBeast(ctx, b, t, now, { tint = true, pic = null } = {}) {
       ctx.fillStyle = mirrorOf(b) ? 'rgba(16,12,20,0.62)' : 'rgba(120,170,235,0.42)';
       ctx.fillRect(-70, -90, 140, 100);
     }
-    if (b.enraged && st !== 'dead') {
-      ctx.fillStyle = `rgba(200,40,30,${0.16 + 0.08 * Math.sin(now * 9)})`;
+    // (enraged; or, 1.3, red-eyed on the night of the blood moon)
+    if ((b.enraged || b.redEyes) && st !== 'dead') {
+      ctx.fillStyle = `rgba(200,40,30,${(b.redEyes && !b.enraged ? 0.1 : 0.16) + 0.08 * Math.sin(now * 9)})`;
       ctx.fillRect(-70, -90, 140, 100);
     }
     const flash = Math.max(0, 1 - (now - b.flashT) / 0.2);

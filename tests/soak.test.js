@@ -12,6 +12,8 @@ import * as A from '../src/core/actions.js';
 import * as SK from '../src/world/skills.js';
 import { NODES, mapOf } from '../src/world/map.js';
 import { fresh, resolvePending, waitUntil, goToPoi, pickText } from './helpers.js';
+import { BLOOD_DAY, nightDone, nightOf } from '../src/world/night.js';
+import { setPlan } from '../src/world/roster.js';
 
 const ORIGINS = ['farmer', 'hunter', 'scholar', 'apprentice', 'orphan'];
 
@@ -102,9 +104,51 @@ function soak(seed, steps, cultivated, away = null) {
     assert.equal(s.world.map, 'tianyan');
     delete s.vars.sky;
   }
+  if (away === 'bloodnight') {
+    // (1.3) the night of the blood moon in 青石鎮: a 金丹, the 名冊 written (the boat, the fox's hill, a charm), those who
+    // said yes at your side, the old one under the river awake; dusk an hour off
+    s.flags.opening_done = true;
+    waitUntil(s, BLOOD_DAY - 5);
+    resolvePending(s);
+    Object.assign(s.player, { realm: 3, stage: 1, hp: 99999 });
+    Object.assign(s.flags, { ty_roster: true, roster_boat: true, roster_lin: true, roster_tj: true, roster_xiao: true, roster_fox: true, isle_fisher_met: true });
+    s.player.items.hushen_fu = 2;
+    setPlan(s, 'shen_qingge', 'evacuate');
+    setPlan(s, 'wang_er', 'fox');
+    setPlan(s, 'qian_banxian', 'charm');
+    waitUntil(s, BLOOD_DAY);
+    resolvePending(s);
+    E.placeAt(s, ...NODES.qingshi_town.at);
+    resolvePending(s);
+    s.tod = 18.5;
+    delete s.vars.sky;
+  }
+  if (away === 'bloodpeak') {
+    // (1.3) the night of the blood moon in 天衍城: up 玉指峰 (or not), and the top of it after
+    s.flags.opening_done = true;
+    waitUntil(s, BLOOD_DAY - 8);
+    resolvePending(s);
+    Object.assign(s.player, { realm: 3, stage: 2, hp: 99999 });
+    Object.assign(s.flags, { chapter1_done: true, zhongzhou_crossed: true, ty_roster: true, su_archive: true, night_warned: true });
+    s.world.cross = 'crane_ferry';
+    E.step(s, 0.05, null);
+    resolvePending(s);
+    s.world.cross = 'guandao_guan';
+    E.step(s, 0.05, null);
+    resolvePending(s);
+    assert.equal(s.world.map, 'tianyan');
+    waitUntil(s, BLOOD_DAY);
+    resolvePending(s);
+    E.placeAt(s, 2700, 3240);
+    resolvePending(s);
+    s.tod = 18.5;
+    delete s.vars.sky;
+  }
+  // (1.3: the night is what is being played — no sitting through it)
+  const nightly = away === 'bloodnight' || away === 'bloodpeak';
   if (cultivated) {
     // a 築基 cultivator with a sword, a few arts and things to burn: every kind of move gets thrown
-    const core = away === 'zhongzhou_late' || away === 'tianyan';
+    const core = away === 'zhongzhou_late' || away === 'tianyan' || nightly;
     Object.assign(s.player, { realm: core ? 3 : 2, stage: away === 'beiyuan' ? 2 : core ? 0 : 1, weapon: 'qinggang_sword' });
     s.player.items.qinggang_sword = 1;
     s.player.items.fire_talisman = 5;
@@ -119,7 +163,26 @@ function soak(seed, steps, cultivated, away = null) {
     for (k = 0; k < steps && !s.dead; k++) {
       if (s.pending || s.rtFight) {
         what = `the event ${s.pending?.id || 'fight'}`;
-        resolvePending(s, (opts) => opts[Math.floor(rnd() * opts.length)], rnd() < 0.8 ? 'won' : 'lost');
+        // (1.3: on the night, mostly standing to it — the first choice: 守住, 接著守, up the peak)
+        const stand = nightly && /^(night_|fz_)/.test(s.pending?.id || '');
+        resolvePending(s, (opts) => (stand && rnd() < 0.85 ? opts[0] : opts[Math.floor(rnd() * opts.length)]), rnd() < 0.8 ? 'won' : 'lost');
+        continue;
+      }
+      // (1.3) the night under way: mostly fought (a watch is a minute and a half), now and then saved and loaded (which
+      // begins the watch again)
+      if (nightly && nightOf(s) && !nightDone(s)) {
+        if (rnd() < 0.88) {
+          what = `the night (watch ${nightOf(s).phase})`;
+          for (let f = 0; f < 600 && !s.pending && !s.dead; f++) {
+            if (CB.inCombat(s) && rnd() < 0.3) CB.attackCmd(s);
+            E.step(s, 1 / 30, rnd() < 0.25 ? { x: rnd() - 0.5, y: rnd() - 0.5 } : null);
+          }
+        } else {
+          what = 'saving and loading in the night';
+          s = SV.migrate(SV.parseSave(SV.serialize(s)));
+          E.ensureWorld(s);
+          tally.saves++;
+        }
         continue;
       }
       const roll = rnd();
@@ -139,6 +202,8 @@ function soak(seed, steps, cultivated, away = null) {
         if (t) E.interact(s, t);
         for (let f = 0; f < 5 && !s.pending; f++) E.step(s, 1 / 30, null);
       } else if (roll < 0.72) {
+        // (1.3: before dusk on the night's day, no sitting through it)
+        if (nightly && !nightDone(s)) continue;
         what = 'seclusion';
         waitUntil(s, s.day + 5 + Math.floor(rnd() * 90));
       } else if (roll < 0.88) {
@@ -230,6 +295,27 @@ test('長玩・天衍城 1.2：金丹在京城隨機遊玩（外城、御階與�
   for (const seed of [34, 35]) {
     const run = soak(seed, 110, true, 'tianyan');
     assert.equal(run.error, null, run.error || '');
+    assert.equal(mapOf(run.s.player.loc), run.s.world.map, 'where you are is on the map you are on');
+  }
+});
+
+test('長玩・血月 1.3：那一夜在青石鎮（名冊、隊友、紅了眼的獸、朱筆、朱墨傀、中途存讀檔），到天亮以後，不出任何例外', () => {
+  for (const seed of [41, 42]) {
+    const run = soak(seed, 200, true, 'bloodnight');
+    assert.equal(run.error, null, run.error || '');
+    const n = nightOf(run.s);
+    assert.ok(n?.done, 'the night came, and dawn after it');
+    assert.ok(Object.keys(n.held).length >= 1, 'a watch was fought to its end');
+  }
+});
+
+test('長玩・血月 1.3：那一夜在天衍城（闖玉指峰、或看著天），到天亮以後，不出任何例外', () => {
+  for (const seed of [43, 44]) {
+    const run = soak(seed, 160, true, 'bloodpeak');
+    assert.equal(run.error, null, run.error || '');
+    const n = nightOf(run.s);
+    assert.ok(n?.done, 'the night came, and dawn after it');
+    assert.equal(n.place, 'peak');
     assert.equal(mapOf(run.s.player.loc), run.s.world.map, 'where you are is on the map you are on');
   }
 });

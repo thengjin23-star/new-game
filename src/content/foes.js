@@ -582,10 +582,10 @@ export const FOES = {
   // (1.3) 朱墨傀: up out of the ink where a stroke of the red brush came down on the page — slow, hard, and ink
   // where it has walked (world/combat.js kuiRises)
   zhumo_kui: {
-    name: '朱墨傀', el: '水', hp: 2.4, atk: 1.15,
+    name: '朱墨傀', el: '水', hp: 1.7, atk: 1,
     rt: {
       tier: 1, speed: 62, walk: 30, sight: 1200, lose: 99999, loseT: 99, leash: 99999, body: 17, bulk: 1.6, tall: 44, notice: 0,
-      moves: ['inkslam', 'inkspit'], inkTrail: { kind: 'ink', secs: 5, dps: 0.16, r: 20 },
+      moves: ['inkslam', 'inkspit'], inkTrail: { kind: 'ink', secs: 4, dps: 0.1, r: 20 },
       cry: '朱墨裡爬出了一個東西！',
     },
   },
