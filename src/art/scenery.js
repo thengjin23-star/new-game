@@ -1729,7 +1729,13 @@ const BAIZE_HIDE = recolor((r, g, b) => (b > r + 40 && b > 150 ? [236, 214, 150]
 // (1.2) the tortoise of the 皇陵: worn grey stone (its eyes left as they were)
 const STONE_HIDE = recolor((r, g, b) => (r > 200 || (g > r + 40 && g > 120) ? null : [(r + g + b) / 3 * 1.6 + 60, (r + g + b) / 3 * 1.58 + 58, (r + g + b) / 3 * 1.5 + 56]));
 // (1.3) 獬豸: a hide the black-blue of ink gone dry, its horn and its eyes the white of the peak's jade
-const XIEZHI_HIDE = recolor((r, g, b) => (r > 200 && g > 200 && b > 200 ? [240, 238, 228] : b > r + 30 ? [226, 230, 232] : [(r + g + b) / 3 * 0.35 + 30, (r + g + b) / 3 * 0.38 + 34, (r + g + b) / 3 * 0.5 + 52]));
+const XIEZHI_HIDE = recolor((r, g, b) => {
+  const L = (r + g + b) / 3;
+  // the glints, and the ice of the horn and the eyes (the bluest of the light): the white of the peak's jade
+  if (L > 240 || (b - r > 50 && L > 160)) return [238, 236, 224];
+  // the coat, the legs, the scales: ink gone dry, black with blue in it
+  return [L * 0.2 + 16, L * 0.22 + 18, L * 0.3 + 32];
+});
 
 /** (1.1) The 劍靈 of 天劍宗's sword pool: the shape of a man made of pale light, and six swords going round him. */
 function swordSpirit(ctx, t) {
