@@ -172,6 +172,11 @@ export function fateLine(s, id) {
       return '命簿：他說的書，有一半是真的。';
     // (1.2) 欽天監's 監正: what the book has him do
     case 'wei_changgeng':
+      // (1.3) the finger seen to: what is written for him after
+      if (s.flags.finger_destroyed) return '命簿：玉指峰頂，看著風把那捧灰吹乾淨。——這一行，是他自己寫上去的。';
+      if (s.flags.finger_sealed) return '命簿：欽天監監正，致仕。下一行，空著。';
+      if (s.flags.finger_taken) return '命簿：欽天監監正，從此不再上峰。';
+      if (s.flags.finger_court) return '命簿：欽天監監正，官復原職。';
       // (1.3) the night come and gone: the stroke fell, or he put the brush down halfway
       if (s.flags.blood_night_done) return s.vars.night?.stoppedAt ? '命簿：天元三千零二十二年七月十五，於玉指峰頂執筆。——「執筆」二字底下：「中途擱筆」。下一筆，還沒有寫。' : '命簿：天元三千零二十二年七月十五，於玉指峰頂執筆。——這一筆，落下去了。下一筆，還沒有寫。';
       return s.day > dayAt(10, 7, 15) ? '命簿：天元三千零二十二年七月十五，於玉指峰頂執筆。——「執筆」二字底下，有一行很小的字：「未竟」。' : '命簿：天元三千零二十二年七月十五，於玉指峰頂執筆。';

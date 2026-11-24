@@ -25,7 +25,7 @@ const REGION_SHAPES = [
   // the founder's 地宮, behind the 陵門 (it reads as the 皇陵 till the way down is open)
   { id: 'hl_gong', circle: [1180, 640, 90], requires: 'hl_open' },
   // the top of the finger: up where no road goes (for those the 皇城's 大陣 lets through the air)
-  { id: 'yuzhi', ellipse: [2700, 1210, 150, 112] },
+  { id: 'yuzhi', ellipse: [2700, 1210, 225, 160] },
   // 欽天監: the back of the terrace, under the cliff of the peak
   { id: 'qintianjian', ellipse: [2700, 1580, 340, 120] },
   { id: 'huangcheng', poly: MASSIF },
@@ -89,7 +89,7 @@ const LAKES = [
 ];
 
 /** The top of the finger (玉指峰's 觀星台), where only the flying come; level: how high its ground stands. */
-const AIRY = [{ id: 'yuzhi', kind: 'summit', at: [2700, 1210], r: [140, 104], level: 460 }];
+const AIRY = [{ id: 'yuzhi', kind: 'summit', at: [2700, 1210], r: [215, 150], level: 460 }];
 
 /** Roads, lanes, trails (a road through a wall is a gate). */
 const ROADS = [

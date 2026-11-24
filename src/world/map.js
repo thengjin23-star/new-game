@@ -7,6 +7,7 @@
 import { ARRAY } from '../content/crafts.js';
 import { LANDS } from './maps/index.js';
 import { RENT, rented } from './caves.js';
+import { DAYS_PER_YEAR } from '../core/calendar.js';
 
 /** (1.2) The ways out of 東荒, known to everyone from the start: across the river, and the passes south, west and north. */
 export const EXITS = ['crane_ferry', 'south_pass', 'west_pass', 'yanhui_pass'];
@@ -127,6 +128,11 @@ export function nodeQi(s, id) {
   if (id === 'hidden_cave' && s.flags.home_claimed) qi += ARRAY[s.vars?.array || 0]?.qi || 0;
   // (1.0) a cave rented in 臨江城, or behind the 鬼市, while the rent is paid
   if (RENT[id] && rented(s, id)) qi = RENT[id].qi;
+  // (1.3) the finger on 玉指峰 destroyed: the ink that fed 中州 is gone, and its 靈氣 thins year by year — five
+  // years on, to eight and a half parts in ten
+  if (s.flags?.finger_destroyed && ['zhongzhou', 'tianyan'].includes(mapOf(id))) {
+    qi *= 1 - 0.15 * Math.min(1, Math.max(0, s.day - (s.vars?.finger_day ?? s.day)) / (5 * DAYS_PER_YEAR));
+  }
   return qi;
 }
 

@@ -155,6 +155,15 @@ export function inTide(day) {
   return (month === 3 || month === 9) && d >= 10 && d <= 12;
 }
 
+/**
+ * (1.3) After the night of the blood moon: the small ones go on — until the finger on 玉指峰 is seen to. Destroyed,
+ * sealed back, or taken (the ink on you): no more. Given to the court: rarer, but they come.
+ */
+function afterTheNight(s) {
+  if (!s.flags?.finger_done) return 0.3;
+  return s.flags.finger_court ? 0.12 : 0;
+}
+
 /** Is the full moon tonight a blood moon? (Only now and then, and only from the sixth year: a sign of what is to come.) */
 export function bloodMoon(s, day = s.day) {
   // (1.0) 天元三千零二十二年七月十五 (world/night.js; a save that came to 1.3 past it: the next 七月十五): red, whatever else is so
@@ -162,7 +171,7 @@ export function bloodMoon(s, day = s.day) {
   if (day < dayAt(5, 9) || dateOf(day).day !== 15) return false;
   // (1.2) 欽天監 trying its brush: the nearer 3022 comes, the oftener (one month in five in 3017; by 3022, three in four)
   const y = Math.floor(day / DAYS_PER_YEAR);
-  const odds = y <= 5 ? 0.2 : y >= 10 ? (day < nightDay(s) ? 0.75 : 0.3) : [0.25, 0.32, 0.42, 0.58][y - 6];
+  const odds = y <= 5 ? 0.2 : y >= 10 ? (day < nightDay(s) ? 0.75 : afterTheNight(s)) : [0.25, 0.32, 0.42, 0.58][y - 6];
   return h1((s.seed | 0) + 77, Math.floor(day / 30)) < odds;
 }
 

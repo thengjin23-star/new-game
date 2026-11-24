@@ -1728,6 +1728,8 @@ const GOLD_HIDE = recolor((r, g, b) => (r > 238 && g > 238 ? null : r < 60 && g 
 const BAIZE_HIDE = recolor((r, g, b) => (b > r + 40 && b > 150 ? [236, 214, 150] : r > 200 && g > 200 ? [246, 244, 236] : [(r + g + b) / 3 * 0.5 + 150, (r + g + b) / 3 * 0.5 + 146, (r + g + b) / 3 * 0.5 + 134]));
 // (1.2) the tortoise of the 皇陵: worn grey stone (its eyes left as they were)
 const STONE_HIDE = recolor((r, g, b) => (r > 200 || (g > r + 40 && g > 120) ? null : [(r + g + b) / 3 * 1.6 + 60, (r + g + b) / 3 * 1.58 + 58, (r + g + b) / 3 * 1.5 + 56]));
+// (1.3) 獬豸: a hide the black-blue of ink gone dry, its horn and its eyes the white of the peak's jade
+const XIEZHI_HIDE = recolor((r, g, b) => (r > 200 && g > 200 && b > 200 ? [240, 238, 228] : b > r + 30 ? [226, 230, 232] : [(r + g + b) / 3 * 0.35 + 30, (r + g + b) / 3 * 0.38 + 34, (r + g + b) / 3 * 0.5 + 52]));
 
 /** (1.1) The 劍靈 of 天劍宗's sword pool: the shape of a man made of pale light, and six swords going round him. */
 function swordSpirit(ctx, t) {
@@ -1776,7 +1778,7 @@ function swordSpirit(ctx, t) {
 
 export function drawBigBeast(ctx, kind, { t = 0, face = 1, moving = false } = {}) {
   ctx.save();
-  groundShadow(ctx, 0, 0, { demon_wolf: 15, wolf_king: 22, python: 24, bear: 22, skeleton: 12, fire_tiger: 25, shanxiao: 12, mumei: 12, xuan_turtle: 27, spider: 14, toad: 16, toad_king: 25, swarm: 12, gu_mother: 30, scorpion: 15, sand_wolf: 16, mummy: 8, kuchan: 13, sand_jiao: 30, stone_puppet: 11, stone_general: 19, ice_wolf: 16, bailang_king: 25, snow_leopard: 16, ice_silkworm: 13, silk_queen: 26, snow_ape: 15, ape_king: 21, snow_wraith: 8, ice_qilin: 24, reed_python: 20, wood_spirit: 16, cangwu_ape: 14, star_beast: 25, yunmeng_jiao: 35, vein_crawler: 16, jianling: 12 }[kind] || 14, 3);
+  groundShadow(ctx, 0, 0, { demon_wolf: 15, wolf_king: 22, python: 24, bear: 22, skeleton: 12, fire_tiger: 25, shanxiao: 12, mumei: 12, xuan_turtle: 27, spider: 14, toad: 16, toad_king: 25, swarm: 12, gu_mother: 30, scorpion: 15, sand_wolf: 16, mummy: 8, kuchan: 13, sand_jiao: 30, stone_puppet: 11, stone_general: 19, ice_wolf: 16, bailang_king: 25, snow_leopard: 16, ice_silkworm: 13, silk_queen: 26, snow_ape: 15, ape_king: 21, snow_wraith: 8, ice_qilin: 24, reed_python: 20, wood_spirit: 16, cangwu_ape: 14, star_beast: 25, yunmeng_jiao: 35, vein_crawler: 16, jianling: 12, xiezhi: 30 }[kind] || 14, 3);
   ctx.scale(face, 1);
   switch (kind) {
     case 'demon_wolf':
@@ -1922,6 +1924,11 @@ export function drawBigBeast(ctx, kind, { t = 0, face = 1, moving = false } = {}
       ctx.scale(1.08, 1.08);
       tinted(ctx, BAIZE_HIDE, () => iceQilin(ctx, t, moving));
       break;
+    // 1.3: the beast that keeps the top of 玉指峰 — the qilin's shape in a black-blue hide, one horn of white jade
+    case 'xiezhi':
+      ctx.scale(1.3, 1.3);
+      tinted(ctx, XIEZHI_HIDE, () => iceQilin(ctx, t, moving));
+      break;
     // 1.2: the stone tortoise of the 皇陵, the blank stele on its back
     case 'bixi':
       ctx.scale(1.55, 1.55);
@@ -1949,7 +1956,7 @@ export function drawBigBeast(ctx, kind, { t = 0, face = 1, moving = false } = {}
   ctx.restore();
 }
 
-export const BIG_BEASTS = new Set(['demon_wolf', 'wolf_king', 'python', 'bear', 'skeleton', 'fire_tiger', 'shanxiao', 'mumei', 'xuan_turtle', 'spider', 'toad', 'toad_king', 'swarm', 'gu_mother', 'scorpion', 'sand_wolf', 'mummy', 'kuchan', 'sand_jiao', 'stone_puppet', 'stone_general', 'ice_wolf', 'bailang_king', 'snow_leopard', 'ice_silkworm', 'silk_queen', 'snow_ape', 'ape_king', 'snow_wraith', 'ice_qilin', 'reed_python', 'wood_spirit', 'cangwu_ape', 'star_beast', 'yunmeng_jiao', 'vein_crawler', 'jianling', 'bixi', 'shiyong', 'jy_leopard', 'baize']);
+export const BIG_BEASTS = new Set(['demon_wolf', 'wolf_king', 'python', 'bear', 'skeleton', 'fire_tiger', 'shanxiao', 'mumei', 'xuan_turtle', 'spider', 'toad', 'toad_king', 'swarm', 'gu_mother', 'scorpion', 'sand_wolf', 'mummy', 'kuchan', 'sand_jiao', 'stone_puppet', 'stone_general', 'ice_wolf', 'bailang_king', 'snow_leopard', 'ice_silkworm', 'silk_queen', 'snow_ape', 'ape_king', 'snow_wraith', 'ice_qilin', 'reed_python', 'wood_spirit', 'cangwu_ape', 'star_beast', 'yunmeng_jiao', 'vein_crawler', 'jianling', 'bixi', 'shiyong', 'jy_leopard', 'baize', 'xiezhi']);
 
 /** Props that flicker or sway (repainted as they go); the rest are still. */
 export const LIVE_PROPS = new Set(['campfire', 'ginseng', 'wisp']);

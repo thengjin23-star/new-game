@@ -12,6 +12,8 @@ export const LOOKS = {
   shen_qingge: { robe: [222, 176, 180], trim: [150, 60, 70], hair: 'long', pin: true },
   song_he: { robe: [150, 150, 140], trim: [90, 90, 80], hair: 'topknot', beard: true, whisk: true },
   wang_er: { robe: [128, 96, 64], trim: [80, 60, 40], hair: 'straw', short: true },
+  // (1.3) 欽天監's 監正: a star officer's robe with nothing sewn on it, the hair gone white at the sides
+  wei_changgeng: { robe: [34, 40, 62], trim: [120, 130, 150], hair: 'bun', white: true },
   sun_zg: { robe: [98, 72, 52], trim: [60, 44, 32], hair: 'cap', beard: true },
   su_qingyao: { robe: [244, 244, 240], trim: [150, 170, 190], hair: 'long', sword: true },
   hu_sanniang: { robe: [246, 244, 240], trim: [200, 70, 70], hair: 'long', tail: true },

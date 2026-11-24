@@ -12,6 +12,7 @@ import ferry from './events/ferry.js';
 import zhongzhou from './events/zhongzhou.js';
 import tianyan from './events/tianyan.js';
 import bloodnight from './events/bloodnight.js';
+import finale from './events/finale.js';
 import pass from './events/pass.js';
 import nanling from './events/nanling.js';
 import ximo from './events/ximo.js';
@@ -28,7 +29,7 @@ import generic, { GENERIC_EXPLORE } from './events/generic.js';
 
 export const EVENT_LIST = [
   ...opening, ...town, ...hill, ...temple, ...forest, ...market, ...valley,
-  ...sect, ...ruins, ...shrine, ...ferry, ...pass, ...nanling, ...ximo, ...beiyuan, ...zhongzhou, ...tianyan, ...bloodnight, ...fields, ...travel, ...air, ...realms, ...world, ...chapter, ...lore, ...inquire, ...generic,
+  ...sect, ...ruins, ...shrine, ...ferry, ...pass, ...nanling, ...ximo, ...beiyuan, ...zhongzhou, ...tianyan, ...bloodnight, ...finale, ...fields, ...travel, ...air, ...realms, ...world, ...chapter, ...lore, ...inquire, ...generic,
   GENERIC_INQUIRE, GENERIC_EXPLORE,
 ];
 

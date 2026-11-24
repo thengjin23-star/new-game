@@ -288,6 +288,16 @@ export const BEAST_MOVES = {
   // 玄龜: a snap of the beak; water spat in jets (three, later five, fanned out); a whirlpool where you
   // stand that drags at your feet; a wave all round it
   shellbite: { shape: 'fan', reach: 58, arc: 1.3, windup: 0.6, recover: 0.7, cd: 2.2, mult: 1.5, lunge: 8, fx: 'bite' },
+  // (1.3) 守峰獬豸: the horn, a charge across the top of the peak, a stamp that throws you back
+  xzhorn: { shape: 'fan', reach: 72, arc: 1.2, windup: 0.7, recover: 0.8, cd: 2.4, mult: 1.7, lunge: 14, fx: 'claw' },
+  xzcharge: { shape: 'leap', min: 110, max: 340, windup: 0.95, speed: 700, width: 46, overshoot: 60, recover: 1.1, cd: 6, mult: 2 },
+  xzstomp: { shape: 'ring', radius: 110, windup: 1, recover: 0.8, cd: 7, mult: 1.5, fx: 'quake', push: 30 },
+  // (1.3) 衛長庚: 星落 (stars come down all about you — aimed by the 命簿, they cannot find you, only the ground you
+  // stand on), 星芒 (a fan of starlight), 移星 (he is somewhere else)
+  xingluo: { shape: 'zone', min: 0, max: 900, radius: 54, windup: 1.3, recover: 0.5, cd: 4.2, mult: 1.6, count: 7, scatter: 250, fx: 'starfall' },
+  xingluo2: { shape: 'zone', min: 0, max: 900, radius: 54, windup: 1.15, recover: 0.45, cd: 3.4, mult: 1.6, count: 10, scatter: 240, fx: 'starfall' },
+  xingmang: { shape: 'shot', min: 60, max: 420, range: 460, windup: 0.75, speed: 640, width: 18, recover: 0.5, cd: 3, mult: 1.2, count: 3, spread: 0.25, fx: 'star' },
+  yixing: { shape: 'blink', near: 110, windup: 0.45, recover: 0.35, cd: 6, fx: 'blink' },
   // (1.3) 朱墨傀: a heavy arm of ink brought down; a gob of ink thrown at your feet (it spreads, and drags at you)
   inkslam: { shape: 'fan', reach: 62, arc: 1.7, windup: 0.95, recover: 0.9, cd: 2.6, mult: 1.7, lunge: 6, fx: 'claw' },
   inkspit: { shape: 'zone', min: 80, max: 300, radius: 46, windup: 1.1, recover: 0.7, cd: 6, first: 2.5, mult: 0.9, fx: 'quake', pool: { kind: 'ink', secs: 4, dps: 0.16, r: 40 } },

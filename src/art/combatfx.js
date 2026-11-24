@@ -1847,6 +1847,35 @@ function drawFx(ctx, proj, px, f, now) {
       }
       break;
     }
+    case 'starfall': {
+      // (1.3) 星落: a star out of the night sky, white-gold, and a burst of light where it meets the stone
+      const [gx, gy] = proj(f.x, f.y, 0);
+      const [tx, ty] = proj(f.x + 40, f.y, 360);
+      const fall = Math.min(1, p * 4);
+      const fade = p < 0.25 ? 1 : 1 - (p - 0.25) / 0.75;
+      const ex = tx + (gx - tx) * fall;
+      const ey = ty + (gy - ty) * fall;
+      ctx.lineCap = 'round';
+      for (const [wd, col] of [[8, `rgba(150,180,255,${0.3 * fade})`], [3, `rgba(255,246,214,${0.95 * fade})`]]) {
+        ctx.strokeStyle = col;
+        ctx.lineWidth = wd * px * Math.max(1, k);
+        ctx.beginPath();
+        ctx.moveTo(tx + (ex - tx) * 0.4, ty + (ey - ty) * 0.4);
+        ctx.lineTo(ex, ey);
+        ctx.stroke();
+      }
+      if (fall >= 1) {
+        const q = (p - 0.25) / 0.75;
+        const glow = ctx.createRadialGradient(gx, gy, 0, gx, gy, f.r * k * (0.5 + q));
+        glow.addColorStop(0, `rgba(255,250,230,${0.85 * (1 - q)})`);
+        glow.addColorStop(1, 'rgba(170,200,255,0)');
+        ctx.fillStyle = glow;
+        ctx.beginPath();
+        ctx.arc(gx, gy, f.r * k * (0.5 + q), 0, Math.PI * 2);
+        ctx.fill();
+      }
+      break;
+    }
     case 'gulp': {
       // (1.3) the old one under the river: the water heaves up in a ring, a dark mouth opens, and shuts
       const [gx, gy] = proj(f.x, f.y, 0);

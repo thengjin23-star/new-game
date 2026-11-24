@@ -12,7 +12,7 @@
 // word (their event) — and if you choose to fight, or to run, it plays out
 // here, and the story ends the way the fight did (core/events.js).
 
-import { collides, speedAt, terrainAt, regionAt, isReachable, findPath, nearestOpen, world, PLAYER_R } from './terrain.js';
+import { collides, speedAt, terrainAt, regionAt, isReachable, isAiry, findPath, nearestOpen, world, PLAYER_R } from './terrain.js';
 import { T } from './geo.js';
 import { BEASTS } from './places.js';
 import { NODES, nodeQi } from './map.js';
@@ -2058,11 +2058,15 @@ function blinkAway(s, C, b, at, M = null) {
   const far = M?.at ?? (b.R.keep?.[1] ?? 200) * 0.85;
   const mark = (x, y) => C.fx.push(M?.fx === 'burrow' ? { kind: 'quake', x, y, r: b.R.body * 1.6, t0: C.t, dur: 0.7 } : { kind: 'blink', x, y, t0: C.t, dur: 0.5 });
   const a0 = Math.atan2(b.y - at.y, b.x - at.x) + Math.PI;
+  // (1.3) up where only the flying come (the top of 玉指峰): only somewhere else on that same top, not out onto the
+  // rock below it, where it could never get back to you
+  const island = isAiry(at.x, at.y) ? regionAt(s, at.x, at.y) : null;
   for (let k = 0; k < 9; k++) {
     const a = a0 + (k % 2 ? 1 : -1) * Math.ceil(k / 2) * 0.5 + (b.rng() - 0.5) * 0.4;
     const x = at.x + Math.cos(a) * far;
     const y = at.y + Math.sin(a) * far;
-    if (collides(s, x, y, 12) || !isReachable(x, y)) continue;
+    if (collides(s, x, y, 12)) continue;
+    if (island ? !isAiry(x, y) || regionAt(s, x, y) !== island : !isReachable(x, y)) continue;
     mark(b.x, b.y);
     Object.assign(b, { x, y, kb: null, path: null });
     mark(x, y);

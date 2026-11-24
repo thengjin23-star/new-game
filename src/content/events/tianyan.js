@@ -511,6 +511,8 @@ export default [
     trigger: 'explore',
     poi: 'yz_platform',
     nodes: YZ,
+    // (1.3: after the night, the top of the peak is another place: content/events/finale.js)
+    cond: (s) => !nightDone(s),
     title: '觀星台',
     text: (s) =>
       `觀星台的台心是一口圓池。${

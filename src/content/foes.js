@@ -589,6 +589,26 @@ export const FOES = {
       cry: '朱墨裡爬出了一個東西！',
     },
   },
+  // (1.3) the top of 玉指峰, after the night (content/events/finale.js): the beast that keeps the peak, and 欽天監's
+  // 監正 himself — whose star art aims by the 命簿, and so cannot find you: it can only break the ground about you
+  xiezhi: {
+    name: '守峰獬豸', el: '土', hp: 2.2, atk: 1.15, boss: true,
+    rt: {
+      tier: 3, speed: 150, walk: 40, sight: 900, lose: 99999, loseT: 99, leash: 99999, body: 26, bulk: 1.8, tall: 38, notice: 0,
+      moves: ['xzhorn', 'xzcharge'],
+      phases: [{ at: 0.5, moves: ['xzhorn', 'xzcharge', 'xzstomp'], enrage: true, line: '獬豸低下頭，獨角上亮起一道白光——牠認準你了！' }],
+      cry: '守峰的獬豸站了起來，獨角對準了你。',
+    },
+  },
+  wei_boss: {
+    name: '衛長庚', el: '金', hp: 2.1, atk: 1.1, boss: true,
+    rt: {
+      tier: 4, person: true, look: 'elder', weapon: 'qinggang_sword', speed: 150, walk: 50, sight: 900, lose: 99999, loseT: 99, leash: 99999,
+      body: 12, tall: 38, notice: 0, moves: ['xingluo', 'xingmang', 'yixing'], keep: [160, 300],
+      phases: [{ at: 0.5, moves: ['xingluo2', 'xingmang', 'yixing'], enrage: true, line: '衛長庚兩手一分——滿天的星，都落了下來。' }],
+      cry: '衛長庚抬起一隻手，天上的星一顆一顆亮了。', yield: 0.08,
+    },
+  },
   // ── 1.0 中州・臨江一帶 (二階: 築基初期 along the river, 築基中期 in the old wood, 築基後期 out in the 大澤) ──
   // 江堤蘆蕩: green pythons that lie in the reeds and come up out of the water at you; they wrap you, and spit
   reed_python: {

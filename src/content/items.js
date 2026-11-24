@@ -613,6 +613,15 @@ export const ITEMS = {
     desc: '天衍觀的黃紙符，硃砂畫的，折成三角，用紅繩繫著。觀裡的老道說能替人擋一災。擋不擋得住天上那支筆，他沒說。',
   },
   // (1.2) 蘇清瑤's: a 欽天監 star officer's token — the papers of the capital, and the 皇城's stair (flag huangcheng_pass)
+  // (1.3) the finger, taken from the top of 玉指峰; and the court's gold plate, for the one who gave it up
+  yuzhi: {
+    name: '玉指', kind: 'token', sell: 0, keep: true,
+    desc: '一根白玉似的手指，比人的手指長一倍，涼得像冰。指尖上曾經掛著一滴紅墨——那滴墨，順著你的手腕不見了。天外那隻手，少的就是這一根。',
+  },
+  qintian_jinpai: {
+    name: '欽天監客卿金牌', kind: 'token', sell: 0, keep: true,
+    desc: '一塊金牌，正面刻著「欽天監客卿」，背面是皇城的印。京城裡的人見了，都要讓一讓。',
+  },
   qintian_token: {
     name: '欽天監腰牌', kind: 'token', sell: 0, keep: true,
     desc: '一塊白玉腰牌，刻著北斗七星，背面是欽天監的印。禁軍見了它，會讓開御階；官道關見了它，不敢多問。',

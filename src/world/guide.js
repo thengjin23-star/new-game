@@ -3,6 +3,7 @@
 // at the buttons (each shown once on this device).
 
 import { atBottleneck, REALMS } from '../core/cultivation.js';
+import { nightDay, nightDone, nightDate } from './night.js';
 import { pools } from '../core/body.js';
 import { NODES, mapOf } from './map.js';
 import { happenings, tideTonight } from './happenings.js';
@@ -209,6 +210,16 @@ export function nextGoal(s) {
     if (h.name === '異寶出世') return { key: `omen:${h.spot}`, text: `異寶出世：${h.where}`, why: `寶光落在${h.where}，只亮五天。已經有散修守在那裡了。` };
     if (h.name === '青雲宗開山收徒' && now && !s.flags.sect_member && !s.flags.recruit_declined) return { key: 'recruit', text: '開山收徒：去青雲宗', why: '十年一回。到青雲宗山門前測靈根，就能入門。也可以繼續做散修。' };
     if (h.name === '青雲宗大比' && now && s.flags.sect_member) return { key: 'tourney', text: '宗門大比：到任務堂', why: '每年六月初一到初十，在任務堂前開擂。連勝三場就是魁首。' };
+  }
+  // (1.3) the night of the blood moon, three days off; and after it, the top of 玉指峰
+  const nd = nightDay(s);
+  if (!nightDone(s) && nd >= s.day && nd - s.day <= 3 && (s.flags.night_warned || s.flags.ty_truth)) {
+    return { key: 'night', text: `血月：${nightDate(s).replace('天元', '')}`, why: '戌時月亮升起。那時你在哪裡，那一夜就在哪裡：東荒的青石鎮、清虛觀、狐仙廟、落霞坊市、白鶴渡，可以守；人在天衍城，可以闖玉指峰。' };
+  }
+  if (nightDone(s) && !s.flags.finger_done && s.flags.zhongzhou_crossed) {
+    return s.flags.ty_arrived
+      ? { key: 'peak', text: '玉指峰頂：衛長庚在等你', why: '欽天監後面的天梯開了。天亮以後，什麼時候上去都可以——峰頂上有一頭守峰的獸，衛長庚是元嬰。' }
+      : { key: 'peak', text: '去天衍城：玉指峰', why: '那一夜的朱筆，是從中州天衍城的玉指峰頂落下來的。官道關往東三天，或臨江城的傳送陣。' };
   }
   // where the stories of the land you are in stand
   if (away) {
